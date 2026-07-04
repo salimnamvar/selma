@@ -130,42 +130,4 @@ skinparam database<<datastore>> {
     FontColor<<datastore>> #F57F17
 }
 
-' ---------------------------------------------------------------
-' Legend Procedures
-' ---------------------------------------------------------------
 
-!procedure $selma_legend_context()
-legend right
-    |= <color:#000000>Symbol |= <color:#000000>Meaning |
-    |<#08427B> <color:#FFFFFF>**Person**</color> | <color:#000000>Rule Administrator, AI Steward, Domain Developer</color> |
-    |<#1168BD> <color:#FFFFFF>**System**</color> | <color:#000000>Selma</color> |
-    |<#999999> <color:#FFFFFF>**External System**</color> | <color:#000000>LLM Service, File System, Git Repository</color> |
-    |<color:#1565C0> --- </color> | <color:#000000>Synchronous</color> |
-    |<color:#E65100> ... </color> | <color:#000000>Asynchronous</color> |
-end legend
-!endprocedure
-
-!procedure $selma_legend_container()
-legend right
-    |= <color:#000000>Symbol |= <color:#000000>Meaning |
-    |<#08427B> <color:#FFFFFF>**Person**</color> | <color:#000000>Rule Administrator, AI Steward, Domain Developer</color> |
-    |<#438DD5> <color:#FFFFFF>**Container**</color> | <color:#000000>Selma Application</color> |
-    |<#FFF8E1> <color:#E65100>**Contract**</color> | <color:#000000>Policy Doctrine, Rule Schema</color> |
-    |<#999999> <color:#FFFFFF>**External System**</color> | <color:#000000>LLM Service, Git Repository</color> |
-    |<color:#1565C0> --- </color> | <color:#000000>Synchronous</color> |
-    |<color:#E65100> ... </color> | <color:#000000>Asynchronous</color> |
-end legend
-!endprocedure
-
-!procedure $selma_legend_component()
-legend right
-    |= <color:#000000>Symbol |= <color:#000000>Meaning |
-    |<#E3F2FD> <color:#0D47A1>**Controller**</color> | <color:#000000>API Layer</color> |
-    |<#FFF3E0> <color:#BF360C>**Service**</color> | <color:#000000>Core Engine, Steward Agent</color> |
-    |<#FFF8E1> <color:#E65100>**Contract**</color> | <color:#000000>Policy Doctrine, Rule Schema</color> |
-    |<#E8F5E9> <color:#1B5E20>**Repository**</color> | <color:#000000>Storage, LLM Adapter</color> |
-    |<#999999> <color:#FFFFFF>**External System**</color> | <color:#000000>LLM Service, Git Repository</color> |
-    |<color:#1565C0> --- </color> | <color:#000000>Synchronous</color> |
-    |<color:#E65100> ... </color> | <color:#000000>Asynchronous</color> |
-end legend
-!endprocedure

@@ -1,98 +1,79 @@
+' SIM-01 EXCEPTION: 14 elements — single data-flow spanning all four pillars plus orchestration, contracts, and external storage
 @startuml c4_selma_component
 ' ============================================================
 ' Title:     Selma — Component Diagram
-' Boundary:  Web Application container
+' Boundary:  SELMA Application container
 ' Purpose:   Show the four-pillar pipeline, Steward orchestration,
 '            dual-contract bond, LLM adapter, and contracts
 ' Milestone: v1.0
-' Version:   1.1.0 (P0 fix: moved llm_adapter, contracts inside boundary)
+' Version:   1.2.0
 ' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !include common/c4_styles.puml
-skinparam linetype polyline
-skinparam wrapWidth 200
+!theme plain
+LAYOUT_WITH_LEGEND()
 
 title SELMA System — Component Diagram
 
-' ── External Containers ──
 Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml (local, network, or S3)", $tags="external_container")
 
-' ── Web Application Boundary (contains four-pillar pipeline + contracts + adapter) ──
 Container_Boundary(selma_application, "SELMA Application") {
 
-    ' ── Pillar 1: Definition Engine ──
     Component(definition, "Definition Engine", "Module", "Generates Machine IDs, drafts prose and YAML stubs", $tags="service")
 
-    ' ── Pillar 2: Maintenance Engine ──
     Component(maintenance, "Maintenance Engine", "Module", "CRUD, SemVer bumping, deprecation, refactoring", $tags="service")
 
-    ' ── Pillar 3: Mechanical Linting Engine ──
     Component(linter, "Mechanical Linting Engine", "Module", "Syntax, schema, contamination guard — hard fail on violations", $tags="service")
 
-    ' ── Pillar 4: Reasoning Engine ──
     Component(reasoner, "Reasoning Engine", "Module", "Conflict detection, priority enforcement, redundancy detection", $tags="service")
 
-    ' ── Steward Agent (Orchestrator) ──
     Component(steward, "Steward Agent", "Module", "Runs four-pillar pipeline, self-corrects on lint failures", $tags="service")
 
-    ' ── Domain Registry ──
     Component(domain_registry, "Domain Registry", "Module", "Scaffolds domain folders with policy.md and rules.yaml templates", $tags="service")
 
-    ' ── Version Manager ──
     Component(versioner, "Version Manager", "Module", "Auto-bumps SemVer, synchronizes contract versions", $tags="service")
 
-    ' ── Domain Exporter ──
     Component(exporter, "Domain Exporter", "Module", "Packages domains for export, import, backup", $tags="service")
 
-    ' ── Query Engine ──
     Component(query_engine, "Query Engine", "Module", "Retrieves rules by ID, domain, status, priority, or type", $tags="service")
 
-    ' ── LLM Adapter (internal module, not external) ──
     Component(llm_adapter, "LLM Adapter", "Python Module", "LLM API communication with retry and fallback", $tags="repository")
 
-    ' ── Contracts (static configuration data) ──
     Component(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
+
     Component(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
 }
 
-' ── Four-Pillar Pipeline ──
-Rel(definition, storage, "→ writes raw candidate rule to disk")
-Rel(maintenance, storage, "→ reads and writes policy.md and rules.yaml")
-Rel(maintenance, versioner, "→ triggers version bump after every change")
-Rel(linter, policy_contract, "→ validates policy structure and checks forbidden_fields (contamination guard)")
-Rel(linter, rule_contract, "→ validates schema compliance, traceability bond, and forbidden_at_root (contamination guard)")
-Rel(linter, storage, "→ reads files for syntax validation")
-Rel(reasoner, rule_contract, "→ reads conflicts_with, depends_on, priority")
-Rel(reasoner, llm_adapter, "→ delegates deep reasoning when needed")
+Rel(definition, storage, "Writes raw candidate rule to disk")
+Rel(maintenance, storage, "Reads and writes policy.md and rules.yaml")
+Rel(maintenance, versioner, "Triggers version bump after every change")
+Rel(linter, policy_contract, "Validates policy structure and checks forbidden_fields (contamination guard)")
+Rel(linter, rule_contract, "Validates schema compliance, traceability bond, and forbidden_at_root (contamination guard)")
+Rel(linter, storage, "Reads files for syntax validation")
+Rel(reasoner, rule_contract, "Reads conflicts_with, depends_on, priority")
+Rel(reasoner, llm_adapter, "Delegates deep reasoning when needed")
 
-' ── Steward Orchestration ──
-Rel(steward, definition, "→ orchestrates Pillar 1: Definition")
-Rel(steward, maintenance, "→ orchestrates Pillar 2: Maintenance")
-Rel(steward, linter, "→ orchestrates Pillar 3: Mechanical Linting")
-Rel(steward, reasoner, "→ orchestrates Pillar 4: Reasoning")
-Rel(steward, llm_adapter, "→ calls LLM for rule generation and reasoning")
+Rel(steward, definition, "Orchestrates Pillar 1: Definition")
+Rel(steward, maintenance, "Orchestrates Pillar 2: Maintenance")
+Rel(steward, linter, "Orchestrates Pillar 3: Mechanical Linting")
+Rel(steward, reasoner, "Orchestrates Pillar 4: Reasoning")
+Rel(steward, llm_adapter, "Calls LLM for rule generation and reasoning")
 
-' ── Domain Management ──
-Rel(domain_registry, storage, "→ creates domain folders and template files")
+Rel(domain_registry, storage, "Creates domain folders and template files")
 
-' ── Export and Query ──
-Rel(exporter, storage, "→ reads domain files for packaging")
-Rel(exporter, policy_contract, "→ reads policy for export")
-Rel(exporter, rule_contract, "→ reads schema to validate exported data")
-Rel(query_engine, storage, "→ reads rules for filtering and sorting")
-Rel(query_engine, policy_contract, "→ checks anchor_ref validity")
-Rel(query_engine, rule_contract, "→ validates rule structure before returning")
+Rel(exporter, storage, "Reads domain files for packaging")
+Rel(exporter, policy_contract, "Reads policy for export")
+Rel(exporter, rule_contract, "Reads schema to validate exported data")
+Rel(query_engine, storage, "Reads rules for filtering and sorting")
+Rel(query_engine, policy_contract, "Checks anchor_ref validity")
+Rel(query_engine, rule_contract, "Validates rule structure before returning")
 
-' ── Version Manager ──
-Rel(versioner, storage, "→ updates version in rules.yaml")
-Rel(versioner, policy_contract, "→ reads doctrine version for synchronization")
-Rel(versioner, rule_contract, "→ updates schema version to match")
+Rel(versioner, storage, "Updates version in rules.yaml")
+Rel(versioner, policy_contract, "Reads doctrine version for synchronization")
+Rel(versioner, rule_contract, "Updates schema version to match")
 
-' ── LLM Adapter → External ──
-Rel(llm_adapter, storage, "→ reads cached rules for context")
-
-$selma_legend_component()
+Rel(llm_adapter, storage, "Reads cached rules for context")
 
 @enduml
