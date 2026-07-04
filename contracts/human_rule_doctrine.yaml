@@ -4,10 +4,37 @@
 
 doctrine:
   name: universal-human-doctrine
-  version: "1.1.0"
+  version: "1.2.0"
   description: >
     Defines how to structure and write a rule document.
     Includes self-governance, hierarchy, and sanctions.
+  machine_contract_version: "1.2.0"
+  machine_contract_id: "universal-machine-schema"
+
+# ─── CONTAMINATION GUARD ─────────────────────────────────────────
+# This contract MUST NOT contain any machine-executable logic.
+# FORBIDDEN at all levels: parameters, conditions, evaluator_hint,
+# weight, depends_on, conflicts_with, status, created_at, expires_at,
+# any field that a machine parser/evaluator/validator consumes.
+# The ONLY machine-facing element allowed: "Machine ID" columns in
+# directive tables, which serve as cross-reference labels (names),
+# not execution directives.
+contamination_guard:
+  forbidden_fields:
+    - parameters
+    - conditions
+    - evaluator_hint
+    - weight
+    - depends_on
+    - conflicts_with
+    - status
+    - created_at
+    - expires_at
+    - remediation
+    - target
+    - technical_hints
+  allowed_machine_references:
+    - "Machine ID columns in directive tables (cross-reference labels only)"
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:

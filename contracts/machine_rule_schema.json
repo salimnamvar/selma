@@ -3,12 +3,39 @@
   "$id": "https://schemas/universal-machine-schema.json",
   "title": "Universal Machine Rule Schema",
   "description": "The absolute essence of a machine-readable rule. Includes lifecycle, dependencies, and provenance. Completely open and context-free.",
+  "x-contamination-guard": {
+    "forbidden_at_root": [
+      "preamble",
+      "governance",
+      "definitions",
+      "principles",
+      "sanctions",
+      "references",
+      "writing_principles",
+      "sections",
+      "guidance",
+      "columns"
+    ],
+    "allowed_human_references": [
+      "anchor_ref (link back to human document section)",
+      "message (human-readable output text)"
+    ],
+    "rationale": "This schema defines data structures for machine consumption only. It MUST NOT contain prose rules, editorial guidance, document layout, governance processes, or social consequences. The only human-facing fields are anchor_ref (traceability link) and message (human-readable output)."
+  },
   "type": "object",
   "required": ["version", "rules"],
   "properties": {
     "version": {
       "type": "string",
       "description": "Version of this specific rule dataset."
+    },
+    "human_contract_version": {
+      "type": "string",
+      "description": "Version of the paired human-rule-doctrine.yaml. Must match for bidirectional traceability."
+    },
+    "human_contract_id": {
+      "type": "string",
+      "description": "Identifier of the paired human contract (e.g., 'universal-human-doctrine')."
     },
     "metadata": {
       "type": "object",
