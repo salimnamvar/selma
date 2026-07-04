@@ -1,7 +1,7 @@
 """SQ layer linter package.
 
-Canonical: tools/software-design/sq/
-Bound to rules/software-design/sq.md
+Canonical: tools/selma/sq/
+Bound to rules/selma/sq.md
 """
 from .parser import parse_sq_file
 from .validator import validate_sq

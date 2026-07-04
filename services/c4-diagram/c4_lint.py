@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """C4 Linter CLI.
 
-Canonical location: ~/.grok/tools/software-design/c4/c4_lint.py  (and ~/.claude equivalent)
+Canonical location: ~/.grok/tools/selma/c4/c4_lint.py  (and ~/.claude equivalent)
 
 Usage:
-    python tools/software-design/c4/c4_lint.py docs/C4 docs/LOG
-    python ~/.grok/tools/software-design/c4/c4_lint.py path/to/diagram.puml --format json --strict
+    python tools/selma/c4/c4_lint.py docs/C4 docs/LOG
+    python ~/.grok/tools/selma/c4/c4_lint.py path/to/diagram.puml --format json --strict
 
-This tool is bound to rules/software-design/c4.md and is invoked as part of
-the C4 layer in skills/software-design (review, audit, cicd gates).
+This tool is bound to rules/selma/c4.md and is invoked as part of
+the C4 layer in skills/selma (review, audit, cicd gates).
 """
 from __future__ import annotations
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """UC Linter CLI.
 
-Canonical location: ~/.grok/tools/software-design/usecase-diagram/usecase_diagram_lint.py  (and ~/.claude)
+Canonical location: ~/.grok/tools/selma/usecase-diagram/usecase_diagram_lint.py  (and ~/.claude)
 
 Usage:
-    python ~/.grok/tools/software-design/usecase-diagram/usecase_diagram_lint.py docs/UC --format text --strict
-    python ~/.grok/tools/software-design/usecase-diagram/usecase_diagram_lint.py docs/UC/uc_reg.puml --format json
+    python ~/.grok/tools/selma/usecase-diagram/usecase_diagram_lint.py docs/UC --format text --strict
+    python ~/.grok/tools/selma/usecase-diagram/usecase_diagram_lint.py docs/UC/uc_reg.puml --format json
 
-Bound to rules/software-design/usecase-diagram/policy.md and invoked by software-design skill.
+Bound to rules/selma/usecase-diagram/policy.md and invoked by selma skill.
 """
 from __future__ import annotations
 

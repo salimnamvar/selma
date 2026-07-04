@@ -5,20 +5,22 @@ Dual-schema architecture for universal rule governance. Two independent contract
 ## Architecture
 
 ```
-┌─────────────────────────────┐         ┌─────────────────────────────┐
-│    policy_doctrine.yaml     │         │     rule_schema.json        │
-│  (The Societal Lens)        │         │  (The Mechanical Lens)      │
-│                             │         │                             │
-│  - Writing Principles       │         │  - Data Structure           │
-│  - Document Sections        │         │  - Lifecycle States         │
-│  - Governance & Amendment   │◄───────►│  - Dependencies             │
-│  - Sanctions & Remedies     │  Label  │  - Evaluator Routing        │
-│  - Directive Tables         │  Only   │  - Parameters & Conditions  │
-│                             │         │                             │
-│  FORBIDDEN: parameters,     │         │  FORBIDDEN: preamble,       │
-│  conditions, evaluator_hint,│         │  governance, definitions,   │
-│  weight, depends_on, etc.   │         │  principles, sanctions, etc.│
-└─────────────────────────────┘         └─────────────────────────────┘
++-------------------------------+         +-------------------------------+
+|    policy_doctrine.yaml       |         |     rule_schema.json          |
+|  (The Societal Lens)          |         |  (The Mechanical Lens)        |
+|                               |         |                               |
+|  - Writing Principles         |         |  - Data Structure             |
+|  - Document Sections          |         |  - Lifecycle States           |
+|  - Governance & Amendment     |<------->|  - Dependencies               |
+|  - Sanctions & Remedies       |  Label  |  - Evaluator Routing          |
+|  - Directive Tables           |  Only   |  - Parameters & Conditions    |
+|  - Priority Hierarchy         |         |  - Complexity Limits          |
+|  - Versioning Strategy        |         |  - Priority Reference         |
+|                               |         |                               |
+|  FORBIDDEN: parameters,       |         |  FORBIDDEN: preamble,         |
+|  conditions, evaluator_hint,  |         |  governance, definitions,     |
+|  weight, depends_on, etc.     |         |  principles, sanctions, etc.  |
++-------------------------------+         +-------------------------------+
 ```
 
 ## The Separation Principle
@@ -60,9 +62,33 @@ Both contracts reference each other's version:
 
 Update both when either contract changes.
 
-## Usage
+## Priority Hierarchy
 
-1. **Edit Policy YAML** → Define prose, governance, sanctions for your domain
-2. **Edit Rule JSON** → Define data structure, lifecycle, evaluator routing
-3. **Cross-reference** → Policy tables use `Machine ID` column; Rule items use `anchor_ref`
-4. **Validate** → Ensure no contamination (policy has no machine fields, rule has no human fields)
+Rules exist at different authority levels. When two rules conflict, the higher-priority rule wins:
+
+1. **Constitutional** - Core principles that cannot be overridden
+2. **Statutory** - Rules enacted by authorized governing bodies
+3. **Regulatory** - Rules created by agencies to implement statutory requirements
+4. **Operational** - Day-to-day procedures implementing higher-level rules
+5. **Advisory** - Recommendations that are not mandatory
+
+## Versioning Strategy
+
+Both contracts follow semantic versioning (MAJOR.MINOR.PATCH):
+- **MAJOR** - Breaking changes requiring migration
+- **MINOR** - New backward-compatible features
+- **PATCH** - Bug fixes and clarifications
+
+## Validation
+
+Use the **rule-manager** service to validate examples against these contracts:
+
+```bash
+cd services/rule-manager
+python validate.py <example_dir>
+python validate.py <policy.md> <rules.yaml>
+```
+
+## Specification
+
+See [SPECIFICATION.md](SPECIFICATION.md) for the full universal rule governance specification.

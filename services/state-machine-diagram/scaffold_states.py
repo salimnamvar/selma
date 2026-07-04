@@ -5,8 +5,8 @@ Reads a states.yaml definition and generates a type-safe State Machine class
 (Python enum + transition matrix) that throws exceptions on invalid moves.
 
 Usage:
-    python ~/.claude/tools/software-design/sm/scaffold_states.py states.yaml output_dir
-    python ~/.claude/tools/software-design/sm/scaffold_states.py states.yaml --stdout
+    python ~/.claude/tools/selma/sm/scaffold_states.py states.yaml output_dir
+    python ~/.claude/tools/selma/sm/scaffold_states.py states.yaml --stdout
 """
 from __future__ import annotations
 

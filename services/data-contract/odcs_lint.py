@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ODCS / CT-DATA Linter CLI.
 
-Canonical: ~/.grok/tools/software-design/ct_data/odcs_lint.py
+Canonical: ~/.grok/tools/selma/ct_data/odcs_lint.py
 """
 from __future__ import annotations
 

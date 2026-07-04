@@ -5,10 +5,10 @@ Validates sequence diagrams against the unified rod-csr-sq rule.
 Checks CSR layer compliance, RoD method/resource patterns, and SQ structure.
 
 Usage:
-    python ~/.claude/tools/software-design/rod_csr_sq/rod_csr_sq_lint.py docs/SQ --format text --strict
-    python ~/.claude/tools/software-design/rod_csr_sq/rod_csr_sq_lint.py docs/SQ/some.puml --format json
+    python ~/.claude/tools/selma/rod_csr_sq/rod_csr_sq_lint.py docs/SQ --format text --strict
+    python ~/.claude/tools/selma/rod_csr_sq/rod_csr_sq_lint.py docs/SQ/some.puml --format json
 
-Bound to rules/software-design/rod-csr-sq.md and invoked by software-design skill.
+Bound to rules/selma/rod-csr-sq.md and invoked by selma skill.
 """
 from __future__ import annotations
 

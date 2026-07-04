@@ -3,9 +3,9 @@ requires = ["setuptools>=82.0.1", "wheel>=0.47.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "software-design"
+name = "selma"
 version = "0.1.0"
-description = "Independent, deployable services for software design knowledge domains"
+description = "A universal governance steward that maintains a perfect, bidirectional bond between human-readable policies and machine-executable rules"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
@@ -13,7 +13,10 @@ authors = [
   { name = "Salim Namvar", email = "salim.namvar@gmail.com" }
 ]
 keywords = [
-  "software-design",
+  "selma",
+  "governance",
+  "policies",
+  "rules",
   "plantuml",
   "c4",
   "use-case-diagram",
@@ -37,9 +40,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/salimnamvar/software-design"
-Repository = "https://github.com/salimnamvar/software-design"
-Issues = "https://github.com/salimnamvar/software-design/issues"
+Homepage = "https://github.com/salimnamvar/selma"
+Repository = "https://github.com/salimnamvar/selma"
+Issues = "https://github.com/salimnamvar/selma/issues"
 
 [tool.black]
 line-length = 120
@@ -61,6 +64,7 @@ line_length = 120
 testpaths = [
     "tests",
     "services/usecase-diagram/tests",
+    "services/rule-manager/tests",
 ]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -77,11 +81,12 @@ pythonpath = [
     "services/sequence-diagram/src",
     "services/state-machine-diagram/src",
     "services/usecase-diagram/src",
+    "services/rule-manager/src",
 ]
 
 [tool.setuptools.packages.find]
 where = ["libs", "services"]
-include = ["design_common*", "c4*", "cl*", "erd*", "sq*", "usecase_diagram*", "data_contract*", "openapi_specification*", "resource_oriented_design*", "state_machine_diagram*"]
+include = ["design_common*", "c4*", "cl*", "erd*", "sq*", "usecase_diagram*", "data_contract*", "openapi_specification*", "resource_oriented_design*", "state_machine_diagram*", "rule_manager*"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
@@ -98,4 +103,5 @@ extraPaths = [
     "services/sequence-diagram/src",
     "services/state-machine-diagram/src",
     "services/usecase-diagram/src",
+    "services/rule-manager/src",
 ]

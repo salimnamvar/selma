@@ -122,6 +122,40 @@
           "remediation": {
             "type": "string",
             "description": "What to do if violated."
+          },
+          "complexity": {
+            "type": "object",
+            "description": "Controls rule nesting and evaluation complexity limits.",
+            "properties": {
+              "max_depth": {
+                "type": "integer",
+                "description": "Maximum levels of nested conditions allowed.",
+                "minimum": 1,
+                "maximum": 10,
+                "default": 3
+              },
+              "max_conditions": {
+                "type": "integer",
+                "description": "Maximum number of conditions in the conditions object.",
+                "minimum": 1,
+                "maximum": 20,
+                "default": 5
+              },
+              "max_parameters": {
+                "type": "integer",
+                "description": "Maximum number of parameters allowed.",
+                "minimum": 1,
+                "maximum": 50,
+                "default": 10
+              }
+            },
+            "additionalProperties": false
+          },
+          "priority": {
+            "type": "string",
+            "description": "Authority level from policy hierarchy (constitutional, statutory, regulatory, operational, advisory).",
+            "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
+            "default": "operational"
           }
         },
         "additionalProperties": true

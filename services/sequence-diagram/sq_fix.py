@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """UC Auto-Fix CLI.
 
-Canonical: ~/.grok/tools/software-design/usecase-diagram/usecase_diagram_fix.py
+Canonical: ~/.grok/tools/selma/usecase-diagram/usecase_diagram_fix.py
 """
 from __future__ import annotations
 

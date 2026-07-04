@@ -1,7 +1,7 @@
 """ERD layer linter package.
 
-Canonical: tools/software-design/erd/
-Bound to rules/software-design/erd.md
+Canonical: tools/selma/erd/
+Bound to rules/selma/erd.md
 """
 from .parser import parse_erd_file
 from .validator import validate_erd

@@ -1,11 +1,11 @@
-# Software Design
+# Selma
 
-A collection of independent, deployable services — each a single-responsibility knowledge domain for software design.
+A universal governance steward that maintains a perfect, bidirectional bond between human-readable policies and machine-executable rules.
 
 ## Project Structure
 
 ```
-software-design/
+selma/
 ├── services/                       # Independent, deployable services
 │   ├── usecase-diagram/            # Use case diagram design knowledge
 │   ├── c4-diagram/                 # C4 diagram design knowledge

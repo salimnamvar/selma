@@ -1,7 +1,7 @@
 """SM layer linter package.
 
-Canonical: tools/software-design/sm/
-Bound to rules/software-design/sm.md
+Canonical: tools/selma/sm/
+Bound to rules/selma/sm.md
 """
 from .parser import parse_sm_file
 from .validator import validate_sm

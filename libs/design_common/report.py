@@ -1,6 +1,6 @@
 """Shared report + violation model for design linters (non-C4).
 
-All linters should produce compatible output shapes for the software-design skill.
+All linters should produce compatible output shapes for the selma skill.
 """
 from __future__ import annotations
 

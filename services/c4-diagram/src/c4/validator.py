@@ -1,7 +1,7 @@
 """C4 Validation Engine.
 
 Deterministic rules per the C4 linter spec.
-Bound to rules/software-design/c4.md .
+Bound to rules/selma/c4.md .
 """
 from __future__ import annotations
 

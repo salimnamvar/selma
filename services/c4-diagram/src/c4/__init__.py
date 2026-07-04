@@ -4,7 +4,7 @@ Parses PlantUML C4 diagrams, validates against deterministic rules,
 auto-fixes, and rewrites corrected PlantUML.
 
 This is the canonical implementation, bound to the C4 rules in
-rules/software-design/c4.md and orchestrated via skills/software-design.
+rules/selma/c4.md and orchestrated via skills/selma.
 """
 from .ir import C4Diagram, Node, Edge, Boundary, Violation
 from .parser import parse_file, parse_text

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CT/API (OpenAPI) Linter CLI.
 
-Canonical ~/.grok/tools/software-design/ct_api/oas_lint.py
+Canonical ~/.grok/tools/selma/ct_api/oas_lint.py
 """
 import argparse, json, sys
 from pathlib import Path

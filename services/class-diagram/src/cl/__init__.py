@@ -1,7 +1,7 @@
 """CL layer linter package.
 
-Canonical: tools/software-design/cl/
-Bound to rules/software-design/cl.md
+Canonical: tools/selma/cl/
+Bound to rules/selma/cl.md
 """
 from .parser import parse_cl_file
 from .validator import validate_cl

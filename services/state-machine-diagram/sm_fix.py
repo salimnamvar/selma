@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SM Auto-Fix CLI.
 
-Canonical: ~/.grok/tools/software-design/sm/sm_fix.py
+Canonical: ~/.grok/tools/selma/sm/sm_fix.py
 """
 from __future__ import annotations
 

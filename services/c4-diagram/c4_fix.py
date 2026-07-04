@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """C4 Auto-Fix CLI.
 
-Canonical location: ~/.grok/tools/software-design/c4/c4_fix.py  (and ~/.claude equivalent)
+Canonical location: ~/.grok/tools/selma/c4/c4_fix.py  (and ~/.claude equivalent)
 
 Applies deterministic fixes and writes corrected PlantUML.
 
 Usage:
-    python ~/.grok/tools/software-design/c4/c4_fix.py docs/LOG --in-place
-    python tools/software-design/c4/c4_fix.py docs/C4/c4_mdl_context.puml --stdout --diff
+    python ~/.grok/tools/selma/c4/c4_fix.py docs/LOG --in-place
+    python tools/selma/c4/c4_fix.py docs/C4/c4_mdl_context.puml --stdout --diff
 
-Always run after edits to C4 diagrams. Integrated with software-design skill
+Always run after edits to C4 diagrams. Integrated with selma skill
 for the C4 layer (review + cicd gates).
 """
 from __future__ import annotations

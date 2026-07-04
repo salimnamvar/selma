@@ -4,11 +4,11 @@
 
 doctrine:
   name: universal-policy-doctrine
-  version: "1.2.0"
+  version: "1.3.0"
   description: >
     Defines how to structure and write a rule document.
     Includes self-governance, hierarchy, and sanctions.
-  rule_contract_version: "1.2.0"
+  rule_contract_version: "1.3.0"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
@@ -53,6 +53,85 @@ writing_principles:
   - id: WP-005
     title: "Hierarchy of Authority"
     description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
+
+# ─── PRIORITY HIERARCHY ─────────────────────────────────────────
+# Defines the authority levels for rules. Higher levels override lower levels.
+# When rules conflict, the higher-priority rule takes precedence.
+priority_hierarchy:
+  description: >
+    Rules exist at different authority levels. When two rules conflict,
+    the higher-priority rule wins. This hierarchy must be declared in
+    the policy document and referenced by each rule.
+  levels:
+    - id: constitutional
+      level: 1
+      title: "Constitutional / Foundational"
+      description: "Core principles that cannot be overridden by any lower-level rule."
+      examples: ["Human safety over efficiency", "No rule may violate fundamental rights"]
+    - id: statutory
+      level: 2
+      title: "Statutory / Legislative"
+      description: "Rules enacted by authorized governing bodies with full authority."
+      examples: ["Traffic laws", "Tax regulations", "Employment standards"]
+    - id: regulatory
+      level: 3
+      title: "Regulatory / Administrative"
+      description: "Rules created by agencies to implement statutory requirements."
+      examples: ["Building codes", "Environmental standards", "Industry guidelines"]
+    - id: operational
+      level: 4
+      title: "Operational / Procedural"
+      description: "Day-to-day procedures that implement higher-level rules."
+      examples: ["Code review checklists", "Deployment procedures", "Incident response"]
+    - id: advisory
+      level: 5
+      title: "Advisory / Best Practice"
+      description: "Recommendations that are not mandatory but encouraged."
+      examples: ["Style guides", "Performance tips", "Architecture patterns"]
+
+  conflict_resolution: >
+    When two rules conflict:
+    1. Higher priority level wins (constitutional > statutory > regulatory > operational > advisory)
+    2. If same level: more specific rule wins over general rule
+    3. If same specificity: newer rule wins over older rule
+    4. If same age: rule with explicit conflict resolution wins
+
+# ─── VERSIONING STRATEGY ────────────────────────────────────────
+# Defines how versions are assigned and incremented for both contracts.
+versioning_strategy:
+  description: >
+    Both policy doctrine and rule schema follow semantic versioning (MAJOR.MINOR.PATCH).
+    This strategy defines when each component is incremented.
+  format: "MAJOR.MINOR.PATCH"
+  rules:
+    major:
+      description: "Breaking changes that require migration"
+      examples:
+        - "Removing or renaming a required section"
+        - "Changing the structure of directive tables"
+        - "Modifying the contamination guard incompatibly"
+      when: "Existing documents will not validate without changes"
+    minor:
+      description: "New features that are backward-compatible"
+      examples:
+        - "Adding a new optional section"
+        - "Adding new fields to rules (optional)"
+        - "Adding new writing principles"
+      when: "Existing documents continue to validate"
+    patch:
+      description: "Bug fixes and clarifications"
+      examples:
+        - "Fixing typos in guidance text"
+        - "Clarifying ambiguous descriptions"
+        - "Updating examples"
+      when: "No functional change to validation"
+  synchronization: >
+    Both contracts must maintain synchronized versions:
+    - policy_doctrine.yaml doctrine.version
+    - rule_schema.json policy_contract_version
+    - policy_doctrine.yaml doctrine.rule_contract_version
+    - rule_schema.json $id (schema identifier)
+    When either contract changes, both must be updated to reflect the new version.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:

@@ -4,10 +4,10 @@
 Auto-fixes common violations in sequence diagrams per rod-csr-sq.md.
 
 Usage:
-    python ~/.claude/tools/software-design/rod_csr_sq/rod_csr_sq_fix.py docs/SQ --dry-run
-    python ~/.claude/tools/software-design/rod_csr_sq/rod_csr_sq_fix.py docs/SQ/some.puml
+    python ~/.claude/tools/selma/rod_csr_sq/rod_csr_sq_fix.py docs/SQ --dry-run
+    python ~/.claude/tools/selma/rod_csr_sq/rod_csr_sq_fix.py docs/SQ/some.puml
 
-Bound to rules/software-design/rod-csr-sq.md and invoked by software-design skill.
+Bound to rules/selma/rod-csr-sq.md and invoked by selma skill.
 """
 from __future__ import annotations
 

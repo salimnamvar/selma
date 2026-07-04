@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "design-common"
 version = "0.1.0"
-description = "Shared utilities for software-design subprojects (PlantUML parsing, report models)"
+description = "Shared utilities for selma subprojects (PlantUML parsing, report models)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

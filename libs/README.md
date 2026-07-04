@@ -1,6 +1,6 @@
 # design-common
 
-Shared libraries for software-design subprojects.
+Shared libraries for selma subprojects.
 
 ## Modules
 

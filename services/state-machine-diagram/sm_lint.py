@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """SM Linter CLI.
 
-Canonical location: ~/.grok/tools/software-design/sm/sm_lint.py  (and ~/.claude)
+Canonical location: ~/.grok/tools/selma/sm/sm_lint.py  (and ~/.claude)
 
 Usage:
-    python ~/.grok/tools/software-design/sm/sm_lint.py docs/SM --strict
+    python ~/.grok/tools/selma/sm/sm_lint.py docs/SM --strict
 
-Bound to rules/software-design/sm.md .
+Bound to rules/selma/sm.md .
 """
 from __future__ import annotations
 

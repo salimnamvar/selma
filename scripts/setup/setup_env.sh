@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup_env.sh — A-to-Z project environment provisioning for software-design (pure shell).
+# setup_env.sh — A-to-Z project environment provisioning for selma (pure shell).
 #
 # Reads pyproject.toml automatically.
 #
@@ -34,7 +34,7 @@ source "${LIB_DIR}/verify.sh"
 source "${LIB_DIR}/cicd.sh"
 
 main() {
-  log_step "Environment setup — software-design"
+  log_step "Environment setup — selma"
   log_info "Project root: ${PROJECT_ROOT}"
 
   load_local_overrides

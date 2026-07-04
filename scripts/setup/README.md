@@ -1,6 +1,6 @@
 # Setup
 
-Environment provisioning for software-design.
+Environment provisioning for selma.
 
 ## Quick start
 
@@ -13,7 +13,7 @@ Reads `pyproject.toml` automatically.
 ## What it does
 
 1. Ensures Miniconda is available (installs if missing and allowed).
-2. Creates/updates the conda environment (name derived from project name → `software-design`).
+2. Creates/updates the conda environment (name derived from project name → `selma`).
 3. `pip install -e ".[dev]"`.
 4. Generates `.vscode/` settings for the correct interpreter + terminal profile.
 5. Verifies the environment.

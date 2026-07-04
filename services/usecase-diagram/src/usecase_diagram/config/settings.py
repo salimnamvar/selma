@@ -24,7 +24,7 @@ class UseCaseDiagramConfig(BaseSettings):
     model_config = {"env_prefix": "UD_", "env_file": ".env", "env_file_encoding": "utf-8"}
 
     rules_dir: Path = Field(
-        default=Path.home() / ".agent-global" / "shared" / "rules" / "software-design" / "usecase-diagram",
+        default=Path.home() / ".agent-global" / "shared" / "rules" / "selma" / "usecase-diagram",
         description="Directory containing rule files.",
     )
     templates_dir: Path = Field(
