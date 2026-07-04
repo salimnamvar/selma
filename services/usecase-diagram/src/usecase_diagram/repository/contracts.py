@@ -19,18 +19,18 @@ class ContractRepository:
     """Loads and caches contract YAML files into a ContractBundle.
 
     Attributes:
-        _dir (Path): Directory containing contract YAML files.
+        _dir (Path): Directory containing rule files.
         _bundle (Optional[ContractBundle]): Cached loaded bundle.
     """
 
-    def __init__(self, a_contracts_dir: Optional[Path] = None) -> None:
-        """Initialize with optional contracts directory override.
+    def __init__(self, a_rules_dir: Optional[Path] = None) -> None:
+        """Initialize with optional rules directory override.
 
         Args:
-            a_contracts_dir (Optional[Path]): Contracts directory or None for default.
+            a_rules_dir (Optional[Path]): Rules directory or None for default.
         """
         config = get_config()
-        self._dir: Path = a_contracts_dir or config.resolved_contracts_dir
+        self._dir: Path = a_rules_dir or config.rules_dir
         self._bundle: Optional[ContractBundle] = None
 
     def load(self) -> ContractBundle:
@@ -42,25 +42,21 @@ class ContractRepository:
         if self._bundle is not None:
             return self._bundle
 
-        package: Dict[str, Any] = self._load_yaml("package.yaml")
-        rules_data: Dict[str, Any] = self._load_yaml("rules.yaml")
-        principles_data: Dict[str, Any] = self._load_yaml("principles.yaml")
-        verbs_data: Dict[str, Any] = self._load_yaml("verbs.yaml")
-        patterns_data: Dict[str, Any] = self._load_yaml("patterns.yaml")
-        fg_data: Dict[str, Any] = self._load_yaml("filename_groups.yaml")
+        config = get_config()
+        data: Dict[str, Any] = self._load_yaml(config.resolved_rules_file)
 
-        rules: List[RuleDef] = self._parse_rules(rules_data)
-        assessments: List[AssessmentDef] = self._parse_assessments(principles_data)
+        rules: List[RuleDef] = self._parse_rules(data)
+        assessments: List[AssessmentDef] = self._parse_assessments(data)
 
         self._bundle = ContractBundle(
-            version=package.get("version", "0.0.0"),
-            package=package,
+            version=data.get("version", "0.0.0"),
+            package=data,
             rules=rules,
             assessments=assessments,
-            verbs=verbs_data,
-            patterns=patterns_data,
-            filename_groups=fg_data,
-            contracts_dir=self._dir,
+            verbs=data.get("verbs", {}),
+            patterns=data.get("patterns", {}),
+            filename_groups=data.get("filename_groups", {}),
+            rules_dir=self._dir,
         )
         return self._bundle
 
@@ -74,19 +70,19 @@ class ContractRepository:
         result: ContractBundle = self.load()
         return result
 
-    def _load_yaml(self, a_filename: str) -> Dict[str, Any]:
-        """Load a YAML file from the contracts directory.
+    @staticmethod
+    def _load_yaml(a_path: Path) -> Dict[str, Any]:
+        """Load a YAML file from the given path.
 
         Args:
-            a_filename (str): Name of the YAML file to load.
+            a_path (Path): Path to the YAML file.
 
         Returns:
             Dict[str, Any]: Parsed YAML data as dict, or empty dict.
         """
-        path: Path = self._dir / a_filename
         result: Dict[str, Any] = {}
-        if path.exists():
-            with open(path, encoding="utf-8") as f:
+        if a_path.exists():
+            with open(a_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             if isinstance(data, dict):
                 result = data
@@ -126,7 +122,7 @@ class ContractRepository:
         """Parse assessment definitions from YAML data.
 
         Args:
-            a_data (Dict[str, Any]): Raw YAML principles data.
+            a_data (Dict[str, Any]): Raw YAML data.
 
         Returns:
             List[AssessmentDef]: Parsed assessment definitions.

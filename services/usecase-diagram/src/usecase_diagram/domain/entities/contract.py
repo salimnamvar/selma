@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Pattern, Set
 
 @dataclass(frozen=True)
 class RuleDef:
-    """A single validation rule loaded from contracts/rules.yaml.
+    """A single validation rule loaded from rule.yaml.
 
     Attributes:
         id (str): Unique rule identifier.
@@ -47,7 +47,7 @@ class RuleDef:
 
 @dataclass(frozen=True)
 class AssessmentDef:
-    """A project-level assessment contract loaded from contracts/principles.yaml.
+    """A project-level assessment contract loaded from rule.yaml.
 
     Attributes:
         id (str): Unique assessment identifier.
@@ -84,7 +84,7 @@ class ContractBundle:
         verbs (Dict[str, Any]): Verb registry data.
         patterns (Dict[str, Any]): Regex pattern definitions.
         filename_groups (Dict[str, Any]): Filename group mappings.
-        contracts_dir (Path): Directory containing contract files.
+        rules_dir (Path): Directory containing rule files.
     """
 
     version: str = field(metadata={"description": "Contract version string"})
@@ -96,7 +96,7 @@ class ContractBundle:
     verbs: Dict[str, Any] = field(metadata={"description": "Verb registry data"})
     patterns: Dict[str, Any] = field(metadata={"description": "Regex pattern definitions"})
     filename_groups: Dict[str, Any] = field(metadata={"description": "Filename group mappings"})
-    contracts_dir: Path = field(metadata={"description": "Directory containing contract files"})
+    rules_dir: Path = field(metadata={"description": "Directory containing rule files"})
 
     def rules_by_scope(self, a_scope: str) -> List[RuleDef]:
         """Return rules matching the given scope.

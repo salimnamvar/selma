@@ -9,37 +9,35 @@ from typing import Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
-_AGENT_GLOBAL = Path.home() / ".agent-global" / "shared"
-
 
 class UseCaseDiagramConfig(BaseSettings):
     """Application configuration — reads from environment and .env files.
 
     Attributes:
-        rules_dir (Path): Directory containing rule contracts.
+        rules_dir (Path): Directory containing rule files.
         templates_dir (Path): Directory containing document templates.
         shared_dir (Path): Root of the shared knowledge directory.
-        contracts_dir (Optional[Path]): Override for contracts subdirectory.
+        rules_file (Optional[Path]): Override for rules YAML file.
         log_level (str): Logging level.
     """
 
     model_config = {"env_prefix": "UD_", "env_file": ".env", "env_file_encoding": "utf-8"}
 
     rules_dir: Path = Field(
-        default=_AGENT_GLOBAL / "rules" / "software-design" / "usecase-diagram",
-        description="Directory containing rule contracts (YAML).",
+        default=Path.home() / ".agent-global" / "shared" / "rules" / "software-design" / "usecase-diagram",
+        description="Directory containing rule files.",
     )
     templates_dir: Path = Field(
-        default=_AGENT_GLOBAL / "templates",
+        default=Path.home() / ".agent-global" / "shared" / "templates",
         description="Directory containing document templates.",
     )
     shared_dir: Path = Field(
-        default=_AGENT_GLOBAL,
+        default=Path.home() / ".agent-global" / "shared",
         description="Root of the shared knowledge directory.",
     )
-    contracts_dir: Optional[Path] = Field(
+    rules_file: Optional[Path] = Field(
         default=None,
-        description="Override for contracts subdirectory (defaults to rules_dir/contracts).",
+        description="Override for rules YAML file (defaults to rules_dir/rule.yaml).",
     )
     log_level: str = Field(default="INFO", description="Logging level.")
 
@@ -57,10 +55,10 @@ class UseCaseDiagramConfig(BaseSettings):
         result: Path = Path(a_value).expanduser().resolve()
         return result
 
-    @field_validator("contracts_dir", mode="before")
+    @field_validator("rules_file", mode="before")
     @classmethod
-    def _resolve_contracts(cls, a_value: Union[str, Path, None]) -> Optional[Path]:
-        """Resolve contracts directory path if provided.
+    def _resolve_rules_file(cls, a_value: Union[str, Path, None]) -> Optional[Path]:
+        """Resolve rules file path if provided.
 
         Args:
             a_value (Union[str, Path, None]): Path or None.
@@ -74,17 +72,17 @@ class UseCaseDiagramConfig(BaseSettings):
         return result
 
     @property
-    def resolved_contracts_dir(self) -> Path:
-        """Return the contracts directory, falling back to rules_dir/contracts.
+    def resolved_rules_file(self) -> Path:
+        """Return the rules file, falling back to rules_dir/rule.yaml.
 
         Returns:
-            Path: Resolved contracts directory path.
+            Path: Resolved rules file path.
         """
         result: Path
-        if self.contracts_dir is not None:
-            result = self.contracts_dir
+        if self.rules_file is not None:
+            result = self.rules_file
         else:
-            result = self.rules_dir / "contracts"
+            result = self.rules_dir / "rule.yaml"
         return result
 
 
