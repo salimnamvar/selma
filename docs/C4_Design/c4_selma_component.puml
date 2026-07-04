@@ -1,11 +1,11 @@
 ' ============================================================
 ' Title:     Selma — Component Diagram (Core Engine)
 ' Boundary:  Core Engine container
-' Purpose:   Shows the eight core components, the validation
-'            pipeline, the Steward orchestration loop, and
-'            the five validation pillars
+' Purpose:   Shows the four-pillar components, the validation
+'            pipeline, the Steward orchestration loop, and the
+'            dual-contract bond
 ' Milestone: v0.1.0
-' Version:   2.0.0
+' Version:   4.0.0
 ' Source:    contracts/SPECIFICATION.md §3-6, README.md,
 '            contracts/policy_doctrine.yaml, contracts/rule_schema.json
 ' Review:    docs/C4_Design/README.md
@@ -17,7 +17,7 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Selma — Component Diagram (Core Engine)\nValidation Pipeline & Steward Orchestration
+title Selma — Component Diagram (Core Engine)\nFour-Pillar Pipeline & Steward Orchestration
 
 ' ─── EXTERNAL CONTAINERS ─────────────────────────────────────────
 Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml.")
@@ -28,81 +28,83 @@ Container_Ext(rule_contract, "Rule Schema", "JSON", "rule_schema.json — The Me
 ' ─── CORE ENGINE BOUNDARY ────────────────────────────────────────
 Container_Boundary("core_boundary", "Core Engine") {
 
-    ' ── Domain Management ──────────────────────────────────────
+    ' ── Pillar 1: Definition Engine (The Creator) ─────────────
+    Component(definition, "Definition Engine", "Module", "Turns human intent into structured rules.\n- Generates stable, collision-free Machine ID\n- Drafts prose for policy.md (WP-001 to WP-005)\n- Drafts YAML stub for rules.yaml\n- Assigns default priority (operational) and status (draft)\n- Output: raw Candidate Rule")
+    note right of definition : **Pillar 1 — The Creator**\nsrc/selma/core/definition.py
+
+    ' ── Pillar 2: Maintenance Engine (The Curator) ────────────
+    Component(maintenance, "Maintenance Engine", "Module", "Manages rule lifecycle (CRUD + Versioning).\n- Update: mutates prose and YAML simultaneously\n- Version Bump: auto-increments SemVer (MAJOR/MINOR/PATCH)\n- Deprecation: flips status to deprecated\n- Refactoring: moves rules between domains\n- Output: committed, version-bumped rule set")
+    note right of maintenance : **Pillar 2 — The Curator**\nsrc/selma/core/maintenance.py
+
+    ' ── Pillar 3: Mechanical Linting Engine (The Inspector) ───
+    Component(linter, "Mechanical Linting Engine", "Module", "Fast, deterministic syntax and structure checks.\n- YAML/JSON syntax validation\n- Contamination Guard (policy ↔ rules separation)\n- Traceability (Machine ID ↔ rule id)\n- Schema compliance (rule_schema.json)\n- Complexity limits (max_depth, max_parameters)\n- Output: Pass/Fail with line numbers")
+    note right of linter : **Pillar 3 — The Inspector**\nsrc/selma/core/linter.py\nHard Fail on violations
+
+    ' ── Pillar 4: Reasoning Engine (The Arbiter) ──────────────
+    Component(reasoner, "Reasoning Engine", "Module", "Deep semantic conflict detection.\n- Conflict Detection (overlapping conditions)\n- Priority Enforcement (hierarchy validation)\n- Dependency Resolution (circular dependency check)\n- Redundancy Detection (duplicate rules)\n- Output: Reasoning Report (Risks, Contradictions)")
+    note right of reasoner : **Pillar 4 — The Arbiter**\nsrc/selma/core/reasoner.py\nSoft Warnings with suggestions
+
+    ' ── Steward Agent (Orchestrator) ──────────────────────────
+    Component(steward, "Steward Agent", "Module", "Autonomous AI orchestrator.\nRuns the four-pillar pipeline:\n1. Definition → 2. Maintenance →\n3. Mechanical Linting → 4. Reasoning\nSelf-corrects on lint failures.\nDelegates deep reasoning to LLM.")
+
+    ' ── Domain Registry ───────────────────────────────────────
     Component(domain_registry, "Domain Registry", "Module", "Manages registration of new domains.\nScaffolds folder structure with\npolicy.md and rules.yaml templates.")
 
-    ' ── CRUD Operations ────────────────────────────────────────
-    Component(crud, "CRUD Operations", "Module", "Creates, reads, updates, and deletes\nrules while maintaining traceability.\nAuto-bumps versions on changes.")
-
-    ' ── Version Manager ────────────────────────────────────────
+    ' ── Version Manager ───────────────────────────────────────
     Component(versioner, "Version Manager", "Module", "Auto-bumps versions (SemVer MAJOR.MINOR.PATCH)\nfor domains. Synchronizes contract versions.\nIncrements based on change severity.")
 
-    ' ── Validation Pipeline (Five Pillars) ─────────────────────
-    Component(validator, "Validator Orchestrator", "Module", "Coordinates the five validation pillars:\n1. Policy Structure\n2. Rule Schema\n3. Traceability Bond\n4. Contamination Guard\n5. Conflict Detection")
-
-    Component(policy_validator, "Policy Validator", "Module", "Validates policy.md structure:\n- Required sections present\n- Correct content types\n- No forbidden fields (contamination)")
-    note right of policy_validator : **Pillar 1**\nSPECIFICATION.md §6.1
-
-    Component(rule_validator, "Rule Validator", "Module", "Validates rules.yaml against rule_schema.json:\n- JSON Schema compliance\n- Required fields present\n- No forbidden root fields")
-    note right of rule_validator : **Pillar 2**\nSPECIFICATION.md §6.2
-
-    Component(trace_validator, "Traceability Validator", "Module", "Validates bidirectional bond:\n- Every Machine ID ↔ rule id\n- Every anchor_ref → valid section\n- Contract version synchronization")
-    note right of trace_validator : **Pillar 3**\nSPECIFICATION.md §6.3
-
-    Component(contamination_guard, "Contamination Guard", "Module", "Enforces separation principle:\n- Policy: no machine fields\n- Rules: no human prose fields\n- Cross-contract pollution detection")
-    note right of contamination_guard : **Pillar 4**\nSPECIFICATION.md §6.4
-
-    ' ── Conflict Reasoner ──────────────────────────────────────
-    Component(reasoner, "Conflict Reasoner", "Module", "Detects rule conflicts and suggests\nresolution based on priority hierarchy:\nconstitutional > statutory > regulatory\n> operational > advisory")
-    note right of reasoner : **Pillar 5**\nSPECIFICATION.md §4.4
-
-    ' ── Steward Agent (AI Orchestrator) ────────────────────────
-    Component(steward, "Steward Agent", "Module", "Autonomous AI rule writer.\nOrchestration loop:\n1. Read domain state\n2. Generate rules via LLM\n3. Persist to storage\n4. Validate (all 5 pillars)\n5. Self-correct if errors\n6. Bump version\n7. Output diff summary")
-
-    ' ── Export / Import ────────────────────────────────────────
+    ' ── Export / Import ───────────────────────────────────────
     Component(exporter, "Domain Exporter", "Module", "Packages entire domains for export.\nImport/export rule sets for backup\nor cross-domain transfer.")
 
-    ' ── Query Engine ───────────────────────────────────────────
+    ' ── Query Engine ──────────────────────────────────────────
     Component(query_engine, "Query Engine", "Module", "Retrieves rules by ID, domain,\nstatus, priority, or type.\nReturns filtered, sorted results.")
 }
 
+' ─── RELATIONSHIPS: Four-Pillar Pipeline ─────────────────────────
+Rel(definition, storage, "Writes raw Candidate\nRule to disk")
+Rel(maintenance, storage, "Reads/writes policy.md\nand rules.yaml")
+Rel(maintenance, versioner, "Triggers version bump\nafter every change")
+Rel(linter, policy_contract, "Validates policy structure\nand contamination guard")
+Rel(linter, rule_contract, "Validates schema compliance\nand traceability bond")
+Rel(linter, storage, "Reads files for\nsyntax validation")
+Rel(reasoner, rule_contract, "Reads conflicts_with,\ndepends_on, priority")
+Rel(reasoner, llm_adapter, "Delegates deep reasoning\nwhen needed")
+
+' ─── RELATIONSHIPS: Steward Orchestration ────────────────────────
+Rel(steward, definition, "Orchestrates\nPillar 1: Definition")
+Rel(steward, maintenance, "Orchestrates\nPillar 2: Maintenance")
+Rel(steward, linter, "Orchestrates\nPillar 3: Mechanical Linting")
+Rel(steward, reasoner, "Orchestrates\nPillar 4: Reasoning")
+Rel(steward, llm_adapter, "Calls LLM for\nrule generation and reasoning")
+
 ' ─── RELATIONSHIPS: Domain Management ────────────────────────────
 Rel(domain_registry, storage, "Creates domain folders\nand template files")
-Rel(domain_registry, crud, "Registers new domains\nfor CRUD operations")
-
-' ─── RELATIONSHIPS: CRUD & Versioning ────────────────────────────
-Rel(crud, storage, "Reads/Writes\npolicy.md and rules.yaml")
-Rel(crud, versioner, "Triggers version bump\non create/update/delete")
-Rel(versioner, crud, "Returns new version\nafter bump")
-Rel(crud, domain_registry, "Delegates domain creation\nfor new domains")
-
-' ─── RELATIONSHIPS: Validation Pipeline ──────────────────────────
-Rel(validator, policy_validator, "Orchestrates\npolicy validation")
-Rel(validator, rule_validator, "Orchestrates\nrule validation")
-Rel(validator, trace_validator, "Orchestrates\ntraceability validation")
-Rel(validator, contamination_guard, "Orchestrates\ncontamination check")
-Rel(validator, reasoner, "Orchestrates\nconflict detection")
-
-Rel(policy_validator, policy_contract, "Reads writing principles,\nvalidates against doctrine")
-Rel(rule_validator, rule_contract, "Reads JSON Schema,\nvalidates rules against it")
-Rel(trace_validator, policy_contract, "Extracts Machine IDs\nfrom directive tables")
-Rel(trace_validator, rule_contract, "Extracts rule ids\nand anchor_refs")
-Rel(contamination_guard, policy_contract, "Scans for forbidden\nmachine fields")
-Rel(contamination_guard, rule_contract, "Scans for forbidden\nhuman fields")
-Rel(reasoner, rule_contract, "Reads conflicts_with,\ndepends_on, priority")
-
-' ─── RELATIONSHIPS: Steward Agent ────────────────────────────────
-Rel(steward, crud, "Persists AI-generated\nrules to storage")
-Rel(steward, validator, "Validates generated\nrules iteratively")
-Rel(steward, llm_adapter, "Calls LLM for\nrule generation")
-Rel(steward, versioner, "Triggers version bump\nafter successful generation")
 
 ' ─── RELATIONSHIPS: Export & Query ────────────────────────────────
 Rel(exporter, storage, "Reads domain files\nfor packaging")
 Rel(query_engine, storage, "Reads rules\nfor filtering/sorting")
 Rel(query_engine, rule_contract, "Reads schema for\nfield definitions")
 
-' ─── RELATIONSHIPS: Validator to Storage ──────────────────────────
-Rel(validator, storage, "Reads policy.md\nand rules.yaml for validation")
+' ─── RELATIONSHIPS: Version Manager ──────────────────────────────
+Rel(versioner, storage, "Updates version\nin rules.yaml")
+
+' ─── NOTES ───────────────────────────────────────────────────────
+note bottom of core
+  **Pipeline Execution Order**
+  ┌─────────────────────────────────────┐
+  │ 1. Definition → Raw Candidate Rule │
+  │ 2. Maintenance → Version-Bumped    │
+  │ 3. Linting → Pass/Fail (Hard)      │
+  │ 4. Reasoning → Report (Soft)       │
+  └─────────────────────────────────────┘
+  Lint Fail → Returns to Steward for fix
+  Reasoning Warn → Suggests resolution
+end note
+
+note top of linter
+  **Mechanical Linting vs. Reasoning**
+  Linting: Fast, deterministic, Hard Fail
+  Reasoning: Deep, contextual, Soft Warning
+end note
 
 @enduml

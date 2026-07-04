@@ -2,9 +2,9 @@
 ' Title:     Selma — Container Diagram
 ' Boundary:  Selma Universal Rule Governance Engine
 ' Purpose:   Shows Selma's internal containers, the dual-contract
-'            files, and the validation pipeline
+'            files, and the four-pillar pipeline
 ' Milestone: v0.1.0
-' Version:   2.0.0
+' Version:   4.0.0
 ' Source:    contracts/SPECIFICATION.md §2, contracts/README.md,
 '            README.md §Architecture
 ' Review:    docs/C4_Design/README.md
@@ -16,7 +16,7 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Selma — Container Diagram\nInternal Containers & Dual-Contract Architecture
+title Selma — Container Diagram\nInternal Containers, Four Pillars & Dual-Contract Architecture
 
 ' ─── ACTORS ──────────────────────────────────────────────────────
 Person(admin, "Rule Administrator")
@@ -29,8 +29,8 @@ System_Boundary("selma_boundary", "Selma — Universal Rule Governance Engine") 
     ' ── API Layer ──────────────────────────────────────────────
     Container(api, "Web API", "Python / FastAPI", "REST endpoints for CRUD,\nvalidation, and queries.\n/health, /domains, /rules.")
 
-    ' ── Core Engine ────────────────────────────────────────────
-    Container(core, "Core Engine", "Python", "Validators, CRUD operations,\nSteward orchestrator, Reasoner,\nVersion Manager, Domain Registry.")
+    ' ── Core Engine (Four Pillars) ─────────────────────────────
+    Container(core, "Core Engine", "Python", "Four-pillar pipeline:\n1. Definition (Creator)\n2. Maintenance (Curator)\n3. Mechanical Linting (Inspector)\n4. Reasoning (Arbiter)\nOrchestrated by Steward Agent.")
 
     ' ── Contracts (The Dual-Contract Bond) ─────────────────────
     Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml.\nThe Societal Lens — defines how\nhumans write rules: prose structure,\ngovernance, sanctions, writing principles.")
@@ -53,7 +53,7 @@ Rel(steward, api, "Submit NL requests,\nfetch domain state", "HTTPS")
 Rel(developer, api, "Fetch rules,\nexport domains", "HTTPS")
 
 ' ─── API → CORE RELATIONSHIPS ────────────────────────────────────
-Rel(api, core, "Dispatches requests\nto domain services")
+Rel(api, core, "Dispatches requests\nto four-pillar pipeline")
 
 ' ─── CORE → CONTRACTS (The Bond) ─────────────────────────────────
 Rel(core, policy_contract, "Reads writing principles,\nvalidates policy structure,\nenforces contamination guard")
@@ -75,10 +75,30 @@ end note
 Rel(core, storage, "Reads/writes per-domain\npolicy.md and rules.yaml")
 
 ' ─── CORE → LLM ─────────────────────────────────────────────────
-Rel(core, llm_adapter, "Delegates AI rule generation\n(self-correcting loop)")
+Rel(core, llm_adapter, "Delegates AI rule generation\nand deep reasoning")
 Rel(llm_adapter, llm, "Calls LLM API", "HTTPS")
 
 ' ─── CORE → VERSION CONTROL ──────────────────────────────────────
 Rel(core, repo, "Commits changes\n(optional audit trail)", "Git")
+
+' ─── NOTES ───────────────────────────────────────────────────────
+note top of core
+  **Four-Pillar Pipeline**
+  ┌─────────────────────────────────────┐
+  │ 1. Definition Engine (Creator)     │
+  │    ID generation, prose drafting   │
+  │                                     │
+  │ 2. Maintenance Engine (Curator)    │
+  │    CRUD, SemVer bumping, deprecation│
+  │                                     │
+  │ 3. Mechanical Linting (Inspector)  │
+  │    Syntax, schema, contamination   │
+  │    Hard Fail on violations         │
+  │                                     │
+  │ 4. Reasoning Engine (Arbiter)      │
+  │    Conflicts, priority, redundancy │
+  │    Soft Warnings with suggestions  │
+  └─────────────────────────────────────┘
+end note
 
 @enduml
