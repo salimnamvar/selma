@@ -1,109 +1,146 @@
-# policy-doc.yaml
-# Document contract for policy documents.
-# Defines section structure, content types, and writing principles.
-# Supports both specific rules (executable checks) and flexible standards (principle-based guidelines).
+# editorial-rule-contract.yaml
+# Universal editorial doctrine for rule-making across any domain.
+# Defines the narrative, rationale, and interpretative context for rules.
+# Context-free: applies to laws, corporate policies, engineering standards, and social norms.
 # Agents use this to generate the policy document. Humans use it to review structure.
 
 contract:
-  name: policy-document
-  version: "3.0.0"
-  domain: "policy-engine"
-  maintainers: ["engineering-team"]
+  name: universal-editorial-doctrine
+  version: "4.0.0"
+  jurisdiction: []
+  maintainers: []
   description: >
-    Structure and writing principles for policy documents.
+    Universal editorial doctrine for rule-making documents.
+    Context-free: applies to international law, corporate policies,
+    engineering standards, scientific protocols, and AI governance frameworks.
     This is NOT a data schema — it defines how the document looks,
     what sections it contains, and how content should be written.
     Covers both rules (specific, executable) and standards (principle-based, flexible).
 
-# ─── WRITING PRINCIPLES ──────────────────────────────────────────
-# How to write the policy document. Agents follow these when generating.
+# ─── GLOBAL DRAFTING PRINCIPLES (Universally Applicable) ──────────
+# How to write the editorial document. Agents follow these when generating.
 
 writing_principles:
-  - id: WP-001
-    title: "Prose over tables"
-    description: >
-      Use prose for explanations and reasoning.
-      Use tables for structured lists (naming patterns, limits, references).
-      Never use a table where a sentence suffices.
-  - id: WP-002
+  - id: DP-001
+    title: "Principle over Precedent"
+    description: "State the underlying principle before listing specific obligations."
+  - id: DP-002
+    title: "Layered Definitions"
+    description: "Define atomic terms first. Only use defined terms in subsequent definitions."
+  - id: DP-003
     title: "Cross-reference, don't duplicate"
     description: >
-      The policy document explains WHY. The policy data file defines WHAT.
-      Link to the data file for specifics — don't repeat policy IDs or parameters in prose.
-  - id: WP-003
+      The editorial document explains WHY. The evaluative schema defines WHAT.
+      Link to the evaluative schema for specifics — don't repeat directive IDs or parameters in prose.
+  - id: DP-004
     title: "One section, one concern"
     description: >
       Each major section addresses a single concern.
       If a section grows beyond 3 subsections, split it.
-  - id: WP-004
+  - id: DP-005
     title: "Actionable language"
     description: >
       Write imperatively: "Use kebab-case" not "Kebab-case is preferred".
-      Every statement should be checkable — can a machine verify it?
-  - id: WP-005
-    title: "No orphan policies"
+      Every statement should be checkable — can an evaluator verify it?
+  - id: DP-006
+    title: "No orphan directives"
     description: >
-      Every policy in the data file must appear in the policy document.
-      Every principle in the policy document must have at least one policy in the data file.
-      Enforced via CI: policy_ref values must match section IDs, and section IDs must be referenced.
-  - id: WP-006
+      Every directive in the evaluative schema must appear in the editorial document.
+      Every substantive paragraph in the editorial must have at least one directive referencing it.
+      This bidirectional traceability bond is verified by a universal resolver, not file paths.
+  - id: DP-007
     title: "Distinguish rules from standards"
     description: >
       Rules are specific: "Use kebab-case for filenames." Standards are principle-based:
       "Choose naming conventions that aid discoverability."
-      Mark each explicitly. Rules require check_type; standards require principle.
-  - id: WP-007
+      Mark each explicitly. Rules require an evaluator; standards require interpretation guidance.
+  - id: DP-008
     title: "State essential attributes"
     description: >
       Every definition must state the essential attributes of the concept being defined.
       Include what it IS and what it is NOT.
-  - id: WP-008
+  - id: DP-009
     title: "Avoid circularity"
     description: >
       Definitions must not be circular. Don't define a rule as "that which follows rules."
       Each term should be defined in terms of more fundamental concepts.
-  - id: WP-009
+  - id: DP-010
     title: "Neither too broad nor too narrow"
     description: >
       Definitions must cover all instances of the concept and exclude everything else.
       A rule for "filenames" should not accidentally cover "variable names."
-  - id: WP-010
+  - id: DP-011
     title: "No artificial meaning"
     description: >
-      Don't give words unnatural or counter-intuitive meanings within the policy.
-      If a term has a standard industry meaning, use that meaning.
-  - id: WP-011
-    title: "Embed machine IDs in tables"
+      Don't give words unnatural or counter-intuitive meanings within the doctrine.
+      If a term has a standard meaning in its domain, use that meaning.
+  - id: DP-012
+    title: "Embed directive IDs in tables"
     description: >
-      Any table describing a specific rule must include the Machine ID column (e.g., `CRT-001`).
-      This enables readers to trace from prose to executable check.
-      The Machine ID column is mandatory for rules_list and standards_list tables.
-  - id: WP-012
+      Any table describing a specific rule must include the Directive ID column (e.g., `CRT-001`).
+      This enables readers to trace from prose to evaluative check.
+      The Directive ID column is mandatory for rules_list and standards_list tables.
+  - id: DP-013
     title: "Section depth limits"
     description: >
       Maximum section nesting depth is 3 levels (## major, ### minor, #### patch).
       If a section needs deeper nesting, split it into separate sections.
 
-# ─── SECTION STRUCTURE ────────────────────────────────────────────
+# ─── RULE CLASSIFICATION TAXONOMY ──────────────────────────────────
+# Universal classification system so every section is understood globally.
+# Every section in the editorial must map to one of these classifications.
+
+rule_classification_taxonomy:
+  - id: preamble
+    title: "Preamble"
+    description: "Intent and existential need — what problem does this solve?"
+  - id: definitions
+    title: "Definitions"
+    description: "Authoritative thesaurus — the atomic vocabulary of the doctrine."
+  - id: rights_obligations
+    title: "Rights & Obligations"
+    description: "What actors must do or refrain from doing."
+  - id: standards_of_proof
+    title: "Standards of Proof"
+    description: "How to judge adherence — the rubric of evaluation."
+  - id: sanctions_remedies
+    title: "Sanctions & Remedies"
+    description: "Consequences of deviation — corrective and punitive measures."
+
+# ─── UNIVERSAL SECTION LAYOUT ──────────────────────────────────────
 # Major (##), minor (###), patch (table rows / list items).
 # max_depth enforced: 3 levels maximum.
 
 sections:
-  - id: overview
-    title: "Overview"
+  - id: preamble
+    title: "Preamble & Context"
+    classification: preamble
     required: true
-    max_depth: 2
+    content_type: normative_statement
     minors:
-      - id: scope
-        title: "Scope"
+      - id: existential_need
+        title: "Existential Need"
         required: true
+        content_type: normative_statement
+        guidance: "State the existential need. What problem does this solve for humanity/the system?"
+      - id: jurisdiction
+        title: "Jurisdiction"
+        required: false
         content_type: prose
-        guidance: "Define boundaries — what is included and excluded."
+        guidance: "Define boundaries — who is subject to this doctrine, and under what conditions."
       - id: audience
         title: "Audience"
         required: false
         content_type: prose
-        guidance: "Who consumes these policies — humans and machines."
+        guidance: "Who consumes these policies — humans, machines, or hybrid evaluators."
+
+  - id: definitions
+    title: "Authoritative Thesaurus"
+    classification: definitions
+    required: true
+    content_type: table
+    columns: ["Atomic Term", "Essential Attributes (IS)", "Exclusions (IS NOT)"]
+    minors:
       - id: terminology
         title: "Terminology"
         required: false
@@ -114,9 +151,11 @@ sections:
           policies when the domain uses both. Only include if the domain has jargon that needs defining.
 
   - id: principles
-    title: "Principles"
+    title: "Foundational Principles"
+    classification: rights_obligations
     required: true
-    max_depth: 2
+    content_type: table
+    columns: ["Principle", "Description"]
     minors:
       - id: principles_table
         title: null
@@ -126,14 +165,15 @@ sections:
         guidance: "Each row is a foundational principle that specific rules and standards derive from."
 
   - id: standards
-    title: "Standards"
+    title: "Standards of Judgment"
+    classification: standards_of_proof
     required: true
-    max_depth: 2
+    content_type: mixed
     minors:
       - id: standards_overview
         title: null
         required: false
-        content_type: prose
+        content_type: normative_statement
         guidance: >
           Brief overview of what standards are in this domain and how they differ from rules.
           Standards are principle-based guidelines that allow interpretation — they define
@@ -142,17 +182,41 @@ sections:
         title: null
         required: true
         content_type: table
-        columns: ["Standard", "Machine ID", "Principle", "Interpretation Guidance"]
-        machine_id_column: "Machine ID"
+        columns: ["Standard", "Directive ID", "Principle", "Interpretation Guidance"]
+        machine_id_column: "Directive ID"
         guidance: >
-          Each row is a flexible guideline. The Machine ID column must contain the policy ID
-          from the data file (e.g., `STD-001`). The Interpretation Guidance column should list
+          Each row is a flexible guideline. The Directive ID column must contain the directive ID
+          from the evaluative schema (e.g., `STD-001`). The Interpretation Guidance column should list
           factors to consider and examples of correct application.
+
+  - id: substantive_rules
+    title: "Substantive Obligations & Prohibitions"
+    classification: rights_obligations
+    required: true
+    content_type: mixed
+    minors:
+      - id: rules_overview
+        title: null
+        required: false
+        content_type: normative_statement
+        guidance: >
+          Brief overview of what rules are in this domain and how they differ from standards.
+          Rules are specific, evaluatable obligations with clear triggers and consequences.
+      - id: rules_list
+        title: null
+        required: true
+        content_type: table
+        columns: ["Rule", "Directive ID", "Standard", "Evaluator Type", "Enforcement Weight"]
+        machine_id_column: "Directive ID"
+        guidance: >
+          Each row is a specific, machine-evaluable rule. The Directive ID column must contain
+          the directive ID from the evaluative schema (e.g., `CRT-001`). Link to the governing standard
+          via the Standard column. Evaluator Type indicates who or what evaluates compliance.
 
   - id: conventions
     title: "Conventions"
+    classification: definitions
     required: true
-    max_depth: 2
     minors:
       - id: naming
         title: "Naming"
@@ -164,80 +228,45 @@ sections:
         required: false
         content_type: mixed
         guidance: "How artifacts are organized."
-      - id: glossary
-        title: "Glossary"
-        required: false
-        content_type: table
-        columns: ["Term", "Meaning", "Context"]
-        guidance: "Only if the domain has domain-specific jargon that needs defining."
 
-  - id: constraints
-    title: "Constraints"
-    required: true
-    max_depth: 2
+  - id: compliance_mechanics
+    title: "Compliance & Evaluator Mechanics"
+    classification: standards_of_proof
+    required: false
+    content_type: mixed
     minors:
-      - id: size_limits
-        title: "Size Limits"
-        required: false
-        content_type: table
-        columns: ["Limit", "Value", "Applies to"]
-      - id: prohibitions
-        title: "Prohibitions"
-        required: false
-        content_type: table
-        columns: ["Item", "Reason"]
-      - id: requirements
-        title: "Requirements"
-        required: true
-        content_type: table
-        columns: ["Requirement", "Mandatory", "Reason"]
-        guidance: >
-          Explicitly state whether each requirement is a rule (specific, machine-checkable)
-          or a standard (principle-based, requires judgment).
-
-  - id: rules
-    title: "Rules"
-    required: true
-    max_depth: 2
-    minors:
-      - id: rules_overview
-        title: null
+      - id: evaluator_protocols
+        title: "Evaluator Protocols"
         required: false
         content_type: prose
-        guidance: >
-          Brief overview of what rules are in this domain and how they differ from standards.
-          Rules are specific, executable checks with clear triggers and consequences.
-      - id: rules_list
-        title: null
-        required: true
-        content_type: table
-        columns: ["Rule", "Machine ID", "Standard", "Check Type", "Severity"]
-        machine_id_column: "Machine ID"
-        guidance: >
-          Each row is a specific, machine-checkable rule. The Machine ID column must contain
-          the policy ID from the data file (e.g., `CRT-001`). Link to the governing standard
-          via the Standard column. Check Type indicates the executor key.
-
-  - id: validation
-    title: "Validation"
-    required: true
-    max_depth: 2
-    minors:
-      - id: automated_checks
-        title: "Automated Checks"
-        required: false
-        content_type: code_block
-        guidance: "CLI commands only. Don't explain what they do — the commands are self-documenting."
+        guidance: "Execution protocols for the evaluator (agent, human, or machine)."
       - id: manual_review
         title: "Manual Review Checklist"
         required: false
         content_type: checklist
         guidance: "Group by concern. Each item must be checkable."
 
+  - id: sanctions
+    title: "Sanctions & Remedies"
+    classification: sanctions_remedies
+    required: false
+    minors:
+      - id: violation_consequences
+        title: "Violation Consequences"
+        required: false
+        content_type: table
+        columns: ["Enforcement Weight", "Consequence", "Remedy"]
+        guidance: "Map each enforcement weight to its corresponding consequence and remedy."
+      - id: remediation
+        title: "Remediation Procedures"
+        required: false
+        content_type: prose
+        guidance: "How deviations are corrected — corrective actions, timelines, escalation."
+
   - id: references
     title: "References"
+    classification: preamble
     required: false
-    max_depth: 2
     minors:
       - id: references_table
         title: null
@@ -246,65 +275,73 @@ sections:
         columns: ["Reference", "Description"]
 
 # ─── CROSS-REFERENCE RULES ────────────────────────────────────────
-# How to link between Schema A (this document) and Schema B (data file).
+# How to link between this editorial document and the evaluative schema.
+# Uses URI-based logical address space, not filesystem paths.
 
 cross_references:
   - id: XR-001
-    rule: "Every table with a Machine ID column must use the exact policy ID from the data file."
-    enforcement: "CI validates that all Machine ID values exist in the data file's policies array."
+    rule: "Every table with a Directive ID column must use the exact directive ID from the evaluative schema."
+    enforcement: "Universal resolver validates that all Directive ID values exist in the evaluative schema."
   - id: XR-002
-    rule: "Every policy in the data file must have a policy_ref pointing to a valid section ID in this document."
-    enforcement: "CI validates that all policy_ref values match a section ID defined above."
+    rule: "Every directive in the evaluative schema must have an anchor_ref pointing to a valid section URI in this editorial document."
+    enforcement: "Universal resolver validates that all anchor_ref values resolve to a section defined above."
   - id: XR-003
-    rule: "Use backtick formatting for machine IDs in prose (e.g., `CRT-001`)."
+    rule: "Use backtick formatting for directive IDs in prose (e.g., `CRT-001`)."
     enforcement: "Agent generation rule."
   - id: XR-004
-    rule: "Never duplicate policy parameters in prose — link to the data file instead."
+    rule: "Never duplicate directive parameters in prose — link to the evaluative schema instead."
     enforcement: "Agent generation rule."
+  - id: XR-005
+    rule: "Every substantive paragraph in the editorial must be invoked by at least one directive."
+    enforcement: "Universal resolver verifies semantic overlap between editorial prose and directive anchors."
+  - id: XR-006
+    rule: "anchor_ref uses URI templates (e.g., urn:doctrine:section:/principles/fairness), not relative file paths."
+    enforcement: "Universal resolver validates URI format and resolution."
 
 # ─── FOOTER ───────────────────────────────────────────────────────
 
 footer:
   required: true
   template: >
-    *This file is the executable specification for all {domain} work.
-    Rules are enforced mechanically by the policy engine.
-    Standards guide judgment and interpretation.
-    Any deviation from a rule is a violation.
-    Any deviation from a standard requires documented reasoning.*
+    *This file is the universal editorial doctrine for {jurisdiction}.
+    It defines the WHY — the rationale, context, and interpretative framework.
+    The evaluative schema defines the WHAT — the executable directives.
+    For this doctrine to be valid, every directive must anchor to a section here,
+    and every substantive section must be invoked by at least one directive.
+    This bidirectional traceability bond is the foundation of rule integrity.*
 
 # ─── DOCUMENT RULES ───────────────────────────────────────────────
 # Structural rules about the document itself.
-# These are enforced by agents, not by the machine contract.
+# These are enforced by agents and the universal resolver.
 
 document_rules:
   - id: DOC-001
     rule: "Every section with required:true must be present."
-    severity: critical
+    severity: absolute_veto
   - id: DOC-002
     rule: "Sections must appear in the order defined in this contract."
-    severity: high
+    severity: rebuttable_presumption
   - id: DOC-003
     rule: "Tables must have headers. No headerless data."
-    severity: medium
+    severity: best_effort
   - id: DOC-004
     rule: "Code blocks must specify language."
-    severity: low
+    severity: informative
   - id: DOC-005
-    rule: "Every rule in the data file must have type=rule and reference a standard."
-    severity: high
+    rule: "Every directive in the evaluative schema must have type=rule and reference a standard."
+    severity: absolute_veto
   - id: DOC-006
-    rule: "Every standard in the data file must have type=standard and include interpretation guidance."
-    severity: high
+    rule: "Every standard in the evaluative schema must have type=standard and include interpretation guidance."
+    severity: absolute_veto
   - id: DOC-007
     rule: "Definitions must not be circular and must state essential attributes."
-    severity: medium
+    severity: best_effort
   - id: DOC-008
-    rule: "Tables with machine_id_column must include the Machine ID column as defined in the section."
-    severity: high
+    rule: "Tables with machine_id_column must include the Directive ID column as defined in the section."
+    severity: rebuttable_presumption
   - id: DOC-009
     rule: "No section may exceed max_depth nesting levels."
-    severity: medium
+    severity: best_effort
   - id: DOC-010
-    rule: "Every Machine ID in a table must match a policy ID in the data file (bidirectional traceability)."
-    severity: critical
+    rule: "Every Directive ID in a table must match a directive ID in the evaluative schema (bidirectional traceability)."
+    severity: absolute_veto

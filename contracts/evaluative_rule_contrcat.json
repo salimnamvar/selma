@@ -1,182 +1,161 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://contracts/policy-schema.json",
-  "title": "Policy Schema",
-  "description": "Machine contract for policy data files. Supports both specific rules (executable checks) and flexible standards (principle-based guidelines).",
+  "$id": "https://contracts/evaluative-rule-schema.json",
+  "title": "Universal Evaluative Rule Schema",
+  "description": "Machine, agent, and human-readable data contract. Completely context-free. Applies to international laws, corporate policies, engineering standards, scientific protocols, and AI governance frameworks.",
   "type": "object",
-  "required": ["version", "name", "description", "policies"],
+  "required": ["version", "jurisdiction_scope", "directives"],
   "properties": {
     "version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "description": "Semver of the contract format."
     },
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Kebab-case domain name."
+    "jurisdiction_scope": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Abstract labels defining where this schema is law (e.g., EU, Engineering-Dept, Solar-System)."
     },
-    "description": {
-      "type": "string",
-      "minLength": 10,
-      "description": "One-line description of what this policy domain covers."
-    },
-    "prose": {
+    "semantic_glossary": {
       "type": "object",
-      "description": "Reference to the human-readable policy document.",
+      "description": "Global key-value store for terms used across directives.",
+      "additionalProperties": { "type": "string" }
+    },
+    "editorial_ref": {
+      "type": "object",
+      "description": "Reference to the human-readable editorial doctrine.",
       "required": ["document"],
       "properties": {
         "document": {
           "type": "string",
-          "description": "Filename of the policy document."
+          "description": "URI or filename of the editorial doctrine document."
         }
-      },
-      "additionalProperties": false
-    },
-    "tooling": {
-      "type": "object",
-      "description": "Paths to executable tooling scripts.",
-      "properties": {
-        "check": { "type": "string", "description": "Path to check script." },
-        "fix": { "type": "string", "description": "Path to fix script." }
-      },
-      "additionalProperties": false
-    },
-    "layers": {
-      "type": "array",
-      "items": { "type": "string" },
-      "uniqueItems": true,
-      "description": "Validation scope names this domain supports."
-    },
-    "discovery": {
-      "type": "object",
-      "description": "File and content discovery configuration.",
-      "properties": {
-        "file_glob": { "type": "string", "description": "Glob pattern for target files." },
-        "content_glob": { "type": "string", "description": "Glob pattern for content files." },
-        "skip_dir_names": { "type": "array", "items": { "type": "string" }, "description": "Directory names to skip." },
-        "skip_file_patterns": { "type": "array", "items": { "type": "string" }, "description": "File patterns to skip." }
       },
       "additionalProperties": false
     },
     "limits": {
       "type": "object",
       "additionalProperties": { "type": ["integer", "number", "string", "boolean"] },
-      "description": "Named thresholds referenced by policies (DRY — single source of truth)."
+      "description": "Named thresholds referenced by directives (DRY — single source of truth)."
     },
     "vocabulary": {
       "type": "object",
-      "description": "Shared word lists and term registries used by policies.",
+      "description": "Shared word lists and term registries used by directives.",
       "additionalProperties": {
         "type": "array",
         "items": { "type": "string" }
       }
     },
-    "patterns": {
+    "technical_hints": {
       "type": "object",
-      "description": "Named regex and lexical patterns used by policies.",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "regex": { "type": "string", "description": "Regex pattern string." },
-          "description": { "type": "string", "description": "Human-readable description." },
-          "examples": { "type": "array", "items": { "type": "string" }, "description": "Example matches." }
-        },
-        "additionalProperties": true
-      }
-    },
-    "policies": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/definitions/policy" },
-      "description": "Policy definitions — specific rules and flexible standards."
+      "description": "Domain-specific technical hints for evaluators. Separated from core params to keep the schema context-free.",
+      "properties": {
+        "file_glob": { "type": "string", "description": "Glob pattern for target files (if evaluating file-based artifacts)." },
+        "content_glob": { "type": "string", "description": "Glob pattern for content files." },
+        "skip_dir_names": { "type": "array", "items": { "type": "string" }, "description": "Directory names to skip." },
+        "skip_file_patterns": { "type": "array", "items": { "type": "string" }, "description": "File patterns to skip." },
+        "check": { "type": "string", "description": "Path to check script or evaluation protocol." },
+        "fix": { "type": "string", "description": "Path to fix script or remediation protocol." }
+      },
+      "additionalProperties": true
     },
     "extensions": {
       "type": "object",
       "description": "Domain-specific extension data. Unconstrained.",
       "additionalProperties": true
+    },
+    "directives": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/directive" },
+      "description": "Directive definitions — specific obligations and flexible standards."
     }
   },
   "additionalProperties": false,
   "definitions": {
-    "policy": {
+    "directive": {
       "type": "object",
-      "required": ["id", "type", "scope", "severity", "message", "policy_ref"],
-      "description": "A single policy item — either a specific rule or a flexible standard.",
+      "required": ["id", "kind", "anchor_ref", "evaluator_type", "message"],
+      "description": "A single directive — either a specific obligation or a flexible standard.",
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[A-Z][A-Z0-9]+(-[A-Z0-9]+)+$",
-          "description": "Stable policy ID. Prefix matches domain name, e.g. XX-001, XX-002."
+          "pattern": "^[A-Z]{2,5}-\\d{4}$",
+          "description": "Stable directive ID. Prefix matches jurisdiction or domain, e.g. XX-001, XX-002."
         },
-        "type": {
+        "kind": {
           "type": "string",
-          "enum": ["rule", "standard"],
-          "description": "Rule = specific, executable check with clear trigger and consequence. Standard = principle-based guideline allowing interpretation."
+          "enum": ["obligation", "prohibition", "standard", "permission"],
+          "description": "The nature of this directive: obligation (must do), prohibition (must not do), standard (principle-based), permission (may do)."
         },
-        "scope": {
+        "anchor_ref": {
           "type": "string",
-          "description": "When the policy runs. Must match a declared layer."
+          "description": "URI or semantic path linking directly to the Editorial Doctrine section (e.g., urn:doctrine:section:/principles/fairness)."
         },
-        "severity": {
+        "evaluator_type": {
           "type": "string",
-          "enum": ["critical", "high", "medium", "low"],
-          "description": "Violation severity."
+          "enum": ["deterministic_algorithm", "statistical_model", "human_reviewer", "llm_judge", "external_oracle"],
+          "description": "Defines the nature of the evaluator — who or what measures compliance."
         },
         "message": {
           "type": "string",
           "minLength": 5,
-          "description": "Violation message template."
+          "description": "Violation message template or judgment output."
         },
-        "check_type": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Executor key in the check registry. Required for type=rule, omitted for type=standard."
+        "applicability": {
+          "type": "object",
+          "description": "Conditions under which this directive is applicable.",
+          "properties": {
+            "jurisdiction_refs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Array of jurisdiction labels this directive applies to."
+            },
+            "trigger_conditions": {
+              "type": "object",
+              "description": "Additional conditions that must be met for this directive to activate.",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false
         },
-        "principle": {
-          "type": "string",
-          "description": "Guiding principle for reasoning output."
+        "trigger_logic": {
+          "type": "object",
+          "description": "Logical conditions under which this directive is active or skipped.",
+          "properties": {
+            "if_jurisdiction": { "type": "array", "items": { "type": "string" }, "description": "Active if jurisdiction matches any of these." },
+            "if_state": { "type": "string", "enum": ["draft", "active", "sunset"], "description": "Active if in this lifecycle state." },
+            "unless": { "type": "object", "description": "Conditions under which this directive is skipped.", "additionalProperties": true }
+          },
+          "additionalProperties": true
         },
-        "policy_ref": {
+        "enforcement_weight": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$",
-          "description": "Cross-reference to policy document section ID. Must match a section ID defined in policy-doc.yaml."
+          "enum": ["absolute_veto", "rebuttable_presumption", "best_effort", "informative"],
+          "description": "Legal/Operational severity detached from code severity. absolute_veto = zero tolerance; informative = best practice."
         },
         "reasoning": {
           "type": "string",
-          "description": "Why the policy exists."
+          "description": "Why this directive exists — the doctrinal rationale."
         },
         "fix": {
           "type": "string",
-          "description": "Actionable fix suggestion."
+          "description": "Actionable fix suggestion or remediation path."
         },
         "params": {
           "type": "object",
-          "description": "Policy-specific parameters passed to the check function.",
-          "properties": {
-            "pattern": { "type": "string", "description": "Regex pattern to match against." },
-            "glob": { "type": "string", "description": "Glob pattern for file matching." },
-            "max_length": { "type": "integer", "description": "Maximum allowed length." },
-            "min_length": { "type": "integer", "description": "Minimum required length." },
-            "allowed_values": { "type": "array", "items": { "type": "string" }, "description": "List of allowed values." },
-            "case_sensitive": { "type": "boolean", "description": "Whether matching is case-sensitive." }
-          },
-          "additionalProperties": false
+          "description": "Unconstrained key-values. Accepts tax rates, regex, word counts, geopolitical zones, financial thresholds, or any domain-specific parameters.",
+          "additionalProperties": true
         },
-        "skip_when": {
-          "type": "object",
-          "description": "Conditions to skip this policy.",
-          "properties": {
-            "file_matches": { "type": "string", "description": "Skip if filename matches this glob." },
-            "dir_matches": { "type": "string", "description": "Skip if directory matches this pattern." },
-            "extension_in": { "type": "array", "items": { "type": "string" }, "description": "Skip if file extension is in this list." },
-            "path_contains": { "type": "string", "description": "Skip if file path contains this string." }
-          },
-          "additionalProperties": false
+        "semantic_tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Keywords for semantic matching with the editorial prose (e.g., ['privacy', 'data-handling'])."
         },
         "interpretation": {
           "type": "object",
-          "description": "Guidance for applying judgment. Use with type=standard.",
+          "description": "Guidance for applying judgment. Use with kind=standard.",
           "properties": {
             "factors": {
               "type": "array",
@@ -205,12 +184,16 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "const": "rule" } } },
-          "then": { "required": ["check_type"] }
+          "if": { "properties": { "kind": { "const": "obligation" } } },
+          "then": { "required": ["params"] }
         },
         {
-          "if": { "properties": { "type": { "const": "standard" } } },
-          "then": { "required": ["principle", "interpretation"] }
+          "if": { "properties": { "kind": { "const": "prohibition" } } },
+          "then": { "required": ["params"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "standard" } } },
+          "then": { "required": ["interpretation"] }
         }
       ],
       "additionalProperties": false
