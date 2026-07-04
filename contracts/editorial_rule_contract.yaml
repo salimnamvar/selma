@@ -298,6 +298,21 @@ cross_references:
     rule: "anchor_ref uses URI templates (e.g., urn:doctrine:section:/principles/fairness), not relative file paths."
     enforcement: "Universal resolver validates URI format and resolution."
 
+# ─── ARCHITECTURE LAYERS ──────────────────────────────────────────
+# Explicit layered architecture: Doctrine Core → Project Manifest → Operational Runtime.
+# This contract defines the Doctrine Core. The Project Manifest (doctrine-manifest.yaml)
+# instantiates jurisdiction, version pins, and deployment bindings per project.
+# The Operational Runtime is the actual evaluator (script, human, LLM, or court).
+
+architecture:
+  layers:
+    - layer: "Doctrine Core"
+      description: "The universal Editorial (WHY) and Evaluative (WHAT) schemas. Immutable across projects."
+    - layer: "Project Manifest"
+      description: "The instantiation file (doctrine-manifest.yaml). Holds jurisdiction, version pins, and deployment bindings. Changes per project."
+    - layer: "Operational Runtime"
+      description: "The actual scripts, databases, or human courts that execute the evaluation."
+
 # ─── FOOTER ───────────────────────────────────────────────────────
 
 footer:
