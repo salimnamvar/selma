@@ -1,0 +1,310 @@
+# policy-doc.yaml
+# Document contract for policy documents.
+# Defines section structure, content types, and writing principles.
+# Supports both specific rules (executable checks) and flexible standards (principle-based guidelines).
+# Agents use this to generate the policy document. Humans use it to review structure.
+
+contract:
+  name: policy-document
+  version: "3.0.0"
+  domain: "policy-engine"
+  maintainers: ["engineering-team"]
+  description: >
+    Structure and writing principles for policy documents.
+    This is NOT a data schema — it defines how the document looks,
+    what sections it contains, and how content should be written.
+    Covers both rules (specific, executable) and standards (principle-based, flexible).
+
+# ─── WRITING PRINCIPLES ──────────────────────────────────────────
+# How to write the policy document. Agents follow these when generating.
+
+writing_principles:
+  - id: WP-001
+    title: "Prose over tables"
+    description: >
+      Use prose for explanations and reasoning.
+      Use tables for structured lists (naming patterns, limits, references).
+      Never use a table where a sentence suffices.
+  - id: WP-002
+    title: "Cross-reference, don't duplicate"
+    description: >
+      The policy document explains WHY. The policy data file defines WHAT.
+      Link to the data file for specifics — don't repeat policy IDs or parameters in prose.
+  - id: WP-003
+    title: "One section, one concern"
+    description: >
+      Each major section addresses a single concern.
+      If a section grows beyond 3 subsections, split it.
+  - id: WP-004
+    title: "Actionable language"
+    description: >
+      Write imperatively: "Use kebab-case" not "Kebab-case is preferred".
+      Every statement should be checkable — can a machine verify it?
+  - id: WP-005
+    title: "No orphan policies"
+    description: >
+      Every policy in the data file must appear in the policy document.
+      Every principle in the policy document must have at least one policy in the data file.
+      Enforced via CI: policy_ref values must match section IDs, and section IDs must be referenced.
+  - id: WP-006
+    title: "Distinguish rules from standards"
+    description: >
+      Rules are specific: "Use kebab-case for filenames." Standards are principle-based:
+      "Choose naming conventions that aid discoverability."
+      Mark each explicitly. Rules require check_type; standards require principle.
+  - id: WP-007
+    title: "State essential attributes"
+    description: >
+      Every definition must state the essential attributes of the concept being defined.
+      Include what it IS and what it is NOT.
+  - id: WP-008
+    title: "Avoid circularity"
+    description: >
+      Definitions must not be circular. Don't define a rule as "that which follows rules."
+      Each term should be defined in terms of more fundamental concepts.
+  - id: WP-009
+    title: "Neither too broad nor too narrow"
+    description: >
+      Definitions must cover all instances of the concept and exclude everything else.
+      A rule for "filenames" should not accidentally cover "variable names."
+  - id: WP-010
+    title: "No artificial meaning"
+    description: >
+      Don't give words unnatural or counter-intuitive meanings within the policy.
+      If a term has a standard industry meaning, use that meaning.
+  - id: WP-011
+    title: "Embed machine IDs in tables"
+    description: >
+      Any table describing a specific rule must include the Machine ID column (e.g., `CRT-001`).
+      This enables readers to trace from prose to executable check.
+      The Machine ID column is mandatory for rules_list and standards_list tables.
+  - id: WP-012
+    title: "Section depth limits"
+    description: >
+      Maximum section nesting depth is 3 levels (## major, ### minor, #### patch).
+      If a section needs deeper nesting, split it into separate sections.
+
+# ─── SECTION STRUCTURE ────────────────────────────────────────────
+# Major (##), minor (###), patch (table rows / list items).
+# max_depth enforced: 3 levels maximum.
+
+sections:
+  - id: overview
+    title: "Overview"
+    required: true
+    max_depth: 2
+    minors:
+      - id: scope
+        title: "Scope"
+        required: true
+        content_type: prose
+        guidance: "Define boundaries — what is included and excluded."
+      - id: audience
+        title: "Audience"
+        required: false
+        content_type: prose
+        guidance: "Who consumes these policies — humans and machines."
+      - id: terminology
+        title: "Terminology"
+        required: false
+        content_type: table
+        columns: ["Term", "Meaning", "Context"]
+        guidance: >
+          Clarify key terms early. Especially distinguish between rule-type and standard-type
+          policies when the domain uses both. Only include if the domain has jargon that needs defining.
+
+  - id: principles
+    title: "Principles"
+    required: true
+    max_depth: 2
+    minors:
+      - id: principles_table
+        title: null
+        required: true
+        content_type: table
+        columns: ["Principle", "Description"]
+        guidance: "Each row is a foundational principle that specific rules and standards derive from."
+
+  - id: standards
+    title: "Standards"
+    required: true
+    max_depth: 2
+    minors:
+      - id: standards_overview
+        title: null
+        required: false
+        content_type: prose
+        guidance: >
+          Brief overview of what standards are in this domain and how they differ from rules.
+          Standards are principle-based guidelines that allow interpretation — they define
+          relevant considerations rather than prescribing exact behavior.
+      - id: standards_list
+        title: null
+        required: true
+        content_type: table
+        columns: ["Standard", "Machine ID", "Principle", "Interpretation Guidance"]
+        machine_id_column: "Machine ID"
+        guidance: >
+          Each row is a flexible guideline. The Machine ID column must contain the policy ID
+          from the data file (e.g., `STD-001`). The Interpretation Guidance column should list
+          factors to consider and examples of correct application.
+
+  - id: conventions
+    title: "Conventions"
+    required: true
+    max_depth: 2
+    minors:
+      - id: naming
+        title: "Naming"
+        required: true
+        content_type: mixed
+        guidance: "Code block for format pattern, optional table for examples."
+      - id: structure
+        title: "Structure"
+        required: false
+        content_type: mixed
+        guidance: "How artifacts are organized."
+      - id: glossary
+        title: "Glossary"
+        required: false
+        content_type: table
+        columns: ["Term", "Meaning", "Context"]
+        guidance: "Only if the domain has domain-specific jargon that needs defining."
+
+  - id: constraints
+    title: "Constraints"
+    required: true
+    max_depth: 2
+    minors:
+      - id: size_limits
+        title: "Size Limits"
+        required: false
+        content_type: table
+        columns: ["Limit", "Value", "Applies to"]
+      - id: prohibitions
+        title: "Prohibitions"
+        required: false
+        content_type: table
+        columns: ["Item", "Reason"]
+      - id: requirements
+        title: "Requirements"
+        required: true
+        content_type: table
+        columns: ["Requirement", "Mandatory", "Reason"]
+        guidance: >
+          Explicitly state whether each requirement is a rule (specific, machine-checkable)
+          or a standard (principle-based, requires judgment).
+
+  - id: rules
+    title: "Rules"
+    required: true
+    max_depth: 2
+    minors:
+      - id: rules_overview
+        title: null
+        required: false
+        content_type: prose
+        guidance: >
+          Brief overview of what rules are in this domain and how they differ from standards.
+          Rules are specific, executable checks with clear triggers and consequences.
+      - id: rules_list
+        title: null
+        required: true
+        content_type: table
+        columns: ["Rule", "Machine ID", "Standard", "Check Type", "Severity"]
+        machine_id_column: "Machine ID"
+        guidance: >
+          Each row is a specific, machine-checkable rule. The Machine ID column must contain
+          the policy ID from the data file (e.g., `CRT-001`). Link to the governing standard
+          via the Standard column. Check Type indicates the executor key.
+
+  - id: validation
+    title: "Validation"
+    required: true
+    max_depth: 2
+    minors:
+      - id: automated_checks
+        title: "Automated Checks"
+        required: false
+        content_type: code_block
+        guidance: "CLI commands only. Don't explain what they do — the commands are self-documenting."
+      - id: manual_review
+        title: "Manual Review Checklist"
+        required: false
+        content_type: checklist
+        guidance: "Group by concern. Each item must be checkable."
+
+  - id: references
+    title: "References"
+    required: false
+    max_depth: 2
+    minors:
+      - id: references_table
+        title: null
+        required: false
+        content_type: table
+        columns: ["Reference", "Description"]
+
+# ─── CROSS-REFERENCE RULES ────────────────────────────────────────
+# How to link between Schema A (this document) and Schema B (data file).
+
+cross_references:
+  - id: XR-001
+    rule: "Every table with a Machine ID column must use the exact policy ID from the data file."
+    enforcement: "CI validates that all Machine ID values exist in the data file's policies array."
+  - id: XR-002
+    rule: "Every policy in the data file must have a policy_ref pointing to a valid section ID in this document."
+    enforcement: "CI validates that all policy_ref values match a section ID defined above."
+  - id: XR-003
+    rule: "Use backtick formatting for machine IDs in prose (e.g., `CRT-001`)."
+    enforcement: "Agent generation rule."
+  - id: XR-004
+    rule: "Never duplicate policy parameters in prose — link to the data file instead."
+    enforcement: "Agent generation rule."
+
+# ─── FOOTER ───────────────────────────────────────────────────────
+
+footer:
+  required: true
+  template: >
+    *This file is the executable specification for all {domain} work.
+    Rules are enforced mechanically by the policy engine.
+    Standards guide judgment and interpretation.
+    Any deviation from a rule is a violation.
+    Any deviation from a standard requires documented reasoning.*
+
+# ─── DOCUMENT RULES ───────────────────────────────────────────────
+# Structural rules about the document itself.
+# These are enforced by agents, not by the machine contract.
+
+document_rules:
+  - id: DOC-001
+    rule: "Every section with required:true must be present."
+    severity: critical
+  - id: DOC-002
+    rule: "Sections must appear in the order defined in this contract."
+    severity: high
+  - id: DOC-003
+    rule: "Tables must have headers. No headerless data."
+    severity: medium
+  - id: DOC-004
+    rule: "Code blocks must specify language."
+    severity: low
+  - id: DOC-005
+    rule: "Every rule in the data file must have type=rule and reference a standard."
+    severity: high
+  - id: DOC-006
+    rule: "Every standard in the data file must have type=standard and include interpretation guidance."
+    severity: high
+  - id: DOC-007
+    rule: "Definitions must not be circular and must state essential attributes."
+    severity: medium
+  - id: DOC-008
+    rule: "Tables with machine_id_column must include the Machine ID column as defined in the section."
+    severity: high
+  - id: DOC-009
+    rule: "No section may exceed max_depth nesting levels."
+    severity: medium
+  - id: DOC-010
+    rule: "Every Machine ID in a table must match a policy ID in the data file (bidirectional traceability)."
+    severity: critical
