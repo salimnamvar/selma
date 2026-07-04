@@ -1,0 +1,127 @@
+# =============================================================================
+# software-design — GitHub Project
+# =============================================================================
+
+# ==========================================
+# 1. PYTHON
+# ==========================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+*.so
+*.so.*
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==========================================
+# 2. BUILD & DISTRIBUTION
+# ==========================================
+build/
+dist/
+out/
+output/
+outputs/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# ==========================================
+# 3. VIRTUAL ENVIRONMENTS
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ==========================================
+# 4. TESTING & COVERAGE
+# ==========================================
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+.hypothesis/
+nosetests.xml
+TEST*.xml
+
+# ==========================================
+# 5. LINTERS & CACHES
+# ==========================================
+.ruff_cache/
+.cache/
+.eslintcache
+
+# ==========================================
+# 6. SECRETS & CREDENTIALS
+# ==========================================
+.env
+.env.*
+*.env
+!.env.example
+secrets/
+secrets*
+*.jwt
+*.pem
+*.key
+auth.json*
+.credentials.json
+credentials.json
+
+# ==========================================
+# 7. HIDDEN DIRECTORIES
+# ==========================================
+.*/
+
+# ==========================================
+# 8. AI / AGENT TOOLS
+# ==========================================
+.aider*
+.nasim
+.claude
+.grok
+.mimo
+.opencode
+.codex
+.cursor
+.copilot
+.continue
+.cody
+.zed
+.windsurf
+.agents
+.micode
+.kimi
+.autohand
+.vibe
+.codewhale
+
+# ==========================================
+# 9. IDE ARTIFACTS
+# ==========================================
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# ==========================================
+# 10. OS / EDITOR TEMP
+# ==========================================
+.DS_Store
+.*/
+
+# ==========================================
+# 11. LOGS & DATA FILES
+# ==========================================
+*.log
+*.csv

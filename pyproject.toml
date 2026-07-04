@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=82.0.1", "wheel>=0.47.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "software-design"
+version = "0.1.0"
+description = "Independent, deployable services for software design knowledge domains"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Salim Namvar", email = "salim.namvar@gmail.com" }
+]
+keywords = [
+  "software-design",
+  "plantuml",
+  "c4",
+  "use-case-diagram",
+  "sequence-diagram",
+  "state-machine",
+  "erd",
+  "class-diagram",
+  "openapi",
+  "data-contract"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.1.0",
+  "pytest-cov>=7.1.0",
+  "black>=26.5.1",
+  "ruff>=0.15.17",
+  "isort>=8.0.1",
+  "pyright>=1.1.400",
+  "pre-commit>=3.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/salimnamvar/software-design"
+Repository = "https://github.com/salimnamvar/software-design"
+Issues = "https://github.com/salimnamvar/software-design/issues"
+
+[tool.black]
+line-length = 120
+target-version = ["py311", "py312", "py313"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["E501", "B008"]
+
+[tool.isort]
+profile = "google"
+line_length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-q --tb=short"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
