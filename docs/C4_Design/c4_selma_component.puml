@@ -1,7 +1,7 @@
 @startuml c4_selma_component
 ' ============================================================
 ' Title:     Selma — Component Diagram
-' Boundary:  Core Engine container
+' Boundary:  Web Application container
 ' Purpose:   Show the four-pillar pipeline, Steward orchestration,
 '            and the dual-contract bond
 ' Milestone: v1.0
@@ -22,8 +22,8 @@ Container_Ext(llm_adapter, "LLM Adapter", "Python", "LLM API communication with 
 Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
 Container(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
 
-' ── Core Engine Boundary ──
-Container_Boundary(core_boundary, "Core Engine") {
+' ── Web Application Boundary (contains four-pillar pipeline) ──
+Container_Boundary(web_boundary, "Web Application") {
 
     ' ── Pillar 1: Definition Engine ──
     Component(definition, "Definition Engine", "Module", "Generates Machine IDs, drafts prose and YAML stubs", $tags="service")

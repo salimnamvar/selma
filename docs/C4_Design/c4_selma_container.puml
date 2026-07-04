@@ -2,10 +2,10 @@
 ' ============================================================
 ' Title:     Selma — Container Diagram
 ' Boundary:  Selma Universal Rule Governance Engine
-' Purpose:   Show Selma's internal containers, the dual-contract
-'            files, and the four-pillar pipeline
+' Purpose:   Show Selma's single deployable container,
+'            external systems, and configuration data
 ' Milestone: v1.0
-' Version:   1.0.0
+' Version:   1.1.0 (C4-compliant)
 ' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
@@ -13,58 +13,40 @@
 !include common/c4_styles.puml
 skinparam linetype polyline
 
-title Selma — Container Diagram
+title Selma — Container Diagram (C4-compliant)
 
 ' ── Actors ──
 Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets", $sprite="person")
-Person(agent, "AI Agent", "Autonomous agent that orchestrates the four-pillar pipeline", $sprite="person")
+Person(agent, "AI Agent", "Autonomous agent that submits NL requests", $sprite="person")
 Person(developer, "Domain Developer", "Builds downstream services that consume rules", $sprite="person")
 
 ' ── Selma System Boundary ──
 System_Boundary(selma_boundary, "Selma") {
 
-    ' ── API Layer ──
-    Container(api, "Web API", "Python / FastAPI", "REST endpoints for CRUD, validation, and queries", $tags="controller")
+    ' ── SINGLE CONTAINER: Web Application ──
+    Container(web, "Web Application", "Python / FastAPI", "REST API + Core Engine (Definition, Maintenance, Linting, Reasoning, Steward)", $tags="container")
 
-    ' ── Core Engine (Four Pillars) ──
-    Container(core, "Core Engine", "Python", "Four-pillar pipeline orchestrated by Steward Agent", $tags="service")
-
-    ' ── Contracts (Dual-Contract Bond) ──
-    Container(policy_contract, "Policy Doctrine", "YAML", "Human lens: prose structure, governance, writing principles", $tags="contract")
-    Container(rule_contract, "Rule Schema", "JSON", "Machine lens: data structure, lifecycle, parameters, conditions", $tags="contract")
-
-    ' ── Storage ──
-    Container(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml", $tags="repository")
-
-    ' ── LLM Integration ──
-    Container(llm_adapter, "LLM Adapter", "Python", "LLM API communication with retry and fallback", $tags="repository")
+    ' ── CONFIGURATION DATA (not deployable, bundled at build time) ──
+    Container(config, "Configuration", "YAML / JSON", "policy_doctrine.yaml & rule_schema.json (loaded at startup)", $tags="datastore")
 }
 
 ' ── External Systems ──
 System_Ext(llm, "LLM Service", "OpenAI / Anthropic", $tags="external")
+System_Ext(fs, "Rule Storage", "File System (./domains/)", $tags="external")
 System_Ext(repo, "Git Repository", "Optional version control", $tags="external")
 
-' ── Actor → API ──
-Rel(admin, api, "→ CRUD, validate, query rules", "HTTPS")
-Rel(agent, api, "→ submit NL requests, fetch domain state", "HTTPS")
-Rel(developer, api, "→ fetch rules, export domains", "HTTPS")
+' ── Actor → Web ──
+Rel(admin, web, "→ CRUD, validate, query rules", "HTTPS")
+Rel(agent, web, "→ submit NL requests", "HTTPS")
+Rel(developer, web, "→ fetch rules, export domains", "HTTPS")
 
-' ── API → Core ──
-Rel(api, core, "→ dispatches requests to four-pillar pipeline")
+' ── Web → Configuration (read-only at startup) ──
+Rel(web, config, "→ reads contracts at startup", "I/O")
 
-' ── Core → Contracts ──
-Rel(core, policy_contract, "→ reads writing principles, validates policy structure")
-Rel(core, rule_contract, "→ reads schema, validates rules")
-
-' ── Core → Storage ──
-Rel(core, storage, "→ reads and writes per-domain policy.md and rules.yaml")
-
-' ── Core → LLM ──
-Rel(core, llm_adapter, "→ delegates AI rule generation and deep reasoning")
-Rel(llm_adapter, llm, "→ calls LLM API", "HTTPS")
-
-' ── Core → Version Control ──
-Rel(core, repo, "→ commits changes", "Git")
+' ── Web → External Systems ──
+Rel(web, llm, "→ calls for rule generation and reasoning", "HTTPS")
+Rel(web, fs, "→ reads/writes per-domain policy.md and rules.yaml", "I/O")
+Rel(web, repo, "→ commits changes (optional)", "Git")
 
 $selma_legend_container()
 
