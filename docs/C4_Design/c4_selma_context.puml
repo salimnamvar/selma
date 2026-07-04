@@ -1,8 +1,8 @@
-@startuml c4_selma_context
+@startuml c4_selma_service_context
 ' ============================================================
-' Title:     Selma — Context Diagram
-' Boundary:  Selma Universal Rule Governance Engine
-' Purpose:   Show Selma as the system under design, its actors,
+' Title:     selma_service — Context Diagram
+' Boundary:  selma_service Universal Rule Governance Engine
+' Purpose:   Show selma_service as the system under design, its actors,
 '            and external dependencies
 ' Milestone: v1.0
 ' Version:   1.0.0
@@ -13,7 +13,7 @@
 !include common/c4_styles.puml
 skinparam linetype polyline
 
-title Selma — Context Diagram
+title SELMA System — Context Diagram
 
 ' ── Actors ──
 Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets via CLI or REST API", $sprite="person")
@@ -21,7 +21,7 @@ Person(agent, "AI Agent", "Autonomous agent that submits natural language rule r
 Person(developer, "Domain Developer", "Builds downstream services that consume rules via API or export", $sprite="person")
 
 ' ── System Under Design ──
-System(selma, "Selma", "Universal Rule Governance Engine: writes, validates, lints, and reasons about rules", $tags="system")
+System(selma_service, "SELMA System", "Universal Rule Governance Engine: writes, validates, lints, and reasons about rules", $tags="system")
 
 ' ── External Systems ──
 System_Ext(llm, "LLM Service", "OpenAI / Anthropic API for rule generation and deep reasoning", $tags="external")
@@ -29,13 +29,13 @@ System_Ext(fs, "File System", "Stores policy.md and rules.yaml per domain", $tag
 System_Ext(repo, "Git Repository", "Optional version control for rule history and audit trail", $tags="external")
 
 ' ── Relationships ──
-Rel(admin, selma, "→ CRUD operations, validation, queries", "HTTPS / CLI")
-Rel(agent, selma, "→ submits natural language rule requests", "HTTPS")
-Rel(developer, selma, "→ fetches rules, exports domains", "HTTPS")
-Rel(selma, llm, "→ delegates AI rule generation and deep reasoning", "HTTPS")
-Rel(selma, fs, "→ reads and writes policy.md and rules.yaml", "I/O")
-Rel(selma, repo, "→ commits changes", "Git")
+Rel(admin, selma_service, "→ CRUD operations, validation, queries", "HTTPS / CLI")
+Rel(agent, selma_service, "→ submits natural language rule requests", "HTTPS")
+Rel(developer, selma_service, "→ fetches rules, exports domains", "HTTPS")
+Rel(selma_service, llm, "→ delegates AI rule generation and deep reasoning", "HTTPS")
+Rel(selma_service, fs, "→ reads and writes policy.md and rules.yaml", "I/O")
+Rel(selma_service, repo, "→ commits changes", "Git")
 
-$selma_legend_context()
+$selma_service_legend_context()
 
 @enduml

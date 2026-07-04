@@ -14,7 +14,7 @@
 skinparam linetype polyline
 skinparam wrapWidth 200
 
-title Selma — Component Diagram
+title SELMA System — Component Diagram
 
 ' ── External Containers ──
 Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml", $tags="external_container")
@@ -23,7 +23,7 @@ Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — 
 Container(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
 
 ' ── Web Application Boundary (contains four-pillar pipeline) ──
-Container_Boundary(web_boundary, "Web Application") {
+Container_Boundary(selma_application, "SELMA Application") {
 
     ' ── Pillar 1: Definition Engine ──
     Component(definition, "Definition Engine", "Module", "Generates Machine IDs, drafts prose and YAML stubs", $tags="service")

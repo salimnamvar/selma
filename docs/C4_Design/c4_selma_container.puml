@@ -13,18 +13,18 @@
 !include common/c4_styles.puml
 skinparam linetype polyline
 
-title Selma — Container Diagram (C4-compliant)
+title SELMA System — Container Diagram (C4-compliant)
 
 ' ── Actors ──
 Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets", $sprite="person")
 Person(agent, "AI Agent", "Autonomous agent that submits NL requests", $sprite="person")
 Person(developer, "Domain Developer", "Builds downstream services that consume rules", $sprite="person")
 
-' ── Selma System Boundary ──
-System_Boundary(selma_boundary, "Selma") {
+' ── SELMA System Boundary ──
+System_Boundary(selma_service, "SELMA System") {
 
-    ' ── SINGLE CONTAINER: Web Application ──
-    Container(web, "Web Application", "Python / FastAPI", "REST API + Core Engine (Definition, Maintenance, Linting, Reasoning, Steward)", $tags="container")
+    ' ── SINGLE CONTAINER: SELMA Application ──
+    Container(selma_application, "SELMA Application", "Python / FastAPI", "REST API + Core Engine (Definition, Maintenance, Linting, Reasoning, Steward)", $tags="container")
 
     ' ── CONFIGURATION DATA (not deployable, bundled at build time) ──
     Container(config, "Configuration", "YAML / JSON", "policy_doctrine.yaml & rule_schema.json (loaded at startup)", $tags="datastore")
@@ -35,18 +35,18 @@ System_Ext(llm, "LLM Service", "OpenAI / Anthropic", $tags="external")
 System_Ext(fs, "Rule Storage", "File System (./domains/)", $tags="external")
 System_Ext(repo, "Git Repository", "Optional version control", $tags="external")
 
-' ── Actor → Web ──
-Rel(admin, web, "→ CRUD, validate, query rules", "HTTPS")
-Rel(agent, web, "→ submit NL requests", "HTTPS")
-Rel(developer, web, "→ fetch rules, export domains", "HTTPS")
+' ── Actor → selma_application ──
+Rel(admin, selma_application, "→ CRUD, validate, query rules", "HTTPS")
+Rel(agent, selma_application, "→ submit NL requests", "HTTPS")
+Rel(developer, selma_application, "→ fetch rules, export domains", "HTTPS")
 
-' ── Web → Configuration (read-only at startup) ──
-Rel(web, config, "→ reads contracts at startup", "I/O")
+' ── selma_application → Configuration (read-only at startup) ──
+Rel(selma_application, config, "→ reads contracts at startup", "I/O")
 
-' ── Web → External Systems ──
-Rel(web, llm, "→ calls for rule generation and reasoning", "HTTPS")
-Rel(web, fs, "→ reads/writes per-domain policy.md and rules.yaml", "I/O")
-Rel(web, repo, "→ commits changes (optional)", "Git")
+' ── selma_application → External Systems ──
+Rel(selma_application, llm, "→ calls for rule generation and reasoning", "HTTPS")
+Rel(selma_application, fs, "→ reads/writes per-domain policy.md and rules.yaml", "I/O")
+Rel(selma_application, repo, "→ commits changes (optional)", "Git")
 
 $selma_legend_container()
 
