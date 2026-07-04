@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from usecase_diagram.repository.contracts import ContractRepository
+from usecase_diagram.repository import ContractRepository
 
 
 def test_contract_repository_loads_from_default():

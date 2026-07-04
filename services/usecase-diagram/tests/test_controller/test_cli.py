@@ -2,7 +2,7 @@
 
 from click.testing import CliRunner
 
-from usecase_diagram.controller.cli import cli
+from usecase_diagram.controller import cli
 
 
 def test_cli_help():

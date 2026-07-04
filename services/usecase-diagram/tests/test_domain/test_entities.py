@@ -1,15 +1,12 @@
 """Tests for the domain entities."""
 
-from pathlib import Path
-
-from usecase_diagram.domain.entities.contract import (
+from usecase_diagram.domain import (
     ContractBundle,
     RuleDef,
+    UCDiagram,
+    Violation,
 )
-from usecase_diagram.domain.entities.diagram import UCDiagram
-from usecase_diagram.domain.entities.violation import Violation
-from usecase_diagram.domain.value_objects.check_scope import CheckScope
-from usecase_diagram.domain.value_objects.severity import Severity
+from usecase_diagram.domain.value_objects import CheckScope, Severity
 
 
 def test_uc_diagram_creation():
@@ -72,7 +69,7 @@ def test_contract_bundle_rules_by_scope():
         verbs={"banned": ["CREATE"]},
         patterns={"filename": "^uc_.*$"},
         filename_groups={},
-        contracts_dir=Path("/tmp"),
+        contracts_dir="/tmp",
     )
     per_file = bundle.rules_by_scope("per_file")
     assert len(per_file) == 1
@@ -92,7 +89,7 @@ def test_contract_bundle_verbs():
         verbs={"banned": ["CREATE", "GET"], "api_rest": ["GET", "POST"]},
         patterns={},
         filename_groups={},
-        contracts_dir=Path("/tmp"),
+        contracts_dir="/tmp",
     )
     assert "CREATE" in bundle.banned_verbs()
     assert "GET" in bundle.api_rest_verbs()
