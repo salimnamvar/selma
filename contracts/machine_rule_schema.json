@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-machine-schema.json",
   "title": "Universal Machine Rule Schema",
-  "description": "The absolute essence of a machine-readable rule. No enums, no domain-specific fields. Just pure data.",
+  "description": "The absolute essence of a machine-readable rule. Includes lifecycle, dependencies, and provenance. Completely open and context-free.",
   "type": "object",
   "required": ["version", "rules"],
   "properties": {
@@ -28,41 +28,73 @@
           },
           "type": {
             "type": "string",
-            "description": "Free text classification. Could be 'obligation', 'prohibition', 'standard', 'recipe', 'guideline' — completely open."
+            "description": "Free text classification (obligation, prohibition, permission, standard, etc.)."
           },
           "message": {
             "type": "string",
             "description": "The human-readable output or description of the rule."
           },
+          "target": {
+            "type": "string",
+            "description": "Who or what this rule applies to (e.g., 'Drivers', 'Python-Scripts', 'All-Citizens')."
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle state (e.g., 'draft', 'active', 'deprecated', 'superseded')."
+          },
           "anchor_ref": {
             "type": "string",
-            "description": "A free string linking back to the human document (e.g., 'section:preamble' or 'urn:doctrine:principles')."
+            "description": "Link back to the human document (e.g., 'section:preamble')."
           },
           "evaluator_hint": {
             "type": "string",
-            "description": "A free string hinting how to evaluate this (e.g., 'regex', 'human_judgment', 'api_call'). No enum, just a hint."
+            "description": "Hint on how to evaluate (e.g., 'regex', 'human_judgment', 'api_call')."
           },
           "weight": {
             "type": "string",
-            "description": "A free string for priority/severity (e.g., 'critical', 'informative', 'low')."
+            "description": "Priority/severity (e.g., 'critical', 'informative')."
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of rules that must be evaluated or active before this one."
+          },
+          "conflicts_with": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of rules that this rule cannot coexist with."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of creation."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp after which this rule is obsolete."
           },
           "parameters": {
             "type": "object",
-            "description": "Completely unconstrained key-value store. Holds anything: pattern, max_length, tax_rate, quorum, sensor_threshold.",
+            "description": "Unconstrained key-value store for config (pattern, max_length, tax_rate, quorum).",
             "additionalProperties": true
           },
           "conditions": {
             "type": "object",
-            "description": "Completely open container for activation logic (e.g., { 'if_env': 'production' } or { 'unless_holiday': true }).",
+            "description": "Activation logic (e.g., { 'if_env': 'production' } or { 'unless_holiday': true }).",
             "additionalProperties": true
           },
           "rationale": {
             "type": "string",
-            "description": "Optional reasoning why this rule exists."
+            "description": "Why this rule exists."
           },
           "remediation": {
             "type": "string",
-            "description": "Optional suggestion on what to do if this rule is violated."
+            "description": "What to do if violated."
           }
         },
         "additionalProperties": true

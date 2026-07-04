@@ -1,17 +1,15 @@
 # human-rule-doctrine.yaml
-# The Absolute Essence: Defines the narrative structure and writing principles.
-# Completely context-free. No domain, no jurisdiction, no deployment.
+# The Absolute Essence + Self-Governance.
+# Completely context-free. Governs the governors.
 
 doctrine:
   name: universal-human-doctrine
-  version: "1.0.0"
+  version: "1.1.0"
   description: >
     Defines how to structure and write a rule document.
-    This is purely structural. It knows nothing about law, software, or science.
+    Includes self-governance, hierarchy, and sanctions.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
-# Universal rules for how the author (human or AI) must write the prose.
-
 writing_principles:
   - id: WP-001
     title: "Precision over Ambiguity"
@@ -25,16 +23,23 @@ writing_principles:
   - id: WP-004
     title: "Traceability"
     description: "Every substantive paragraph must link to a Machine ID. No orphan rules."
+  - id: WP-005
+    title: "Hierarchy of Authority"
+    description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
-# The skeleton of the human-readable document.
-
 sections:
   - id: preamble
     title: "Preamble"
     required: true
     content_type: prose
     guidance: "Explain the existential need for these rules."
+
+  - id: governance
+    title: "Governance & Amendment"
+    required: true
+    content_type: prose
+    guidance: "Define how this doctrine is changed, who has authority, and the ratification process."
 
   - id: definitions
     title: "Definitions"
@@ -53,16 +58,23 @@ sections:
     title: "Directives (Rules & Standards)"
     required: true
     content_type: mixed
-    guidance: "List all specific obligations, prohibitions, and flexible guidelines."
+    guidance: "List all specific obligations, prohibitions, permissions, and flexible guidelines."
     children:
-      - id: specific_rules
-        title: "Specific Obligations & Prohibitions"
+      - id: specific_directives
+        title: "Specific Directives"
         content_type: table
-        columns: ["Description", "Machine ID", "Context / Conditions"]
+        columns: ["Type (Obligation/Prohibition/Permission)", "Description", "Machine ID", "Context / Conditions"]
       - id: flexible_standards
         title: "Flexible Standards"
         content_type: table
         columns: ["Description", "Machine ID", "Factors to Consider", "Examples"]
+
+  - id: sanctions
+    title: "Sanctions & Remedies"
+    required: true
+    content_type: table
+    columns: ["Violation Context", "Enforcement Action", "Remediation Path"]
+    guidance: "Explicitly state the consequences of non-compliance."
 
   - id: references
     title: "References & Annexes"
