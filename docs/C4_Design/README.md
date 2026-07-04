@@ -30,7 +30,7 @@ The Core Engine is structured as a **four-pillar pipeline**:
 
 ## Architecture
 
-Selma runs as a single Python process. Three actors (Rule Administrator, AI Steward, Domain Developer) connect via HTTPS or CLI. Internally the application follows a four-pillar pipeline orchestrated by the Steward Agent:
+Selma runs as a single Python process. Three actors (Rule Administrator, AI Agent, Domain Developer) connect via HTTPS or CLI. Internally the application follows a four-pillar pipeline orchestrated by the Steward Agent:
 
 ```
 Actor / CLI / REST API

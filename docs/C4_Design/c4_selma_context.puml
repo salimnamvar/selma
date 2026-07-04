@@ -17,7 +17,7 @@ title Selma — Context Diagram
 
 ' ── Actors ──
 Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets via CLI or REST API", $sprite="person")
-Person(steward, "AI Steward", "Autonomous agent that writes rules from natural language", $sprite="person")
+Person(agent, "AI Agent", "Autonomous agent that submits natural language rule requests", $sprite="person")
 Person(developer, "Domain Developer", "Builds downstream services that consume rules via API or export", $sprite="person")
 
 ' ── System Under Design ──
@@ -30,7 +30,7 @@ System_Ext(repo, "Git Repository", "Optional version control for rule history an
 
 ' ── Relationships ──
 Rel(admin, selma, "→ CRUD operations, validation, queries", "HTTPS / CLI")
-Rel(steward, selma, "→ submits natural language rule requests", "HTTPS")
+Rel(agent, selma, "→ submits natural language rule requests", "HTTPS")
 Rel(developer, selma, "→ fetches rules, exports domains", "HTTPS")
 Rel(selma, llm, "→ delegates AI rule generation and deep reasoning", "HTTPS")
 Rel(selma, fs, "→ reads and writes policy.md and rules.yaml", "I/O")

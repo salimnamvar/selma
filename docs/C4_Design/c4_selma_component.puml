@@ -19,8 +19,8 @@ title Selma — Component Diagram
 ' ── External Containers ──
 Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml", $tags="external_container")
 Container_Ext(llm_adapter, "LLM Adapter", "Python", "LLM API communication with retry and fallback", $tags="external_container")
-Container_Ext(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
-Container_Ext(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
+Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
+Container(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
 
 ' ── Core Engine Boundary ──
 Container_Boundary(core_boundary, "Core Engine") {
@@ -57,8 +57,8 @@ Container_Boundary(core_boundary, "Core Engine") {
 Rel(definition, storage, "→ writes raw candidate rule to disk")
 Rel(maintenance, storage, "→ reads and writes policy.md and rules.yaml")
 Rel(maintenance, versioner, "→ triggers version bump after every change")
-Rel(linter, policy_contract, "→ validates policy structure and contamination guard")
-Rel(linter, rule_contract, "→ validates schema compliance and traceability bond")
+Rel(linter, policy_contract, "→ validates policy structure and checks forbidden_fields (contamination guard)")
+Rel(linter, rule_contract, "→ validates schema compliance, traceability bond, and forbidden_at_root (contamination guard)")
 Rel(linter, storage, "→ reads files for syntax validation")
 Rel(reasoner, rule_contract, "→ reads conflicts_with, depends_on, priority")
 Rel(reasoner, llm_adapter, "→ delegates deep reasoning when needed")
@@ -75,11 +75,16 @@ Rel(domain_registry, storage, "→ creates domain folders and template files")
 
 ' ── Export and Query ──
 Rel(exporter, storage, "→ reads domain files for packaging")
+Rel(exporter, policy_contract, "→ reads policy for export")
+Rel(exporter, rule_contract, "→ reads schema to validate exported data")
 Rel(query_engine, storage, "→ reads rules for filtering and sorting")
-Rel(query_engine, rule_contract, "→ reads schema for field definitions")
+Rel(query_engine, policy_contract, "→ checks anchor_ref validity")
+Rel(query_engine, rule_contract, "→ validates rule structure before returning")
 
 ' ── Version Manager ──
 Rel(versioner, storage, "→ updates version in rules.yaml")
+Rel(versioner, policy_contract, "→ reads doctrine version for synchronization")
+Rel(versioner, rule_contract, "→ updates schema version to match")
 
 $selma_legend_component()
 

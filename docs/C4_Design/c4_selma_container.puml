@@ -17,7 +17,7 @@ title Selma — Container Diagram
 
 ' ── Actors ──
 Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets", $sprite="person")
-Person(steward, "AI Steward", "Autonomous agent that orchestrates the four-pillar pipeline", $sprite="person")
+Person(agent, "AI Agent", "Autonomous agent that orchestrates the four-pillar pipeline", $sprite="person")
 Person(developer, "Domain Developer", "Builds downstream services that consume rules", $sprite="person")
 
 ' ── Selma System Boundary ──
@@ -46,7 +46,7 @@ System_Ext(repo, "Git Repository", "Optional version control", $tags="external")
 
 ' ── Actor → API ──
 Rel(admin, api, "→ CRUD, validate, query rules", "HTTPS")
-Rel(steward, api, "→ submit NL requests, fetch domain state", "HTTPS")
+Rel(agent, api, "→ submit NL requests, fetch domain state", "HTTPS")
 Rel(developer, api, "→ fetch rules, export domains", "HTTPS")
 
 ' ── API → Core ──
