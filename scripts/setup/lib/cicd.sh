@@ -7,12 +7,6 @@ SETUP_CICD_SH=1
 run_cicd_gates() {
   [[ "${SKIP_CICD}" == "1" ]] && { log_info "Skipping cicd gates"; return 0; }
 
-  if [[ -x "${PROJECT_ROOT}/scripts/lint.sh" ]]; then
-    run_cmd "${PROJECT_ROOT}/scripts/lint.sh" || true
-  else
-    log_warn "lint.sh not found"
-  fi
-
   if [[ -x "${PYTEST_BIN}" ]]; then
     if [[ "${DRY_RUN}" == "1" ]]; then
       log_info "Would run pytest"

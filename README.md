@@ -18,7 +18,7 @@ software-design/
 │   └── resource-oriented-design/   # Resource-oriented design knowledge
 ├── libs/                           # Shared libraries
 │   └── design-common/              # PlantUML parsing, report models
-├── scripts/                        # Standalone cross-domain tools
+├── scripts/                        # Environment setup scripts
 ├── infrastructure/                 # Deployment configs
 └── tools/                          # Tooling configs
 ```
