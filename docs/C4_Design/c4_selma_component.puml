@@ -1,0 +1,42 @@
+' ============================================================
+' Title:     Selma — Component Diagram (Core Engine)
+' Boundary:  Core Engine container
+' Purpose:   Shows the six core components inside the Core Engine and their dependencies
+' Milestone: v0.1.0
+' Version:   1.0.0
+' Source:    contracts/SPECIFICATION.md (§4-5), SPECIFICATION.md (§6)
+' Review:    docs/C4_Design/README.md
+' ============================================================
+
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma — Component Diagram (Core Engine)
+
+Container_Ext(storage, "Rule Storage", "File System", "Stores per-domain policy.md and rules.yaml.")
+Container_Ext(ext_llm, "LLM Adapter", "Python", "Handles communication with external LLM API.")
+
+Container_Boundary("core_boundary", "Core Engine") {
+    Component(domain_registry, "Domain Registry", "Module", "Manages registration of new domains and folder scaffolding.")
+    Component(crud, "CRUD Operations", "Module", "Creates, reads, updates, and deletes rules while maintaining traceability.")
+    Component(validator, "Validator", "Module", "Validates policy structure, rule schema, traceability, and contamination.")
+    Component(steward, "Steward Agent", "Module", "Orchestrates AI-driven rule writing. Calls LLM, then runs validator iteratively.")
+    Component(reasoner, "Reasoner", "Module", "Detects rule conflicts and suggests resolution based on priority hierarchy.")
+    Component(versioner, "Version Manager", "Module", "Auto-bumps versions (SemVer) for domains based on changes.")
+}
+
+Rel(domain_registry, storage, "Creates domain folders")
+Rel(crud, storage, "Reads/Writes rules")
+Rel(crud, versioner, "Triggers version bump on changes")
+Rel(crud, domain_registry, "Registers domains on creation")
+Rel(steward, crud, "Persists AI-generated rules")
+Rel(steward, validator, "Validates generated rules iteratively")
+Rel(steward, ext_llm, "Calls LLM for rule generation")
+Rel(validator, crud, "Accesses rules for validation")
+Rel(reasoner, crud, "Reads rules for conflict detection")
+Rel(reasoner, validator, "Uses validation results")
+
+@enduml

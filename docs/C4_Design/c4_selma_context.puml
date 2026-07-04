@@ -1,0 +1,37 @@
+' ============================================================
+' Title:     Selma — Context Diagram
+' Boundary:  Selma Universal Rule Governance Engine
+' Purpose:   Shows Selma as the system under design, its actors, and external dependencies
+' Milestone: v0.1.0
+' Version:   1.0.0
+' Source:    contracts/SPECIFICATION.md (§1-2), README.md
+' Review:    docs/C4_Design/README.md
+' ============================================================
+
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Context.puml
+!theme plain
+
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title Selma — Context Diagram
+
+Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets.")
+Person(agent, "AI Steward", "Autonomous agent that writes rules from natural language.")
+Person(developer, "Domain Developer", "Builds downstream services that consume rules.")
+
+System(selma, "Selma", "Universal Rule Governance Engine.\nManages policies and rules across domains.\nProvides CRUD, validation, and AI-agentic writing.")
+
+System_Ext(llm, "LLM Service", "OpenAI/Anthropic API for natural language understanding.")
+System_Ext(fs, "File System", "Stores policy.md and rules.yaml per domain.")
+System_Ext(repo, "Version Control", "Git repository for tracking rule history.")
+
+Rel(admin, selma, "Uses via CLI / REST API", "HTTPS")
+Rel(agent, selma, "Submits natural language requests", "HTTPS")
+Rel(developer, selma, "Fetches rules for domain services", "HTTPS")
+Rel(selma, llm, "Calls to generate/extract rule data", "HTTPS")
+Rel(selma, fs, "Reads/Writes policy.md and rules.yaml")
+Rel(selma, repo, "Commits changes (optional)", "Git")
+
+@enduml

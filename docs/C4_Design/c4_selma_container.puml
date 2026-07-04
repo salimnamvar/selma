@@ -1,0 +1,42 @@
+' ============================================================
+' Title:     Selma — Container Diagram
+' Boundary:  Selma Universal Rule Governance Engine
+' Purpose:   Shows Selma's internal containers and their dependencies
+' Milestone: v0.1.0
+' Version:   1.0.0
+' Source:    contracts/SPECIFICATION.md (§2), contracts/README.md
+' Review:    docs/C4_Design/README.md
+' ============================================================
+
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Container.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma — Container Diagram
+
+Person(admin, "Rule Administrator")
+Person(agent, "AI Steward")
+Person(developer, "Domain Developer")
+
+System_Boundary("selma_boundary", "Selma") {
+    Container(api, "Web API", "Python / FastAPI", "Exposes REST endpoints for all operations.")
+    Container(core, "Core Engine", "Python", "Contains validators, CRUD, and Steward orchestrator.")
+    Container(storage, "Rule Storage", "File System", "Stores per-domain policy.md and rules.yaml.")
+    Container(ext_llm, "LLM Adapter", "Python", "Handles communication with external LLM API.")
+}
+
+System_Ext(llm, "LLM Service", "OpenAI/Anthropic")
+System_Ext(repo, "Git Repository", "Optional version control")
+
+Rel(admin, api, "Uses", "HTTPS")
+Rel(agent, api, "Uses", "HTTPS")
+Rel(developer, api, "Fetches rules", "HTTPS")
+Rel(api, core, "Dispatches requests")
+Rel(core, storage, "Reads/Writes policy and rule files")
+Rel(core, ext_llm, "Delegates AI operations")
+Rel(ext_llm, llm, "Calls", "HTTPS")
+Rel(core, repo, "Commits changes (optional)", "Git")
+
+@enduml
