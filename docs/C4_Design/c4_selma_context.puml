@@ -5,7 +5,7 @@
 ' Purpose:   Show selma_service as the system under design, its actors,
 '            and external dependencies
 ' Milestone: v1.0
-' Version:   1.0.0
+' Version:   1.1.0 (P0 fix: legend procedure name)
 ' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
@@ -36,6 +36,6 @@ Rel(selma_service, llm, "→ delegates AI rule generation and deep reasoning", "
 Rel(selma_service, fs, "→ reads and writes policy.md and rules.yaml", "I/O")
 Rel(selma_service, repo, "→ commits changes", "Git")
 
-$selma_service_legend_context()
+$selma_legend_context()
 
 @enduml

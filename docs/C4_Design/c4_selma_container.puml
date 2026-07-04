@@ -5,7 +5,7 @@
 ' Purpose:   Show Selma's single deployable container,
 '            external systems, and configuration data
 ' Milestone: v1.0
-' Version:   1.1.0 (C4-compliant)
+' Version:   1.2.0 (P1 fix: Configuration → Contracts, P2: Rule Storage note)
 ' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
@@ -26,13 +26,13 @@ System_Boundary(selma_service, "SELMA System") {
     ' ── SINGLE CONTAINER: SELMA Application ──
     Container(selma_application, "SELMA Application", "Python / FastAPI", "REST API + Core Engine (Definition, Maintenance, Linting, Reasoning, Steward)", $tags="container")
 
-    ' ── CONFIGURATION DATA (not deployable, bundled at build time) ──
-    Container(config, "Configuration", "YAML / JSON", "policy_doctrine.yaml & rule_schema.json (loaded at startup)", $tags="datastore")
+    ' ── CONTRACTS (static configuration data, not deployable units) ──
+    Container(contracts, "Contracts", "YAML / JSON", "policy_doctrine.yaml & rule_schema.json (static data loaded at startup, not a process)", $tags="datastore")
 }
 
 ' ── External Systems ──
 System_Ext(llm, "LLM Service", "OpenAI / Anthropic", $tags="external")
-System_Ext(fs, "Rule Storage", "File System (./domains/)", $tags="external")
+System_Ext(fs, "Rule Storage", "File System (local, network, or S3 — supports graceful degradation)", $tags="external")
 System_Ext(repo, "Git Repository", "Optional version control", $tags="external")
 
 ' ── Actor → selma_application ──
@@ -40,8 +40,8 @@ Rel(admin, selma_application, "→ CRUD, validate, query rules", "HTTPS")
 Rel(agent, selma_application, "→ submit NL requests", "HTTPS")
 Rel(developer, selma_application, "→ fetch rules, export domains", "HTTPS")
 
-' ── selma_application → Configuration (read-only at startup) ──
-Rel(selma_application, config, "→ reads contracts at startup", "I/O")
+' ── selma_application → Contracts (read-only at startup) ──
+Rel(selma_application, contracts, "→ reads contracts at startup", "I/O")
 
 ' ── selma_application → External Systems ──
 Rel(selma_application, llm, "→ calls for rule generation and reasoning", "HTTPS")

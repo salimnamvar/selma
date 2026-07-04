@@ -3,9 +3,9 @@
 ' Title:     Selma — Component Diagram
 ' Boundary:  Web Application container
 ' Purpose:   Show the four-pillar pipeline, Steward orchestration,
-'            and the dual-contract bond
+'            dual-contract bond, LLM adapter, and contracts
 ' Milestone: v1.0
-' Version:   1.0.0
+' Version:   1.1.0 (P0 fix: moved llm_adapter, contracts inside boundary)
 ' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
@@ -17,12 +17,9 @@ skinparam wrapWidth 200
 title SELMA System — Component Diagram
 
 ' ── External Containers ──
-Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml", $tags="external_container")
-Container_Ext(llm_adapter, "LLM Adapter", "Python", "LLM API communication with retry and fallback", $tags="external_container")
-Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
-Container(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
+Container_Ext(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml (local, network, or S3)", $tags="external_container")
 
-' ── Web Application Boundary (contains four-pillar pipeline) ──
+' ── Web Application Boundary (contains four-pillar pipeline + contracts + adapter) ──
 Container_Boundary(selma_application, "SELMA Application") {
 
     ' ── Pillar 1: Definition Engine ──
@@ -51,6 +48,13 @@ Container_Boundary(selma_application, "SELMA Application") {
 
     ' ── Query Engine ──
     Component(query_engine, "Query Engine", "Module", "Retrieves rules by ID, domain, status, priority, or type", $tags="service")
+
+    ' ── LLM Adapter (internal module, not external) ──
+    Component(llm_adapter, "LLM Adapter", "Python Module", "LLM API communication with retry and fallback", $tags="repository")
+
+    ' ── Contracts (static configuration data) ──
+    Component(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml — human lens", $tags="contract")
+    Component(rule_contract, "Rule Schema", "JSON", "rule_schema.json — machine lens", $tags="contract")
 }
 
 ' ── Four-Pillar Pipeline ──
@@ -85,6 +89,9 @@ Rel(query_engine, rule_contract, "→ validates rule structure before returning"
 Rel(versioner, storage, "→ updates version in rules.yaml")
 Rel(versioner, policy_contract, "→ reads doctrine version for synchronization")
 Rel(versioner, rule_contract, "→ updates schema version to match")
+
+' ── LLM Adapter → External ──
+Rel(llm_adapter, storage, "→ reads cached rules for context")
 
 $selma_legend_component()
 
