@@ -81,7 +81,7 @@ for CAND in \
   "${HOME}/anaconda3/etc/profile.d/conda.sh" \
   "/opt/miniconda3/etc/profile.d/conda.sh"
 do
-  if [ -f "$CAND" ]; then . "$CAND"; conda activate nasim 2>/dev/null || true; break; fi
+  if [ -f "$CAND" ]; then . "$CAND"; conda activate ${ENV_NAME} 2>/dev/null || true; break; fi
 done
 SH
 

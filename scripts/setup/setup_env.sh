@@ -11,7 +11,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SETUP_DIR="${SCRIPT_DIR}"
 LIB_DIR="${SETUP_DIR}/lib"
 
@@ -52,6 +52,7 @@ main() {
   if step_selected env; then
     log_step "Conda environment"
     ensure_conda_env
+    setup_shell_profile
   fi
 
   if step_selected python; then

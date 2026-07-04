@@ -68,3 +68,30 @@ ensure_conda_env() {
   PYTEST_BIN="${ENV_PREFIX}/bin/pytest"
   log_ok "Python: ${PYTHON_BIN}"
 }
+
+setup_shell_profile() {
+  local marker="# >>> ${ENV_NAME} auto-activate >>>"
+  local marker_end="# <<< ${ENV_NAME} auto-activate <<<"
+  local profile="${HOME}/.bashrc"
+  [[ -f "${profile}" ]] || profile="${HOME}/.profile"
+
+  if grep -qF "${marker}" "${profile}" 2>/dev/null; then
+    log_ok "Shell profile already has ${ENV_NAME} activation"
+    return 0
+  fi
+
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    log_info "Would add conda activate ${ENV_NAME} to ${profile}"
+    return 0
+  fi
+
+  cat >>"${profile}" <<EOF
+
+${marker}
+# Auto-activate project conda env — managed by setup_env.sh
+conda activate ${ENV_NAME} 2>/dev/null || true
+${marker_end}
+EOF
+
+  log_ok "Added 'conda activate ${ENV_NAME}' to ${profile}"
+}

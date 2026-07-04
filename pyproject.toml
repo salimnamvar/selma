@@ -64,6 +64,10 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-q --tb=short"
 
+[tool.setuptools.packages.find]
+where = ["libs", "services"]
+include = ["design_common*", "c4*", "cl*", "erd*", "sq*", "usecase_diagram*", "data_contract*", "openapi_specification*", "resource_oriented_design*", "state_machine_diagram*"]
+
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.11"
