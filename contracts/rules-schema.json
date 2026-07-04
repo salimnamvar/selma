@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts/rules-schema.json",
+  "title": "Rules Schema",
+  "description": "Machine contract for rules data files. Defines data structures and executable parameters for machine consumption.",
+  "type": "object",
+  "required": ["version", "name", "description", "rules"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver of the contract format."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Kebab-case domain name."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "One-line description of what this rule domain covers."
+    },
+    "prose": {
+      "type": "object",
+      "description": "Reference to the human-readable rules document.",
+      "required": ["rules"],
+      "properties": {
+        "rules": {
+          "type": "string",
+          "description": "Filename of the rules document."
+        }
+      },
+      "additionalProperties": false
+    },
+    "tooling": {
+      "type": "object",
+      "description": "Paths to executable tooling scripts.",
+      "properties": {
+        "check": { "type": "string", "description": "Path to check script." },
+        "fix": { "type": "string", "description": "Path to fix script." }
+      },
+      "additionalProperties": true
+    },
+    "layers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Validation scope names this domain supports."
+    },
+    "discovery": {
+      "type": "object",
+      "description": "File and content discovery configuration.",
+      "properties": {
+        "file_glob": { "type": "string", "description": "Glob pattern for target files." },
+        "content_glob": { "type": "string", "description": "Glob pattern for content files." },
+        "skip_dir_names": { "type": "array", "items": { "type": "string" }, "description": "Directory names to skip." },
+        "skip_file_patterns": { "type": "array", "items": { "type": "string" }, "description": "File patterns to skip." }
+      },
+      "additionalProperties": true
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": { "type": ["integer", "number", "string", "boolean"] },
+      "description": "Named thresholds referenced by rules (DRY — single source of truth)."
+    },
+    "vocabulary": {
+      "type": "object",
+      "description": "Shared word lists and term registries used by rules.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "patterns": {
+      "type": "object",
+      "description": "Named regex and lexical patterns used by rules.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "regex": { "type": "string", "description": "Regex pattern string." },
+          "description": { "type": "string", "description": "Human-readable description." },
+          "examples": { "type": "array", "items": { "type": "string" }, "description": "Example matches." }
+        },
+        "additionalProperties": true
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/rule" },
+      "description": "Rule definitions — the executable checks."
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Domain-specific extension data. Unconstrained.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "required": ["id", "scope", "severity", "check_type", "message"],
+      "description": "A single executable rule.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]+(-[A-Z0-9]+)+$",
+          "description": "Stable rule ID. Prefix matches domain name, e.g. XX-001, XX-002."
+        },
+        "scope": {
+          "type": "string",
+          "description": "When the rule runs. Must match a declared layer."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Violation severity."
+        },
+        "check_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Executor key in the check registry."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 5,
+          "description": "Violation message template."
+        },
+        "principle": {
+          "type": "string",
+          "description": "Guiding principle for reasoning output."
+        },
+        "policy_ref": {
+          "type": "string",
+          "description": "Cross-reference to rules document section."
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "Why the rule exists."
+        },
+        "fix": {
+          "type": "string",
+          "description": "Actionable fix suggestion."
+        },
+        "params": {
+          "type": "object",
+          "description": "Rule-specific parameters passed to the check function.",
+          "additionalProperties": true
+        },
+        "skip_when": {
+          "type": "object",
+          "description": "Conditions to skip this rule.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

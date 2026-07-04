@@ -1,0 +1,166 @@
+# rules-doc.yaml
+# Document contract for rules documents.
+# Defines section structure, content types, and writing principles.
+# Agents use this to generate the rules document. Humans use it to review structure.
+
+contract:
+  name: rules-document
+  version: "1.0.0"
+  description: >
+    Structure and writing principles for the rules document.
+    This is NOT a data schema — it defines how the document looks,
+    what sections it contains, and how content should be written.
+
+# ─── WRITING PRINCIPLES ──────────────────────────────────────────
+# How to write the rules document. Agents follow these when generating.
+
+writing_principles:
+  - id: WP-001
+    title: "Prose over tables"
+    description: >
+      Use prose for explanations and reasoning.
+      Use tables for structured lists (naming patterns, limits, references).
+      Never use a table where a sentence suffices.
+  - id: WP-002
+    title: "Cross-reference, don't duplicate"
+    description: >
+      The rules document explains WHY. The rules data file defines WHAT.
+      Link to the data file for specifics — don't repeat rule IDs or parameters in prose.
+  - id: WP-003
+    title: "One section, one concern"
+    description: >
+      Each major section addresses a single concern.
+      If a section grows beyond 3 subsections, split it.
+  - id: WP-004
+    title: "Actionable language"
+    description: >
+      Write imperatively: "Use kebab-case" not "Kebab-case is preferred".
+      Every statement should be checkable — can a machine verify it?
+  - id: WP-005
+    title: "No orphan rules"
+    description: >
+      Every rule in the data file must appear in the rules document.
+      Every principle in the rules document must have at least one rule in the data file.
+
+# ─── SECTION STRUCTURE ────────────────────────────────────────────
+# Major (##), minor (###), patch (table rows / list items).
+
+sections:
+  - id: overview
+    title: "Overview"
+    required: true
+    minors:
+      - id: scope
+        title: "Scope"
+        required: true
+        content_type: prose
+        guidance: "Define boundaries — what is included and excluded."
+      - id: audience
+        title: "Audience"
+        required: false
+        content_type: prose
+        guidance: "Who consumes these rules — humans and machines."
+
+  - id: principles
+    title: "Principles"
+    required: true
+    minors:
+      - id: principles_table
+        title: null
+        required: true
+        content_type: table
+        columns: ["Principle", "Description"]
+        guidance: "Each row is a foundational rule that specific checks derive from."
+
+  - id: conventions
+    title: "Conventions"
+    required: true
+    minors:
+      - id: naming
+        title: "Naming"
+        required: true
+        content_type: mixed
+        guidance: "Code block for format pattern, optional table for examples."
+      - id: structure
+        title: "Structure"
+        required: false
+        content_type: mixed
+        guidance: "How artifacts are organized."
+      - id: glossary
+        title: "Glossary"
+        required: false
+        content_type: table
+        columns: ["Term", "Meaning", "Context"]
+        guidance: "Only if the domain has domain-specific jargon that needs defining."
+
+  - id: constraints
+    title: "Constraints"
+    required: true
+    minors:
+      - id: size_limits
+        title: "Size Limits"
+        required: false
+        content_type: table
+        columns: ["Limit", "Value", "Applies to"]
+      - id: prohibitions
+        title: "Prohibitions"
+        required: false
+        content_type: table
+        columns: ["Item", "Reason"]
+      - id: requirements
+        title: "Requirements"
+        required: true
+        content_type: table
+        columns: ["Requirement", "Mandatory", "Reason"]
+
+  - id: validation
+    title: "Validation"
+    required: true
+    minors:
+      - id: automated_checks
+        title: "Automated Checks"
+        required: false
+        content_type: code_block
+        guidance: "CLI commands only. Don't explain what they do — the commands are self-documenting."
+      - id: manual_review
+        title: "Manual Review Checklist"
+        required: false
+        content_type: checklist
+        guidance: "Group by concern. Each item must be checkable."
+
+  - id: references
+    title: "References"
+    required: false
+    minors:
+      - id: references_table
+        title: null
+        required: false
+        content_type: table
+        columns: ["Reference", "Description"]
+
+# ─── FOOTER ───────────────────────────────────────────────────────
+
+footer:
+  required: true
+  template: >
+    *This file is the executable specification for all {domain} work.
+    The rule engine interprets every rule mechanically.
+    Any deviation is a violation.*
+
+# ─── DOCUMENT RULES ───────────────────────────────────────────────
+# Structural rules about the document itself.
+# These are enforced by agents, not by the machine contract.
+
+document_rules:
+  - id: DOC-001
+    rule: "Every section with required:true must be present."
+    severity: critical
+  - id: DOC-002
+    rule: "Sections must appear in the order defined in this contract."
+    severity: high
+  - id: DOC-003
+    rule: "Tables must have headers. No headerless data."
+    severity: medium
+  - id: DOC-004
+    rule: "Code blocks must specify language."
+    severity: low
