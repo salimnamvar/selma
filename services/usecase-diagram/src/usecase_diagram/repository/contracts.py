@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -15,27 +16,41 @@ from usecase_diagram.domain.entities.contract import (
 
 
 class ContractRepository:
-    """Loads and caches contract YAML files into a ContractBundle."""
+    """Loads and caches contract YAML files into a ContractBundle.
 
-    def __init__(self, contracts_dir: Path | None = None) -> None:
+    Attributes:
+        _dir (Path): Directory containing contract YAML files.
+        _bundle (Optional[ContractBundle]): Cached loaded bundle.
+    """
+
+    def __init__(self, a_contracts_dir: Optional[Path] = None) -> None:
+        """Initialize with optional contracts directory override.
+
+        Args:
+            a_contracts_dir (Optional[Path]): Contracts directory or None for default.
+        """
         config = get_config()
-        self._dir = contracts_dir or config.resolved_contracts_dir
-        self._bundle: ContractBundle | None = None
+        self._dir: Path = a_contracts_dir or config.resolved_contracts_dir
+        self._bundle: Optional[ContractBundle] = None
 
     def load(self) -> ContractBundle:
-        """Load all contract YAML files and return a ContractBundle."""
+        """Load all contract YAML files and return a ContractBundle.
+
+        Returns:
+            ContractBundle: Loaded contract bundle.
+        """
         if self._bundle is not None:
             return self._bundle
 
-        package = self._load_yaml("package.yaml")
-        rules_data = self._load_yaml("rules.yaml")
-        principles_data = self._load_yaml("principles.yaml")
-        verbs_data = self._load_yaml("verbs.yaml")
-        patterns_data = self._load_yaml("patterns.yaml")
-        fg_data = self._load_yaml("filename_groups.yaml")
+        package: Dict[str, Any] = self._load_yaml("package.yaml")
+        rules_data: Dict[str, Any] = self._load_yaml("rules.yaml")
+        principles_data: Dict[str, Any] = self._load_yaml("principles.yaml")
+        verbs_data: Dict[str, Any] = self._load_yaml("verbs.yaml")
+        patterns_data: Dict[str, Any] = self._load_yaml("patterns.yaml")
+        fg_data: Dict[str, Any] = self._load_yaml("filename_groups.yaml")
 
-        rules = self._parse_rules(rules_data)
-        assessments = self._parse_assessments(principles_data)
+        rules: List[RuleDef] = self._parse_rules(rules_data)
+        assessments: List[AssessmentDef] = self._parse_assessments(principles_data)
 
         self._bundle = ContractBundle(
             version=package.get("version", "0.0.0"),
@@ -50,22 +65,45 @@ class ContractRepository:
         return self._bundle
 
     def reload(self) -> ContractBundle:
-        """Force-reload contracts from disk."""
-        self._bundle = None
-        return self.load()
+        """Force-reload contracts from disk.
 
-    def _load_yaml(self, filename: str) -> dict:
-        path = self._dir / filename
-        if not path.exists():
-            return {}
-        with open(path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        return data if isinstance(data, dict) else {}
+        Returns:
+            ContractBundle: Freshly loaded contract bundle.
+        """
+        self._bundle = None
+        result: ContractBundle = self.load()
+        return result
+
+    def _load_yaml(self, a_filename: str) -> Dict[str, Any]:
+        """Load a YAML file from the contracts directory.
+
+        Args:
+            a_filename (str): Name of the YAML file to load.
+
+        Returns:
+            Dict[str, Any]: Parsed YAML data as dict, or empty dict.
+        """
+        path: Path = self._dir / a_filename
+        result: Dict[str, Any] = {}
+        if path.exists():
+            with open(path, encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            if isinstance(data, dict):
+                result = data
+        return result
 
     @staticmethod
-    def _parse_rules(data: dict) -> list[RuleDef]:
-        rules: list[RuleDef] = []
-        for entry in data.get("rules", []):
+    def _parse_rules(a_data: Dict[str, Any]) -> List[RuleDef]:
+        """Parse rule definitions from YAML data.
+
+        Args:
+            a_data (Dict[str, Any]): Raw YAML rules data.
+
+        Returns:
+            List[RuleDef]: Parsed rule definitions.
+        """
+        rules: List[RuleDef] = []
+        for entry in a_data.get("rules", []):
             rules.append(
                 RuleDef(
                     id=entry["id"],
@@ -84,9 +122,17 @@ class ContractRepository:
         return rules
 
     @staticmethod
-    def _parse_assessments(data: dict) -> list[AssessmentDef]:
-        assessments: list[AssessmentDef] = []
-        for entry in data.get("assessments", []):
+    def _parse_assessments(a_data: Dict[str, Any]) -> List[AssessmentDef]:
+        """Parse assessment definitions from YAML data.
+
+        Args:
+            a_data (Dict[str, Any]): Raw YAML principles data.
+
+        Returns:
+            List[AssessmentDef]: Parsed assessment definitions.
+        """
+        assessments: List[AssessmentDef] = []
+        for entry in a_data.get("assessments", []):
             assessments.append(
                 AssessmentDef(
                     id=entry["id"],

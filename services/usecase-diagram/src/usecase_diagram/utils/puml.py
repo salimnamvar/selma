@@ -6,17 +6,32 @@ import re
 from pathlib import Path
 
 
-def load_basic_diagram(filepath: Path) -> str:
-    """Load a PlantUML file and return its raw text content."""
-    return filepath.read_text(encoding="utf-8")
+def load_basic_diagram(a_filepath: Path) -> str:
+    """Load a PlantUML file and return its raw text content.
+
+    Args:
+        a_filepath (Path): Path to the PlantUML file.
+
+    Returns:
+        str: Raw source text.
+    """
+    result: str = a_filepath.read_text(encoding="utf-8")
+    return result
 
 
-def strip_comments(source: str) -> str:
-    """Remove PlantUML comments from source text."""
-    lines = []
-    in_multiline = False
-    for line in source.splitlines():
-        stripped = line.strip()
+def strip_comments(a_source: str) -> str:
+    """Remove PlantUML comments from source text.
+
+    Args:
+        a_source (str): PlantUML source text.
+
+    Returns:
+        str: Source text with comments removed.
+    """
+    lines: list[str] = []
+    in_multiline: bool = False
+    for line in a_source.splitlines():
+        stripped: str = line.strip()
         if stripped.startswith("'"):
             continue
         if stripped.startswith("/*"):
@@ -27,12 +42,19 @@ def strip_comments(source: str) -> str:
                 in_multiline = False
             continue
         lines.append(line)
-    return "\n".join(lines)
+    result: str = "\n".join(lines)
+    return result
 
 
-def extract_startuml_body(source: str) -> str:
-    """Extract content between @startuml and @enduml."""
-    match = re.search(r"@startuml.*?\n(.*?)@enduml", source, re.DOTALL)
-    if match:
-        return match.group(1)
-    return source
+def extract_startuml_body(a_source: str) -> str:
+    """Extract content between @startuml and @enduml.
+
+    Args:
+        a_source (str): PlantUML source text.
+
+    Returns:
+        str: Content between @startuml and @enduml, or full source.
+    """
+    match = re.search(r"@startuml.*?\n(.*?)@enduml", a_source, re.DOTALL)
+    result: str = match.group(1) if match else a_source
+    return result

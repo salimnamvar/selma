@@ -1,6 +1,6 @@
 # Use Case Diagram
 
-Design knowledge service for PlantUML use case diagrams.
+Design knowledge service of use case diagrams.
 
 ## Usage
 
