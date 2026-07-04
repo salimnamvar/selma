@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://schemas/universal-machine-schema.json",
-  "title": "Universal Machine Rule Schema",
+  "$id": "https://schemas/universal-rule-schema.json",
+  "title": "Universal Rule Schema",
   "description": "The absolute essence of a machine-readable rule. Includes lifecycle, dependencies, and provenance. Completely open and context-free.",
   "x-contamination-guard": {
     "forbidden_at_root": [
@@ -29,13 +29,13 @@
       "type": "string",
       "description": "Version of this specific rule dataset."
     },
-    "human_contract_version": {
+    "policy_contract_version": {
       "type": "string",
-      "description": "Version of the paired human-rule-doctrine.yaml. Must match for bidirectional traceability."
+      "description": "Version of the paired policy-doctrine.yaml. Must match for bidirectional traceability."
     },
-    "human_contract_id": {
+    "policy_contract_id": {
       "type": "string",
-      "description": "Identifier of the paired human contract (e.g., 'universal-human-doctrine')."
+      "description": "Identifier of the paired policy contract (e.g., 'universal-policy-doctrine')."
     },
     "metadata": {
       "type": "object",

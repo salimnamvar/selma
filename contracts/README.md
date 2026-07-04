@@ -6,7 +6,7 @@ Dual-schema architecture for universal rule governance. Two independent contract
 
 ```
 ┌─────────────────────────────┐         ┌─────────────────────────────┐
-│  human_rule_doctrine.yaml   │         │  machine_rule_schema.json   │
+│    policy_doctrine.yaml     │         │     rule_schema.json        │
 │  (The Societal Lens)        │         │  (The Mechanical Lens)      │
 │                             │         │                             │
 │  - Writing Principles       │         │  - Data Structure           │
@@ -23,11 +23,11 @@ Dual-schema architecture for universal rule governance. Two independent contract
 
 ## The Separation Principle
 
-**Human Contract** defines *why* and *how* humans write rules:
+**Policy Contract** defines *why* and *how* humans write rules:
 - Prose structure, editorial standards, governance processes, social consequences
 - A diplomat can edit this without knowing what a "regex" is
 
-**Machine Contract** defines *what* a machine executes:
+**Rule Contract** defines *what* a machine executes:
 - Data structure, lifecycle, dependencies, evaluator routing hints
 - A kernel developer can extend this without caring about the "Governance" section
 
@@ -35,34 +35,34 @@ Dual-schema architecture for universal rule governance. Two independent contract
 
 The contracts connect in exactly **one** way:
 
-- **Human → Machine**: Directive tables contain a `Machine ID` column (cross-reference label)
-- **Machine → Human**: Each rule has an `anchor_ref` field (link back to human document section)
+- **Policy → Rule**: Directive tables contain a `Machine ID` column (cross-reference label)
+- **Rule → Policy**: Each rule has an `anchor_ref` field (link back to policy document section)
 
 This forms a strict bidirectional pointer:
-- Human says: *"This paragraph is about Rule `R-001`."*
-- Machine says: *"Rule `R-001` points back to `section:directives`."*
+- Policy says: *"This paragraph is about Rule `R-001`."*
+- Rule says: *"Rule `R-001` points back to `section:directives`."*
 
 ## Contamination Guards
 
 Each contract explicitly lists what it MUST NOT contain:
 
-### Human Contract Forbidden Fields
+### Policy Contract Forbidden Fields
 `parameters`, `conditions`, `evaluator_hint`, `weight`, `depends_on`, `conflicts_with`, `status`, `created_at`, `expires_at`, `remediation`, `target`, `technical_hints`
 
-### Machine Contract Forbidden Root Fields
+### Rule Contract Forbidden Root Fields
 `preamble`, `governance`, `definitions`, `principles`, `sanctions`, `references`, `writing_principles`, `sections`, `guidance`, `columns`
 
 ## Version Synchronization
 
 Both contracts reference each other's version:
-- `human_rule_doctrine.yaml` → `doctrine.machine_contract_version`
-- `machine_rule_schema.json` → `human_contract_version` + `human_contract_id`
+- `policy_doctrine.yaml` → `doctrine.rule_contract_version` + `doctrine.rule_contract_id`
+- `rule_schema.json` → `policy_contract_version` + `policy_contract_id`
 
 Update both when either contract changes.
 
 ## Usage
 
-1. **Edit Human YAML** → Define prose, governance, sanctions for your domain
-2. **Edit Machine JSON** → Define data structure, lifecycle, evaluator routing
-3. **Cross-reference** → Human tables use `Machine ID` column; Machine rules use `anchor_ref`
-4. **Validate** → Ensure no contamination (human has no machine fields, machine has no human fields)
+1. **Edit Policy YAML** → Define prose, governance, sanctions for your domain
+2. **Edit Rule JSON** → Define data structure, lifecycle, evaluator routing
+3. **Cross-reference** → Policy tables use `Machine ID` column; Rule items use `anchor_ref`
+4. **Validate** → Ensure no contamination (policy has no machine fields, rule has no human fields)

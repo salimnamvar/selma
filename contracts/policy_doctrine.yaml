@@ -1,15 +1,15 @@
-# human-rule-doctrine.yaml
+# policy-doctrine.yaml
 # The Absolute Essence + Self-Governance.
 # Completely context-free. Governs the governors.
 
 doctrine:
-  name: universal-human-doctrine
+  name: universal-policy-doctrine
   version: "1.2.0"
   description: >
     Defines how to structure and write a rule document.
     Includes self-governance, hierarchy, and sanctions.
-  machine_contract_version: "1.2.0"
-  machine_contract_id: "universal-machine-schema"
+  rule_contract_version: "1.2.0"
+  rule_contract_id: "universal-rule-schema"
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
 # This contract MUST NOT contain any machine-executable logic.
