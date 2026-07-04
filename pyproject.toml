@@ -58,11 +58,26 @@ profile = "google"
 line_length = 120
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = [
+    "tests",
+    "services/usecase-diagram/tests",
+]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-q --tb=short"
+pythonpath = [
+    "libs",
+    "services/c4-diagram/src",
+    "services/class-diagram/src",
+    "services/data-contract/src",
+    "services/entity-relationship-diagram/src",
+    "services/openapi-specification/src",
+    "services/resource-oriented-design/src",
+    "services/sequence-diagram/src",
+    "services/state-machine-diagram/src",
+    "services/usecase-diagram/src",
+]
 
 [tool.setuptools.packages.find]
 where = ["libs", "services"]
@@ -72,3 +87,15 @@ include = ["design_common*", "c4*", "cl*", "erd*", "sq*", "usecase_diagram*", "d
 typeCheckingMode = "strict"
 pythonVersion = "3.11"
 pythonPlatform = "Linux"
+extraPaths = [
+    "libs",
+    "services/c4-diagram/src",
+    "services/class-diagram/src",
+    "services/data-contract/src",
+    "services/entity-relationship-diagram/src",
+    "services/openapi-specification/src",
+    "services/resource-oriented-design/src",
+    "services/sequence-diagram/src",
+    "services/state-machine-diagram/src",
+    "services/usecase-diagram/src",
+]
