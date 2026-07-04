@@ -40,7 +40,7 @@ writing_principles:
   - id: DP-005
     title: "Actionable language"
     description: >
-      Write imperatively: "Use kebab-case" not "Kebab-case is preferred".
+      Write imperatively and precisely: e.g., "The driver must stop" not "Stopping is recommended".
       Every statement should be checkable — can an evaluator verify it?
   - id: DP-006
     title: "No orphan directives"
@@ -51,8 +51,8 @@ writing_principles:
   - id: DP-007
     title: "Distinguish rules from standards"
     description: >
-      Rules are specific: "Use kebab-case for filenames." Standards are principle-based:
-      "Choose naming conventions that aid discoverability."
+      Rules are specific: "All payments must be processed within 48 hours." Standards are principle-based:
+      "Choose processing timelines that balance speed and accuracy."
       Mark each explicitly. Rules require an evaluator; standards require interpretation guidance.
   - id: DP-008
     title: "State essential attributes"
@@ -68,7 +68,7 @@ writing_principles:
     title: "Neither too broad nor too narrow"
     description: >
       Definitions must cover all instances of the concept and exclude everything else.
-      A rule for "filenames" should not accidentally cover "variable names."
+      A rule for "employees" should not accidentally cover "contractors."
   - id: DP-011
     title: "No artificial meaning"
     description: >
@@ -216,7 +216,7 @@ sections:
         title: "Naming"
         required: true
         content_type: mixed
-        guidance: "Code block for format pattern, optional table for examples."
+        guidance: "Use examples or pattern templates to illustrate the format."
       - id: structure
         title: "Structure"
         required: false
@@ -325,13 +325,13 @@ document_rules:
     rule: "Tables must have headers. No headerless data."
     severity: best_effort
   - id: DOC-004
-    rule: "Code blocks must specify language."
+    rule: "Examples and templates must be clearly labeled with their context."
     severity: informative
   - id: DOC-005
-    rule: "Every directive in the evaluative schema must have type=rule and reference a standard."
+    rule: "Every directive in the evaluative schema must have kind=obligation or kind=prohibition and reference a standard."
     severity: absolute_veto
   - id: DOC-006
-    rule: "Every standard in the evaluative schema must have type=standard and include interpretation guidance."
+    rule: "Every directive with kind=standard must include interpretation guidance."
     severity: absolute_veto
   - id: DOC-007
     rule: "Definitions must not be circular and must state essential attributes."

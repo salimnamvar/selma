@@ -29,7 +29,7 @@
       "properties": {
         "document": {
           "type": "string",
-          "description": "URI or filename of the editorial doctrine document."
+          "description": "URI or logical identifier of the editorial doctrine document (e.g., urn:doctrine:un-climate-v1)."
         }
       },
       "additionalProperties": false
@@ -46,19 +46,6 @@
         "type": "array",
         "items": { "type": "string" }
       }
-    },
-    "technical_hints": {
-      "type": "object",
-      "description": "Domain-specific technical hints for evaluators. Separated from core params to keep the schema context-free.",
-      "properties": {
-        "file_glob": { "type": "string", "description": "Glob pattern for target files (if evaluating file-based artifacts)." },
-        "content_glob": { "type": "string", "description": "Glob pattern for content files." },
-        "skip_dir_names": { "type": "array", "items": { "type": "string" }, "description": "Directory names to skip." },
-        "skip_file_patterns": { "type": "array", "items": { "type": "string" }, "description": "File patterns to skip." },
-        "check": { "type": "string", "description": "Path to check script or evaluation protocol." },
-        "fix": { "type": "string", "description": "Path to fix script or remediation protocol." }
-      },
-      "additionalProperties": true
     },
     "extensions": {
       "type": "object",
