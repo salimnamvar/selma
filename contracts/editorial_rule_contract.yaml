@@ -156,13 +156,7 @@ sections:
     required: true
     content_type: table
     columns: ["Principle", "Description"]
-    minors:
-      - id: principles_table
-        title: null
-        required: true
-        content_type: table
-        columns: ["Principle", "Description"]
-        guidance: "Each row is a foundational principle that specific rules and standards derive from."
+    guidance: "Each row is a foundational principle that specific rules and standards derive from."
 
   - id: standards
     title: "Standards of Judgment"
@@ -215,7 +209,7 @@ sections:
 
   - id: conventions
     title: "Conventions"
-    classification: definitions
+    classification: standards_of_proof
     required: true
     minors:
       - id: naming
@@ -240,6 +234,12 @@ sections:
         required: false
         content_type: prose
         guidance: "Execution protocols for the evaluator (agent, human, or machine)."
+      - id: human_judgment_rubric
+        title: "Human Judgment Rubric"
+        required: false
+        content_type: table
+        columns: ["Factor", "Weight", "How to Assess"]
+        guidance: "Only used when evaluator_type is human_reviewer or llm_judge. Gives judges/agents a scoring framework."
       - id: manual_review
         title: "Manual Review Checklist"
         required: false

@@ -76,7 +76,7 @@
   "definitions": {
     "directive": {
       "type": "object",
-      "required": ["id", "kind", "anchor_ref", "evaluator_type", "message"],
+      "required": ["id", "kind", "anchor_ref", "evaluator_type", "message", "enforcement_weight"],
       "description": "A single directive — either a specific obligation or a flexible standard.",
       "properties": {
         "id": {
@@ -103,30 +103,25 @@
           "minLength": 5,
           "description": "Violation message template or judgment output."
         },
-        "applicability": {
+        "conditions": {
           "type": "object",
-          "description": "Conditions under which this directive is applicable.",
+          "description": "The exclusive gatekeeper. If conditions are not met, this directive is inert.",
           "properties": {
-            "jurisdiction_refs": {
+            "jurisdictions": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Array of jurisdiction labels this directive applies to."
+              "description": "Active if jurisdiction matches any of these labels."
             },
-            "trigger_conditions": {
+            "lifecycle_state": {
+              "type": "string",
+              "enum": ["draft", "active", "sunset"],
+              "description": "Active if in this lifecycle state."
+            },
+            "unless": {
               "type": "object",
-              "description": "Additional conditions that must be met for this directive to activate.",
+              "description": "Explicit skip logic (e.g., {'income_bracket': 'low'}). If any condition matches, directive is inert.",
               "additionalProperties": true
             }
-          },
-          "additionalProperties": false
-        },
-        "trigger_logic": {
-          "type": "object",
-          "description": "Logical conditions under which this directive is active or skipped.",
-          "properties": {
-            "if_jurisdiction": { "type": "array", "items": { "type": "string" }, "description": "Active if jurisdiction matches any of these." },
-            "if_state": { "type": "string", "enum": ["draft", "active", "sunset"], "description": "Active if in this lifecycle state." },
-            "unless": { "type": "object", "description": "Conditions under which this directive is skipped.", "additionalProperties": true }
           },
           "additionalProperties": true
         },
