@@ -1,62 +1,41 @@
+@startuml c4_selma_context
 ' ============================================================
 ' Title:     Selma — Context Diagram
 ' Boundary:  Selma Universal Rule Governance Engine
-' Purpose:   Shows Selma as the system under design, its actors,
-'            external dependencies, the dual-contract bond,
-'            and the four-pillar core engine
-' Milestone: v0.1.0
-' Version:   4.0.0
-' Source:    contracts/SPECIFICATION.md, contracts/policy_doctrine.yaml,
-'            contracts/rule_schema.json, README.md
-' Review:    docs/C4_Design/README.md
+' Purpose:   Show Selma as the system under design, its actors,
+'            and external dependencies
+' Milestone: v1.0
+' Version:   1.0.0
+' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Context.puml
-!theme plain
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
+!include common/c4_styles.puml
+skinparam linetype polyline
 
-LAYOUT_LEFT_RIGHT()
-LAYOUT_WITH_LEGEND()
+title Selma — Context Diagram
 
-title Selma — Context Diagram\nUniversal Rule Governance Engine
+' ── Actors ──
+Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets via CLI or REST API", $sprite="person")
+Person(steward, "AI Steward", "Autonomous agent that writes rules from natural language", $sprite="person")
+Person(developer, "Domain Developer", "Builds downstream services that consume rules via API or export", $sprite="person")
 
-' ─── ACTORS ──────────────────────────────────────────────────────
-Person(admin, "Rule Administrator", "Human authoring and maintaining\nrule sets via CLI or REST API.")
-Person(steward, "AI Steward", "Autonomous agent that writes rules\nfrom natural language. Orchestrates\nthe four-pillar pipeline.")
-Person(developer, "Domain Developer", "Builds downstream services that\nconsume rules via API or export.")
+' ── System Under Design ──
+System(selma, "Selma", "Universal Rule Governance Engine: writes, validates, lints, and reasons about rules", $tags="system")
 
-' ─── SYSTEM UNDER DESIGN ─────────────────────────────────────────
-System(selma, "Selma", "Universal Rule Governance Engine.\nFour Pillars: Definition, Maintenance,\nMechanical Linting, Reasoning.\nWrites, validates, lints, and reasons\nABOUT THE RULES THEMSELVES.")
+' ── External Systems ──
+System_Ext(llm, "LLM Service", "OpenAI / Anthropic API for rule generation and deep reasoning", $tags="external")
+System_Ext(fs, "File System", "Stores policy.md and rules.yaml per domain", $tags="external")
+System_Ext(repo, "Git Repository", "Optional version control for rule history and audit trail", $tags="external")
 
-' ─── EXTERNAL DEPENDENCIES ───────────────────────────────────────
-System_Ext(llm, "LLM Service", "OpenAI / Anthropic API.\nNatural language understanding\nfor rule generation and reasoning.")
-System_Ext(fs, "File System", "Stores policy.md and rules.yaml\nper domain. YAML + Markdown.")
-System_Ext(repo, "Git Repository", "Optional version control for\ntracking rule history and audit trail.")
+' ── Relationships ──
+Rel(admin, selma, "→ CRUD operations, validation, queries", "HTTPS / CLI")
+Rel(steward, selma, "→ submits natural language rule requests", "HTTPS")
+Rel(developer, selma, "→ fetches rules, exports domains", "HTTPS")
+Rel(selma, llm, "→ delegates AI rule generation and deep reasoning", "HTTPS")
+Rel(selma, fs, "→ reads and writes policy.md and rules.yaml", "I/O")
+Rel(selma, repo, "→ commits changes", "Git")
 
-' ─── RELATIONSHIPS ───────────────────────────────────────────────
-Rel(admin, selma, "CRUD operations,\nvalidation, queries", "HTTPS / CLI")
-Rel(steward, selma, "Submits natural language\nrule requests, orchestrates pipeline", "HTTPS")
-Rel(developer, selma, "Fetches rules,\nexports domains", "HTTPS")
-
-Rel(selma, llm, "Delegates AI rule generation\nand deep reasoning", "HTTPS")
-Rel(selma, fs, "Reads/writes policy.md\nand rules.yaml per domain", "I/O")
-Rel(selma, repo, "Commits changes\n(optional audit trail)", "Git")
-
-' ─── NOTES ───────────────────────────────────────────────────────
-note left of selma
-  **Four Pillars**
-  1. Definition Engine (Creator)
-  2. Maintenance Engine (Curator)
-  3. Mechanical Linting (Inspector)
-  4. Reasoning Engine (Arbiter)
-end note
-
-note bottom of selma
-  **Dual-Contract Architecture**
-  Policy Doctrine (human lens) ←→
-  Rule Schema (machine lens)
-  Connected by Traceability Bond
-  (Machine ID ↔ anchor_ref)
-end note
+$selma_legend_context()
 
 @enduml

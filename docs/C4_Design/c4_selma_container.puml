@@ -1,104 +1,71 @@
+@startuml c4_selma_container
 ' ============================================================
 ' Title:     Selma — Container Diagram
 ' Boundary:  Selma Universal Rule Governance Engine
-' Purpose:   Shows Selma's internal containers, the dual-contract
+' Purpose:   Show Selma's internal containers, the dual-contract
 '            files, and the four-pillar pipeline
-' Milestone: v0.1.0
-' Version:   4.0.0
-' Source:    contracts/SPECIFICATION.md §2, contracts/README.md,
-'            README.md §Architecture
-' Review:    docs/C4_Design/README.md
+' Milestone: v1.0
+' Version:   1.0.0
+' Source:    contracts/SPECIFICATION.md
 ' ============================================================
 
-@startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Container.puml
-!theme plain
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
+!include common/c4_styles.puml
+skinparam linetype polyline
 
-LAYOUT_WITH_LEGEND()
+title Selma — Container Diagram
 
-title Selma — Container Diagram\nInternal Containers, Four Pillars & Dual-Contract Architecture
+' ── Actors ──
+Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets", $sprite="person")
+Person(steward, "AI Steward", "Autonomous agent that orchestrates the four-pillar pipeline", $sprite="person")
+Person(developer, "Domain Developer", "Builds downstream services that consume rules", $sprite="person")
 
-' ─── ACTORS ──────────────────────────────────────────────────────
-Person(admin, "Rule Administrator")
-Person(steward, "AI Steward")
-Person(developer, "Domain Developer")
+' ── Selma System Boundary ──
+System_Boundary(selma_boundary, "Selma") {
 
-' ─── SELMA SYSTEM BOUNDARY ───────────────────────────────────────
-System_Boundary("selma_boundary", "Selma — Universal Rule Governance Engine") {
+    ' ── API Layer ──
+    Container(api, "Web API", "Python / FastAPI", "REST endpoints for CRUD, validation, and queries", $tags="controller")
 
-    ' ── API Layer ──────────────────────────────────────────────
-    Container(api, "Web API", "Python / FastAPI", "REST endpoints for CRUD,\nvalidation, and queries.\n/health, /domains, /rules.")
+    ' ── Core Engine (Four Pillars) ──
+    Container(core, "Core Engine", "Python", "Four-pillar pipeline orchestrated by Steward Agent", $tags="service")
 
-    ' ── Core Engine (Four Pillars) ─────────────────────────────
-    Container(core, "Core Engine", "Python", "Four-pillar pipeline:\n1. Definition (Creator)\n2. Maintenance (Curator)\n3. Mechanical Linting (Inspector)\n4. Reasoning (Arbiter)\nOrchestrated by Steward Agent.")
+    ' ── Contracts (Dual-Contract Bond) ──
+    Container(policy_contract, "Policy Doctrine", "YAML", "Human lens: prose structure, governance, writing principles", $tags="contract")
+    Container(rule_contract, "Rule Schema", "JSON", "Machine lens: data structure, lifecycle, parameters, conditions", $tags="contract")
 
-    ' ── Contracts (The Dual-Contract Bond) ─────────────────────
-    Container(policy_contract, "Policy Doctrine", "YAML", "policy_doctrine.yaml.\nThe Societal Lens — defines how\nhumans write rules: prose structure,\ngovernance, sanctions, writing principles.")
-    Container(rule_contract, "Rule Schema", "JSON", "rule_schema.json.\nThe Mechanical Lens — defines how\nmachines execute rules: data structure,\nlifecycle, parameters, conditions.")
+    ' ── Storage ──
+    Container(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml", $tags="repository")
 
-    ' ── Storage ────────────────────────────────────────────────
-    Container(storage, "Rule Storage", "File System", "Per-domain policy.md and rules.yaml.\nYAML + Markdown for human readability.")
-
-    ' ── LLM Integration ───────────────────────────────────────
-    Container(llm_adapter, "LLM Adapter", "Python", "Handles communication with\nexternal LLM API. Retry, fallback,\nand prompt management.")
+    ' ── LLM Integration ──
+    Container(llm_adapter, "LLM Adapter", "Python", "LLM API communication with retry and fallback", $tags="repository")
 }
 
-' ─── EXTERNAL SYSTEMS ────────────────────────────────────────────
-System_Ext(llm, "LLM Service", "OpenAI / Anthropic")
-System_Ext(repo, "Git Repository", "Optional version control")
+' ── External Systems ──
+System_Ext(llm, "LLM Service", "OpenAI / Anthropic", $tags="external")
+System_Ext(repo, "Git Repository", "Optional version control", $tags="external")
 
-' ─── ACTOR → API RELATIONSHIPS ───────────────────────────────────
-Rel(admin, api, "CRUD, validate,\nquery rules", "HTTPS")
-Rel(steward, api, "Submit NL requests,\nfetch domain state", "HTTPS")
-Rel(developer, api, "Fetch rules,\nexport domains", "HTTPS")
+' ── Actor → API ──
+Rel(admin, api, "→ CRUD, validate, query rules", "HTTPS")
+Rel(steward, api, "→ submit NL requests, fetch domain state", "HTTPS")
+Rel(developer, api, "→ fetch rules, export domains", "HTTPS")
 
-' ─── API → CORE RELATIONSHIPS ────────────────────────────────────
-Rel(api, core, "Dispatches requests\nto four-pillar pipeline")
+' ── API → Core ──
+Rel(api, core, "→ dispatches requests to four-pillar pipeline")
 
-' ─── CORE → CONTRACTS (The Bond) ─────────────────────────────────
-Rel(core, policy_contract, "Reads writing principles,\nvalidates policy structure,\nenforces contamination guard")
-Rel(core, rule_contract, "Reads schema,\nvalidates rules,\nenforces contamination guard")
+' ── Core → Contracts ──
+Rel(core, policy_contract, "→ reads writing principles, validates policy structure")
+Rel(core, rule_contract, "→ reads schema, validates rules")
 
-note bottom of policy_contract
-  **Policy → Rule Bond**
-  Machine ID columns in
-  directive tables
-end note
+' ── Core → Storage ──
+Rel(core, storage, "→ reads and writes per-domain policy.md and rules.yaml")
 
-note bottom of rule_contract
-  **Rule → Policy Bond**
-  anchor_ref field links
-  back to policy section
-end note
+' ── Core → LLM ──
+Rel(core, llm_adapter, "→ delegates AI rule generation and deep reasoning")
+Rel(llm_adapter, llm, "→ calls LLM API", "HTTPS")
 
-' ─── CORE → STORAGE ──────────────────────────────────────────────
-Rel(core, storage, "Reads/writes per-domain\npolicy.md and rules.yaml")
+' ── Core → Version Control ──
+Rel(core, repo, "→ commits changes", "Git")
 
-' ─── CORE → LLM ─────────────────────────────────────────────────
-Rel(core, llm_adapter, "Delegates AI rule generation\nand deep reasoning")
-Rel(llm_adapter, llm, "Calls LLM API", "HTTPS")
-
-' ─── CORE → VERSION CONTROL ──────────────────────────────────────
-Rel(core, repo, "Commits changes\n(optional audit trail)", "Git")
-
-' ─── NOTES ───────────────────────────────────────────────────────
-note top of core
-  **Four-Pillar Pipeline**
-  ┌─────────────────────────────────────┐
-  │ 1. Definition Engine (Creator)     │
-  │    ID generation, prose drafting   │
-  │                                     │
-  │ 2. Maintenance Engine (Curator)    │
-  │    CRUD, SemVer bumping, deprecation│
-  │                                     │
-  │ 3. Mechanical Linting (Inspector)  │
-  │    Syntax, schema, contamination   │
-  │    Hard Fail on violations         │
-  │                                     │
-  │ 4. Reasoning Engine (Arbiter)      │
-  │    Conflicts, priority, redundancy │
-  │    Soft Warnings with suggestions  │
-  └─────────────────────────────────────┘
-end note
+$selma_legend_container()
 
 @enduml
