@@ -1,10 +1,12 @@
 ' ============================================================
 ' Title:     Selma — Context Diagram
 ' Boundary:  Selma Universal Rule Governance Engine
-' Purpose:   Shows Selma as the system under design, its actors, and external dependencies
+' Purpose:   Shows Selma as the system under design, its actors,
+'            external dependencies, and the dual-contract bond
 ' Milestone: v0.1.0
-' Version:   1.0.0
-' Source:    contracts/SPECIFICATION.md (§1-2), README.md
+' Version:   2.0.0
+' Source:    contracts/SPECIFICATION.md, contracts/policy_doctrine.yaml,
+'            contracts/rule_schema.json, README.md
 ' Review:    docs/C4_Design/README.md
 ' ============================================================
 
@@ -15,23 +17,37 @@
 LAYOUT_LEFT_RIGHT()
 LAYOUT_WITH_LEGEND()
 
-title Selma — Context Diagram
+title Selma — Context Diagram\nUniversal Rule Governance Engine
 
-Person(admin, "Rule Administrator", "Human authoring and maintaining rule sets.")
-Person(agent, "AI Steward", "Autonomous agent that writes rules from natural language.")
-Person(developer, "Domain Developer", "Builds downstream services that consume rules.")
+' ─── ACTORS ──────────────────────────────────────────────────────
+Person(admin, "Rule Administrator", "Human authoring and maintaining\nrule sets via CLI or REST API.")
+Person(steward, "AI Steward", "Autonomous agent that writes rules\nfrom natural language. Self-validates\nand self-corrects iteratively.")
+Person(developer, "Domain Developer", "Builds downstream services that\nconsume rules via API or export.")
 
-System(selma, "Selma", "Universal Rule Governance Engine.\nManages policies and rules across domains.\nProvides CRUD, validation, and AI-agentic writing.")
+' ─── SYSTEM UNDER DESIGN ─────────────────────────────────────────
+System(selma, "Selma", "Universal Rule Governance Engine.\nMaintains bidirectional bond between\nhuman policies and machine rules.\nCRUD, validation, AI-agentic writing.")
 
-System_Ext(llm, "LLM Service", "OpenAI/Anthropic API for natural language understanding.")
-System_Ext(fs, "File System", "Stores policy.md and rules.yaml per domain.")
-System_Ext(repo, "Version Control", "Git repository for tracking rule history.")
+' ─── EXTERNAL DEPENDENCIES ───────────────────────────────────────
+System_Ext(llm, "LLM Service", "OpenAI / Anthropic API.\nNatural language understanding\nfor rule generation.")
+System_Ext(fs, "File System", "Stores policy.md and rules.yaml\nper domain. YAML + Markdown.")
+System_Ext(repo, "Git Repository", "Optional version control for\ntracking rule history and audit trail.")
 
-Rel(admin, selma, "Uses via CLI / REST API", "HTTPS")
-Rel(agent, selma, "Submits natural language requests", "HTTPS")
-Rel(developer, selma, "Fetches rules for domain services", "HTTPS")
-Rel(selma, llm, "Calls to generate/extract rule data", "HTTPS")
-Rel(selma, fs, "Reads/Writes policy.md and rules.yaml")
-Rel(selma, repo, "Commits changes (optional)", "Git")
+' ─── RELATIONSHIPS ───────────────────────────────────────────────
+Rel(admin, selma, "CRUD operations,\nvalidation, queries", "HTTPS / CLI")
+Rel(steward, selma, "Submits natural language\nrule requests", "HTTPS")
+Rel(developer, selma, "Fetches rules,\nexports domains", "HTTPS")
+
+Rel(selma, llm, "Delegates AI rule generation\n(self-correcting loop)", "HTTPS")
+Rel(selma, fs, "Reads/writes policy.md\nand rules.yaml per domain", "I/O")
+Rel(selma, repo, "Commits changes\n(optional audit trail)", "Git")
+
+' ─── NOTES ───────────────────────────────────────────────────────
+note right of selma
+  **Dual-Contract Architecture**
+  Policy Doctrine (human lens) ←→
+  Rule Schema (machine lens)
+  Connected by Traceability Bond
+  (Machine ID ↔ anchor_ref)
+end note
 
 @enduml
