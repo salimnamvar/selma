@@ -17,15 +17,6 @@ keywords = [
   "governance",
   "policies",
   "rules",
-  "plantuml",
-  "c4",
-  "use-case-diagram",
-  "sequence-diagram",
-  "state-machine",
-  "erd",
-  "class-diagram",
-  "openapi",
-  "data-contract"
 ]
 
 [project.optional-dependencies]
