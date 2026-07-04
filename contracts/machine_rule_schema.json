@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas/universal-machine-schema.json",
+  "title": "Universal Machine Rule Schema",
+  "description": "The absolute essence of a machine-readable rule. No enums, no domain-specific fields. Just pure data.",
+  "type": "object",
+  "required": ["version", "rules"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of this specific rule dataset."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Completely open container for any context (e.g., { 'jurisdiction': 'EU', 'project': 'Apollo' }).",
+      "additionalProperties": true
+    },
+    "rules": {
+      "type": "array",
+      "description": "The list of directives. Each item is a rule or standard.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "message"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable unique identifier (e.g., R-001, HR-0233)."
+          },
+          "type": {
+            "type": "string",
+            "description": "Free text classification. Could be 'obligation', 'prohibition', 'standard', 'recipe', 'guideline' — completely open."
+          },
+          "message": {
+            "type": "string",
+            "description": "The human-readable output or description of the rule."
+          },
+          "anchor_ref": {
+            "type": "string",
+            "description": "A free string linking back to the human document (e.g., 'section:preamble' or 'urn:doctrine:principles')."
+          },
+          "evaluator_hint": {
+            "type": "string",
+            "description": "A free string hinting how to evaluate this (e.g., 'regex', 'human_judgment', 'api_call'). No enum, just a hint."
+          },
+          "weight": {
+            "type": "string",
+            "description": "A free string for priority/severity (e.g., 'critical', 'informative', 'low')."
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Completely unconstrained key-value store. Holds anything: pattern, max_length, tax_rate, quorum, sensor_threshold.",
+            "additionalProperties": true
+          },
+          "conditions": {
+            "type": "object",
+            "description": "Completely open container for activation logic (e.g., { 'if_env': 'production' } or { 'unless_holiday': true }).",
+            "additionalProperties": true
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Optional reasoning why this rule exists."
+          },
+          "remediation": {
+            "type": "string",
+            "description": "Optional suggestion on what to do if this rule is violated."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

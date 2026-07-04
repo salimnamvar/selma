@@ -1,0 +1,71 @@
+# human-rule-doctrine.yaml
+# The Absolute Essence: Defines the narrative structure and writing principles.
+# Completely context-free. No domain, no jurisdiction, no deployment.
+
+doctrine:
+  name: universal-human-doctrine
+  version: "1.0.0"
+  description: >
+    Defines how to structure and write a rule document.
+    This is purely structural. It knows nothing about law, software, or science.
+
+# ─── WRITING PRINCIPLES ──────────────────────────────────────────
+# Universal rules for how the author (human or AI) must write the prose.
+
+writing_principles:
+  - id: WP-001
+    title: "Precision over Ambiguity"
+    description: "Use exact, imperative language. Avoid 'should' or 'may' when 'must' or 'must not' is intended."
+  - id: WP-002
+    title: "Definitions First"
+    description: "Define every atomic term before using it in a rule."
+  - id: WP-003
+    title: "Structural Integrity"
+    description: "Do not exceed 3 levels of nested sections. If you need more, split the document."
+  - id: WP-004
+    title: "Traceability"
+    description: "Every substantive paragraph must link to a Machine ID. No orphan rules."
+
+# ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
+# The skeleton of the human-readable document.
+
+sections:
+  - id: preamble
+    title: "Preamble"
+    required: true
+    content_type: prose
+    guidance: "Explain the existential need for these rules."
+
+  - id: definitions
+    title: "Definitions"
+    required: true
+    content_type: table
+    columns: ["Term", "Definition (What it IS)", "Exclusion (What it IS NOT)"]
+    guidance: "All terms used in the document must be defined here."
+
+  - id: principles
+    title: "Foundational Principles"
+    required: true
+    content_type: prose_or_table
+    guidance: "State the high-level morals or axioms from which all rules derive."
+
+  - id: directives
+    title: "Directives (Rules & Standards)"
+    required: true
+    content_type: mixed
+    guidance: "List all specific obligations, prohibitions, and flexible guidelines."
+    children:
+      - id: specific_rules
+        title: "Specific Obligations & Prohibitions"
+        content_type: table
+        columns: ["Description", "Machine ID", "Context / Conditions"]
+      - id: flexible_standards
+        title: "Flexible Standards"
+        content_type: table
+        columns: ["Description", "Machine ID", "Factors to Consider", "Examples"]
+
+  - id: references
+    title: "References & Annexes"
+    required: false
+    content_type: prose_or_table
+    guidance: "External sources, historical context, or supplementary data."
