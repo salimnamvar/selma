@@ -2,25 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
   "title": "Universal Rule Schema",
-  "description": "The absolute essence of a machine-readable rule. Includes lifecycle, dependencies, and provenance. Completely open and context-free.",
-  "x-contamination-guard": {
-    "forbidden_at_root": [
-      "preamble",
-      "governance",
-      "definitions",
-      "principles",
-      "sanctions",
-      "references",
-      "writing_principles",
-      "sections",
-      "guidance",
-      "columns"
-    ],
-    "allowed_human_references": [
-      "anchor_ref (link back to human document section)",
-      "message (human-readable output text)"
-    ],
-    "rationale": "This schema defines data structures for machine consumption only. It MUST NOT contain prose rules, editorial guidance, document layout, governance processes, or social consequences. The only human-facing fields are anchor_ref (traceability link) and message (human-readable output)."
+  "description": "Machine-readable rule structure. Includes lifecycle, dependencies, and evaluation logic.",
+  "x-identity-resolution": {
+    "canonical_id_field": "id",
+    "policy_mapping": "Machine ID in directive tables maps to rule.id",
+    "spec_mapping": "directive_id in CG-IR nodes maps to rule.id",
+    "rule": "One canonical identifier per directive across all layers. rule.id = Machine ID = directive_id."
   },
   "type": "object",
   "required": ["version", "rules"],
@@ -31,88 +18,86 @@
     },
     "policy_contract_version": {
       "type": "string",
-      "description": "Version of the paired policy-doctrine.yaml. Must match for bidirectional traceability."
+      "description": "Version of the paired policy_doctrine.yaml."
     },
     "policy_contract_id": {
       "type": "string",
-      "description": "Identifier of the paired policy contract (e.g., 'universal-policy-doctrine')."
+      "description": "Identifier of the paired policy contract."
     },
     "metadata": {
       "type": "object",
-      "description": "Completely open container for any context (e.g., { 'jurisdiction': 'EU', 'project': 'Apollo' }).",
+      "description": "Open container for context (jurisdiction, domain, project).",
       "additionalProperties": true
     },
     "rules": {
       "type": "array",
-      "description": "The list of directives. Each item is a rule or standard.",
+      "description": "The list of directives.",
       "items": {
         "type": "object",
         "required": ["id", "type", "message"],
         "properties": {
           "id": {
             "type": "string",
-            "description": "Stable unique identifier (e.g., R-001, HR-0233)."
+            "description": "Stable unique identifier. This IS the Machine ID from the policy document and the directive_id in CG-IR nodes."
           },
           "type": {
             "type": "string",
-            "description": "Free text classification (obligation, prohibition, permission, standard, etc.)."
+            "enum": ["obligation", "prohibition", "permission", "standard"],
+            "description": "Classification."
           },
           "message": {
             "type": "string",
-            "description": "The human-readable output or description of the rule."
+            "description": "Human-readable output or description."
           },
           "target": {
             "type": "string",
-            "description": "Who or what this rule applies to (e.g., 'Drivers', 'Python-Scripts', 'All-Citizens')."
+            "description": "Who or what this rule applies to."
           },
           "status": {
             "type": "string",
-            "description": "Lifecycle state (e.g., 'draft', 'active', 'deprecated', 'superseded')."
+            "enum": ["draft", "active", "deprecated", "superseded"],
+            "description": "Lifecycle state."
           },
           "anchor_ref": {
             "type": "string",
-            "description": "Link back to the human document (e.g., 'section:preamble')."
+            "description": "Link back to the human document section."
           },
-          "evaluator_hint": {
+          "evaluator_type": {
             "type": "string",
-            "description": "Hint on how to evaluate (e.g., 'regex', 'human_judgment', 'api_call')."
+            "enum": ["regex", "field_check", "threshold", "composite"],
+            "description": "Pure evaluator type. No IO-based evaluators allowed."
+          },
+          "evaluator_config": {
+            "type": "object",
+            "description": "Evaluator configuration (pattern, field, operator, threshold, sub-evaluators).",
+            "additionalProperties": true
           },
           "weight": {
             "type": "string",
-            "description": "Priority/severity (e.g., 'critical', 'informative')."
+            "enum": ["critical", "high", "medium", "low", "informational"],
+            "description": "Severity weight."
           },
           "depends_on": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "IDs of rules that must be evaluated or active before this one."
+            "items": { "type": "string" },
+            "description": "IDs of rules that must be evaluated first."
           },
           "conflicts_with": {
             "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "IDs of rules that this rule cannot coexist with."
+            "items": { "type": "string" },
+            "description": "IDs of rules that cannot coexist."
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of creation."
+            "format": "date-time"
           },
           "expires_at": {
             "type": "string",
-            "format": "date-time",
-            "description": "Timestamp after which this rule is obsolete."
+            "format": "date-time"
           },
           "parameters": {
             "type": "object",
-            "description": "Unconstrained key-value store for config (pattern, max_length, tax_rate, quorum).",
-            "additionalProperties": true
-          },
-          "conditions": {
-            "type": "object",
-            "description": "Activation logic (e.g., { 'if_env': 'production' } or { 'unless_holiday': true }).",
+            "description": "Configuration values for evaluator_config.",
             "additionalProperties": true
           },
           "rationale": {
@@ -123,44 +108,15 @@
             "type": "string",
             "description": "What to do if violated."
           },
-          "complexity": {
-            "type": "object",
-            "description": "Controls rule nesting and evaluation complexity limits.",
-            "properties": {
-              "max_depth": {
-                "type": "integer",
-                "description": "Maximum levels of nested conditions allowed.",
-                "minimum": 1,
-                "maximum": 10,
-                "default": 3
-              },
-              "max_conditions": {
-                "type": "integer",
-                "description": "Maximum number of conditions in the conditions object.",
-                "minimum": 1,
-                "maximum": 20,
-                "default": 5
-              },
-              "max_parameters": {
-                "type": "integer",
-                "description": "Maximum number of parameters allowed.",
-                "minimum": 1,
-                "maximum": 50,
-                "default": 10
-              }
-            },
-            "additionalProperties": false
-          },
           "priority": {
             "type": "string",
-            "description": "Authority level from policy hierarchy (constitutional, statutory, regulatory, operational, advisory).",
             "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
             "default": "operational"
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

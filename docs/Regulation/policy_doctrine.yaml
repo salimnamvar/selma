@@ -1,29 +1,43 @@
 # policy_doctrine.yaml
-# The Absolute Essence + Self-Governance.
-# Completely context-free. Governs the governors.
+# Human governance document. Describes HOW humans write and manage rules.
+# Contains NO machine-executable logic. Priority hierarchy and conflict
+# resolution are DECLARATIVE DESCRIPTIONS of governance intent, not
+# executable algorithms. The machine implementation lives in the
+# Compilation Engine, not here.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "1.3.0"
+  version: "2.0.0"
   description: >
     Defines how to structure and write a rule document.
-    Includes self-governance, hierarchy, and sanctions.
-  rule_contract_version: "1.3.0"
+    Describes governance intent, not executable logic.
+  rule_contract_version: "2.0.0"
   rule_contract_id: "universal-rule-schema"
 
+# ─── IDENTITY RESOLUTION ────────────────────────────────────────
+# The canonical identifier for a directive is the "Machine ID" column
+# in directive tables. This maps directly to rule.id in rule_schema.json
+# and directive_id in CG-IR nodes. One ID, three layers.
+identity_resolution:
+  canonical_field: "Machine ID"
+  policy_location: "directive_tables[].Machine ID"
+  schema_location: "rules[].id"
+  spec_location: "CG-IR nodes[].directive_id"
+  rule: "All three must match exactly. This is the single identity across all layers."
+
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
-# This contract MUST NOT contain any machine-executable logic.
-# FORBIDDEN at all levels: parameters, conditions, evaluator_hint,
-# weight, depends_on, conflicts_with, status, created_at, expires_at,
-# any field that a machine parser/evaluator/validator consumes.
-# The ONLY machine-facing element allowed: "Machine ID" columns in
-# directive tables, which serve as cross-reference labels (names),
-# not execution directives.
+# This document MUST NOT contain machine-executable logic.
+# PROHIBITED: parameters, conditions, evaluator_hint, weight,
+# depends_on, conflicts_with, status, created_at, any field that
+# a machine parser/evaluator/validator consumes.
+# ALLOWED: Machine ID columns (cross-reference labels only).
 contamination_guard:
-  forbidden_fields:
+  prohibited_fields:
     - parameters
     - conditions
     - evaluator_hint
+    - evaluator_type
+    - evaluator_config
     - weight
     - depends_on
     - conflicts_with
@@ -35,6 +49,11 @@ contamination_guard:
     - technical_hints
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
+  note: >
+    Priority hierarchy and conflict resolution below are DECLARATIVE
+    DESCRIPTIONS of governance intent. They describe WHAT the governing
+    body intends, not HOW the machine implements it. The compilation
+    engine reads these descriptions and generates executable CG-IR logic.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:
@@ -54,14 +73,13 @@ writing_principles:
     title: "Hierarchy of Authority"
     description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
 
-# ─── PRIORITY HIERARCHY ─────────────────────────────────────────
-# Defines the authority levels for rules. Higher levels override lower levels.
-# When rules conflict, the higher-priority rule takes precedence.
+# ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
+# This is a DESCRIPTION of governance intent, not an executable algorithm.
+# The compilation engine translates this into CG-IR conflict resolution logic.
 priority_hierarchy:
   description: >
-    Rules exist at different authority levels. When two rules conflict,
-    the higher-priority rule wins. This hierarchy must be declared in
-    the policy document and referenced by each rule.
+    Rules exist at different authority levels. The governing body declares
+    that higher-priority rules take precedence. This is intent, not code.
   levels:
     - id: constitutional
       level: 1
@@ -89,49 +107,29 @@ priority_hierarchy:
       description: "Recommendations that are not mandatory but encouraged."
       examples: ["Style guides", "Performance tips", "Architecture patterns"]
 
-  conflict_resolution: >
-    When two rules conflict:
-    1. Higher priority level wins (constitutional > statutory > regulatory > operational > advisory)
-    2. If same level: more specific rule wins over general rule
-    3. If same specificity: newer rule wins over older rule
+  conflict_resolution_intent: >
+    The governing body declares that when two rules conflict:
+    1. Higher priority level wins
+    2. If same level: more specific rule wins
+    3. If same specificity: newer rule wins
     4. If same age: rule with explicit conflict resolution wins
+    This is governance intent. The compilation engine implements this as CG-IR logic.
 
-# ─── VERSIONING STRATEGY ────────────────────────────────────────
-# Defines how versions are assigned and incremented for both contracts.
+# ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
+# Describes versioning intent. The actual version resolution function
+# lives in the Provenance Manager engine.
 versioning_strategy:
   description: >
-    Both policy doctrine and rule schema follow semantic versioning (MAJOR.MINOR.PATCH).
-    This strategy defines when each component is incremented.
+    Both policy doctrine and rule schema follow semantic versioning.
+    This describes intent. The version resolution function is in the engine.
   format: "MAJOR.MINOR.PATCH"
-  rules:
-    major:
-      description: "Breaking changes that require migration"
-      examples:
-        - "Removing or renaming a required section"
-        - "Changing the structure of directive tables"
-        - "Modifying the contamination guard incompatibly"
-      when: "Existing documents will not validate without changes"
-    minor:
-      description: "New features that are backward-compatible"
-      examples:
-        - "Adding a new optional section"
-        - "Adding new fields to rules (optional)"
-        - "Adding new writing principles"
-      when: "Existing documents continue to validate"
-    patch:
-      description: "Bug fixes and clarifications"
-      examples:
-        - "Fixing typos in guidance text"
-        - "Clarifying ambiguous descriptions"
-        - "Updating examples"
-      when: "No functional change to validation"
-  synchronization: >
-    Both contracts must maintain synchronized versions:
-    - policy_doctrine.yaml doctrine.version
-    - rule_schema.json policy_contract_version
-    - policy_doctrine.yaml doctrine.rule_contract_version
-    - rule_schema.json $id (schema identifier)
-    When either contract changes, both must be updated to reflect the new version.
+  intent:
+    major: "Breaking changes that require migration"
+    minor: "New backward-compatible features"
+    patch: "Bug fixes and clarifications"
+  synchronization_intent: >
+    The governing body intends that both contracts stay in sync.
+    The engine enforces this via validation.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:
