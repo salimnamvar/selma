@@ -1,24 +1,40 @@
 # Selma — Rule Regularity Platform
 
-A universal governance steward that maintains a perfect, bidirectional bond between human-readable policies and machine-executable rules.
+**A universal governance steward that maintains a perfect, bidirectional bond between human-readable policies and machine-executable rules.**
 
 Selma is domain-agnostic. It serves financial compliance, environmental standards, organizational governance, software engineering, or any regulatory domain where policy intent must map to verifiable machine behavior.
 
 ---
 
-## Current State
+## What is Selma?
+
+Selma is a **rule governance platform** designed to provide **regularity** — the state where rules are consistently defined, uniformly enforced, logically coherent, and predictably evolved across time and domains.
+
+It achieves this through three core tenets:
+
+1. **Strict separation** between human governance intent and machine-executable logic.
+2. **Hermetic, deterministic compilation** that produces content-addressed, immutable execution artifacts.
+3. **Auditable, append-only event streams** that track every finding and remediation.
+
+Selma is **domain-agnostic** — it can be instantiated for regulatory compliance, internal corporate policies, technical standards, or any context requiring rule-based enforcement.
+
+---
+
+## Current Status
 
 | Artifact | Status | Version |
 | :--- | :--- | :--- |
-| Specification (`SPECIFICATION.md`) | Complete | 8.2.4 |
-| Rule Schema (`rule_schema.json`) | Complete | 8.2.4 |
-| Policy Doctrine (`policy_doctrine.yaml`) | Complete | 8.2.4 |
+| Normative Specification (`SPECIFICATION.md`) | Complete | 8.2.4 |
+| Structural Schema (`rule_schema.json`) | Complete | 8.2.4 |
+| Governance Doctrine (`policy_doctrine.yaml`) | Complete | 8.2.4 |
 | User Stories (32 stories, 7 epics) | Complete | 8.2.4 |
 | C4 Architecture Diagrams | Complete | 1.0.0 |
 | Contract Validators | Complete | — |
-| Implementation | Not started | — |
+| **Implementation** | **Not started** | — |
 
-**Next step:** C4 diagram → use-case → sequence → ERD → class → contract → code.
+> Selma is in the **design phase**. All architectural artifacts, specifications, schemas, and user stories are complete, cross-validated, and audit-verified (98/100 architectural soundness). Runtime implementation has not yet begun.
+
+**Next step:** Use-case diagrams → sequence diagrams → ERD → class diagrams → contracts → code.
 
 ---
 
@@ -28,9 +44,9 @@ Selma enforces a strict **three-layer dominance hierarchy**:
 
 | Layer | Document | Role | Runtime Authority |
 | :--- | :--- | :--- | :--- |
-| **Normative** | `SPECIFICATION.md` | System behaviors, algorithms, invariants | Highest — sole source of runtime semantics |
-| **Structural** | `rule_schema.json` | JSON Schema projection of spec invariants | Data carrier — no executable logic |
-| **Governance** | `policy_doctrine.yaml` | Human authoring guidance | None — prohibited at runtime |
+| **Normative** | `SPECIFICATION.md` | System behaviors, algorithms, invariants | **Highest** — sole source of runtime semantics |
+| **Structural** | `rule_schema.json` | JSON Schema projection of spec invariants | **Data carrier** — no executable logic |
+| **Governance** | `policy_doctrine.yaml` | Human authoring guidance | **None** — prohibited at runtime |
 
 ### The Policy Runtime Prohibition
 
@@ -38,9 +54,9 @@ The governance layer (`policy_doctrine.yaml`) is **never read at runtime**. It i
 
 ### Three Runtime Primitives
 
-1. **Directive Graph** — human-authored, structured source of truth
-2. **Compiled Control DAG (CG-IR)** — content-addressed, immutable executable IR
-3. **Finding Event Stream** — append-only, HLC-ordered audit log
+1. **Directive Graph** — human-authored, structured source of truth (versioned, mutable).
+2. **Compiled Control DAG (CG-IR)** — content-addressed, immutable executable intermediate representation.
+3. **Finding Event Stream** — append-only, HLC-ordered audit log of all compliance findings and state transitions.
 
 ### Four-Pillar Pipeline
 
@@ -50,10 +66,10 @@ Directive Graph → Definition → Maintenance → Mechanical Linting → Reason
 
 | Pillar | Engine | Responsibility |
 | :--- | :--- | :--- |
-| 1 | Definition | Generates Machine IDs, drafts rules |
-| 2 | Maintenance | CRUD, SemVer bumping, deprecation, refactoring |
-| 3 | Mechanical Linting | Syntax, schema, contamination guard — hard fail |
-| 4 | Reasoning | Conflict detection, priority enforcement, soft warnings |
+| 1 | **Definition** | Generates Machine IDs, drafts rule entries for both human and machine formats |
+| 2 | **Maintenance** | CRUD operations, SemVer bumping, deprecation, refactoring |
+| 3 | **Mechanical Linting** | Syntax, schema, contamination guard — hard fail on violations |
+| 4 | **Reasoning** | Conflict detection, priority enforcement, soft warnings (Conflict Artifacts) |
 
 ---
 
@@ -62,25 +78,26 @@ Directive Graph → Definition → Maintenance → Mechanical Linting → Reason
 ```
 selma/
 ├── docs/
-│   ├── Regulation/          # Three-layer contract architecture
-│   │   ├── SPECIFICATION.md     # Normative behavioral source (8.2.4)
-│   │   ├── rule_schema.json     # Structural JSON Schema (8.2.4)
-│   │   ├── policy_doctrine.yaml # Governance intent (8.2.4)
-│   │   └── README.md            # Cross-layer binding & compatibility matrix
+│   ├── Regulation/              # Three-layer contract architecture
+│   │   ├── SPECIFICATION.md         # Normative behavioral source (8.2.4)
+│   │   ├── rule_schema.json         # Structural JSON Schema (8.2.4)
+│   │   ├── policy_doctrine.yaml     # Governance intent (8.2.4)
+│   │   └── README.md                # Cross-layer binding & compatibility matrix
 │   ├── User-Story/
-│   │   └── User_Stories.md      # 32 user stories across 7 epics
-│   └── C4-Design/               # Architecture diagrams (PlantUML)
+│   │   └── User_Stories.md          # 32 user stories across 7 epics
+│   └── C4-Design/                   # Architecture diagrams (PlantUML)
 │       ├── c4_selma_context.puml
 │       ├── c4_selma_container.puml
 │       ├── c4_selma_component.puml
-│       └── common/c4_styles.puml
-├── src/selma/               # Source code (not yet implemented)
-├── tests/                   # Contract validation tests
+│       ├── common/c4_styles.puml
+│       └── README.md                # Diagram conventions & rendering guide
+├── src/selma/                   # Source scaffold (runtime not yet implemented)
+├── tests/                       # Contract validation tests
 ├── scripts/
-│   ├── validate_contracts.py    # Cross-layer contract validators
-│   └── setup/                   # Environment provisioning
+│   ├── validate_contracts.py        # Cross-layer contract validators
+│   └── setup/                       # Environment provisioning
 ├── pyproject.toml
-└── LICENSE                  # Apache-2.0
+└── LICENSE                      # Apache-2.0
 ```
 
 ---
@@ -108,17 +125,14 @@ conda activate selma
 pip install -e ".[dev]"
 ```
 
-### Run Tests
-
-```bash
-pytest
-```
-
-### Run Contract Validators
+### Verify Contracts
 
 ```bash
 python scripts/validate_contracts.py
+pytest
 ```
+
+`validate_contracts.py` checks version synchronization, the policy runtime prohibition, and audit-clarification traceability across the five-document corpus. `pytest` runs the same validators as an automated test suite.
 
 ### Render C4 Diagrams
 
@@ -136,29 +150,50 @@ plantuml docs/C4-Design/c4_selma_component.puml
 
 | Concept | Definition |
 | :--- | :--- |
-| **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node identity) |
-| **Content-Addressed Storage** | CG-IR nodes deduplicated by hash; identical content shares storage |
-| **Incremental Compilation** | Unchanged subgraphs reused via `semantic_hash`; only dirty nodes recompiled |
-| **Hermetic Reproducibility** | Frozen environment pins all non-deterministic factors |
-| **Finding FSM** | Strict state machine: Created → Open → Acknowledged → … → Closed |
-| **Capability Model** | Role → Capability → Action, enforced at request ingress and stage gates |
-| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
+| **Dual Identity** | Each rule has an immutable **Lineage ID** (audit root) and a mutable **Execution ID** (active node identity). |
+| **Content-Addressed Storage** | CG-IR nodes are deduplicated by hash; identical rule content shares storage. |
+| **Incremental Compilation** | Unchanged subgraphs are reused via `semantic_hash`; only dirty nodes are recompiled. |
+| **Hermetic Reproducibility** | All non-deterministic factors are pinned in a frozen environment; identical inputs produce identical CG-IR. |
+| **Finding FSM** | Strict state machine: `Created → Open → Acknowledged → … → Closed`. |
+| **Capability Model** | Role → Capability → Action, enforced at request ingress and stage gates. |
+| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver. |
+
+---
+
+## Documentation
+
+| Document | Description |
+| :--- | :--- |
+| [SPECIFICATION.md](docs/Regulation/SPECIFICATION.md) | Normative system behavior, algorithms, and invariants |
+| [rule_schema.json](docs/Regulation/rule_schema.json) | Machine-readable JSON Schema projection |
+| [policy_doctrine.yaml](docs/Regulation/policy_doctrine.yaml) | Human authoring guidance (governance intent) |
+| [Regulation README](docs/Regulation/README.md) | Cross-layer binding, version compatibility matrix, audit corpus |
+| [User_Stories.md](docs/User-Story/User_Stories.md) | 32 behavioral user stories with traceability to spec invariants |
+| [C4 Design](docs/C4-Design/) | Context, container, and component diagrams (PlantUML) |
 
 ---
 
 ## Design Chain
+
+Selma follows a structured design-then-implementation workflow:
 
 ```
 Specification → User Stories → C4 Diagrams → Use Cases → Sequence Diagrams
     → ERD → Class Diagrams → Contracts → Code
 ```
 
+All steps through **C4 Diagrams** are complete and validated. **Use-case diagrams** are the current focus.
+
 ---
 
 ## Contributing
 
-This project is in the design phase. Implementation has not yet started. See the specification and user stories in `docs/` for the full behavioral contract.
+This project is in the **design phase**. Contributions are welcome as reviews, suggestions, and refinements to the specification, schema, user stories, or architecture diagrams. Runtime implementation is not yet open.
+
+Please open an issue or submit a pull request with your proposed changes.
+
+---
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
