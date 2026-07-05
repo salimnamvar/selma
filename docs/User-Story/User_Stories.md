@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 20.2.0  
+**Version:** 20.3.0  
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md 8.1.1
+**Normative Reference:** SPECIFICATION.md 8.1.2
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -14,10 +14,10 @@
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.1.1 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.1.1 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.1.1 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 20.2.0 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.1.2 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.1.2 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.1.2 | Declarative governance intent (authoring only) |
+| **Behavioral** | User_Stories.md 20.3.0 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents. Policy is never read at runtime — only schema fields compiled per spec.
 
@@ -89,7 +89,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Inspection | Pipeline entry | `inspection.submit`, `inspection.reinspect` |
 | Finding transitions | Finding FSM Engine | `finding.acknowledge`, `finding.approve_remediation`, … |
 
-**Segregation of duties** is checked at the same gates. No capability delegation in v8.1.1.
+**Segregation of duties** is checked at the same gates. No capability delegation in v8.1.2.
 
 ---
 
@@ -98,7 +98,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Concept | Definition |
 | :--- | :--- |
 | **Directive Graph** | Human-authored source-of-truth. Structured, versioned, diffable. |
-| **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Stored in content-addressed store. |
+| **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Determinism: identical inputs → identical hash. |
 | **Finding Event Stream** | Append-only audit log with HLC ordering. Finding FSM enforced. |
 | **Execution Artifacts** | Immutable inspection snapshots, pipeline traces, system state hashes. |
 | **Hermetic Compilation** | Frozen environment ensures reproducibility. Read lock on Directive Graph. |
@@ -113,7 +113,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
 | **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → priority → specificity → recency → Conflict Artifact. Cycles detected and resolved. |
 | **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. |
-| **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_hash, frozen_env, engine, target_hash)` |
+| **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_snapshot_hash, frozen_env, engine, target_hash)`. `cg_ir_snapshot_hash` defined in SPECIFICATION.md §2.6. |
 | **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
 | **Concurrency Model** | Compilation = read lock; modification = write lock (exclusive). Queue serializes requests. |
 | **CG-IR Storage** | Content-addressed: snapshots → nodes → edges. Deduplication by hash. |
@@ -255,13 +255,14 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.1.1 is the single normative source |
+| **Normative Source** | SPECIFICATION.md 8.1.2 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id never reused |
 | **Execution ID Stability** | Changes only on fork/merge/split |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, immutable; compilation creates new snapshots |
-| **CG-IR Content Addressing** | Identical content produces identical hash |
+| **CG-IR Content Addressing** | Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Identical inputs → identical hash (§2.6). |
+| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash depends on directive graph content, engine version, and frozen env only. Not wall clock, node identity, or request context. |
 | **Finding Event Immutability** | Append-only; event_hash + HLC ensure integrity |
 | **Finding FSM** | Strict state transitions enforced |
 | **Inspection Immutability** | Completed snapshots never modified |

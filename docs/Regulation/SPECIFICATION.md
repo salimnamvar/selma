@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.1.1
+**Version:** 8.1.2
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -224,6 +224,23 @@ node_body = {
 | **Node** | `node_body` only | Local content | Deduplication across snapshots; stable under incremental reuse |
 | **Edge** | `{source: directive_id, target: directive_id}` | Pair identity | Graph structure separate from node content |
 | **Snapshot** | `{node_hashes: sorted[], edge_hashes: sorted[], provenance}` | Global composition | Snapshot identity; structure without embedding neighbors in node hash |
+
+**CG-IR Snapshot Hash Composition:**
+
+```
+cg_ir_snapshot_hash = SHA-256(canonical_json({
+  node_hashes: sorted[],        // sorted array of node_hash values
+  edge_hashes: sorted[],        // sorted array of edge_hash values
+  provenance: {
+    engine_version: string,     // pinned engine version
+    frozen_env_hash: string,    // SHA-256 of frozen environment
+    directive_graph_version: string,
+    compiled_at: datetime       // ISO 8601 UTC
+  }
+}))
+```
+
+**Determinism guarantee:** Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical. The hash is **not a function of wall clock time, compilation node identity, or request context**.
 
 **Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
 
@@ -584,6 +601,8 @@ system_state_hash = SHA-256(canonical_json({
 
 To reproduce any historical inspection, pin all five dimensions.
 
+**CG-IR Hash Binding Clarification:** The `cg_ir_hash` used in the system_state_hash formula refers to `cg_ir_snapshot_hash` as defined in §2.6. The `system_state_hash` is a second-level composition that additionally includes `target_hash` and `directive_graph_version`. This ensures full inspection reproducibility across directive state, execution target, compiled CG-IR snapshot, and engine + environment context.
+
 ### 2.18 Version Incompatibility Handling
 
 | Scenario | Behavior |
@@ -943,7 +962,8 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Execution ID Stability** | Execution ID changes only on fork/merge/split |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, a snapshot is immutable; compilation creates new snapshots |
-| **CG-IR Content Addressing** | Snapshots are content-addressed; identical content produces identical hash |
+| **CG-IR Content Addressing** | Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Identical inputs → identical hash (§2.6). |
+| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash is a function of directive graph content, engine version, and frozen env only. Not a function of wall clock time, compilation node identity, or request context. |
 | **Finding Event Immutability** | Append-only; event_hash ensures integrity |
 | **Finding FSM** | Findings follow strict state transitions (see Section 3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
@@ -1065,3 +1085,4 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | 7.0.0 | 2026-07-05 | Identity lifecycle, execution artifact schema, deterministic serialization, conflict resolution mapping, event schema, version incompatibility handling, target/context strict schemas |
 | 8.1.0 | 2026-07-05 | Cross-layer compliance audit: fixed identity mapping (Machine ID → lineage_id), HLC clock advancement and monotonic counter rules, cross-layer conflict resolution precedence chain, FSM human/system transition binding |
 | 8.1.1 | 2026-07-05 | Architectural review: policy runtime prohibition, Machine ID single interpretation, HLC monotonicity under clock regression, CG-IR local node hashing scope, capability enforcement gates, DAG reference hashing |
+| 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
