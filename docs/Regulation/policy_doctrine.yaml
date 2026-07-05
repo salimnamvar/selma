@@ -84,6 +84,11 @@ identity_lifecycle_intent:
     Use when two directives combine into one with unified semantic intent.
     The governing body intends that the lexicographically smaller parent
     Machine ID becomes the merged lineage root (see SPECIFICATION.md §2.2.2).
+    NOTE: The lexicographic minimum approach is deterministic but
+    semantically lossy — e.g. merging PAY-800 and AUTH-001 produces
+    AUTH-001 as root, which loses the PAY-800 provenance. A future
+    MERGE-NN namespace (e.g. MGR-18) could preserve provenance explicitly.
+    Current approach is acceptable for determinism guarantees.
   split: "Use when one directive restructured into multiple independent directives."
   rename: "Use when display name changes but semantic intent is unchanged."
   retire: "Use when directive is no longer applicable. ID preserved in audit trail."
@@ -193,7 +198,7 @@ priority_hierarchy:
     factors (in order):
     0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
     1. Higher priority level wins
-    2. If same level: more specific rule wins (specificity algorithm in SPECIFICATION.md §2.15)
+    2. If same level: more specific rule wins (specificity algorithm in SPECIFICATION.md §2.15 — composite evaluator > regex > threshold > field_check; narrower scope wins; more conditions win. Score is a lexicographic tuple compared element-wise.)
     3. If same specificity: newer rule wins
     4. If still tied: escalate as Conflict Artifact for human review
     This is governance intent only — not executable logic in this file.
@@ -219,11 +224,22 @@ versioning_strategy:
     major: "Breaking changes that require migration"
     minor: "New backward-compatible features"
     patch: "Bug fixes and clarifications"
+  migration_intent: >
+    When crossing a MAJOR version boundary (e.g. 8.x → 9.x), lineage_ids
+    are identity_preserved by default — the same Machine ID retains its
+    lineage across versions. Schema field additions in the new MAJOR version
+    MUST have defaults so existing datasets remain valid. Field removals or
+    renames require a migration descriptor (metadata.migration) documenting
+    the transformation. The compilation engine MUST validate cross-version
+    lineage integrity.
   synchronization_intent: >
     All three documents MUST share the same MAJOR version. MINOR and PATCH
     versions MAY differ independently within the same MAJOR family
     (see SPECIFICATION.md §5 version compatibility matrix). MAJOR mismatch
     is incompatible. This is a compatibility matrix, not strict version equality.
+    Formal definition: dataset(schema_version=S) accepts policy(policy_version=P)
+    if and only if floor(S) == floor(P). A validator MUST reject datasets
+    where MAJOR versions differ.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:

@@ -67,7 +67,17 @@ This forms a strict bidirectional pointer:
 - Policy says: *"This paragraph is about Rule `R-001`."*
 - Rule says: *"Rule `R-001` points back to `section:directives/specific_directives`."*
 
-**Anchor Reference Syntax (§7.2):** `section:<id>[/<subsection>]` or JSON Pointer (`/path/to/section`).
+**Anchor Reference Syntax (§7.2):** `section:<id>[/<subsection>]` or JSON Pointer per [RFC 6901](https://tools.ietf.org/html/rfc6901) (`/path/to/section`).
+
+## Policy Runtime Prohibition
+
+**Policy MUST NOT be read at runtime.** This prohibition is stated in each document for self-contained clarity:
+
+- **policy_doctrine.yaml**: `cross_layer_binding.runtime_prohibition` and `contamination_guard.note`
+- **rule_schema.json**: `x-cross-layer-binding.policy_runtime_prohibition`
+- **SPECIFICATION.md**: §2.15 conflict resolution, §2.2 identity resolution, and cross-layer binding sections
+
+The compilation engine implements all runtime behavior over schema/CG-IR fields only. Policy prose is authoritative for human authoring but never interpreted by the engine.
 
 ## Contamination Guards
 
@@ -86,6 +96,19 @@ Both contracts reference each other's version:
 - `rule_schema.json` → `policy_contract_version` + `policy_contract_id`
 
 Update both when either contract changes.
+
+## Compatibility Matrix
+
+All three documents share the same MAJOR version. MINOR and PATCH may differ independently:
+
+| Policy (MAJOR.minor.patch) | Schema (MAJOR.minor.patch) | Spec (MAJOR.minor.patch) | Compatible? | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| 8.x.x | 8.x.x | 8.x.x | ✅ | Same MAJOR family — all combinations valid |
+| 8.2.1 | 8.4.2 | 8.3.0 | ✅ | MINOR/PATCH may differ within MAJOR |
+| 8.x.x | 9.x.x | 8.x.x | ❌ | MAJOR mismatch — incompatible |
+| 9.0.0 | 8.x.x | 8.x.x | ❌ | MAJOR mismatch — incompatible |
+
+**Formal rule:** `dataset(schema_version=S) accepts policy(policy_version=P) ⟺ ⌊S⌋ == ⌊P⌋`
 
 ## Priority Hierarchy
 
@@ -110,6 +133,18 @@ Both contracts follow semantic versioning (MAJOR.MINOR.PATCH):
 - **MAJOR** - Breaking changes requiring migration
 - **MINOR** - New backward-compatible features
 - **PATCH** - Bug fixes and clarifications
+
+## Migration Rules
+
+Cross-version migration follows these invariants:
+
+1. **Lineage preservation:** `lineage_id` is preserved across MAJOR versions by default (`identity_preserved`). Machine IDs retain their audit trail.
+2. **Additive changes:** New schema fields in a MAJOR version MUST have defaults so existing datasets remain valid without modification.
+3. **Breaking changes:** Field removals or renames require a migration descriptor in `metadata.migration` documenting the transformation, with `migration_required: true`.
+4. **Cross-version validation:** The compilation engine MUST validate that all `lineage_id` references resolve within the migrated dataset.
+5. **Audit replay:** Old `hash_algorithm_version` values remain valid for audit replay of historical compilations.
+
+**Migration descriptor fields:** `upgrade_from`, `upgrade_to`, `migration_required`, `lineage_preservation` (identity_preserved | identity_reassigned | requires_remap).
 
 ## Composite Evaluator Recursion
 
@@ -143,6 +178,50 @@ Root `metadata` is informational only. Declared namespaces: `audit`, `vendor`, `
 
 Merged `lineage_id` = lexicographic minimum of parent lineage_ids. New execution_id generated deterministically per §2.2.2.
 
-## Specification
+## Compilation Pipeline
+
+The end-to-end lifecycle from policy authoring to runtime execution:
+
+```
+Policy Authoring (human writes policy_doctrine.yaml)
+        │
+        ▼
+Policy Validation (compile-time: contamination guard, no executable fields)
+        │
+        ▼
+Schema Validation (JSON Schema Draft-07: structure, types, constraints)
+        │
+        ▼
+Cross-Layer Validation (schema derivable from spec; cross-field evaluator_type ↔ evaluator_config)
+        │
+        ▼
+Identity Validation (lineage_id uniqueness, pattern compliance, DAG integrity)
+        │
+        ▼
+Conflict Graph Construction (override → priority → specificity → recency)
+        │
+        ▼
+CG-IR Generation (directives → nodes with dual identity)
+        │
+        ▼
+Semantic Hash Generation (node_hash, edge_hash, snapshot_hash per §2.6)
+        │
+        ▼
+Snapshot Manifest (deterministic serialization, sorted keys, UTF-8)
+        │
+        ▼
+Runtime Bundle (engine reads schema/CG-IR fields only)
+```
+
+Each stage performs a specific class of validation. The engine is the sole executor; policy is never interpreted at any stage after Policy Validation.
+
+## Hash Algorithm Versioning
+
+Hash algorithms may change over time (e.g. SHA-256 → BLAKE3). The `hash_algorithm_version` field in `x-deterministic-serialization` tracks the current algorithm version:
+
+- **Version 1**: SHA-256 (current)
+- All `node_hash`, `edge_hash`, and `snapshot_hash` values are tagged with the algorithm version
+- Old versions remain valid for audit replay; new compilations MUST use the current version
+- Algorithm migration requires a MAJOR version bump
 
 See [SPECIFICATION.md](SPECIFICATION.md) for the full universal rule governance specification.

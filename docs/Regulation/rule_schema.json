@@ -13,6 +13,7 @@
     "policy_runtime_prohibition": "policy_doctrine.yaml MUST NOT be read at inspection, evaluation, or FSM runtime",
     "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
+    "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
     "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant enforced by if/then. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST check cross-field consistency."
   },
   "x-cg-ir-hashing": {
@@ -34,7 +35,7 @@
       "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id (immutable root). Execution ID maps to rule.id.",
       "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id"
     },
-    "pattern_relationship": "Execution ID pattern extends lineage_id pattern by appending zero or more -SUFFIX segments. Base [A-Z][A-Z0-9]+-[0-9]+ is shared. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes appended.",
+    "pattern_relationship": "Execution ID pattern extends lineage_id pattern by appending zero or more -SUFFIX segments. Base [A-Z][A-Z0-9]+-[0-9]+ is shared. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes appended. Suffix segments are hierarchical history tokens encoding the operation chain that produced the execution ID (e.g. TRAF-001-A-B means fork then fork). Suffixes carry no independent semantic meaning beyond provenance.",
     "lifecycle": {
       "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
       "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
@@ -60,6 +61,8 @@
     "null_handling": "explicit null not omitted",
     "nan_policy": "NaN and Infinity are NOT permitted in serializable objects",
     "hash_algorithm": "SHA-256",
+    "hash_algorithm_version": 1,
+    "hash_algorithm_versioning": "If hash algorithm changes (e.g. SHA-256 → BLAKE3), increment hash_algorithm_version. All node_hash and snapshot_hash values MUST be recomputed. Old versions remain valid for audit replay but new compilations MUST use current version.",
     "canonical_form": "All objects serialized with sorted keys before hashing",
     "recursive_structures": "For recursive evaluator_config: serialize sub_evaluators as array of canonical JSON objects. For lineage: serialize parent_*_ids as sorted arrays.",
     "schema_references": "$ref resolved at schema validation time; not included in canonical form for hashing",
@@ -74,11 +77,14 @@
     "max_composite_width": 64,
     "max_regex_pattern_length": 4096,
     "max_metadata_bytes_per_rule": 16384,
-    "max_lineage_ancestry_depth": 64
+    "max_lineage_ancestry_depth": 64,
+    "not_chain_note": "NOT composites (maxItems=1) may nest recursively up to max_composite_depth. Nested NOT chains (NOT(NOT(NOT(...))) are valid but semantically equivalent to a single NOT for odd depth or identity for even depth. Validators MAY warn on redundant NOT nesting.",
+    "evaluator_node_counting": "Each leaf evaluator_config_entry counts as 1 node. Composite evaluators count as 1 node plus the sum of their sub_evaluator nodes. Total across all rules in a dataset MUST NOT exceed max_evaluator_nodes_per_rule."
   },
   "x-conflict-resolution-binding": {
     "normative_status": "informative",
     "specificity_algorithm": "SPECIFICATION.md §2.15 specificity_score (normative)",
+    "specificity_metric": "SPECIFICATION.md §2.15 defines specificity as a composite score: (1) evaluator_type specificity (composite > regex > threshold > field_check), (2) scope narrowness (fewer targets = more specific), (3) condition count (more conditions = more specific). Score is a lexicographic tuple compared element-wise. Two implementations MUST agree on specificity ranking for identical rule pairs.",
     "priority_level_mapping": {"constitutional": 1, "statutory": 2, "regulatory": 3, "operational": 4, "advisory": 5},
     "spec_model": "Deterministic multi-factor: explicit override → priority → specificity → recency",
     "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
@@ -124,7 +130,11 @@
           "type": "object",
           "properties": {
             "superseded_by": { "type": "string" },
-            "migration_notes": { "type": "string" }
+            "migration_notes": { "type": "string" },
+            "upgrade_from": { "type": "string", "description": "Previous dataset version this dataset was migrated from (e.g. '8.2.1')." },
+            "upgrade_to": { "type": "string", "description": "Target dataset version for next migration (e.g. '9.0.0')." },
+            "migration_required": { "type": "boolean", "description": "True if dataset requires manual migration steps before use with target version." },
+            "lineage_preservation": { "type": "string", "enum": ["identity_preserved", "identity_reassigned", "requires_remap"], "description": "How lineage_ids are handled during migration." }
           },
           "additionalProperties": false
         },
@@ -174,7 +184,7 @@
           "anchor_ref": {
             "type": "string",
             "pattern": "^(section:(preamble|governance|definitions|principles|directives|sanctions|references)(/[a-z_]+)?|/.+)$",
-            "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2."
+            "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2. JSON Pointer format follows RFC 6901."
           },
           "evaluator_type": {
             "type": "string",
