@@ -1130,8 +1130,8 @@ Findings follow a strict state transition model:
 | `conflict.resolve` | ✅ | ❌ | ❌ |
 
 **Segregation of Duties:**
-- Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it)
-- Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it)
+- Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it; enforced on `finding.waive` — see S-29)
+- Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it; enforced on `finding.approve_remediation` — see S-14)
 
 **Runtime Enforcement Points:**
 
@@ -1149,7 +1149,7 @@ Findings follow a strict state transition model:
 - All denials produce an append-only audit record: `{actor, capability, action, outcome: denied, timestamp, reason}`
 - Escalation is NOT automatic on denial; caller receives error and decides next action
 
-**Delegation Model:** Not supported in v8.2.0. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
+**Delegation Model:** Not supported in v8.2.2. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
 
 ### 3.3 Execution Fault Taxonomy
 
@@ -1476,7 +1476,7 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 | **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash is a function of directive graph content, engine version, and frozen env only. compiled_at is NOT included in snapshot hash (execution artifact metadata only). |
 | **CG-IR Edge Hash Formula** | edge_hash = SHA-256(canonical_json({source: directive_id, target: directive_id})). Directional. Independent of node content. |
 | **Provenance Canonicalization** | All provenance fields MUST be canonicalized before inclusion in hash computation; no non-deterministic ordering |
-| **Finding Event Immutability** | Append-only; event_hash ensures integrity |
+| **Finding Event Immutability** | Append-only; event_hash + HLC ordering ensure integrity |
 | **Finding FSM** | Findings follow strict state transitions (see Section 3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
@@ -1628,4 +1628,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
 | 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
-| 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale |
+| 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale; cross-document audit: HLC in Finding Event Immutability (§8), delegation model v8.2.2 alignment, explicit S-29/S-14 segregation binding in §3.2 |

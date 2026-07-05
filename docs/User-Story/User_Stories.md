@@ -117,7 +117,7 @@ Minor and patch versions are allowed to evolve independently within the same maj
 
 | Risk | Description | Mitigation |
 | :--- | :--- | :--- |
-| **Lossy Metadata in Lexicographic Merges** | Merging `PAY-800` and `AUTH-001` permanently forces `AUTH-001` as lineage root; structural provenance of payment chain survives only in metadata array | Downstream metadata parsing for lineage tracing; consider `MGR-NN` merge namespace in future versions |
+| **Lossy Metadata in Lexicographic Merges** | Merging `PAY-800` and `AUTH-001` permanently forces `AUTH-001` as lineage root; structural provenance of payment chain survives only in metadata array | Downstream metadata parsing for lineage tracing; consider `MERGE-NN` namespace (e.g. `MGR-18`) in future versions |
 | **Time Realism in `finding_aggregates`** | Aggregates are pre-computed from past inspections; current-inspection findings not included in real-time | Multi-pass inspection loop or delayed escalation alerts until reinspection |
 | **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce dependent-schema validation at compile time; never rely solely on `if`/`then` |
 | **Cascade Invisibility via Skipped Nodes** | Dependency failures silently bypass downstream checks; compliance review may miss unverified infrastructure | Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings |
@@ -320,8 +320,8 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 | **Non-Capabilities** | Cannot create/modify/retire directives. Cannot waive findings. |
 
 **Segregation of Duties:**
-- Directive creator ≠ Finding waiver
-- Evidence submitter ≠ Remediation approver
+- Directive creator ≠ Finding waiver: holders of `finding.waive` MUST NOT waive findings raised by directives they authored (S-29)
+- Evidence submitter ≠ Remediation approver: holders of `evidence.submit` MUST NOT approve remediation for the same finding (S-14)
 
 ---
 
@@ -434,7 +434,8 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 | Evaluator Portability (cross-runtime determinism) | S-10, S-21 |
 | Finding FSM | S-11, S-12, S-13, S-14, S-25, S-29 |
 | HLC Event Ordering | S-14 |
-| Capability-Based Permissions | S-14 |
+| Capability-Based Permissions | S-14, S-25, S-29 |
+| Segregation of Duties | S-14, S-29 |
 | Conflict Resolution Mapping (explicit override first) | S-05, S-28 |
 | Specificity Determinism (normative algorithm) | S-05, S-28 |
 | Evaluator Complexity Limits | S-27 |
@@ -457,45 +458,49 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 
 ## System Invariants
 
+Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normative.
+
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.2.2 is the single normative source |
-| **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
-| **Lineage ID Immutability** | Once assigned, lineage_id root never reused; fork/split allows shared lineage_id |
-| **Execution ID Stability** | Changes only on fork/merge/split; globally unique within ruleset |
-| **Rule-Level Uniqueness** | (lineage_id, id) pair unique; id alone globally unique |
+| **Normative Source** | SPECIFICATION.md 8.2.2 is the single normative source; schema and policy MUST conform |
+| **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node identity) |
+| **Lineage ID Immutability** | Once assigned, lineage_id root is never reused; multiple active rules may share lineage_id after fork/split |
+| **Execution ID Stability** | Execution ID changes only on fork/merge/split; globally unique within ruleset |
+| **Rule-Level Uniqueness** | (lineage_id, id) pair is unique; id alone is also globally unique |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
-| **CG-IR Snapshot Immutability** | Once published, immutable; compilation creates new snapshots |
+| **CG-IR Snapshot Immutability** | Once published, a snapshot is immutable; compilation creates new snapshots |
 | **CG-IR Content Addressing** | Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Identical inputs → identical hash (§2.6). |
-| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash depends on directive graph content, engine version, and frozen env only. compiled_at excluded from hash (execution artifact metadata only). |
+| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash is a function of directive graph content, engine version, and frozen env only. compiled_at is NOT included in snapshot hash (execution artifact metadata only). |
 | **CG-IR Edge Hash Formula** | edge_hash = SHA-256(canonical_json({source: directive_id, target: directive_id})). Directional. Independent of node content. |
-| **Provenance Canonicalization** | All provenance fields canonicalized before hash inclusion; no non-deterministic ordering. |
-| **Finding Event Immutability** | Append-only; event_hash + HLC ensure integrity |
-| **Finding FSM** | Strict state transitions enforced |
+| **Provenance Canonicalization** | All provenance fields MUST be canonicalized before inclusion in hash computation; no non-deterministic ordering |
+| **Finding Event Immutability** | Append-only; event_hash + HLC ordering ensure integrity |
+| **Finding FSM** | Findings follow strict state transitions (see SPECIFICATION.md §3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
-| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then). Cross-field consistency is a semantic invariant — intermediate validators may not catch all invalid pairings. |
-| **Evaluator Portability** | Cross-runtime determinism: RE2-compatible regex, IEEE 754 numerics, UTC timestamps, NFC strings. |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
+| **Evaluator Portability** | RE2-compatible regex only; IEEE 754 strict numerics; UTC-only timestamps; NFC-normalized strings |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
-| **Capability Enforcement** | All actions checked against capability matrix |
-| **Mediated Feedback** | No direct finding → CG-IR path |
-| **Declarative Governance** | Policy describes authoring intent only; runtime uses schema/CG-IR fields via spec resolve_conflict |
+| **Capability Enforcement** | All actions checked at ingress and stage gates; deny = 403, no partial mutation, audit logged |
+| **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
+| **Declarative Governance** | Policy describes authoring intent only; runtime engine reads schema/CG-IR fields via spec algorithm |
 | **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
 | **Machine ID Semantics** | Machine ID = stable lineage root; bijective at root-assignment level; fork/split allows shared lineage_id with distinct execution_ids |
-| **CG-IR Local Node Hashing** | Dual hash: semantic_hash + presentation_hash compose node_hash; depends_on as sorted directive_id refs; edges/snapshot capture topology |
-| **Deterministic Serialization** | Canonical JSON with sorted keys; ordered vs unordered arrays per §2.16.1; NaN/Infinity prohibited; metadata namespaced and informational only; `$ref` excluded from canonical form |
-| **Evaluator Complexity Bounds** | Depth ≤ 32, nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars |
-| **Lineage DAG Acyclicity** | Ancestry acyclic; max depth 64; merge lineage_id = lexicographic min of parents |
-| **Specificity Determinism** | Normative `specificity_score` algorithm; priority compared as integers |
-| **Schema x-* Informative Only** | All `x-*` annotations non-normative; spec wins on conflict |
-| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; tuple strictly non-decreasing per node |
+| **CG-IR Local Node Hashing** | node_hash depends on node_body only; graph context captured in edges and snapshot manifest |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id |
+| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; per-node tuple strictly non-decreasing |
 | **system_state_hash Scope** | Captures inspection reproducibility only; event ordering excluded (circular dependency avoidance) |
-| **Conflict Resolution Temporal Binding** | created_at frozen in CG-IR node_body; conflict outcomes snapshot-bound, not evaluation-time-dependent |
-| **Capability Enforcement** | Checked at ingress and stage gates; deny = 403, no partial mutation, audit logged |
+| **Conflict Resolution Temporal Binding** | created_at is frozen in CG-IR node_body; conflict outcomes are snapshot-bound, not evaluation-time-dependent |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
+| **Evaluator Complexity Bounds** | Depth ≤ 32, total nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars, metadata ≤ 16 KiB (§2.9) |
+| **Lineage DAG Acyclicity** | Ancestry graph acyclic; max depth 64 (§2.2.3) |
+| **Specificity Determinism** | `specificity_score` algorithm in §2.15 is normative |
+| **Semantic/Presentation Hash Split** | `semantic_hash` excludes description; `node_hash` composes both (§2.6) |
+| **Array Ordering Classification** | Ordered vs unordered arrays per §2.16.1 |
+| **Metadata Informational Only** | Namespaced metadata; no executable content (§7.1) |
+| **Merge Identity Determinism** | Merged `lineage_id` = lexicographic min of parents (§2.2.2) |
 
 ---
 

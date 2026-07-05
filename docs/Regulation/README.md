@@ -44,41 +44,16 @@ dataset(S) accepts policy(P) ⟺ ⌊S⌋ == ⌊P⌋
 
 Minor and patch versions are allowed to evolve independently within the same major family, but a major version mismatch results in an absolute compile-time rejection.
 
-### Architectural Risks & System Deficiencies
+### Architectural Risks & Mitigations
 
-While the system design exhibits strong mathematical rigor, a deep audit highlights several subtle edge cases, semantic vulnerabilities, and structural risks that require careful monitoring:
+Four known edge cases require monitoring during implementation. See `docs/User-Story/User_Stories.md` (Executive Architectural Overview → Architectural Risks & Mitigations) for detailed risk analysis.
 
-#### 1. The Lossy Metadata Nature of Lexicographic Merges
-
-The merge protocol dictating that `lineage_id := MIN(parent_a, parent_b)` provides strict mathematical determinism, but introduces **semantic provenance loss**.
-
-**The Risk:** Merging `PAY-800` (Payments Regulation) and `AUTH-001` (Identity Verification) permanently forces `AUTH-001` as the active lineage root. Over multiple system iterations, the structural provenance of the payment rule chain vanishes from direct lineage tracking, surviving only within the metadata array. If a future major shift splits the rule again, tracing its lineage back to payments requires heavy manual traversal of ancestral metadata strings.
-
-**Mitigation:** Downstream metadata parsing for lineage tracing; consider introducing a dedicated `MGR-NN` merge namespace to explicitly track unified rule heritage.
-
-#### 2. Time Realism Shift in `finding_aggregates`
-
-The pre-computation constraint on `finding_aggregates` ensures that the `Context` object remains perfectly read-only, avoiding shared mutable state race conditions during topological DAG execution.
-
-**The Risk:** Because aggregates are compiled strictly from *past* historical finding event streams before the active evaluation begins, they do not incorporate findings generated during the current inspection cycle. If a series of interdependent rules within the same execution path count cumulative failures to escalate a severity level, the pipeline cannot track them in real-time. This structural isolation forces a multi-pass inspection loop or delays escalation alerts until a subsequent reinspection occurs.
-
-**Mitigation:** Multi-pass inspection loop or delayed escalation alerts until reinspection.
-
-#### 3. Discriminator Under-Validation Risk
-
-The specification highlights that `evaluator_type` ↔ `evaluator_config` consistency is a core semantic invariant, warning that standard JSON Schema subschema engines often fail to validate these strict pairings comprehensively.
-
-**The Risk:** If a development team relies solely on automated schema validators at ingress points without implementing custom compile-time conditional checks, malformed pairings (e.g., an `evaluator_type` set to `regex` passing an object containing a threshold structure) could bypass edge filtering and cause runtime exceptions inside the pure evaluation functions.
-
-**Mitigation:** Enforce dependent-schema validation at compile time; never rely solely on `if`/`then`.
-
-#### 4. Cascade Invisibility via Skipped Dependency Semantics
-
-To eliminate false-positive storms, nodes whose upstream dependencies fail are silently bypassed, appending a `Skipped` status marker to the pipeline trace instead of generating a separate validation finding.
-
-**The Risk:** While this keeps error logs clean, it can obscure systemic non-compliance. If a foundational control node fails, dozens of fine-grained downstream checks will quietly deactivate without recording explicit findings. A compliance representative reviewing *only* open findings could easily overlook massive swathes of unverified infrastructure because the system treats them as invisible pipeline trace entries rather than actionable validation gaps.
-
-**Mitigation:** Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings.
+| Risk | Summary | Mitigation |
+| :--- | :--- | :--- |
+| **Lossy Lexicographic Merges** | `lineage_id := MIN(parent_a, parent_b)` is deterministic but may obscure provenance | Metadata parsing for lineage tracing; future `MERGE-NN` namespace (e.g. `MGR-18`) |
+| **Time Realism in `finding_aggregates`** | Pre-computed aggregates exclude current-inspection findings | Multi-pass inspection or delayed escalation until reinspection |
+| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` may bypass standard JSON Schema engines | Dependent-schema validation at compile time |
+| **Cascade Invisibility via Skipped Nodes** | Dependency failures bypass downstream checks without findings | Surface `skipped_nodes` in pipeline trace and dashboards |
 
 **Binding Rules:**
 1. SPECIFICATION.md is the single normative source for all system behavior
