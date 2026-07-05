@@ -1,8 +1,10 @@
 # Selma — Unified User Stories
 **Project:** Selma — Rule Regularity Platform
-**Version:** 5.0
+**Version:** 5.1
 **Date:** 2026-07-05
 **Status:** Final
+
+> **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
 ---
 
@@ -13,7 +15,7 @@
 | **Actor** | The Regulated Entity (Human or AI Agent) |
 | **Role** | The Rule Submitter & Compliance Seeker |
 | **Core Mission** | Establishes and maintains regulatory directives for their domain |
-| **What They Do** | Submits, modifies, retires, and reviews regulatory directives via natural language or formal requests |
+| **What They Do** | Submits, modifies, retires, and reviews regulatory directives via natural language or structured requests (Selma handles both seamlessly) |
 | **What They DON'T Do** | They do NOT perform compliance inspections, consistency assessments, or formatting reviews. Selma automatically handles all regulatory oversight, inspections, and corrective feedback. |
 
 ---
@@ -50,8 +52,8 @@
 | Story ID | User Story | Acceptance Criteria (Given-When-Then) | Priority |
 | :--- | :--- | :--- | :--- |
 | **S-04** | As a Regulated Entity, I want to view all active regulatory requirements for my domain, so that I know what is currently expected and enforced. | **Given** I request the active requirements for my domain. <br> **When** Selma processes it. <br> **Then** Selma returns all active directives in both a formal reference format and a technical format suitable for implementation. | **P0** |
-| **S-05** | As a Regulated Entity, I want to know if any directives conflict with one another, so that I can resolve contradictions before they cause compliance issues. | **Given** I request a regulatory consistency review. <br> **When** Selma processes it. <br> **Then** Selma conducts a full assessment and issues an advisory report detailing all identified conflicts, contradictions, and recommended corrective actions. | **P1** |
-| **S-06** | As a Regulated Entity, I want to receive a comprehensive compliance audit of my entire regulatory set, so that I understand redundancies, gaps, and circular dependencies. | **Given** I request a full compliance audit. <br> **When** Selma processes it. <br> **Then** Selma generates a detailed audit report highlighting deficiencies, redundancies, logical gaps, and required remedial measures. | **P2** |
+| **S-05** | As a Regulated Entity, I want to know if any directives conflict with one another, so that I can resolve contradictions before they cause compliance issues. | **Given** I request a regulatory consistency review. <br> **When** Selma processes it. <br> **Then** Selma conducts a full assessment and issues a formal inspection report with findings, identified conflicts, contradictions, and required corrective actions. | **P1** |
+| **S-06** | As a Regulated Entity, I want to receive a comprehensive compliance audit of my entire regulatory set, so that I understand redundancies, gaps, and circular dependencies. | **Given** I request a full compliance audit. <br> **When** Selma processes it. <br> **Then** Selma generates a formal compliance inspection report with findings, deficiencies, redundancies, logical gaps, and required corrective actions. | **P2** |
 
 ---
 
