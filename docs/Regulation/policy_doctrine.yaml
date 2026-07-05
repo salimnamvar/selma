@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 8.2.1
+# NORMATIVE SOURCE: SPECIFICATION.md 8.2.2
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.2.1"
+  version: "8.2.2"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.2.1"
-  rule_contract_version: "8.2.1"
+  spec_version: "8.2.2"
+  rule_contract_version: "8.2.2"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -200,7 +200,7 @@ priority_hierarchy:
     factors (in order):
     0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
     1. Higher priority level wins
-    2. If same level: more specific rule wins (specificity algorithm in SPECIFICATION.md §2.15 — composite evaluator > regex > threshold > field_check; narrower scope wins; more conditions win. Score is a lexicographic tuple compared element-wise.)
+    2. If same level: more specific rule wins (specificity is a composite integer score per SPECIFICATION.md §2.15: scope constraints (weighted ×100) + evaluator field bindings + target_type via scope_specificity_score. Two engines MUST agree on scores for identical CG-IR node bodies.)
     3. If same specificity: newer rule wins
     4. If still tied: escalate as Conflict Artifact for human review
     This is governance intent only — not executable logic in this file.

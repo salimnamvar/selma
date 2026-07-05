@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.2.1
+**Version:** 8.2.2
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -129,9 +129,11 @@ merge(parent_a, parent_b) → merged_rule:
 2. id := lineage_id + "-M" + SHA-256(canonical_json({
      parent_lineage_ids: sorted([parent_a.lineage_id, parent_b.lineage_id]),
      parent_execution_ids: sorted([parent_a.id, parent_b.id]),
-     operation: "merge"
-   }))[0:8].uppercase()
-   // Example: TRAF-001-M3A7F2B1
+     operation: "merge",
+     timestamp: lineage.timestamp
+   }))[0:16].uppercase()
+   // Example: TRAF-001-M3A7F2B1C4D5E6F7
+   // timestamp guarantees uniqueness across re-merge attempts; 16 hex chars = 64 bits entropy
 
 3. lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])
 4. lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])
@@ -149,7 +151,7 @@ The lineage ancestry graph MUST satisfy:
 3. **Parent existence:** Every ID in `parent_lineage_ids` and `parent_execution_ids` MUST reference a rule that existed at `lineage.timestamp`
 4. **Operation consistency:**
    - `fork`/`split`: exactly one entry in `parent_lineage_ids` (the inherited root)
-   - `merge`: exactly two entries in `parent_lineage_ids` (both parents)
+   - `merge`: exactly two entries in `parent_lineage_ids` (both parents). N-way merge is not supported in v8.2.x; only binary merge is defined.
 5. **No self-reference:** A rule MUST NOT list its own `lineage_id` or `id` as a parent
 6. **Depth bound:** Maximum ancestry depth = 64 operations from any leaf to root (compile-time rejection beyond limit)
 7. **Temporal ordering:** `lineage.timestamp` MUST be ≥ max(parent timestamps) when parent lineage records exist
@@ -301,6 +303,8 @@ Node identity is **local** — a node hash depends only on the node's own canoni
 
 **Dual Hash Model:**
 
+The dual hash model separates compilation-relevant identity (`semantic_hash`) from editorial identity (`presentation_hash`), enabling incremental compilation to reuse evaluator subgraphs when only human-readable descriptions change.
+
 | Hash | Input | Purpose |
 | :--- | :--- | :--- |
 | **semantic_hash** | `semantic_body` (evaluator, scope, depends_on, priority, conflict_resolution, status, severity_default) | Compilation cache identity; unchanged by editorial description edits |
@@ -436,11 +440,14 @@ Directive Graph
       "decoder_hash": "sha256"
     }
   ],
+  "confidence_severity_cap_threshold": 0.5,
   "frozen_env_hash": "sha256"
 }
 ```
 
 `frozen_env_hash` = SHA-256(canonical_json(above minus `frozen_env_hash` itself))
+
+`frozen_env_hash` is a computed digest. The hash input is the frozen environment object with the `frozen_env_hash` key excluded. Implementations MUST NOT include `frozen_env_hash` in its own computation.
 
 ### 2.8 CG-IR Node Schema
 
@@ -531,7 +538,7 @@ Rules with no scope object (or all-default scope) have `scope_specificity_score 
 
 The following rule schema fields are NOT compiled into CG-IR nodes. They exist in the rule schema for authoring-time tooling, documentation, and human-readable reports. The runtime engine never accesses them:
 
-`anchor_ref`, `rationale`, `remediation`, `parameters` (merged into evaluator at compile time), `target` (best-effort extraction to scope only), `expires_at`
+`anchor_ref`, `rationale`, `remediation`, `expires_at`, `conflicts_with` (consumed at compile time to generate candidate conflict pairs per §2.15.1; pairs recorded in snapshot metadata, not present in CG-IR nodes), `target` (best-effort extraction to `scope.target_type` only; the `target` field itself is not present in CG-IR nodes), `parameters` — values are shallow-merged into `evaluator.config` at compile time; the `parameters` field itself is not present in the CG-IR node, only the merged result within the evaluator object survives compilation
 
 ### 2.9 Formal Evaluator Contract
 
@@ -602,7 +609,7 @@ Engines MUST NOT rely on partial subschema validation for evaluator pairing.
 | `Partial` | Yes | Downgraded by one level from `severity_default` | `critical`→`high`, `high`→`medium`, `medium`→`low`, `low`→`informational`, `informational`→`informational` |
 | `NeedsReview` | Yes | `informational` | Always informational regardless of severity_default — cannot escalate without human review |
 
-**Confidence threshold (optional):** If `confidence < 0.5`, the finding severity is capped at `informational` regardless of outcome. This prevents low-confidence failures from appearing as critical.
+**Confidence threshold (optional):** If `confidence` is below the configured threshold, the finding severity is capped at `informational` regardless of outcome. This prevents low-confidence failures from appearing as critical. The confidence threshold (default: `0.5`) is configurable in the frozen environment under `confidence_severity_cap_threshold`. If not specified, `0.5` is used.
 
 **`permission` type special case:** When a `permission` rule's evaluator returns `Fail`, the finding severity is ALWAYS `informational` regardless of `severity_default`. A permission failure means "the permitted action was not taken" — this is advisory, not a violation.
 
@@ -647,7 +654,7 @@ All targets must conform to:
   "finding_aggregates": {
     "total_open_findings": "integer",
     "findings_by_severity": "object (enum keys: critical, high, medium, low, informational)",
-    "findings_by_control": "object (control_id → count)",
+    "findings_by_directive_id": "object (directive_id → count)",
     "last_inspection_date": "datetime",
     "recurrence_count": "integer"
   }
@@ -706,6 +713,14 @@ Reinspection creates a completely new inspection with a new `inspection_id` and 
   "event_hash": "string (required, SHA-256)"
 }
 ```
+
+**Event Payload Structures:**
+
+| `event_type` | Required `payload` fields |
+| :--- | :--- |
+| `FindingCreated` | `finding_id`, `lineage_id`, `control_id` (directive_id), `inspection_id`, `fsm_state` (`Created`), `severity`, `outcome`, `confidence`, `evidence`, `reasoning` |
+| `DispositionChanged` | `previous_disposition`, `new_disposition`, `previous_fsm_state`, `new_fsm_state`, `reason` (optional) |
+| `FindingClosed` | `final_disposition`, `final_fsm_state`, `closure_reason` (optional) |
 
 **Hybrid Logical Clock (HLC):**
 
@@ -811,7 +826,7 @@ When two active rules sharing a `lineage_id` both produce `Fail` findings for th
 | Intent (Policy — authoring only) | Schema Field | Operator (CG-IR — runtime) | Implementation |
 | :--- | :--- | :--- | :--- |
 | "Higher priority wins" | `priority` | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
-| "More specific wins" | `target`, scope constraints | `specificity_score(rule) > specificity_score(other)` | Formal algorithm below |
+| "More specific wins" | scope constraints, evaluator bindings | `specificity_score(rule) > specificity_score(other)` | Formal algorithm below |
 | "Newer wins" | `created_at` | `max(created_at)` | ISO 8601 timestamp comparison |
 | N/A (schema-only) | `conflict_resolution` | `has_field(conflict_resolution)` | Checked first, before all computed factors |
 
@@ -828,26 +843,23 @@ When two active rules sharing a `lineage_id` both produce `Fail` findings for th
 **Specificity Score Algorithm (normative):**
 
 ```
-specificity_score(rule) → non-negative integer
+specificity_score(node) → non-negative integer
 
 score = 0
 
-// 1. Target constraint specificity
-if rule.target is present and non-empty:
-  score += 1000 + len(rule.target)
-
-// 2. Scope constraint specificity (§2.8.2 scope_specificity_score)
+// 1. Scope constraint specificity (§2.8.2 scope_specificity_score)
+//    Includes target_type discrimination (text | structured | binary | any)
 score += scope_specificity_score(scope) * 100
 
-// 3. Evaluator field binding (more constrained = more specific)
-score += count_bound_fields(rule.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
+// 2. Evaluator field binding (more constrained = more specific)
+score += count_bound_fields(node.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
 
-// 4. Explicit priority within same level does NOT affect specificity (handled by priority step)
+// 3. Explicit priority within same level does NOT affect specificity (handled by priority step)
 
 Tie on equal score → proceed to recency step
 ```
 
-`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies.
+`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Evaluator complexity contributes to specificity because a rule with more evaluation constraints is more narrowly targeted. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies. The algorithm operates exclusively on CG-IR node fields — compile-time-only rule schema fields (e.g., `rule.target`) are NOT accessed at runtime.
 
 **Priority Level Mapping (internal integer):**
 
@@ -926,6 +938,7 @@ For reproducibility, all hashing uses:
 | **Array ordering** | Classified per §2.16.1 — ordered arrays preserve insertion order; unordered arrays sorted lexicographically before hashing |
 | **Float precision** | IEEE 754 double; no rounding before hashing |
 | **Hash algorithm** | SHA-256 |
+| **Hash algorithm version** | `1` — flat `node_body` hash (deprecated 8.2.0); `2` — dual-hash model (`semantic_hash` + `presentation_hash`, current) |
 
 **Canonical JSON:** All objects are serialized with sorted keys before hashing.
 
@@ -1397,8 +1410,9 @@ The root `metadata` object and per-rule `metadata` (if present) are **informatio
 }
 ```
 
-- `additionalProperties` outside declared namespaces is PROHIBITED at root `metadata`
-- Unknown keys within a namespace MAY be rejected with warning at compile time
+- Declared namespaces (`audit`, `vendor`, `author`, `migration`, `domain`, `jurisdiction`, `project`) are preferred for all metadata
+- Custom top-level keys are permitted for backward compatibility and vendor extensions; validators MAY warn on undeclared keys but MUST NOT reject datasets solely for custom metadata keys within the same MAJOR version
+- Unknown keys within a declared namespace MAY be rejected with warning at compile time
 - Metadata does NOT participate in `semantic_hash` unless explicitly declared in a future spec version
 
 ### 7.2 Anchor Reference Syntax
@@ -1410,8 +1424,8 @@ anchor_ref ::= section_ref | json_pointer
 
 section_ref ::= "section:" section_id ["/" subsection_id]
 
-section_id ::= "preamble" | "governance" | "definitions" | "principles"
-             | "directives" | "sanctions" | "references"
+section_id ::= [a-z][a-z_]*   // any lowercase section identifier (e.g. preamble, domain_appendix)
+subsection_id ::= [a-z_]+
 
 json_pointer ::= "/" path_segment ("/" path_segment)*
 ```
@@ -1614,4 +1628,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
 | 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
-| 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection mechanism (§2.15.1), scope object schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes semantics, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation algorithm, pipeline stage descriptions, FSM story binding (S-25 dismiss, S-29 waive), flexible standards encoding guidance, phantom technical_hints removed |
+| 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale |

@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 8.2.1  
+**Version:** 8.2.2
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md 8.2.1
+**Normative Reference:** SPECIFICATION.md 8.2.2
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -51,10 +51,10 @@ Minor and patch versions are allowed to evolve independently within the same maj
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.2.1 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.2.1 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.2.1 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 8.2.1 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.2.2 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.2.2 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.2.2 | Declarative governance intent (authoring only) |
+| **Behavioral** | User_Stories.md 8.2.2 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. MAJOR versions MUST match across all documents; MINOR and PATCH MAY differ (compatibility matrix, not strict equality). Policy is never read at runtime — only schema fields compiled per spec.
 
@@ -154,7 +154,7 @@ When multiple rules converge, SELMA resolves identity mathematically to prevent 
 ```
 merge(parent_a, parent_b)
    ├── lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id)
-   └── execution_id := lineage_id + "-M" + SHA-256(sorted_parents)[0:8]
+   └── execution_id := lineage_id + "-M" + SHA-256(canonical_json({parents, operation: "merge", timestamp}))[0:16]
 ```
 
 ---
@@ -170,7 +170,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Inspection | Pipeline entry | `inspection.submit`, `inspection.reinspect` |
 | Finding transitions | Finding FSM Engine | `finding.acknowledge`, `finding.approve_remediation`, … |
 
-**Segregation of duties** is checked at the same gates. No capability delegation in v8.2.1.
+**Segregation of duties** is checked at the same gates. No capability delegation in v8.2.2.
 
 ---
 
@@ -458,7 +458,7 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.2.1 is the single normative source |
+| **Normative Source** | SPECIFICATION.md 8.2.2 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id root never reused; fork/split allows shared lineage_id |
 | **Execution ID Stability** | Changes only on fork/merge/split; globally unique within ruleset |

@@ -154,7 +154,7 @@ All three documents share the same MAJOR version. MINOR and PATCH may differ ind
 | Policy (MAJOR.minor.patch) | Schema (MAJOR.minor.patch) | Spec (MAJOR.minor.patch) | Compatible? | Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | 8.x.x | 8.x.x | 8.x.x | ✅ | Same MAJOR family — all combinations valid |
-| 8.2.1 | 8.4.2 | 8.3.0 | ✅ | MINOR/PATCH may differ within MAJOR |
+| 8.2.2 | 8.4.2 | 8.3.0 | ✅ | MINOR/PATCH may differ within MAJOR |
 | 8.x.x | 9.x.x | 8.x.x | ❌ | MAJOR mismatch — incompatible |
 | 9.0.0 | 8.x.x | 8.x.x | ❌ | MAJOR mismatch — incompatible |
 
@@ -195,26 +195,23 @@ Escalate to human review as a Conflict Artifact
 ### Specificity Score Algorithm (Normative)
 
 ```
-specificity_score(rule) → non-negative integer
+specificity_score(node) → non-negative integer
 
 score = 0
 
-// 1. Target constraint specificity
-if rule.target is present and non-empty:
-  score += 1000 + len(rule.target)
-
-// 2. Scope constraint specificity (§2.8.2 scope_specificity_score)
+// 1. Scope constraint specificity (§2.8.2 scope_specificity_score)
+//    Includes target_type discrimination (text | structured | binary | any)
 score += scope_specificity_score(scope) * 100
 
-// 3. Evaluator field binding (more constrained = more specific)
-score += count_bound_fields(rule.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
+// 2. Evaluator field binding (more constrained = more specific)
+score += count_bound_fields(node.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
 
-// 4. Explicit priority within same level does NOT affect specificity (handled by priority step)
+// 3. Explicit priority within same level does NOT affect specificity (handled by priority step)
 
 Tie on equal score → proceed to recency step
 ```
 
-`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies.
+`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Evaluator complexity contributes to specificity because a rule with more evaluation constraints is more narrowly targeted. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies. The algorithm operates exclusively on CG-IR node fields.
 
 ### Priority Level Mapping (Internal Integer)
 
@@ -328,7 +325,7 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 
 ## Metadata Namespacing
 
-Root `metadata` is informational only. Declared namespaces: `audit`, `vendor`, `author`, `migration`. No executable hints permitted (§7.1).
+Root `metadata` is informational only. Declared namespaces: `audit`, `vendor`, `author`, `migration`, `domain`, `jurisdiction`, `project`. Custom top-level keys permitted for backward compatibility; validators MAY warn on undeclared keys. No executable hints permitted (§7.1).
 
 ## Merge Semantics
 
@@ -337,7 +334,7 @@ Merged `lineage_id` = lexicographic minimum of parent lineage_ids. New execution
 ```
 merge(parent_a, parent_b) → merged_rule:
 1. lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically
-2. id := lineage_id + "-M" + SHA-256(sorted_parents)[0:8].uppercase()
+2. id := lineage_id + "-M" + SHA-256(canonical_json({parent_lineage_ids, parent_execution_ids, operation: "merge", timestamp}))[0:16].uppercase()
 3. lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])
 4. lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])
 5. Both parent rules transition to status=deprecated
@@ -445,7 +442,8 @@ Each stage performs a specific class of validation. The engine is the sole execu
 
 Hash algorithms may change over time (e.g. SHA-256 → BLAKE3). The `hash_algorithm_version` field in `x-deterministic-serialization` tracks the current algorithm version:
 
-- **Version 1**: SHA-256 (current)
+- **Version 1**: Flat `node_body` hash (deprecated 8.2.0)
+- **Version 2**: Dual-hash model (`semantic_hash` + `presentation_hash`, current)
 - All `node_hash`, `edge_hash`, and `snapshot_hash` values are tagged with the algorithm version
 - Old versions remain valid for audit replay; new compilations MUST use the current version
 - Algorithm migration requires a MAJOR version bump
