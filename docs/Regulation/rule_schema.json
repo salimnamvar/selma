@@ -14,7 +14,7 @@
     "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
     "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
-    "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant enforced by if/then. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST check cross-field consistency."
+    "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant. JSON Schema if/then is a first-pass filter only. The compilation engine MUST implement a formal AST-walking validator per SPECIFICATION.md §2.9 Discriminator Validation. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST use the AST walker, not partial subschema validation alone."
   },
   "x-cg-ir-hashing": {
     "normative_status": "informative",
@@ -154,7 +154,31 @@
             "upgrade_from": { "type": "string", "description": "Previous dataset version this dataset was migrated from (e.g. '8.2.1')." },
             "upgrade_to": { "type": "string", "description": "Target dataset version for next migration (e.g. '9.0.0')." },
             "migration_required": { "type": "boolean", "description": "True if dataset requires manual migration steps before use with target version." },
-            "lineage_preservation": { "type": "string", "enum": ["identity_preserved", "identity_reassigned", "requires_remap"], "description": "How lineage_ids are handled during migration." }
+            "lineage_preservation": { "type": "string", "enum": ["identity_preserved", "identity_reassigned", "requires_remap"], "description": "How lineage_ids are handled during migration." },
+            "merge_provenance": {
+              "type": "object",
+              "description": "Explicit mapping of non-surviving parent lineage_ids during a merge operation. Mitigates lexicographic MIN provenance loss by documenting the semantic weight and context of each parent.",
+              "properties": {
+                "non_surviving_parents": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "lineage_id": { "type": "string", "description": "Non-surviving parent lineage_id." },
+                      "semantic_weight": { "type": "string", "enum": ["primary", "secondary", "informational"], "description": "Semantic importance of this parent in the merged rule." },
+                      "context": { "type": "string", "description": "Human-readable description of what the non-surviving parent contributed (e.g. 'payment processing rules', 'access control constraints')." }
+                    },
+                    "required": ["lineage_id"],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
+                },
+                "merged_at": { "type": "string", "format": "date-time", "description": "Timestamp of the merge operation." },
+                "merge_notes": { "type": "string", "description": "Additional context about the merge rationale." }
+              },
+              "required": ["non_surviving_parents"],
+              "additionalProperties": false
+            }
           },
           "additionalProperties": false
         },

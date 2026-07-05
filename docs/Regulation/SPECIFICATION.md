@@ -142,6 +142,11 @@ merge(parent_a, parent_b) → merged_rule:
 
 **Invariant:** The merged `lineage_id` equals the lexicographically minimum parent `lineage_id`. The non-surviving parent `lineage_id` remains in audit history via `lineage.parent_lineage_ids` but is never reused as an active root.
 
+**Merge Provenance Loss (Accepted Risk):** The lexicographic MIN strategy is deterministic but semantically lossy. Merging `PAY-800` with `AUTH-001` produces `AUTH-001` as the surviving root, which obscures the payment lineage provenance. Mitigations:
+- The optional `metadata.migration.merge_provenance` field (§7.1, schema) explicitly maps non-surviving parent `lineage_id`s with semantic weight and context
+- Downstream lineage tracing tools MUST parse `lineage.parent_lineage_ids` arrays, not rely solely on the primary identity graph
+- **Future (v9.0.0):** A dedicated `MERGE-NN` namespace (e.g., `MGR-18`) will replace lexicographic MIN to preserve full provenance identity in merged roots
+
 #### 2.2.3 Lineage DAG Invariants
 
 The lineage ancestry graph MUST satisfy:
@@ -597,14 +602,49 @@ evaluate(node, target, context) → {
 
 **Regex catastrophic backtracking mitigation:** All regex patterns MUST be RE2-compatible (§2.9 portability). Compile-time validation MUST reject patterns exceeding length limit. Runtime engines SHOULD enforce per-node evaluation timeout (§2.12).
 
-**Discriminator Validation:** `evaluator_type` ↔ `evaluator_config` consistency is a semantic invariant. JSON Schema `if`/`then` alone is insufficient — compile-time validation MUST apply dependent-schema checks equivalent to:
+**Discriminator Validation:** `evaluator_type` ↔ `evaluator_config` consistency is a semantic invariant. JSON Schema `if`/`then` alone is insufficient — compile-time validation MUST apply a formal AST-walking validator that implements the following algorithm:
 
 ```
-when evaluator_type = T → evaluator_config MUST match $defs for T exclusively
-reject any oneOf match where x-evaluator-type ≠ evaluator_type
+validate_evaluator_pairing(rule):
+  // Step 1: Type-specific required-field assertions
+  match rule.evaluator_type:
+    "regex":
+      assert "pattern" in rule.evaluator_config           // string, 1-4096 chars
+      assert "flags" in rule.evaluator_config →           // optional, pattern: ^[ims]*$
+        assert rule.evaluator_config.flags matches "^[ims]*$"
+      assert no unrecognized keys in rule.evaluator_config // only pattern, flags
+
+    "field_check":
+      assert "field" in rule.evaluator_config              // string, non-empty
+      assert "operator" in rule.evaluator_config            // eq|neq|gt|gte|lt|lte|contains|matches
+      assert "value" in rule.evaluator_config               // any JSON value
+      assert no unrecognized keys in rule.evaluator_config  // only field, operator, value
+
+    "threshold":
+      assert "field" in rule.evaluator_config               // string, non-empty
+      assert "operator" in rule.evaluator_config             // gt|gte|lt|lte only
+      assert "threshold" in rule.evaluator_config            // number
+      assert no unrecognized keys in rule.evaluator_config   // only field, operator, threshold
+
+    "composite":
+      assert "logic" in rule.evaluator_config                // and|or|not
+      assert "sub_evaluators" in rule.evaluator_config       // array, 1-64 items
+      for each sub in rule.evaluator_config.sub_evaluators:
+        validate_evaluator_pairing(sub)                      // recursive AST walk
+
+  // Step 2: Cross-field binding verification
+  // For each oneOf variant in the evaluator_config schema, the validator MUST check
+  // that the x-evaluator-type annotation matches the parent evaluator_type.
+  // This catches cases where a regex config accidentally matches a field_check schema.
+  assert rule.evaluator_config matches exactly_one_schema_variant(rule.evaluator_type)
+
+  // Step 3: Reject structural mismatches
+  // If evaluator_type is "regex" but evaluator_config has "field" or "threshold",
+  // the validator MUST reject regardless of partial schema match.
+  assert no cross-type key leakage
 ```
 
-Engines MUST NOT rely on partial subschema validation for evaluator pairing.
+Engines MUST NOT rely on partial subschema validation for evaluator pairing. The standard JSON Schema `if`/`then` mechanism is a first-pass filter only; the formal AST walker above is the normative gate. Implementations SHOULD integrate this validator as a standalone pass before or after JSON Schema validation to ensure no invalid pairing passes through structural checks.
 
 ### 2.9.1 Outcome-to-Finding Mapping
 
@@ -670,6 +710,11 @@ All targets must conform to:
 **No Write-Back:** Evaluators cannot modify context.
 
 **`finding_aggregates` Semantics:** `finding_aggregates` is pre-computed from PREVIOUS inspections' finding event streams BEFORE the current DAG execution begins. Current-inspection findings do NOT populate this field. This preserves the read-only context invariant (§2.12) — no shared mutable state during DAG execution.
+
+**Aggregation Latency Warning:** Because `finding_aggregates` reflects only pre-inspection state, compliance dashboards and escalation systems that depend on real-time severity aggregation will experience at-least-one-inspection-cycle delay. For example, if a critical violation occurs during the current inspection, `finding_aggregates` will not reflect it until the next inspection of the same target. Implementations SHOULD:
+- Document this latency in compliance dashboards (e.g., "Aggregates reflect prior inspection state")
+- Consider multi-pass inspection within a single pipeline if real-time escalation is required
+- Rely on individual finding events (via the Finding Event Stream) for immediate alerting; use `finding_aggregates` for trend analysis and dashboard views only
 
 ### 2.12 DAG Execution Semantics
 
@@ -1326,7 +1371,7 @@ CG-IR Content-Addressed Store
 | `select_controls` | Filter CG-IR nodes by scope applicability |
 | `evaluate` | DAG execution with topological ordering |
 | `aggregate` | Collect findings, compute severities per §2.9.1 |
-| `report` | Generate inspection snapshot |
+| `report` | Generate inspection snapshot. **All prior stages operate on pre-inspection aggregates; escalation logic fed by this pipeline is inherently delayed by at least one inspection cycle (see §2.11 Aggregation Latency Warning).** |
 
 ---
 
@@ -1587,7 +1632,7 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 11. Total evaluator nodes per rule ≤ 256
 12. Composite width (`sub_evaluators` count) ≤ 64 at any level
 13. Regex pattern length ≤ 4096 characters
-14. Cross-field discriminator: `evaluator_type` ↔ `evaluator_config` verified by compile-time validator (not partial subschema validation alone)
+14. Cross-field discriminator: `evaluator_type` ↔ `evaluator_config` verified by compile-time AST-walking validator (not partial subschema validation alone). The validator MUST implement the algorithm specified in §2.9 Discriminator Validation.
 
 ### 9.3 CG-IR Validation
 
@@ -1673,4 +1718,5 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
 | 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale; cross-document audit: HLC in Finding Event Immutability (§8), delegation model v8.2.2 alignment, explicit S-29/S-14 segregation binding in §3.2 |
 | 8.2.2-auditfix | 2026-07-05 | Audit report fixes: schema Draft-07 compliance (dependentRequired→dependencies, $defs→definitions), deontic_type added to CG-IR node and semantic_body, scope object added to rule schema, per-rule metadata and directive_revision/control_version fields added, regex flags pattern restriction, composite evaluator width/not constraints, lineage parent cardinality enforcement, retry policy clarified (deterministic vs timeout), User_Stories S-03 Retired→deprecated, event_hash composition defined, finding.supersede capability added, superseded disposition added, snapshot hash determinism clarified, matches operator semantics defined, README deduplicated |
-| 8.2.3 | 2026-07-05 | Formal verification audit clarifications: normative `defer_to` active-lineage resolution algorithm with post-fork Conflict Artifact escalation (§2.15), `authored_by` creator provenance inheritance through fork/merge/split with `creator_provenance` snapshot field (§3.2, §2.8.1), cross-lineage presentation correlation guidance (§2.13.1), NeedsReview+Fail operational guidance (§2.15.1), Policy Runtime Prohibition CI enforcement mechanism (§9.7), User_Stories capability matrix segregation column |
+| 8.2.3 | 2026-07-05 | Formal verification audit findings: normative `defer_to` active-lineage resolution algorithm with post-fork Conflict Artifact escalation (§2.15), `authored_by` creator provenance inheritance through fork/merge/split with `creator_provenance` snapshot field (§3.2, §2.8.1), cross-lineage presentation correlation guidance (§2.13.1), NeedsReview+Fail operational guidance (§2.15.1), Policy Runtime Prohibition CI enforcement mechanism (§9.7), User_Stories capability matrix segregation column |
+| 8.2.3-b | 2026-07-05 | Formal verification audit deltas: normative AST-walking discriminator validation algorithm superseding JSON Schema if/then (§2.9), optional `metadata.migration.merge_provenance` for merge lineage preservation (§7.1), aggregation latency warning in §2.11 and §3.7, MERGE-NN namespace documented as v9.0.0 candidate (§2.2.2) |
