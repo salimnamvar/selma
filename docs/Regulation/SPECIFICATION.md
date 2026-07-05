@@ -312,12 +312,15 @@ semantic_body = {
   directive_id, lineage_id,
   evaluator, scope, severity_default,
   depends_on,           // sorted array (§2.16)
-  priority, conflict_resolution, status
+  priority, conflict_resolution, status,
+  created_at            // frozen authoring timestamp for conflict resolution recency
 }
 
 presentation_body = {
   description, directive_revision, control_version
 }
+
+node_body = union(semantic_body, presentation_body)  // 13 fields total
 
 node_hash = SHA-256(canonical_json({
   semantic_hash: SHA-256(canonical_json(semantic_body)),
@@ -370,11 +373,19 @@ cg_ir_snapshot_hash = SHA-256(canonical_json({
 
 **Determinism guarantee:** Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical. The hash is **not a function of wall clock time, compilation node identity, or request context**.
 
-**Provenance Canonicalization Requirement:** All provenance fields MUST be canonicalized (normalized to canonical form) before inclusion in the snapshot hash input. Provenance fields MUST NOT be appended in non-deterministic order. Specifically:
-- `engine_version` and `frozen_env_hash` are normalized strings (no trailing whitespace, case-insensitive where applicable)
-- `directive_graph_version` follows semver normalization
-- `compiled_at` is NOT part of the snapshot hash input — it is recorded in execution artifact metadata only. Two compilations with identical directive graph content, engine version, and frozen environment produce the same `cg_ir_snapshot_hash` regardless of wall clock time
+**Provenance Canonicalization Requirement:** All provenance fields MUST be canonicalized (normalized to canonical form per §2.16) before inclusion in the snapshot hash input. Specifically:
+- `engine_version` and `frozen_env_hash` are normalized strings (no trailing whitespace, case-sensitive as defined)
+- `directive_graph_version` follows semver normalization (no leading `v`, zero-padded numeric components)
+- `compiled_at` is NOT part of the snapshot hash input. It is recorded in execution artifact metadata (inspection snapshots, pipeline traces) only. This exclusion ensures snapshot hash determinism regardless of when compilation executes
 - If future extensions add provenance fields, each field MUST be declared with a canonical form before inclusion in hash computation
+
+**Incremental Compilation Algorithm:**
+1. Compute the set of changed `lineage_id` values by comparing current vs. previous directive graph
+2. For each changed `lineage_id`, mark its node and all transitive dependents as dirty
+3. Recompute dirty nodes
+4. Reuse unchanged `node_hash` values from the previous snapshot
+5. Recompute edge hashes for any dirty node's edges
+6. Recompute snapshot hash
 
 **Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
 
@@ -408,20 +419,119 @@ Directive Graph
 4. AI outputs are cached and serialized into CG-IR before publication
 5. Once published, CG-IR snapshot is immutable
 
+**Frozen Environment Schema:**
+
+```json
+{
+  "engine_version": "semver",
+  "toolchain": {
+    "compiler": "string",
+    "os_runtime_hash": "sha256"
+  },
+  "ai_components": [
+    {
+      "name": "string",
+      "model_hash": "sha256",
+      "prompt_hash": "sha256",
+      "decoder_hash": "sha256"
+    }
+  ],
+  "frozen_env_hash": "sha256"
+}
+```
+
+`frozen_env_hash` = SHA-256(canonical_json(above minus `frozen_env_hash` itself))
+
 ### 2.8 CG-IR Node Schema
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `node_id` | String | Unique node identifier |
 | `directive_id` | String | Canonical directive ID |
+| `lineage_id` | String | Immutable lineage root |
 | `directive_revision` | String | Revision of source directive |
 | `control_version` | String | Version of evaluation logic |
 | `description` | String | Human-readable description |
 | `evaluator` | Object | Pure evaluator specification |
-| `scope` | Object | Applicability context |
+| `scope` | Object | Applicability context (see §2.8.2) |
 | `severity_default` | Enum | Default severity on failure |
 | `depends_on` | Array | Node IDs evaluated first |
+| `priority` | Enum | Authority level for conflict resolution |
+| `conflict_resolution` | Object | Optional explicit override |
 | `status` | Enum | `active`, `deprecated` |
+| `created_at` | Datetime (ISO 8601 UTC) | Authoring timestamp, frozen from `rule.created_at`. Used for conflict resolution recency comparison |
+
+### 2.8.1 Rule-to-CG-IR Node Mapping
+
+| Rule Schema Field | CG-IR Node Field | Transform | Notes |
+| :--- | :--- | :--- | :--- |
+| `id` | `directive_id` | Direct copy | Execution ID becomes node's canonical ID |
+| `lineage_id` | `lineage_id` | Direct copy | Immutable root |
+| `type` | _(not in node_body)_ | Not compiled | Deontic classification is authoring-time metadata |
+| `message` | `description` | Direct copy | Renamed for CG-IR convention |
+| `evaluator_type` + `evaluator_config` | `evaluator` | Merge into `{"type": evaluator_type, "config": evaluator_config}` | Single evaluator object in CG-IR |
+| `weight` | `severity_default` | Direct copy | Weight maps to default severity on failure |
+| `target` | `scope.target_type` | Extract target_type if parseable | Compile-time only; best-effort extraction |
+| `priority` | `priority` | Direct copy | Used by conflict resolution |
+| `depends_on` | `depends_on` | Transform from rule.id refs to node directive_id refs | Resolved at compile time |
+| `conflict_resolution` | `conflict_resolution` | Direct copy | Used by conflict resolution |
+| `status` | `status` | Map: `draft`→`active`, `active`→`active`, `deprecated`→`deprecated`, `superseded`→`deprecated` | Drafts compile as active for testing |
+| `created_at` | `created_at` | Direct copy | Frozen for conflict resolution recency |
+| `anchor_ref` | _(not compiled)_ | Dropped | Compile-time-only field |
+| `rationale` | _(not compiled)_ | Dropped | Compile-time-only field |
+| `remediation` | _(not compiled)_ | Dropped | Compile-time-only field |
+| `parameters` | Merged into `evaluator.config` | Shallow merge | Parameters override evaluator_config keys on conflict |
+| `expires_at` | _(not compiled)_ | Dropped | Compile-time-only field; expiration is a separate scheduler concern |
+| `lineage` | _(not in node_body)_ | Recorded in provenance only | Lineage metadata in snapshot provenance, not node body |
+| `metadata` | _(not compiled)_ | Dropped | Root-level metadata is not per-rule |
+
+### 2.8.2 Scope Object Schema
+
+```json
+{
+  "target_type": "enum (text | structured | binary | any)",
+  "domain": "string",
+  "jurisdiction": "string",
+  "filters": [
+    {
+      "field": "string (path within target metadata or content)",
+      "operator": "enum (eq | neq | in | subset)",
+      "value": "any"
+    }
+  ]
+}
+```
+
+**Scope Specificity Score Function:**
+
+```
+scope_specificity_score(scope) =
+  (1 if scope.target_type != "any" else 0) +
+  (1 if scope.domain is non-empty else 0) +
+  (1 if scope.jurisdiction is non-empty else 0) +
+  length(scope.filters)
+```
+
+Rules with no scope object (or all-default scope) have `scope_specificity_score = 0`.
+
+### 2.8.3 Deontic Type Evaluation Semantics
+
+| Type | Evaluator Pass | Evaluator Fail | Evaluator Partial | Evaluator NeedsReview |
+| :--- | :--- | :--- | :--- | :--- |
+| `obligation` | No finding | Finding (severity_default) | Finding (downgraded) | Finding (informational) |
+| `prohibition` | No finding | Finding (severity_default) | Finding (downgraded) | Finding (informational) |
+| `permission` | No finding | Finding (informational, advisory) | No finding | No finding |
+
+**Rationale:**
+- `obligation` fail = requirement not met → violation
+- `prohibition` fail = prohibited thing occurred → violation
+- `permission` fail = permitted thing did not occur → advisory only (you COULD do this, you didn't — not a violation)
+
+### 2.8.4 Compile-Time-Only Fields
+
+The following rule schema fields are NOT compiled into CG-IR nodes. They exist in the rule schema for authoring-time tooling, documentation, and human-readable reports. The runtime engine never accesses them:
+
+`anchor_ref`, `rationale`, `remediation`, `parameters` (merged into evaluator at compile time), `target` (best-effort extraction to scope only), `expires_at`
 
 ### 2.9 Formal Evaluator Contract
 
@@ -483,6 +593,19 @@ reject any oneOf match where x-evaluator-type ≠ evaluator_type
 
 Engines MUST NOT rely on partial subschema validation for evaluator pairing.
 
+### 2.9.1 Outcome-to-Finding Mapping
+
+| Evaluator Outcome | Finding Created? | Default Severity | Notes |
+| :--- | :--- | :--- | :--- |
+| `Pass` | No | N/A | No finding generated |
+| `Fail` | Yes | `node.severity_default` | Standard failure finding |
+| `Partial` | Yes | Downgraded by one level from `severity_default` | `critical`→`high`, `high`→`medium`, `medium`→`low`, `low`→`informational`, `informational`→`informational` |
+| `NeedsReview` | Yes | `informational` | Always informational regardless of severity_default — cannot escalate without human review |
+
+**Confidence threshold (optional):** If `confidence < 0.5`, the finding severity is capped at `informational` regardless of outcome. This prevents low-confidence failures from appearing as critical.
+
+**`permission` type special case:** When a `permission` rule's evaluator returns `Fail`, the finding severity is ALWAYS `informational` regardless of `severity_default`. A permission failure means "the permitted action was not taken" — this is advisory, not a violation.
+
 ### 2.10 Target Schema (Strict)
 
 All targets must conform to:
@@ -533,6 +656,8 @@ All targets must conform to:
 
 **No Write-Back:** Evaluators cannot modify context.
 
+**`finding_aggregates` Semantics:** `finding_aggregates` is pre-computed from PREVIOUS inspections' finding event streams BEFORE the current DAG execution begins. Current-inspection findings do NOT populate this field. This preserves the read-only context invariant (§2.12) — no shared mutable state during DAG execution.
+
 ### 2.12 DAG Execution Semantics
 
 | Aspect | Rule |
@@ -543,6 +668,7 @@ All targets must conform to:
 | **State Propagation** | Read-only context; no shared mutable state |
 | **Timeout** | Per-node configurable (default: 30s) |
 | **Retry** | No retries; failed nodes → `NeedsReview` |
+| **Skipped Nodes** | Dependency-failed nodes produce NO finding. They generate a `Skipped` pipeline trace entry only. The parent inspection snapshot records them in `skipped_nodes`. This prevents cascading false positives from dependency failures |
 
 ### 2.13 Inspection Consistency Model
 
@@ -555,6 +681,14 @@ An inspection produces a **point-in-time snapshot**:
 | **Report** | Consistent point-in-time view including partial results |
 | **Reproducibility** | Same CG-IR + same target + same frozen_env = same snapshot |
 | **Immutability** | Once completed, never modified |
+
+### 2.13.1 Reinspection Semantics
+
+Reinspection creates a completely new inspection with a new `inspection_id` and new findings. Findings from previous inspections of the same target are NOT automatically affected.
+
+**Correlation model:** Findings are correlated by `target_id` + `lineage_id`. A dashboard view MAY group findings across inspections by these fields, but this is a presentation concern — the Finding Event Stream remains append-only with no cross-inspection mutation.
+
+**Supersession (manual only):** A Regulatory Official MAY close a previous finding with disposition `superseded` via a manual FSM transition (if implemented) or by adding `superseded` as an additional disposition value with its own capability (`finding.supersede`). This is NOT automatic on reinspection.
 
 ### 2.14 Finding Event Stream
 
@@ -654,6 +788,24 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 
 **Explicit override takes precedence.** The runtime engine executes ONLY the algorithm below over schema/CG-IR fields. Policy prose is never consulted at runtime.
 
+### 2.15.1 Conflict Detection
+
+Conflicts are identified through two mechanisms:
+
+**Mechanism 1: Declared Conflicts (compile-time)**
+The `conflicts_with` schema field declares explicit conflict pairs. At compilation, the engine generates candidate conflict pairs from all active rules' `conflicts_with` arrays. These pairs are recorded in the CG-IR snapshot metadata and fed to `resolve_conflict` at evaluation time if both rules in a pair produce findings for the same target.
+
+**Mechanism 2: Outcome Contradiction (evaluation-time)**
+When two active rules sharing a `lineage_id` both produce `Fail` findings for the same target, and their `type` fields are contradictory (one `obligation` and one `prohibition` about the same target aspect), the engine flags this as a conflict and applies `resolve_conflict`.
+
+**Non-Conflicting Outcomes:**
+- Both Pass: no conflict
+- One Pass, one Fail: no conflict (only failing rules enter conflict resolution)
+- Both Fail with same type: no conflict (both findings stand independently)
+- One Fail, one NeedsReview: no conflict (NeedsReview does not contradict)
+
+**Cross-Lineage:** Mechanism 2 does not apply across lineage boundaries. Cross-lineage findings never trigger automatic conflict resolution — they are always reported as independent findings. Humans may request cross-lineage analysis via S-05, which produces advisory Conflict Artifacts (not automatic resolution).
+
 **Temporal Binding Guarantee:** The `created_at` field used in conflict resolution is the directive's authoring timestamp, frozen into `node_body` at compilation time. It is a static property of the CG-IR node — NOT evaluation time, NOT wall clock time. For a given CG-IR snapshot, conflict resolution outcomes are fully deterministic because all inputs (`priority`, `conflict_resolution`, `created_at`, `scope` for specificity) are frozen in the immutable snapshot. Two evaluations of the same CG-IR snapshot against the same target always produce identical conflict outcomes, regardless of when evaluation occurs.
 
 | Intent (Policy — authoring only) | Schema Field | Operator (CG-IR — runtime) | Implementation |
@@ -684,13 +836,8 @@ score = 0
 if rule.target is present and non-empty:
   score += 1000 + len(rule.target)
 
-// 2. Scope constraint depth (compiled from CG-IR scope object)
-for each key in canonical_sorted(scope.keys()):
-  score += 100
-  if scope[key] is object:
-    score += depth(scope[key]) * 10    // nested keys add depth
-  else:
-    score += 1
+// 2. Scope constraint specificity (§2.8.2 scope_specificity_score)
+score += scope_specificity_score(scope) * 100
 
 // 3. Evaluator field binding (more constrained = more specific)
 score += count_bound_fields(rule.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
@@ -750,6 +897,14 @@ apply_strategy(strategy, rule, other_rule) → winning_rule | Conflict Artifact:
 cycle_detection:
   If A defers_to B and B defers_to A → both overrides ignored → fall through to computed resolution
   If chain A → B → C → A → cycle detected → all overrides ignored → fall through to computed resolution
+
+defer_to_reference_resolution:
+  - defer_to contains a rule id (execution ID), not a lineage_id
+  - At compile time, the engine resolves the execution ID to a CG-IR node
+  - If the target execution ID is deprecated or superseded, the engine follows the lineage chain to find the currently active execution ID for that lineage
+  - If no active execution ID exists (all deprecated/superseded with no active successor), the override is ignored and conflict resolution falls through to computed factors
+  - If the target execution ID does not exist in the ruleset at all, the override is ignored and conflict resolution falls through to computed factors
+  - defer_to MUST NOT reference the rule's own id (self-deference is ignored)
 
 scope_boundary:
   Conflict resolution applies within same lineage_id.
@@ -894,19 +1049,19 @@ Findings follow a strict state transition model:
 
 **State Transitions:**
 
-| From | To | Trigger | Allowed Actor |
-| :--- | :--- | :--- | :--- |
-| Created | Open | System (automatic) | System |
-| Open | Acknowledged | S-12 (acknowledge) | Compliance Representative |
-| Open | Dismissed | Disposition = Invalid | Regulatory Official |
-| Open | Waived | S-25 (waive) | Regulatory Official |
-| Acknowledged | Evidence Submitted | S-13 (submit evidence) | Compliance Representative |
-| Evidence Submitted | Pending Verification | System (automatic) | System |
-| Pending Verification | Verified | S-14 (approve) | Regulatory Official |
-| Pending Verification | Rejected | S-14 (reject) | Regulatory Official |
-| Rejected | Open | Reopen with comments | Regulatory Official |
-| Verified | Closed | System (automatic) | System |
-| Waived | Closed | System (automatic) | System |
+| From | To | Trigger | Allowed Actor | Story |
+| :--- | :--- | :--- | :--- | :--- |
+| Created | Open | System (automatic) | System | — |
+| Open | Acknowledged | acknowledge | Compliance Representative | S-12 |
+| Open | Dismissed | dismiss (invalid) | Regulatory Official | S-25 |
+| Open | Waived | waive (accepted risk) | Regulatory Official | S-29 |
+| Acknowledged | Evidence Submitted | submit evidence | Compliance Representative | S-13 |
+| Evidence Submitted | Pending Verification | System (automatic) | System | — |
+| Pending Verification | Verified | approve | Regulatory Official | S-14 |
+| Pending Verification | Rejected | reject | Regulatory Official | S-14 |
+| Rejected | Open | reopen with comments | Regulatory Official | S-14 |
+| Verified | Closed | System (automatic) | System | — |
+| Waived | Closed | System (automatic) | System | — |
 
 **Disposition Values:**
 
@@ -936,6 +1091,8 @@ Findings follow a strict state transition model:
   "actor": "string (actor ID of last state transition)"
 }
 ```
+
+`updated_at` is set to the timestamp of the most recent FSM transition event for this finding. On creation, `updated_at = created_at`.
 
 ### 3.2 Capability-Based Permission Model
 
@@ -979,7 +1136,7 @@ Findings follow a strict state transition model:
 - All denials produce an append-only audit record: `{actor, capability, action, outcome: denied, timestamp, reason}`
 - Escalation is NOT automatic on denial; caller receives error and decides next action
 
-**Delegation Model:** Not supported in v8.1.0. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
+**Delegation Model:** Not supported in v8.2.0. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
 
 ### 3.3 Execution Fault Taxonomy
 
@@ -988,7 +1145,7 @@ Findings follow a strict state transition model:
 | **Deterministic Evaluation** | Rule logic fails | Node → `Fail` finding | No |
 | **Deterministic Partial** | Partial compliance | Node → `Partial` finding | No |
 | **Ambiguous Evaluation** | Cannot determine | Node → `NeedsReview` finding | No |
-| **Dependency Failure** | Upstream node failed | Node skipped → `Skipped` trace entry | No |
+| **Dependency Failure** | Upstream node failed | Node skipped → `Skipped` trace entry only (no finding) | No |
 | **Timeout** | Node exceeds time limit | Node → `Timeout` finding | Configurable |
 | **Resource Exhaustion** | Memory/CPU limits | Node → `ResourceExhausted` finding | No |
 | **Schema Violation** | Target malformed | Pipeline → `SchemaError` | No |
@@ -1103,6 +1260,17 @@ CG-IR Content-Addressed Store
   "duration_ms": "integer"
 }
 ```
+
+**Pipeline Stage Descriptions:**
+
+| Stage | Description |
+| :--- | :--- |
+| `normalize` | Validate target schema, compute `target_hash` |
+| `classify` | Determine `target_type`, select evaluation strategy |
+| `select_controls` | Filter CG-IR nodes by scope applicability |
+| `evaluate` | DAG execution with topological ordering |
+| `aggregate` | Collect findings, compute severities per §2.9.1 |
+| `report` | Generate inspection snapshot |
 
 ---
 
@@ -1254,6 +1422,28 @@ json_pointer ::= "/" path_segment ("/" path_segment)*
 - `/directives/TRAF-001`
 
 Compile-time validation MUST verify `section:` references against policy document structure. Invalid references produce warnings; missing policy sections produce errors.
+
+### 7.3 Parameters Field Behavior
+
+The `parameters` field provides runtime configuration values that are merged into `evaluator_config` at compilation time. This allows the same evaluator logic to be reused with different thresholds, patterns, or field paths without duplicating evaluator definitions.
+
+**Merge algorithm:**
+1. Start with a copy of `evaluator_config`
+2. For each key in `parameters`, if the key exists in the copy, overwrite it
+3. If the key does not exist in the copy, add it
+4. The merged result becomes the CG-IR node's `evaluator.config`
+
+**Constraint:** `parameters` MUST NOT contain keys that would change the structural type of the evaluator (e.g., a `parameters.logic` key that conflicts with `evaluator_config.logic`). Compile-time validation rejects such conflicts.
+
+**Example:**
+```json
+{
+  "evaluator_type": "threshold",
+  "evaluator_config": {"field": "coverage", "operator": "gte", "threshold": 80},
+  "parameters": {"threshold": 95}
+}
+```
+Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 
 ---
 
@@ -1424,3 +1614,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
 | 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
+| 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection mechanism (§2.15.1), scope object schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes semantics, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation algorithm, pipeline stage descriptions, FSM story binding (S-25 dismiss, S-29 waive), flexible standards encoding guidance, phantom technical_hints removed |

@@ -19,9 +19,10 @@
   "x-cg-ir-hashing": {
     "normative_status": "informative",
     "node_hash_scope": "local",
-    "dual_hash_model": "semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status) + presentation_hash (description, directive_revision, control_version) compose node_hash per SPECIFICATION.md §2.6",
-    "semantic_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status"],
+    "dual_hash_model": "semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (description, directive_revision, control_version) compose node_hash per SPECIFICATION.md §2.6",
+    "semantic_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
     "presentation_body_fields": ["description", "directive_revision", "control_version"],
+    "node_body_fields": ["directive_id", "lineage_id", "directive_revision", "control_version", "description", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
     "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
     "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
     "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
@@ -84,7 +85,7 @@
   "x-conflict-resolution-binding": {
     "normative_status": "informative",
     "specificity_algorithm": "SPECIFICATION.md §2.15 specificity_score (normative)",
-    "specificity_metric": "SPECIFICATION.md §2.15 defines specificity as a composite score: (1) evaluator_type specificity (composite > regex > threshold > field_check), (2) scope narrowness (fewer targets = more specific), (3) condition count (more conditions = more specific). Score is a lexicographic tuple compared element-wise. Two implementations MUST agree on specificity ranking for identical rule pairs.",
+    "specificity_metric": "SPECIFICATION.md §2.15 defines specificity as a composite score using scope_specificity_score from §2.8.2, evaluator field binding, and target constraints. Two implementations MUST agree on specificity ranking for identical rule pairs.",
     "priority_level_mapping": {"constitutional": 1, "statutory": 2, "regulatory": 3, "operational": 4, "advisory": 5},
     "spec_model": "Deterministic multi-factor: explicit override → priority → specificity → recency",
     "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
@@ -99,7 +100,7 @@
     "version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Semantic version of this rule dataset. MUST match spec version for compatibility."
+      "description": "Directive graph version (semantic version of this rule dataset). Distinct from cg_ir_snapshot_hash in SPECIFICATION.md §2.6. MUST share the same MAJOR version as the spec for compatibility."
     },
     "policy_contract_version": {
       "type": "string",

@@ -104,6 +104,9 @@ identity_lifecycle_intent:
 # created_at, expires_at, remediation, target, lineage.
 # ALLOWED: Machine ID columns (cross-reference labels only).
 contamination_guard:
+  # NOTE: If adding new schema fields, evaluate contamination risk before
+  # allowing them in policy. The fields below are machine-executable and
+  # MUST NOT appear in governance prose.
   prohibited_fields:
     - parameters
     - conditions
@@ -119,7 +122,6 @@ contamination_guard:
     - remediation
     - target
     - lineage
-    - technical_hints
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
   metadata_note: >
@@ -282,6 +284,12 @@ sections:
         title: "Flexible Standards"
         content_type: table
         columns: ["Description", "Machine ID", "Factors to Consider", "Examples"]
+        schema_encoding: >
+          Flexible standards have no dedicated schema type. Encode in rule_schema.json
+          as type=obligation with weight=informational and priority=advisory.
+          Evaluator Fail produces an informational finding only — advisory, not a
+          violation. This preserves deontic clarity (obligation/prohibition/permission)
+          while giving policy authors a legitimate home for soft goals.
 
   - id: sanctions
     title: "Sanctions & Remedies"

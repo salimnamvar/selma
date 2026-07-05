@@ -214,9 +214,10 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | :--- | :--- | :--- | :--- | :--- |
 | **S-11** | Compliance Representative | I want to view all findings. | **Given** I request findings. **When** Selma processes it. **Then** Selma returns findings with FSM state, computed disposition, severity, inspection reference, control node. | **P0** |
 | **S-12** | Compliance Representative | I want to acknowledge a finding. | **Given** I specify finding. **When** I acknowledge (valid FSM transition: Open → Acknowledged). **Then** Selma creates Remediation record, status "In Progress", records timestamp and actor. **And** event log unchanged. | **P1** |
-| **S-13** | Compliance Representative | I want to submit remediation evidence. | **Given** I specify finding and evidence. **When** Selma processes it (valid FSM transition: Acknowledged → Evidence Submitted → Pending Verification). **Then** Selma attaches evidence, records submission. **And** event log unchanged. | **P1** |
+| **S-13** | Compliance Representative | I want to submit remediation evidence. | **Given** I specify finding and evidence. **When** I submit evidence (valid FSM transition: Acknowledged → Evidence Submitted). **Then** Selma attaches evidence, records submission. **And** system automatically transitions Evidence Submitted → Pending Verification. **And** event log unchanged. | **P1** |
 | **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews. **When** Selma presents evidence. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed) or reject (Pending Verification → Rejected). **And** reopening a rejected finding requires a separate explicit action (Rejected → Open with comments). **And** human actor triggers only approve/reject; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order (physical_time → logical_counter → node_id → event_id). | **P1** |
 | **S-25** | Regulatory Official | I want to dismiss an invalid finding. | **Given** I determine a finding is incorrect. **When** I dismiss (valid FSM transition: Open → Dismissed). **Then** Selma transitions finding to Dismissed state, records disposition "invalid", records actor and timestamp. **And** event log append-only with event_hash and HLC total order. **And** dismissed findings have no outgoing FSM transitions. | **P1** |
+| **S-29** | Regulatory Official | I want to waive a finding as accepted risk. | **Given** I determine a finding is legitimate but the risk is accepted. **When** I waive (valid FSM transition: Open → Waived). **Then** Selma transitions finding to Waived state, records disposition "waived", records actor and timestamp. **And** system automatically transitions Waived → Closed. **And** event log append-only with event_hash and HLC total order. **And** I cannot waive findings from directives I created (segregation of duties). | **P1** |
 
 ---
 
@@ -236,29 +237,29 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Directive Lifecycle | 2 | 4 | 0 | **6** |
 | Directive Governance | 1 | 7 | 1 | **9** |
 | Inspection | 1 | 4 | 0 | **5** |
-| Finding Management | 1 | 4 | 0 | **5** |
+| Finding Management | 1 | 5 | 0 | **6** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
-| **Total** | **5** | **20** | **2** | **27** |
+| **Total** | **5** | **21** | **2** | **28** |
 
 ---
 
 ## Finding FSM — Human vs System Transitions
 
-| Transition | Trigger | Actor |
-| :--- | :--- | :--- |
-| Created → Open | Automatic on finding creation | System |
-| Open → Acknowledged | S-12 acknowledge | Compliance Representative |
-| Open → Dismissed | Disposition = Invalid | Regulatory Official |
-| Open → Waived | S-25 waive | Regulatory Official |
-| Acknowledged → Evidence Submitted | S-13 submit evidence | Compliance Representative |
-| Evidence Submitted → Pending Verification | Automatic on evidence receipt | System |
-| Pending Verification → Verified | S-14 approve | Regulatory Official |
-| Pending Verification → Rejected | S-14 reject | Regulatory Official |
-| Verified → Closed | Automatic after verification | System |
-| Rejected → Open | Reopen with comments | Regulatory Official |
-| Waived → Closed | Automatic after waive | System |
+| Transition | Trigger | Actor | Story |
+| :--- | :--- | :--- | :--- |
+| Created → Open | Automatic on finding creation | System | — |
+| Open → Acknowledged | acknowledge | Compliance Representative | S-12 |
+| Open → Dismissed | dismiss (invalid) | Regulatory Official | S-25 |
+| Open → Waived | waive (accepted risk) | Regulatory Official | S-29 |
+| Acknowledged → Evidence Submitted | submit evidence | Compliance Representative | S-13 |
+| Evidence Submitted → Pending Verification | Automatic on evidence receipt | System | — |
+| Pending Verification → Verified | approve | Regulatory Official | S-14 |
+| Pending Verification → Rejected | reject | Regulatory Official | S-14 |
+| Rejected → Open | reopen with comments | Regulatory Official | S-14 |
+| Verified → Closed | Automatic after verification | System | — |
+| Waived → Closed | Automatic after waive | System | — |
 
-**Binding:** S-14 covers human approve/reject only. S-25 covers dismiss. Verified → Closed and Waived → Closed are never human actions.
+**Binding:** S-14 covers human approve/reject only. S-25 covers dismiss. S-29 covers waive. Verified → Closed and Waived → Closed are never human actions.
 
 ---
 
@@ -272,7 +273,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Inspection Consistency (point-in-time) | S-10 |
 | Evaluator Type Safety | S-10 |
 | Evaluator Portability (cross-runtime determinism) | S-10, S-21 |
-| Finding FSM | S-11, S-12, S-13, S-14, S-25 |
+| Finding FSM | S-11, S-12, S-13, S-14, S-25, S-29 |
 | HLC Event Ordering | S-14 |
 | Capability-Based Permissions | S-14 |
 | Conflict Resolution Mapping (explicit override first) | S-05, S-28 |
