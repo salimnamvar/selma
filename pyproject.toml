@@ -15,8 +15,26 @@ authors = [
 keywords = [
   "selma",
   "governance",
-  "policies",
+  "compliance",
   "rules",
+  "policies",
+  "regulation",
+  "audit",
+  "policy-as-code",
+  "rule-engine",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Typing :: Typed",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +52,7 @@ dev = [
 Homepage = "https://github.com/salimnamvar/selma"
 Repository = "https://github.com/salimnamvar/selma"
 Issues = "https://github.com/salimnamvar/selma/issues"
+Documentation = "https://github.com/salimnamvar/selma/tree/main/docs"
 
 [tool.black]
 line-length = 120
@@ -60,15 +79,16 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-q --tb=short"
 pythonpath = [
+    "src",
 ]
 
 [tool.setuptools.packages.find]
-where = []
-include = []
+where = ["src"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.11"
 pythonPlatform = "Linux"
 extraPaths = [
+    "src",
 ]
