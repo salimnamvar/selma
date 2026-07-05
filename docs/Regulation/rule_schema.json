@@ -15,7 +15,7 @@
   },
   "x-cg-ir-hashing": {
     "node_hash_scope": "local",
-    "node_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "priority", "conflict_resolution", "depends_on", "status"],
+    "node_body_fields": ["directive_id", "lineage_id", "directive_revision", "control_version", "description", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status"],
     "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
     "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
     "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
@@ -108,8 +108,8 @@
           },
           "type": {
             "type": "string",
-            "enum": ["obligation", "prohibition", "permission", "standard"],
-            "description": "Classification."
+            "enum": ["obligation", "prohibition", "permission"],
+            "description": "Deontic classification: obligation (MUST), prohibition (MUST NOT), permission (MAY)."
           },
           "message": {
             "type": "string",
@@ -282,6 +282,10 @@
           {
             "if": { "properties": { "lineage": { "properties": { "operation": { "enum": ["fork", "merge", "split"] } } } } },
             "then": { "required": ["lineage"] }
+          },
+          {
+            "if": { "properties": { "evaluator_type": { "const": "composite" }, "evaluator_config": { "properties": { "logic": { "const": "not" } } } } },
+            "then": { "properties": { "evaluator_config": { "properties": { "sub_evaluators": { "maxItems": 1 } } } } }
           }
         ]
       }

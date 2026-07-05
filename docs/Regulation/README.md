@@ -71,7 +71,7 @@ This forms a strict bidirectional pointer:
 Each contract explicitly lists what it MUST NOT contain:
 
 ### Policy Contract Forbidden Fields
-`parameters`, `conditions`, `evaluator_hint`, `weight`, `depends_on`, `conflicts_with`, `status`, `created_at`, `expires_at`, `remediation`, `target`, `technical_hints`
+`parameters`, `conditions`, `evaluator_hint`, `evaluator_type`, `evaluator_config`, `weight`, `depends_on`, `conflicts_with`, `status`, `created_at`, `expires_at`, `remediation`, `target`, `lineage`, `technical_hints`
 
 ### Rule Contract Forbidden Root Fields
 `preamble`, `governance`, `definitions`, `principles`, `sanctions`, `references`, `writing_principles`, `sections`, `guidance`, `columns`

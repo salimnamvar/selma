@@ -682,36 +682,38 @@ Findings follow a strict state transition model:
                     └──────┬──────┘
                            │
                     ┌──────▼──────┐
-               ┌────│    Open     │────┐
-               │    └──────┬──────┘    │
-               │           │           │
-        ┌──────▼──────┐    │    ┌──────▼──────┐
-        │  Acknowledged│    │    │  Dismissed  │
-        │  (In Remedy) │    │    │  (Invalid)  │
-        └──────┬──────┘    │    └─────────────┘
-               │           │
-        ┌──────▼──────┐    │
-        │  Evidence    │    │
-        │  Submitted   │    │
-        └──────┬──────┘    │
-               │           │
-        ┌──────▼──────┐    │
-        │  Pending     │    │
-        │  Verification│    │
-        └──────┬──────┘    │
-               │           │
-      ┌────────┴────────┐  │
-      │                 │  │
-┌─────▼─────┐    ┌──────▼──────┐
-│  Verified  │    │  Rejected   │
-│  (Resolved)│    │  (Reopen)   │
-└─────┬─────┘    └──────┬──────┘
-      │                 │
-      │    ┌────────────┘
-      │    │
-┌─────▼─────┐
-│   Closed  │
-└───────────┘
+               ┌────│    Open     │────┐────────┐
+               │    └──────┬──────┘    │        │
+               │           │           │        │
+        ┌──────▼──────┐    │    ┌──────▼──────┐ │  ┌──────────┐
+        │  Acknowledged│    │    │  Dismissed  │ │  │  Waived  │
+        │  (In Remedy) │    │    │  (Invalid)  │ │  │  (Risk)  │
+        └──────┬──────┘    │    └─────────────┘ │  └────┬─────┘
+               │           │                    │       │
+        ┌──────▼──────┐    │                    │       │
+        │  Evidence    │    │                    │       │
+        │  Submitted   │    │                    │       │
+        └──────┬──────┘    │                    │       │
+               │           │                    │       │
+        ┌──────▼──────┐    │                    │       │
+        │  Pending     │    │                    │       │
+        │  Verification│    │                    │       │
+        └──────┬──────┘    │                    │       │
+               │           │                    │       │
+      ┌────────┴────────┐  │                    │       │
+      │                 │  │                    │       │
+┌─────▼─────┐    ┌──────▼──────┐              │       │
+│  Verified  │    │  Rejected   │              │       │
+│  (Resolved)│    │  (Reopen)   │              │       │
+└─────┬─────┘    └──────┬──────┘              │       │
+      │                 │                     │       │
+      │    ┌────────────┘                     │       │
+      │    │                                  │       │
+┌─────▼─────┐                                 │       │
+│   Closed  │◄────────────────────────────────┘       │
+└───────────┘                                         │
+      ▲                                               │
+      └───────────────────────────────────────────────┘
 ```
 
 **State Transitions:**
@@ -721,12 +723,14 @@ Findings follow a strict state transition model:
 | Created | Open | System (automatic) | System |
 | Open | Acknowledged | S-12 (acknowledge) | Compliance Representative |
 | Open | Dismissed | Disposition = Invalid | Regulatory Official |
+| Open | Waived | S-25 (waive) | Regulatory Official |
 | Acknowledged | Evidence Submitted | S-13 (submit evidence) | Compliance Representative |
 | Evidence Submitted | Pending Verification | System (automatic) | System |
 | Pending Verification | Verified | S-14 (approve) | Regulatory Official |
 | Pending Verification | Rejected | S-14 (reject) | Regulatory Official |
 | Rejected | Open | Reopen with comments | Regulatory Official |
 | Verified | Closed | System (automatic) | System |
+| Waived | Closed | System (automatic) | System |
 
 **Disposition Values:**
 
@@ -735,6 +739,27 @@ Findings follow a strict state transition model:
 | `valid` | Finding is legitimate; requires remediation |
 | `invalid` | Finding is incorrect; no action needed |
 | `waived` | Finding is legitimate but accepted as risk |
+
+**Finding Object Schema:**
+
+```json
+{
+  "finding_id": "string (required, UUID)",
+  "lineage_id": "string (required, → CG-IR node lineage_id)",
+  "control_id": "string (required, → CG-IR node directive_id)",
+  "inspection_id": "string (required, UUID)",
+  "fsm_state": "enum (required, Created | Open | Acknowledged | Evidence Submitted | Pending Verification | Verified | Rejected | Dismissed | Waived | Closed)",
+  "disposition": "enum (valid | invalid | waived)",
+  "severity": "enum (critical | high | medium | low | informational)",
+  "outcome": "enum (Pass | Fail | Partial | NeedsReview, from evaluator contract §2.9)",
+  "confidence": "float (0.0–1.0, from evaluator contract §2.9)",
+  "evidence": "string (from evaluator contract §2.9)",
+  "reasoning": "string (from evaluator contract §2.9)",
+  "created_at": "datetime (required, ISO 8601, UTC)",
+  "updated_at": "datetime (required, ISO 8601, UTC)",
+  "actor": "string (actor ID of last state transition)"
+}
+```
 
 ### 3.2 Capability-Based Permission Model
 
@@ -867,7 +892,7 @@ CG-IR Content-Addressed Store
   "inspection_id": "string (UUID)",
   "target_id": "string",
   "target_hash": "string (SHA-256)",
-  "ruleset_version": "string (CG-IR hash)",
+  "cg_ir_snapshot_hash": "string (SHA-256 of CG-IR snapshot, per §2.6)",
   "frozen_env_hash": "string",
   "engine_version": "string",
   "inspector": "string (actor ID)",

@@ -174,13 +174,15 @@ priority_hierarchy:
 
   conflict_resolution_intent: >
     The governing body declares that when two rules conflict, the engine
-    applies the following computed resolution factors (in order):
+    first checks for explicit override, then applies computed resolution
+    factors (in order):
+    0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
     1. Higher priority level wins
     2. If same level: more specific rule wins
     3. If same specificity: newer rule wins
     4. If still tied: escalate as Conflict Artifact for human review
     This is governance intent only — not executable logic in this file.
-    The compilation engine implements computed factors via SPECIFICATION.md
+    The compilation engine implements this via SPECIFICATION.md
     Section 2.15. Optional explicit override (conflict_resolution field in
     rule_schema.json) is a structural data carrier checked FIRST by the engine
     before any computed factor. Policy MUST NOT define override fields.
@@ -205,8 +207,9 @@ versioning_strategy:
     patch: "Bug fixes and clarifications"
   synchronization_intent: >
     The governing body intends that policy version, schema version,
-    and spec version stay in sync. All three MUST match (e.g., all at 8.1.0).
-    The engine enforces this via validation.
+    and spec version stay in sync. All three MUST share the same MAJOR
+    version. MINOR and PATCH versions may differ independently
+    (see SPECIFICATION.md §5 version compatibility matrix).
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:

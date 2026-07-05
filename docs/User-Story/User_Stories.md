@@ -165,7 +165,8 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **S-02** | Regulatory Official | I want to modify an existing directive. | **Given** I specify directive execution_id and change. **When** Selma processes it. **Then** Selma acquires write lock, creates new revision (same lineage_id), incrementally compiles to new CG-IR snapshot (reuses unchanged subgraph via content-addressed store), re-assesses consistency, records provenance. **And** lineage_id unchanged. **And** new Ruleset Version. | **P0** |
 | **S-03** | Regulatory Official | I want to retire a directive. | **Given** I specify directive to retire. **When** Selma processes it. **Then** Selma transitions to "Retired", records reason, marks CG-IR nodes deprecated, generates new snapshot. | **P1** |
 | **S-19** | Regulatory Official | I want to fork a directive into two distinct directives. | **Given** I specify a directive and describe the split. **When** Selma processes it. **Then** Selma creates two new execution_ids (inheriting lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=fork), compiles both to CG-IR, deprecates original nodes. **And** both new rules share the same lineage_id. **And** execution_ids are globally unique. | **P1** |
-| **S-20** | Regulatory Official | I want to merge two directives into one. | **Given** I specify two directives and describe the merge. **When** Selma processes it. **Then** Selma creates one new execution_id (inheriting both lineage_ids), records lineage, compiles to CG-IR, deprecates both originals. | **P1** |
+| **S-20** | Regulatory Official | I want to merge two directives into one. | **Given** I specify two directives and describe the merge. **When** Selma processes it. **Then** Selma creates one new lineage_id and one new execution_id, records parent lineage_ids in `lineage.parent_lineage_ids`, records parent execution_ids in `lineage.parent_execution_ids`, compiles to CG-IR, deprecates both originals. **And** new lineage_id is distinct from both parents. | **P1** |
+| **S-26** | Regulatory Official | I want to split a directive into multiple independent directives. | **Given** I specify a directive and describe the restructuring. **When** Selma processes it. **Then** Selma creates multiple new execution_ids (inheriting parent lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=split), compiles to CG-IR, deprecates original. **And** each child has a unique execution_id. **And** all children share the parent lineage_id. | **P1** |
 
 ---
 
@@ -203,7 +204,8 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **S-11** | Compliance Representative | I want to view all findings. | **Given** I request findings. **When** Selma processes it. **Then** Selma returns findings with FSM state, computed disposition, severity, inspection reference, control node. | **P0** |
 | **S-12** | Compliance Representative | I want to acknowledge a finding. | **Given** I specify finding. **When** I acknowledge (valid FSM transition: Open → Acknowledged). **Then** Selma creates Remediation record, status "In Progress", records timestamp and actor. **And** event log unchanged. | **P1** |
 | **S-13** | Compliance Representative | I want to submit remediation evidence. | **Given** I specify finding and evidence. **When** Selma processes it (valid FSM transition: Acknowledged → Evidence Submitted → Pending Verification). **Then** Selma attaches evidence, records submission. **And** event log unchanged. | **P1** |
-| **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews. **When** Selma presents evidence. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed) or reject (Pending Verification → Rejected → Open). **And** human actor triggers only approve/reject; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order (physical_time → logical_counter → node_id → event_id). | **P1** |
+| **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews. **When** Selma presents evidence. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed) or reject (Pending Verification → Rejected). **And** reopening a rejected finding requires a separate explicit action (Rejected → Open with comments). **And** human actor triggers only approve/reject; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order (physical_time → logical_counter → node_id → event_id). | **P1** |
+| **S-25** | Regulatory Official | I want to dismiss an invalid finding. | **Given** I determine a finding is incorrect. **When** I dismiss (valid FSM transition: Open → Dismissed). **Then** Selma transitions finding to Dismissed state, records disposition "invalid", records actor and timestamp. **And** event log append-only with event_hash and HLC total order. **And** dismissed findings have no outgoing FSM transitions. | **P1** |
 
 ---
 
@@ -220,12 +222,12 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 
 | Epic | P0 | P1 | P2 | Total |
 | :--- | :--- | :--- | :--- | :--- |
-| Directive Lifecycle | 2 | 3 | 0 | **5** |
+| Directive Lifecycle | 2 | 4 | 0 | **6** |
 | Directive Governance | 1 | 5 | 1 | **7** |
 | Inspection | 1 | 4 | 0 | **5** |
-| Finding Management | 1 | 3 | 0 | **4** |
+| Finding Management | 1 | 4 | 0 | **5** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
-| **Total** | **5** | **16** | **2** | **23** |
+| **Total** | **5** | **18** | **2** | **25** |
 
 ---
 
@@ -235,14 +237,17 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | :--- | :--- | :--- |
 | Created → Open | Automatic on finding creation | System |
 | Open → Acknowledged | S-12 acknowledge | Compliance Representative |
+| Open → Dismissed | Disposition = Invalid | Regulatory Official |
+| Open → Waived | S-25 waive | Regulatory Official |
 | Acknowledged → Evidence Submitted | S-13 submit evidence | Compliance Representative |
 | Evidence Submitted → Pending Verification | Automatic on evidence receipt | System |
 | Pending Verification → Verified | S-14 approve | Regulatory Official |
 | Pending Verification → Rejected | S-14 reject | Regulatory Official |
 | Verified → Closed | Automatic after verification | System |
 | Rejected → Open | Reopen with comments | Regulatory Official |
+| Waived → Closed | Automatic after waive | System |
 
-**Binding:** S-14 covers human approve/reject only. Verified → Closed is never a human action.
+**Binding:** S-14 covers human approve/reject only. S-25 covers dismiss. Verified → Closed and Waived → Closed are never human actions.
 
 ---
 
@@ -250,13 +255,13 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 
 | Principle | Stories |
 | :--- | :--- |
-| Dual Identity (lineage + execution) | S-01, S-02, S-03, S-19, S-20 |
-| Incremental Compilation (content-addressed) | S-02, S-03, S-19, S-20 |
+| Dual Identity (lineage + execution) | S-01, S-02, S-03, S-19, S-20, S-26 |
+| Incremental Compilation (content-addressed) | S-02, S-03, S-19, S-20, S-26 |
 | Hermetic Reproducibility | S-10, S-23 |
 | Inspection Consistency (point-in-time) | S-10 |
 | Evaluator Type Safety | S-10 |
 | Evaluator Portability (cross-runtime determinism) | S-10, S-21 |
-| Finding FSM | S-11, S-12, S-13, S-14 |
+| Finding FSM | S-11, S-12, S-13, S-14, S-25 |
 | HLC Event Ordering | S-14 |
 | Capability-Based Permissions | S-14 |
 | Conflict Resolution Mapping (explicit override first) | S-05 |
@@ -268,7 +273,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | CG-IR Edge Hashing (directional, node-independent) | S-24 |
 | Provenance Canonicalization | S-22 |
 | Snapshot Hash Determinism (compiled_at excluded) | S-23 |
-| Identity Refinement (bijection at root level) | S-01, S-19, S-20 |
+| Identity Refinement (bijection at root level) | S-01, S-19, S-20, S-26 |
 
 ---
 
