@@ -100,7 +100,7 @@ The identity model has two distinct ID types:
 
 | Layer | Lineage ID Field | Execution ID Field |
 | :--- | :--- | :--- |
-| Policy Doctrine | `Machine ID` | `Machine ID` (same until fork/merge/split) |
+| Policy Doctrine | `Machine ID` → lineage_id | Not represented until fork/merge/split (then tracked in schema) |
 | Rule Schema | `rule.lineage_id` | `rule.id` |
 | CG-IR | `node.lineage_id` | `node.directive_id` |
 | Finding | `finding.lineage_id` | `finding.control_id` → node |
@@ -133,7 +133,8 @@ Policy Document (prose + directive tables)
 Directive Graph (structured, versioned)
     │
     │ Step 2: Resolve identity
-    │ Ensure Machine ID = rule.id = directive_id
+    │ Ensure Machine ID = rule.lineage_id (immutable root)
+    │ Ensure rule.id = directive_id (active execution identity)
     │ Validate lineage (fork/merge/split)
     ▼
 Rule Schema (machine-readable)
@@ -368,6 +369,41 @@ To handle distributed systems and clock skew, events use a Hybrid Logical Clock:
 3. If equal, compare `node_id` (lexicographic)
 4. If all equal, compare `event_id` (lexicographic)
 
+**HLC Clock Advancement (per node):**
+
+```
+on_local_event(physical_time_pt):
+  l = max(l, last_logical_counter)
+  if physical_time_pt > last_physical_time:
+    last_physical_time = physical_time_pt
+    last_logical_counter = 0
+  else:
+    last_logical_counter = last_logical_counter + 1
+  emit { physical_time: last_physical_time, logical_counter: last_logical_counter, node_id }
+
+on_receive_remote(remote_hlc):
+  l = max(l, remote_hlc.logical_counter)
+  if remote_hlc.physical_time > last_physical_time:
+    last_physical_time = remote_hlc.physical_time
+    last_logical_counter = remote_hlc.logical_counter
+  else if remote_hlc.physical_time == last_physical_time:
+    last_logical_counter = max(last_logical_counter, remote_hlc.logical_counter) + 1
+  else:
+    last_logical_counter = last_logical_counter + 1
+```
+
+**Monotonic Counter Rules:**
+- `logical_counter` is a non-negative integer, initialized to 0 per node
+- Counter resets to 0 only when `physical_time` advances strictly past the previous value
+- Counter MUST NOT decrease; validation rejects regressive HLC tuples
+- On node restart: load last persisted HLC state; if wall clock is behind persisted `physical_time`, retain persisted `physical_time` and increment `logical_counter`
+
+**Multi-Node Reconciliation:**
+- Each event carries the emitting node's HLC tuple; receivers apply `on_receive_remote` before appending
+- Total order is reconstructed by sorting all events by the 4-level key (physical_time → logical_counter → node_id → event_id)
+- Partition tolerance: nodes may diverge during partition; on heal, merged stream is re-sorted by total order key (no causal overwrite of committed events)
+- Identical `node_id` with equal physical_time and logical_counter cannot occur from a single node; cross-node ties are broken by `node_id`, then `event_id`
+
 **Event Immutability:** Once written, events are never modified. The `event_hash` ensures integrity.
 
 **Read-Only Analytics:**
@@ -393,7 +429,15 @@ The declarative intent in policy is mapped to deterministic operators. **Explici
 | "Higher priority wins" | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
 | "More specific wins" | `specificity_score(rule_a) > specificity_score(rule_b)` | Count of scope constraints; higher = more specific |
 | "Newer wins" | `max(created_at)` | ISO 8601 timestamp comparison |
-| "Explicit override wins" | `has_field(conflict_resolution)` | Boolean: does rule have explicit override? |
+| "Explicit override wins" | `has_field(conflict_resolution)` | Boolean: does rule have explicit override? Applied first, before computed factors |
+
+**Cross-Layer Precedence Chain:**
+
+| Layer | Role in Conflict Resolution |
+| :--- | :--- |
+| **Policy** | Declares governance intent (priority hierarchy, specificity preference, recency preference). No executable override fields. |
+| **Schema** | Optional `conflict_resolution` field is a structural explicit override. Not an algorithm — a data carrier consumed by the engine. |
+| **Spec (this document)** | Normative `resolve_conflict` algorithm. Explicit override checked first; computed resolution is deterministic fallback. |
 
 **Unified Conflict Resolution Function:**
 
@@ -835,7 +879,7 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
 | **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
 | **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
-| **HLC Event Ordering** | physical_time + logical_counter + node_id |
+| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; monotonic counter per node |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
@@ -889,7 +933,7 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 ### 9.5 Event Validation
 
 1. All events have valid event_hash
-2. Events follow HLC ordering (physical_time + logical_counter + node_id)
+2. Events follow HLC ordering (physical_time → logical_counter → node_id → event_id)
 3. finding_id references valid finding
 4. No duplicate event_ids
 5. Finding state transitions follow FSM (Section 3.1)
@@ -928,3 +972,4 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | 5.0.0 | 2026-07-05 | Incremental compilation, evaluator contract |
 | 6.0.0 | 2026-07-05 | Canonical identity, transformation pipeline, declarative governance |
 | 7.0.0 | 2026-07-05 | Identity lifecycle, execution artifact schema, deterministic serialization, conflict resolution mapping, event schema, version incompatibility handling, target/context strict schemas |
+| 8.1.0 | 2026-07-05 | Cross-layer compliance audit: fixed identity mapping (Machine ID → lineage_id), HLC clock advancement and monotonic counter rules, cross-layer conflict resolution precedence chain, FSM human/system transition binding |

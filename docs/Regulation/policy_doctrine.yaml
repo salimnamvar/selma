@@ -28,6 +28,11 @@ cross_layer_binding:
   this_layer_purpose: "Governance intent description"
   schema_layer_purpose: "Structural projection of spec invariants"
   enforcement: "Engine validates schema against spec invariants at compile time"
+  conflict_resolution_binding:
+    policy: "Declares computed-factor intent (priority, specificity, recency). No override fields."
+    schema: "Optional conflict_resolution field is structural override data only."
+    spec: "Normative resolve_conflict algorithm. Override checked before computed factors."
+    precedence: "explicit override → priority → specificity → recency → Conflict Artifact"
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
@@ -41,9 +46,14 @@ cross_layer_binding:
 identity_resolution:
   canonical_field: "Machine ID"
   policy_location: "directive_tables[].Machine ID"
-  schema_location: "rules[].lineage_id"
-  spec_location: "CG-IR nodes[].lineage_id"
-  rule: "Machine ID maps to lineage_id (immutable root). Execution ID (rule.id) may differ after fork/merge/split."
+  schema_lineage_location: "rules[].lineage_id"
+  schema_execution_location: "rules[].id"
+  spec_lineage_location: "CG-IR nodes[].lineage_id"
+  spec_execution_location: "CG-IR nodes[].directive_id"
+  rule: >
+    Machine ID maps exclusively to lineage_id (immutable root).
+    Execution ID is NOT represented in policy tables; it is assigned
+    at schema compilation time as rule.id and may diverge after fork/merge/split.
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle: >
     Identity lifecycle operations (fork, merge, split) are defined in
@@ -147,14 +157,22 @@ priority_hierarchy:
       examples: ["Style guides", "Performance tips", "Architecture patterns"]
 
   conflict_resolution_intent: >
-    The governing body declares that when two rules conflict:
+    The governing body declares that when two rules conflict, the engine
+    applies the following computed resolution factors (in order):
     1. Higher priority level wins
     2. If same level: more specific rule wins
     3. If same specificity: newer rule wins
-    4. If same age: rule with explicit conflict resolution wins
-    This is governance intent. The compilation engine implements this via
-    the deterministic operators defined in SPECIFICATION.md Section 2.15.
-    Explicit conflict_resolution field in schema takes precedence.
+    4. If still tied: escalate as Conflict Artifact for human review
+    This is governance intent only — not executable logic in this file.
+    The compilation engine implements computed factors via SPECIFICATION.md
+    Section 2.15. Optional explicit override (conflict_resolution field in
+    rule_schema.json) is a structural data carrier checked FIRST by the engine
+    before any computed factor. Policy MUST NOT define override fields.
+  cross_layer_precedence:
+    normative_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
+    structural_override: "rule_schema.json conflict_resolution field (optional)"
+    policy_role: "Declarative intent for computed factors only"
+    order: "explicit override (schema) → priority → specificity → recency → Conflict Artifact"
 
 # ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
 # Describes versioning intent. The actual version resolution function

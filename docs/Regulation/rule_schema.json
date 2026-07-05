@@ -14,7 +14,7 @@
     "contract": {
       "canonical": "id",
       "root": "lineage_id",
-      "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id",
+      "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id (immutable root). Execution ID maps to rule.id.",
       "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id"
     },
     "lifecycle": {
@@ -45,8 +45,8 @@
     "map_ordering": "Objects with additionalProperties: keys sorted lexicographically before hashing"
   },
   "x-conflict-resolution-binding": {
-    "spec_model": "Deterministic multi-factor: priority → specificity → recency → explicit override",
-    "schema_model": "conflict_resolution field provides explicit override only",
+    "spec_model": "Deterministic multi-factor: explicit override → priority → specificity → recency",
+    "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
     "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
     "cycle_handling": "If A defers_to B and B defers_to A, both overrides are ignored; fall through to computed resolution (priority → specificity → recency). If target rule in defer_to does not exist, the override is ignored; fall through to computed resolution.",
     "scope_boundary": "Conflict resolution applies within same lineage. Cross-lineage conflicts are flagged as Conflict Artifacts for human review.",
@@ -79,6 +79,7 @@
       "type": "array",
       "minItems": 1,
       "description": "The list of directives. Every rule MUST have a unique lineage_id and id. Uniqueness enforced by external validator.",
+      "items": {
         "type": "object",
         "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
         "properties": {
@@ -200,7 +201,7 @@
           },
           "conflict_resolution": {
             "type": "object",
-            "description": "Explicit conflict resolution override. Takes precedence over computed resolution.",
+            "description": "Explicit conflict resolution override. Takes precedence over computed resolution per SPECIFICATION.md Section 2.15.",
             "properties": {
               "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"] },
               "defer_to": { "type": "string", "description": "Rule ID to defer to (required if strategy=defer_to)" }
@@ -264,16 +265,20 @@
           {
             "if": { "properties": { "evaluator_type": { "const": "composite" } } },
             "then": { "properties": { "evaluator_config": { "required": ["logic", "sub_evaluators"] } } }
+          },
+          {
+            "if": { "properties": { "lineage": { "properties": { "operation": { "enum": ["fork", "merge", "split"] } } } } },
+            "then": { "required": ["lineage"] }
           }
         ]
       }
-    ]
+    }
   },
   "additionalProperties": false,
   "$defs": {
     "evaluator_config_entry": {
       "type": "object",
-      "description": "A single sub-evaluator entry within a composite evaluator. Recursively typed to prevent open objects.",
+      "description": "A single sub-evaluator entry within a composite evaluator. Strict recursive typed union.",
       "oneOf": [
         {
           "description": "Regex sub-evaluator",
@@ -330,34 +335,30 @@
           },
           "required": ["evaluator_type", "evaluator_config"],
           "additionalProperties": false
+        },
+        {
+          "description": "Composite sub-evaluator (recursive)",
+          "type": "object",
+          "properties": {
+            "evaluator_type": { "type": "string", "const": "composite" },
+            "evaluator_config": {
+              "type": "object",
+              "properties": {
+                "logic": { "type": "string", "enum": ["and", "or", "not"] },
+                "sub_evaluators": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/evaluator_config_entry" },
+                  "minItems": 1
+                }
+              },
+              "required": ["logic", "sub_evaluators"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["evaluator_type", "evaluator_config"],
+          "additionalProperties": false
         }
       ]
-    }
-  }
-}
-        ]
-      },
-      "uniqueItems": true
-    }
-  },
-  "additionalProperties": false,
-  "$defs": {
-    "evaluator_config_entry": {
-      "type": "object",
-      "description": "A single sub-evaluator entry within a composite evaluator.",
-      "properties": {
-        "evaluator_type": {
-          "type": "string",
-          "enum": ["regex", "field_check", "threshold"]
-        },
-        "evaluator_config": {
-          "type": "object",
-          "description": "Configuration for this sub-evaluator (same schema as top-level evaluator_config for the given type).",
-          "additionalProperties": true
-        }
-      },
-      "required": ["evaluator_type", "evaluator_config"],
-      "additionalProperties": false
     }
   }
 }

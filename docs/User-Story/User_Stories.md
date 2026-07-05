@@ -1,7 +1,7 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 20.0.0  
+**Version:** 20.1.0  
 **Date:** 2026-07-05  
 **Status:** Final  
 **Normative Reference:** SPECIFICATION.md 8.1.0
@@ -17,7 +17,7 @@
 | **Normative** | SPECIFICATION.md 8.1.0 | Defines system behavior, invariants, contracts |
 | **Structural** | rule_schema.json 8.1.0 | JSON Schema encoding of spec invariants |
 | **Governance** | policy_doctrine.yaml 8.1.0 | Declarative governance intent |
-| **Behavioral** | User_Stories.md 20.0.0 | This document — behavioral contract |
+| **Behavioral** | User_Stories.md 20.1.0 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents.
 
@@ -68,11 +68,11 @@
 
 | Layer | Lineage ID Field | Execution ID Field |
 | :--- | :--- | :--- |
-| Policy Doctrine | `Machine ID` | `Machine ID` (same until fork/merge/split) |
+| Policy Doctrine | `Machine ID` → lineage_id | Not represented (assigned at schema compile time) |
 | Rule Schema | `rule.lineage_id` | `rule.id` |
 | CG-IR | `node.lineage_id` | `node.directive_id` |
 
-**Invariant:** `rule.lineage_id` is immutable. `rule.id` changes only on fork/merge/split.
+**Invariant:** `rule.lineage_id` is immutable. `rule.id` changes only on fork/merge/split. Policy `Machine ID` maps to lineage_id only — never to execution ID.
 
 ---
 
@@ -88,11 +88,11 @@
 | **Control Node** | CG-IR node with pure evaluator, scope, severity, dependencies. |
 | **Evaluator** | Pure function. Types: regex, field_check, threshold, composite. |
 | **Evaluator Config** | Schema-enforced if/then binding — config MUST match evaluator_type. |
-| **Finding FSM** | Strict state machine: Created → Open → Acknowledged → Evidence Submitted → Pending Verification → Verified/Closed |
-| **Hybrid Logical Clock** | HLC ordering for distributed systems: physical_time + logical_counter + node_id |
+| **Finding FSM** | Strict state machine: Created → Open → Acknowledged → Evidence Submitted → Pending Verification → Verified → Closed (system) / Rejected → Open |
+| **Hybrid Logical Clock** | Total order: physical_time → logical_counter → node_id → event_id; monotonic counter per node |
 | **Capability Model** | Role → Capability → Action. Segregation of duties enforced. |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
-| **Conflict Resolution Mapping** | Deterministic operators. Explicit override takes precedence. Cycles detected and resolved. |
+| **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → priority → specificity → recency → Conflict Artifact. Cycles detected and resolved. |
 | **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. |
 | **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_hash, frozen_env, engine, target_hash)` |
 | **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
@@ -169,7 +169,7 @@
 | **S-11** | Compliance Representative | I want to view all findings. | **Given** I request findings. **When** Selma processes it. **Then** Selma returns findings with FSM state, computed disposition, severity, inspection reference, control node. | **P0** |
 | **S-12** | Compliance Representative | I want to acknowledge a finding. | **Given** I specify finding. **When** I acknowledge (valid FSM transition: Open → Acknowledged). **Then** Selma creates Remediation record, status "In Progress", records timestamp and actor. **And** event log unchanged. | **P1** |
 | **S-13** | Compliance Representative | I want to submit remediation evidence. | **Given** I specify finding and evidence. **When** Selma processes it (valid FSM transition: Acknowledged → Evidence Submitted → Pending Verification). **Then** Selma attaches evidence, records submission. **And** event log unchanged. | **P1** |
-| **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews. **When** Selma presents evidence. **Then** I approve (Pending Verification → Verified → Closed) or reject (Pending Verification → Rejected → Open). **And** event log append-only with event_hash and HLC. | **P1** |
+| **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews. **When** Selma presents evidence. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed) or reject (Pending Verification → Rejected → Open). **And** human actor triggers only approve/reject; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order (physical_time → logical_counter → node_id → event_id). | **P1** |
 
 ---
 
@@ -192,6 +192,23 @@
 | Finding Management | 1 | 3 | 0 | **4** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
 | **Total** | **5** | **12** | **2** | **19** |
+
+---
+
+## Finding FSM — Human vs System Transitions
+
+| Transition | Trigger | Actor |
+| :--- | :--- | :--- |
+| Created → Open | Automatic on finding creation | System |
+| Open → Acknowledged | S-12 acknowledge | Compliance Representative |
+| Acknowledged → Evidence Submitted | S-13 submit evidence | Compliance Representative |
+| Evidence Submitted → Pending Verification | Automatic on evidence receipt | System |
+| Pending Verification → Verified | S-14 approve | Regulatory Official |
+| Pending Verification → Rejected | S-14 reject | Regulatory Official |
+| Verified → Closed | Automatic after verification | System |
+| Rejected → Open | Reopen with comments | Regulatory Official |
+
+**Binding:** S-14 covers human approve/reject only. Verified → Closed is never a human action.
 
 ---
 
@@ -235,9 +252,9 @@
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | No direct finding → CG-IR path |
-| **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
+| **Declarative Governance** | Policy describes computed-factor intent only; schema carries optional explicit override; engine implements via SPECIFICATION.md resolve_conflict |
 | **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
-| **HLC Event Ordering** | physical_time + logical_counter + node_id |
+| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; monotonic counter per node |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
