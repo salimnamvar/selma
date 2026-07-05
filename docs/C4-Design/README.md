@@ -1,18 +1,19 @@
 # Selma -- C4 Architecture Diagrams
 
-**Version:** 1.1.0
+**Version:** 2.0.0
 **Date:** 2026-07-06
-**Status:** Initial Design
+**Status:** Enhanced Design
 
 ## Diagram Inventory
 
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| Context | `c4_selma_context.puml` | Context | 3 | System boundary and actors |
-| Container | `c4_selma_container.puml` | Container | 12 | Deployable units: services, databases |
-| CompilationEngine | `c4_selma_component_compilation.puml` | Component | 13 | Hermetic compilation pipeline internals |
-| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 8 | DAG execution and finding creation |
-| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 6 | Finding lifecycle state machine |
+| Context | `c4_selma_context.puml` | Context | 6 | System boundary, actors, external dependencies, policy prohibition |
+| Container | `c4_selma_container.puml` | Container | 16 | Deployable units organized by 5 layers |
+| CompilationEngine | `c4_selma_component_compilation.puml` | Component | 24 | Three-pass validation, hermetic boundary, compilation core |
+| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 15 | DAG execution, fault taxonomy, finding aggregation |
+| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 9 | State machine with SoD enforcement and audit trail |
+| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 11 | Content-addressed storage with deduplication and lineage tracing |
 
 ## Component Inventory
 
@@ -22,6 +23,7 @@
 | :--- | :--- | :--- | :--- |
 | RegulatoryOfficial | Person | Context, Container | Rule Author and Governance Owner |
 | ComplianceRepresentative | Person | Context, Container | Compliance Seeker and Remediation Owner |
+| System | Person_Ext | Context, Container | Automated Actor. Submits inspections, views findings |
 
 ### Containers
 
@@ -42,59 +44,104 @@
 | CgIrStore | Content-Addressed Storage | Container | Immutable CG-IR snapshot storage |
 | FindingEventStore | Append-Only Log | Container | HLC-ordered event stream |
 | ExecutionArtifactStore | Object Store | Container | Immutable inspection snapshots |
+| FrozenEnvConfig | Configuration | Container | Pinned environment configuration |
 
-### Compilation Engine Components
+### External Systems
+
+| Name | Type | C4 Level | Description |
+| :--- | :--- | :--- | :--- |
+| CICDPipeline | System_Ext | Context | Scans runtime source for policy references |
+| PolicyDocument | System_Ext | Context | Governance intent. Authoring-time ONLY |
+
+### Compilation Engine Components (21)
+
+| Name | Container | Pass | Description |
+| :--- | :--- | :--- | :--- |
+| JsonSchemaValidator | CompilationEngine | Pass 1 | First-pass structural filter |
+| AstDiscriminatorWalker | CompilationEngine | Pass 2 | evaluator_type + config verification |
+| EvaluatorComplexityWalker | CompilationEngine | Pass 2 | Complexity limits enforcement |
+| LineageDagValidator | CompilationEngine | Pass 2 | Cycle detection, depth bound, temporal ordering |
+| ReferenceValidator | CompilationEngine | Pass 2 | RE2, UTC timestamps, finite numerics, regex flags |
+| PolicyVersionChecker | CompilationEngine | Pass 2 | Cross-file version consistency |
+| CrossFieldValidator | CompilationEngine | Pass 3 | scope/priority consistency, acyclicity |
+| FrozenEnvManager | CompilationEngine | Hermetic | Pins environment, computes frozen_env_hash |
+| ConcurrencyManager | CompilationEngine | Core | Read/write lock management |
+| IdentityResolver | CompilationEngine | Core | lineage_id/execution_id assignment |
+| RuleToNodeMapper | CompilationEngine | Core | Directive-to-CG-IR node transformation |
+| ParameterMerger | CompilationEngine | Core | Shallow merge of evaluator configs |
+| DependencyGraphBuilder | CompilationEngine | Core | DAG construction, acyclicity validation |
+| ConflictPairGenerator | CompilationEngine | Core | Candidate pair generation from conflicts_with |
+| ScopeSpecificityScorer | CompilationEngine | Core | Specificity scoring for conflict resolution |
+| HashComputer | CompilationEngine | Core | Dual hash model: semantic + presentation |
+| EdgeHashComputer | CompilationEngine | Core | Directional edge hash computation |
+| IncrementalCompilationManager | CompilationEngine | Core | Semantic hash subgraph reuse |
+| SnapshotAssembler | CompilationEngine | Core | Snapshot assembly and hash computation |
+| ProvenanceRecorder | CompilationEngine | Core | Frozen env and lineage provenance |
+
+### Inspection Pipeline Components (12)
+
+| Name | Container | Phase | Description |
+| :--- | :--- | :--- | :--- |
+| TargetValidator | InspectionPipeline | Input | Target schema validation |
+| ContextPopulator | InspectionPipeline | Input | Read-only context construction |
+| DagScheduler | InspectionPipeline | DAG | Topological sort with parallel execution |
+| EvaluatorDispatcher | InspectionPipeline | DAG | Routes by evaluator type, enforces timeout |
+| EvaluatorPool | InspectionPipeline | DAG | Pure evaluator functions |
+| FaultTaxonomyClassifier | InspectionPipeline | DAG | 8-class fault classification |
+| SkippedNodeTracker | InspectionPipeline | DAG | Dependency-failed node tracking |
+| FindingAggregator | InspectionPipeline | Output | Finding collection and severity application |
+| ConflictResolverRuntime | InspectionPipeline | Output | Concurrent finding resolution |
+| PipelineTraceRecorder | InspectionPipeline | Output | Ordered trace entry recording |
+| InspectionSnapshotSerializer | InspectionPipeline | Output | Snapshot serialization |
+| SystemStateHasher | InspectionPipeline | Output | System state hash computation |
+
+### Finding FSM Components (8)
 
 | Name | Container | Description |
 | :--- | :--- | :--- |
-| DirectiveParser | CompilationEngine | Parses directive tables, extracts Machine ID |
-| IdentityResolver | CompilationEngine | Resolves lineage_id and execution_id |
-| EvaluatorValidator | CompilationEngine | AST-walking discriminator, RE2, complexity checks |
-| ScopeCompiler | CompilationEngine | Compiles scope objects with specificity scoring |
-| ConflictResolver | CompilationEngine | Multi-factor conflict resolution per 2.15 |
-| NodeCompiler | CompilationEngine | CG-IR node generation, dual hash model |
-| DagBuilder | CompilationEngine | DAG construction, acyclicity validation |
-| EdgeHasher | CompilationEngine | Directional edge hash computation |
-| SnapshotAssembler | CompilationEngine | Snapshot assembly and hash computation |
-| IncrementalCache | CompilationEngine | semantic_hash subgraph reuse |
-| ProvenanceRecorder | CompilationEngine | Frozen environment and lineage provenance |
+| CapabilityChecker | FindingFsmEngine | Capability matrix enforcement |
+| SegregationOfDutiesEnforcer | FindingFsmEngine | SoD constraint enforcement |
+| FsmStateMachine | FindingFsmEngine | 10 states, 11 transitions |
+| HlcClockManager | FindingFsmEngine | Hybrid Logical Clock management |
+| EventHasher | FindingFsmEngine | Event integrity hashing |
+| EventAppender | FindingFsmEngine | Atomic event append |
+| AuditLogger | FindingFsmEngine | Transition audit logging |
+| DenialHandler | FindingFsmEngine | 403 CapabilityDenied handling |
 
-### Inspection Pipeline Components
+### CG-IR Store Components (9)
 
 | Name | Container | Description |
 | :--- | :--- | :--- |
-| TargetValidator | InspectionPipeline | Target schema validation, target_hash computation |
-| ScopeFilter | InspectionPipeline | Filters CG-IR nodes by scope applicability |
-| EvalExecutor | InspectionPipeline | Topological DAG execution with pure evaluators |
-| FindingCreator | InspectionPipeline | Maps evaluator outcomes to findings |
-| PipelineTracer | InspectionPipeline | Records pipeline trace entries |
-| SnapshotRecorder | InspectionPipeline | Generates inspection snapshot |
-
-### Finding FSM Components
-
-| Name | Container | Description |
-| :--- | :--- | :--- |
-| CapabilityGater | FindingFsmEngine | Enforces capability matrix at transition gate |
-| FsmTransition | FindingFsmEngine | Finding state machine transitions |
-| EventEmitter | FindingFsmEngine | Appends HLC-ordered events |
-| HlcClock | FindingFsmEngine | Hybrid Logical Clock for event ordering |
+| NodeDeduplicator | CgIrStore | Node deduplication by hash |
+| EdgeDeduplicator | CgIrStore | Edge deduplication by hash |
+| NodeStore | CgIrStore | Content-addressed node storage |
+| EdgeStore | CgIrStore | Content-addressed edge storage |
+| SnapshotManifestStore | CgIrStore | Snapshot manifest persistence |
+| NodeLookup | CgIrStore | Multi-index node query |
+| EdgeLookup | CgIrStore | Multi-index edge query |
+| SnapshotLookup | CgIrStore | Snapshot query and retrieval |
+| LineageTracer | CgIrStore | Lineage traversal and parent queries |
 
 ## Architecture Pattern
 
 ```
-RegulatoryOfficial / ComplianceRepresentative
+RegulatoryOfficial / ComplianceRepresentative / System
     -> ApiGateway (capability checking, segregation of duties)
         -> DirectiveManager (CRUD + identity lifecycle)
             -> DirectiveStore (PostgreSQL)
         -> CompilationEngine (hermetic compilation)
+            -> FrozenEnvConfig (pinned environment)
             -> CgIrStore (content-addressed)
         -> InspectionPipeline (DAG execution)
             -> CgIrStore (read)
             -> ExecutionArtifactStore (write)
+            -> FindingEventStore (write findings)
         -> FindingFsmEngine (lifecycle state machine)
             -> FindingEventStore (append-only)
         -> AnalyticsEngine (read-only aggregates)
             -> FindingEventStore (read)
+    <- CICDPolicyPipeline (static analysis, prohibition enforcement)
+    x  PolicyDocument (PROHIBITED at runtime)
 ```
 
 ## Validation

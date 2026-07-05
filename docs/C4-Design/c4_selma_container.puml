@@ -1,13 +1,13 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Shows deployable units: services, databases, and their interactions
+' Purpose:   Shows deployable units organized by layer: ingress, authoring, compilation, storage, runtime
 ' Milestone: v1.0.0
-' Version:   1.0.0
-' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.7, docs/User-Story/User_Stories.md Core Architecture
+' Version:   1.1.0
+' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.13, 3.1-3.4, docs/User-Story/User_Stories.md Core Architecture
 ' Review:    pending
 ' ============================================================
-' SIM-01 EXCEPTION: 12 elements -- cross-cutting overview of all subsystems (6 services + 4 stores + 2 actors)
+' SIM-01 EXCEPTION: 16 elements -- cross-cutting overview of all subsystems (3 actors + 10 containers/stores + 2 external + 1 system)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Container.puml
 !theme plain
@@ -18,40 +18,72 @@ title Selma -- Container Diagram
 
 Person(regulatory_official, "Regulatory Official", "Rule Author and Governance Owner")
 Person(compliance_rep, "Compliance Representative", "Compliance Seeker and Remediation Owner")
+Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views findings.")
 
 System_Boundary(selma, "Selma") {
-    Container(api_gateway, "ApiGateway", "FastAPI", "Request ingress, capability checking, segregation of duties enforcement")
-    Container(directive_mgr, "DirectiveManager", "Python", "CRUD and identity lifecycle: fork, merge, split, retire, restore")
-    Container(compilation_engine, "CompilationEngine", "Python", "Hermetic compilation, CG-IR snapshot generation, incremental cache")
-    Container(inspection_pipeline, "InspectionPipeline", "Python", "DAG execution, target evaluation, finding creation")
-    Container(finding_fsm, "FindingFsmEngine", "Python", "Finding lifecycle state machine, FSM transitions, event emission")
-    Container(analytics_engine, "AnalyticsEngine", "Python", "Read-only aggregate analytics, trend analysis, mediated feedback")
+    Container_Boundary(ingress, "Request Ingress") {
+        Container(api_gateway, "ApiGateway", "FastAPI", "Capability gate #1. Request routing, 403 CapabilityDenied (S-34).")
+    }
 
-    ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph persistence, version history, lineage tracking")
-    ContainerDb(cgir_store, "CgIrStore", "Content-Addressed Storage", "Immutable CG-IR snapshots, shared node objects, edge hashes")
-    ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream, finding lifecycle events")
-    ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots, pipeline traces, system state hashes")
+    Container_Boundary(authoring, "Authoring Layer") {
+        Container(directive_mgr, "DirectiveManager", "Python", "CRUD and identity lifecycle: fork, merge, split, retire, restore (S-01, S-02).")
+        ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph persistence, version history, lineage tracking (2.5, 3.4).")
+    }
+
+    Container_Boundary(compilation, "Compilation Layer") {
+        Container(compilation_engine, "CompilationEngine", "Python", "Hermetic boundary. Schema + custom validators. CG-IR generation. Incremental compilation (2.4, 2.7).")
+        Container(frozen_env, "FrozenEnvConfig", "Configuration", "Pinned: engine version, toolchain hash, AI model hashes (2.7).")
+    }
+
+    Container_Boundary(storage, "Storage Layer") {
+        ContainerDb(cgir_store, "CgIrStore", "Content-Addressed Storage", "Immutable CG-IR snapshots. Node/edge deduplication (2.6).")
+        ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream. event_hash chain (3.1, 3.3).")
+        ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots, pipeline traces, system state hashes (2.13).")
+    }
+
+    Container_Boundary(runtime, "Runtime Layer") {
+        Container(inspection_pipeline, "InspectionPipeline", "Python", "DAG execution. Pure evaluator invocation. Fault taxonomy. Point-in-time snapshots (2.12, 2.13).")
+        Container(finding_fsm, "FindingFsmEngine", "Python", "State machine transitions. SoD enforcement. Capability gate #4. HLC event generation (3.1, 3.2).")
+        Container(analytics_engine, "AnalyticsEngine", "Python", "Read-only aggregates. Pre-computed from FES. NO CG-IR write path (S-17, AA-01).")
+    }
 }
 
-Rel(regulatory_official, api_gateway, "Creates directives, reviews findings, resolves conflicts", "HTTPS")
-Rel(compliance_rep, api_gateway, "Submits inspections, manages findings", "HTTPS")
+System_Ext(ci_pipeline, "CI/CD Pipeline", "Scans runtime source for policy_doctrine.yaml references (1.2).")
+System_Ext(policy_doc, "Policy Document", "policy_doctrine.yaml. Governance intent. Authoring-time ONLY.")
 
-Rel(api_gateway, directive_mgr, "Dispatches directive operations", "Capability-gated")
-Rel(api_gateway, inspection_pipeline, "Dispatches inspection requests", "Capability-gated")
-Rel(api_gateway, finding_fsm, "Dispatches finding transitions", "Capability-gated")
-Rel(api_gateway, analytics_engine, "Queries analytics", "Capability-gated")
+Rel(regulatory_official, api_gateway, "directive.*, finding.*, analytics.*, conflict.resolve", "HTTPS")
+Rel(compliance_rep, api_gateway, "inspection.*, finding.acknowledge, evidence.submit, analytics.view", "HTTPS")
+Rel(system_actor, api_gateway, "inspection.submit, finding.view, analytics.view", "HTTPS")
 
-Rel(directive_mgr, directive_store, "Persists directive graph", "SQL")
-Rel(directive_mgr, compilation_engine, "Triggers compilation on mutation", "Internal")
+Rel(api_gateway, directive_mgr, "directive mutations (capability gate #2)", "Internal")
+Rel(api_gateway, inspection_pipeline, "inspection.submit (capability gate #3)", "Internal")
+Rel(api_gateway, finding_fsm, "finding transitions (capability gate #4)", "Internal")
+Rel(api_gateway, analytics_engine, "analytics queries", "Internal")
+Rel(api_gateway, directive_store, "read queries", "SQL")
+Rel(api_gateway, cgir_store, "read queries", "Content-addressed")
 
-Rel(compilation_engine, cgir_store, "Stores CG-IR snapshots and nodes", "Content-addressed")
-Rel(compilation_engine, directive_store, "Reads directive graph under read lock", "SQL")
+Rel(directive_mgr, directive_store, "persists directive graph", "SQL")
+Rel(directive_mgr, compilation_engine, "triggers compilation on mutation", "Internal")
+Rel(directive_store, compilation_engine, "directive graph (read lock)", "SQL")
+Rel(frozen_env, compilation_engine, "pinned config", "Internal")
 
-Rel(inspection_pipeline, cgir_store, "Reads frozen CG-IR snapshot", "Content-addressed")
-Rel(inspection_pipeline, execution_artifact_store, "Writes inspection snapshots", "Object PUT")
-Rel(inspection_pipeline, finding_fsm, "Emits findings from evaluation", "Internal")
+Rel(compilation_engine, cgir_store, "CG-IR snapshot (immutable)", "Content-addressed")
 
-Rel(finding_fsm, finding_event_store, "Appends finding events", "Append-only")
-Rel(analytics_engine, finding_event_store, "Reads event stream for aggregates", "Read-only")
+Rel(inspection_pipeline, cgir_store, "reads frozen CG-IR snapshot", "Content-addressed")
+Rel(inspection_pipeline, finding_event_store, "writes findings", "Append-only")
+Rel(inspection_pipeline, execution_artifact_store, "writes inspection snapshots", "Object PUT")
+
+Rel(finding_fsm, finding_event_store, "appends transition events", "Append-only")
+
+Rel(analytics_engine, finding_event_store, "reads aggregates (pre-computed)", "Read-only")
+
+policy_doc -[hidden]x- selma
+
+note right of policy_doc
+  **PROHIBITED** at runtime
+  Never read during inspection,
+  evaluation, FSM transitions,
+  or conflict resolution (1.2 Rule 7)
+end note
 
 @enduml

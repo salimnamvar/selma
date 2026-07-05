@@ -1,10 +1,10 @@
 ' ============================================================
 ' Title:     Selma -- FindingFsmEngine Component Diagram
 ' Boundary:  FindingFsmEngine
-' Purpose:   Shows finding lifecycle state machine, capability gating, and event emission
+' Purpose:   Finding lifecycle state machine with SoD enforcement, capability gating, and audit trail
 ' Milestone: v1.0.0
-' Version:   1.0.0
-' Source:    docs/Regulation/SPECIFICATION.md 3.1-3.2, docs/User-Story/User_Stories.md Epic 4
+' Version:   1.1.0
+' Source:    docs/Regulation/SPECIFICATION.md 3.1-3.4, docs/User-Story/User_Stories.md Epic 4
 ' Review:    pending
 ' ============================================================
 @startuml
@@ -16,17 +16,35 @@ LAYOUT_WITH_LEGEND()
 title Selma -- FindingFsmEngine Component Diagram
 
 Container_Boundary(fsm, "FindingFsmEngine") {
-    Component(capability_gater, "CapabilityGater", "Python", "Enforces capability matrix and segregation of duties at FSM transition gate per 3.2")
-    Component(fsm_transition, "FsmTransition", "Python", "Finding state machine: Open, Acknowledged, Evidence Submitted, Pending Verification, Verified, Rejected, Dismissed, Waived, Closed")
-    Component(event_emitter, "EventEmitter", "Python", "Appends HLC-ordered FindingCreated, DispositionChanged, FindingClosed events per 2.14")
-    Component(hlc_clock, "HlcClock", "Python", "Hybrid Logical Clock for total event ordering per 2.14")
+    Component(capability_checker, "CapabilityChecker", "Python", "Verifies actor holds required capability for requested transition (S-34).")
+    Component(sod_enforcer, "SegregationOfDutiesEnforcer", "Python", "finding.waive: actor not in creator_provenance (S-29, S-32). finding.approve_remediation: actor != evidence submitter (S-14a, S-33).")
+    Component(fsm_state_machine, "FsmStateMachine", "Python", "10 states, 11 transitions per SPEC 3.1. Created->Open (auto), Open->Acknowledged, Open->Dismissed, Open->Waived, Acknowledged->Evidence Submitted, Evidence Submitted->Pending Verification (auto), Pending Verification->Verified, Pending Verification->Rejected, Rejected->Open, Verified->Closed (auto), Waived->Closed (auto).")
+    Component(hlc_clock, "HlcClockManager", "Python", "physical_time -> logical_counter -> node_id -> event_id. Per-node non-decreasing. Absorbs wall clock regression (3.3).")
+    Component(event_hasher, "EventHasher", "Python", "SHA-256(event payload). Ensures event integrity. Append-only guarantee.")
+    Component(event_appender, "EventAppender", "Python", "Atomic append to Finding Event Stream. HLC total order. No mutation, no deletion.")
+    Component(audit_logger, "AuditLogger", "Python", "Records all transitions: actor, timestamp, reason. Denials logged with CapabilityDenied reason (S-32, S-33, S-34).")
+    Component(denial_handler, "DenialHandler", "Python", "403 CapabilityDenied. No partial state mutation. FSM state unchanged. Audit entry recorded.")
 }
 
-ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream")
+ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream.")
 
-Rel(capability_gater, fsm_transition, "Validated transition request")
-Rel(fsm_transition, event_emitter, "Validated state change")
-Rel(hlc_clock, event_emitter, "HLC tuple for event ordering")
-Rel(event_emitter, finding_event_store, "Appends event with event_hash", "Append-only")
+Rel(capability_checker, sod_enforcer, "capability held")
+Rel(capability_checker, denial_handler, "capability missing")
+Rel(sod_enforcer, fsm_state_machine, "SoD check passed")
+Rel(sod_enforcer, denial_handler, "SoD violation")
+Rel(fsm_state_machine, hlc_clock, "valid transition")
+Rel(fsm_state_machine, denial_handler, "invalid transition")
+Rel(hlc_clock, event_hasher, "HLC tuple")
+Rel(event_hasher, event_appender, "hashed event")
+Rel(event_appender, finding_event_store, "appends event with event_hash", "Append-only")
+
+Rel(capability_checker, audit_logger, "transition attempt")
+Rel(sod_enforcer, audit_logger, "SoD check result")
+Rel(denial_handler, audit_logger, "denial recorded")
+
+Rel(finding_event_store, fsm_state_machine, "reads current finding state", "Read-only")
+Rel(finding_event_store, sod_enforcer, "reads creator_provenance, evidence submitter history", "Read-only")
+
+denial_handler -[hidden]right- finding_event_store
 
 @enduml

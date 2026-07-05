@@ -1,13 +1,13 @@
 ' ============================================================
 ' Title:     Selma -- CompilationEngine Component Diagram
 ' Boundary:  CompilationEngine
-' Purpose:   Shows internal structure of the hermetic compilation pipeline with all 11 components
+' Purpose:   Three-pass validation, hermetic boundary, and compilation core with 18 components
 ' Milestone: v1.0.0
-' Version:   1.0.0
+' Version:   1.1.0
 ' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16
 ' Review:    pending
 ' ============================================================
-' SIM-01 EXCEPTION: 13 elements -- complete CompilationEngine internals (11 components + 1 store + 1 boundary)
+' SIM-01 EXCEPTION: 24 elements -- complete CompilationEngine internals (3 pass groups + 1 hermetic + 14 core + 3 stores + 3 inputs/outputs)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
 !theme plain
@@ -17,34 +17,66 @@ LAYOUT_WITH_LEGEND()
 title Selma -- CompilationEngine Component Diagram
 
 Container_Boundary(compilation, "CompilationEngine") {
-    Component(directive_parser, "DirectiveParser", "Python", "Parses directive tables, extracts Machine ID, type, description, context")
-    Component(identity_resolver, "IdentityResolver", "Python", "Resolves lineage_id and execution_id, validates fork/merge/split lifecycle")
-    Component(evaluator_validator, "EvaluatorValidator", "Python", "AST-walking discriminator, RE2 compatibility, complexity limits per 2.9")
-    Component(scope_compiler, "ScopeCompiler", "Python", "Compiles scope objects with specificity scoring per 2.8.2")
-    Component(conflict_resolver, "ConflictResolver", "Python", "Multi-factor resolution: override, compatible_overrides, priority, specificity, recency")
-    Component(node_compiler, "NodeCompiler", "Python", "CG-IR node generation, dual hash model: semantic_hash + presentation_hash")
-    Component(dag_builder, "DagBuilder", "Python", "DAG construction, acyclicity validation, topological ordering")
-    Component(edge_hasher, "EdgeHasher", "Python", "Directional edge hash computation per 2.6 formula")
-    Component(snapshot_assembler, "SnapshotAssembler", "Python", "Snapshot assembly, cg_ir_snapshot_hash computation per 2.6")
-    Component(incremental_cache, "IncrementalCache", "Python", "semantic_hash subgraph reuse across compilations")
-    Component(provenance_recorder, "ProvenanceRecorder", "Python", "Frozen environment hash, engine version, lineage provenance")
+
+    Component(js_validator, "JsonSchemaValidator", "Draft-07", "First-pass filter. Field types, array bounds. if/then secondary filter (2.9).")
+
+    Component(ast_discriminator, "AstDiscriminatorWalker", "Python", "evaluator_type + config verification. Recursive oneOf. Cross-type leakage check. Normative gate (2.9, S-27, S-31).")
+    Component(complexity_walker, "EvaluatorComplexityWalker", "Python", "Depth <= 32, nodes <= 256, width <= 64, pattern <= 4096 chars, metadata <= 16 KiB (S-27).")
+    Component(lineage_dag_val, "LineageDagValidator", "Python", "Cycle detection (DFS), depth bound (<= 64), parent existence, operation consistency, temporal ordering, no self-reference (2.2.3).")
+    Component(ref_validator, "ReferenceValidator", "Python", "RE2 canary vectors (9.2.6), UTC-only timestamps, finite numerics (no NaN/infinity), regex flags whitelist {i,m,s}, NFC normalization (S-21, S-31).")
+    Component(policy_ver_checker, "PolicyVersionChecker", "Python", "major(policy_contract_version) == major(policy.version). Cross-file consistency (1.2 Rule 7).")
+
+    Component(cross_field_val, "CrossFieldValidator", "Python", "scope + priority consistency, depends_on acyclicity, conflicts_with candidate pairs.")
+
+    Component(frozen_env_mgr, "FrozenEnvManager", "Python", "Pins: engine, toolchain, AI models, OS/runtime. Computes frozen_env_hash (2.7).")
+
+    Component(concurrency_mgr, "ConcurrencyManager", "Python", "Read lock (compile), write lock (modify). Writer-preference FIFO. Deadlock prevention (3.4).")
+    Component(identity_resolver, "IdentityResolver", "Python", "lineage_id assignment, execution_id generation. Merge: lexmin lineage. Fork/Split: inherit lineage (2.2, 2.3).")
+    Component(rule_to_node, "RuleToNodeMapper", "Python", "2.8.1 transform table: message -> description, weight -> severity_default, evaluator_type+config -> evaluator, target -> scope.target_type.")
+    Component(param_merger, "ParameterMerger", "Python", "Shallow merge: parameters -> evaluator.config override (2.8.1).")
+    Component(dep_graph, "DependencyGraphBuilder", "Python", "Topological sort, depends_on -> edges, acyclicity verification.")
+    Component(conflict_pair, "ConflictPairGenerator", "Python", "Consumes conflicts_with, generates candidate pairs, records in snapshot metadata (2.8.4, 2.15.1).")
+    Component(specificity_scorer, "ScopeSpecificityScorer", "Python", "scope_specificity_score x 100 + count_bound_fields (2.8.2, 2.15).")
+    Component(hash_computer, "HashComputer", "Python", "semantic_hash (11 fields), presentation_hash (3 fields), node_hash = compose both. Canonical JSON, sorted keys, SHA-256 (2.6).")
+    Component(edge_hasher, "EdgeHashComputer", "Python", "SHA-256({source, target}). Directional. Node-content independent (2.6).")
+    Component(inc_compilation, "IncrementalCompilationManager", "Python", "Dirty marking by lineage_id, transitive dependent marking, cache lookup by semantic_hash, reuse unchanged node_hashes (2.6).")
+    Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6).")
+    Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
 }
 
-ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects")
-ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth")
+ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects.")
+ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth.")
+ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "Finding lifecycle events.")
 
-Rel(directive_store, directive_parser, "Reads directive graph under read lock", "SQL")
-Rel(directive_parser, identity_resolver, "Parsed directives with Machine IDs")
-Rel(identity_resolver, evaluator_validator, "Validated rules with resolved identities")
-Rel(evaluator_validator, scope_compiler, "Validated evaluators with scope objects")
-Rel(scope_compiler, conflict_resolver, "Scoped rules ready for conflict analysis")
-Rel(conflict_resolver, node_compiler, "Resolved rules with conflict metadata")
-Rel(node_compiler, dag_builder, "CG-IR nodes with dual hashes")
-Rel(dag_builder, edge_hasher, "DAG structure with node references")
-Rel(edge_hasher, snapshot_assembler, "Edge hashes and node hashes")
-Rel(incremental_cache, node_compiler, "Reuses unchanged semantic_hash subgraphs")
-Rel(provenance_recorder, snapshot_assembler, "Frozen environment and lineage metadata")
-Rel(snapshot_assembler, cgir_store, "Stores immutable CG-IR snapshot", "Content-addressed")
-Rel(incremental_cache, cgir_store, "Reads previous snapshot for reuse", "Content-addressed")
+Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
+Rel(directive_store, policy_ver_checker, "authoring-time only", "SQL")
+
+Rel(js_validator, ast_discriminator, "PASS")
+Rel(js_validator, complexity_walker, "PASS")
+Rel(complexity_walker, lineage_dag_val, "PASS")
+Rel(lineage_dag_val, ref_validator, "PASS")
+Rel(ref_validator, policy_ver_checker, "PASS")
+Rel(policy_ver_checker, cross_field_val, "ALL PASS")
+
+Rel(cross_field_val, concurrency_mgr, "ALL PASS")
+
+Rel(frozen_env_mgr, provenance_recorder, "pinned config")
+
+Rel(concurrency_mgr, identity_resolver, "read lock acquired")
+Rel(identity_resolver, rule_to_node, "validated rules")
+Rel(rule_to_node, param_merger, "mapped rules")
+Rel(param_merger, dep_graph, "merged parameters")
+Rel(dep_graph, conflict_pair, "DAG structure")
+Rel(conflict_pair, specificity_scorer, "candidate pairs")
+Rel(specificity_scorer, hash_computer, "scored nodes")
+Rel(hash_computer, inc_compilation, "node hashes")
+Rel(dep_graph, edge_hasher, "node references")
+Rel(edge_hasher, inc_compilation, "edge hashes")
+Rel(inc_compilation, snapshot_assembler, "assembled node/edge hashes")
+Rel(provenance_recorder, snapshot_assembler, "frozen env + lineage metadata")
+
+Rel(snapshot_assembler, cgir_store, "immutable CG-IR snapshot", "Content-addressed")
+Rel(inc_compilation, cgir_store, "reads previous snapshot for reuse", "Content-addressed")
+Rel(finding_event_store, provenance_recorder, "reads prior events (if needed)", "Read-only")
 
 @enduml

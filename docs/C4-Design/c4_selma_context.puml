@@ -1,9 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Shows Selma as a black box with its two primary actors
+' Purpose:   Shows Selma as a black box with its human and system actors, external dependencies, and policy prohibition
 ' Milestone: v1.0.0
-' Version:   1.0.0
+' Version:   1.1.0
 ' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities
 ' Review:    pending
 ' ============================================================
@@ -18,10 +18,23 @@ title Selma -- Context Diagram
 
 Person(regulatory_official, "Regulatory Official", "Rule Author and Governance Owner. Creates, modifies, retires directives.")
 Person(compliance_rep, "Compliance Representative", "Compliance Seeker and Remediation Owner. Submits inspections, manages findings.")
+Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views findings.")
 
 System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles directives into executable controls, evaluates targets, and manages finding lifecycle.")
 
-Rel(regulatory_official, selma, "Creates and governs directives, reviews findings, resolves conflicts", "HTTPS")
-Rel(compliance_rep, selma, "Submits inspections, acknowledges findings, submits evidence", "HTTPS")
+System_Ext(ci_pipeline, "CI/CD Pipeline", "Scans runtime source for policy_doctrine.yaml references (1.2).")
+System_Ext(policy_doc, "Policy Document", "policy_doctrine.yaml. Governance intent. Authoring-time ONLY. NO runtime connection.")
+
+Rel(regulatory_official, selma, "Author directives, view findings, waive/dismiss/resolve", "HTTPS")
+Rel(compliance_rep, selma, "Submit targets, acknowledge findings, submit evidence", "HTTPS")
+Rel(system_actor, selma, "Automated inspection, view findings", "HTTPS")
+Rel(ci_pipeline, selma, "Static analysis, policy prohibition enforcement check", "CI/CD")
+
+note right of policy_doc
+  **PROHIBITED** at runtime
+  Never read during inspection,
+  evaluation, FSM transitions,
+  or conflict resolution (1.2 Rule 7)
+end note
 
 @enduml
