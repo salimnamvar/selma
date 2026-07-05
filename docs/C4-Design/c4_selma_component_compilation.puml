@@ -1,0 +1,50 @@
+' ============================================================
+' Title:     Selma -- CompilationEngine Component Diagram
+' Boundary:  CompilationEngine
+' Purpose:   Shows internal structure of the hermetic compilation pipeline with all 11 components
+' Milestone: v1.0.0
+' Version:   1.0.0
+' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16
+' Review:    pending
+' ============================================================
+' SIM-01 EXCEPTION: 13 elements -- complete CompilationEngine internals (11 components + 1 store + 1 boundary)
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- CompilationEngine Component Diagram
+
+Container_Boundary(compilation, "CompilationEngine") {
+    Component(directive_parser, "DirectiveParser", "Python", "Parses directive tables, extracts Machine ID, type, description, context")
+    Component(identity_resolver, "IdentityResolver", "Python", "Resolves lineage_id and execution_id, validates fork/merge/split lifecycle")
+    Component(evaluator_validator, "EvaluatorValidator", "Python", "AST-walking discriminator, RE2 compatibility, complexity limits per 2.9")
+    Component(scope_compiler, "ScopeCompiler", "Python", "Compiles scope objects with specificity scoring per 2.8.2")
+    Component(conflict_resolver, "ConflictResolver", "Python", "Multi-factor resolution: override, compatible_overrides, priority, specificity, recency")
+    Component(node_compiler, "NodeCompiler", "Python", "CG-IR node generation, dual hash model: semantic_hash + presentation_hash")
+    Component(dag_builder, "DagBuilder", "Python", "DAG construction, acyclicity validation, topological ordering")
+    Component(edge_hasher, "EdgeHasher", "Python", "Directional edge hash computation per 2.6 formula")
+    Component(snapshot_assembler, "SnapshotAssembler", "Python", "Snapshot assembly, cg_ir_snapshot_hash computation per 2.6")
+    Component(incremental_cache, "IncrementalCache", "Python", "semantic_hash subgraph reuse across compilations")
+    Component(provenance_recorder, "ProvenanceRecorder", "Python", "Frozen environment hash, engine version, lineage provenance")
+}
+
+ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects")
+ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth")
+
+Rel(directive_store, directive_parser, "Reads directive graph under read lock", "SQL")
+Rel(directive_parser, identity_resolver, "Parsed directives with Machine IDs")
+Rel(identity_resolver, evaluator_validator, "Validated rules with resolved identities")
+Rel(evaluator_validator, scope_compiler, "Validated evaluators with scope objects")
+Rel(scope_compiler, conflict_resolver, "Scoped rules ready for conflict analysis")
+Rel(conflict_resolver, node_compiler, "Resolved rules with conflict metadata")
+Rel(node_compiler, dag_builder, "CG-IR nodes with dual hashes")
+Rel(dag_builder, edge_hasher, "DAG structure with node references")
+Rel(edge_hasher, snapshot_assembler, "Edge hashes and node hashes")
+Rel(incremental_cache, node_compiler, "Reuses unchanged semantic_hash subgraphs")
+Rel(provenance_recorder, snapshot_assembler, "Frozen environment and lineage metadata")
+Rel(snapshot_assembler, cgir_store, "Stores immutable CG-IR snapshot", "Content-addressed")
+Rel(incremental_cache, cgir_store, "Reads previous snapshot for reuse", "Content-addressed")
+
+@enduml

@@ -1,0 +1,39 @@
+' ============================================================
+' Title:     Selma -- InspectionPipeline Component Diagram
+' Boundary:  InspectionPipeline
+' Purpose:   Shows internal structure of the DAG execution pipeline and finding creation
+' Milestone: v1.0.0
+' Version:   1.0.0
+' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7
+' Review:    pending
+' ============================================================
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- InspectionPipeline Component Diagram
+
+Container_Boundary(pipeline, "InspectionPipeline") {
+    Component(target_validator, "TargetValidator", "Python", "Validates target schema, computes target_hash, populates context")
+    Component(scope_filter, "ScopeFilter", "Python", "Filters CG-IR nodes by scope applicability to target")
+    Component(eval_executor, "EvalExecutor", "Python", "Topological DAG execution with pure evaluator invocation per 2.12")
+    Component(finding_creator, "FindingCreator", "Python", "Maps evaluator outcomes to findings per deontic type and severity rules 2.8.3, 2.9.1")
+    Component(pipeline_tracer, "PipelineTracer", "Python", "Records pipeline trace entries with fault taxonomy per 3.3")
+    Component(snapshot_recorder, "SnapshotRecorder", "Python", "Generates inspection snapshot with system_state_hash per 3.6")
+}
+
+ContainerDb(cgir_store, "CgIrStore", "CAS", "Frozen CG-IR snapshot")
+ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots and pipeline traces")
+
+Rel(cgir_store, scope_filter, "Reads CG-IR snapshot nodes", "Content-addressed")
+Rel(target_validator, scope_filter, "Validated target with context")
+Rel(scope_filter, eval_executor, "Applicable nodes in topological order")
+Rel(eval_executor, finding_creator, "Evaluator outcomes: Pass, Fail, Partial, NeedsReview")
+Rel(eval_executor, pipeline_tracer, "Execution status per node")
+Rel(finding_creator, snapshot_recorder, "Findings with severities")
+Rel(pipeline_tracer, snapshot_recorder, "Pipeline trace entries")
+Rel(snapshot_recorder, execution_artifact_store, "Writes inspection snapshot", "Object PUT")
+
+@enduml

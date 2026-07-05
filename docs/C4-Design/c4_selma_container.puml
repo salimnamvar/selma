@@ -1,0 +1,57 @@
+' ============================================================
+' Title:     Selma -- Container Diagram
+' Boundary:  Selma Rule Regularity Platform
+' Purpose:   Shows deployable units: services, databases, and their interactions
+' Milestone: v1.0.0
+' Version:   1.0.0
+' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.7, docs/User-Story/User_Stories.md Core Architecture
+' Review:    pending
+' ============================================================
+' SIM-01 EXCEPTION: 12 elements -- cross-cutting overview of all subsystems (6 services + 4 stores + 2 actors)
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Container.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- Container Diagram
+
+Person(regulatory_official, "Regulatory Official", "Rule Author and Governance Owner")
+Person(compliance_rep, "Compliance Representative", "Compliance Seeker and Remediation Owner")
+
+System_Boundary(selma, "Selma") {
+    Container(api_gateway, "ApiGateway", "FastAPI", "Request ingress, capability checking, segregation of duties enforcement")
+    Container(directive_mgr, "DirectiveManager", "Python", "CRUD and identity lifecycle: fork, merge, split, retire, restore")
+    Container(compilation_engine, "CompilationEngine", "Python", "Hermetic compilation, CG-IR snapshot generation, incremental cache")
+    Container(inspection_pipeline, "InspectionPipeline", "Python", "DAG execution, target evaluation, finding creation")
+    Container(finding_fsm, "FindingFsmEngine", "Python", "Finding lifecycle state machine, FSM transitions, event emission")
+    Container(analytics_engine, "AnalyticsEngine", "Python", "Read-only aggregate analytics, trend analysis, mediated feedback")
+
+    ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph persistence, version history, lineage tracking")
+    ContainerDb(cgir_store, "CgIrStore", "Content-Addressed Storage", "Immutable CG-IR snapshots, shared node objects, edge hashes")
+    ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream, finding lifecycle events")
+    ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots, pipeline traces, system state hashes")
+}
+
+Rel(regulatory_official, api_gateway, "Creates directives, reviews findings, resolves conflicts", "HTTPS")
+Rel(compliance_rep, api_gateway, "Submits inspections, manages findings", "HTTPS")
+
+Rel(api_gateway, directive_mgr, "Dispatches directive operations", "Capability-gated")
+Rel(api_gateway, inspection_pipeline, "Dispatches inspection requests", "Capability-gated")
+Rel(api_gateway, finding_fsm, "Dispatches finding transitions", "Capability-gated")
+Rel(api_gateway, analytics_engine, "Queries analytics", "Capability-gated")
+
+Rel(directive_mgr, directive_store, "Persists directive graph", "SQL")
+Rel(directive_mgr, compilation_engine, "Triggers compilation on mutation", "Internal")
+
+Rel(compilation_engine, cgir_store, "Stores CG-IR snapshots and nodes", "Content-addressed")
+Rel(compilation_engine, directive_store, "Reads directive graph under read lock", "SQL")
+
+Rel(inspection_pipeline, cgir_store, "Reads frozen CG-IR snapshot", "Content-addressed")
+Rel(inspection_pipeline, execution_artifact_store, "Writes inspection snapshots", "Object PUT")
+Rel(inspection_pipeline, finding_fsm, "Emits findings from evaluation", "Internal")
+
+Rel(finding_fsm, finding_event_store, "Appends finding events", "Append-only")
+Rel(analytics_engine, finding_event_store, "Reads event stream for aggregates", "Read-only")
+
+@enduml

@@ -1,0 +1,27 @@
+' ============================================================
+' Title:     Selma -- Context Diagram
+' Boundary:  Selma Rule Regularity Platform
+' Purpose:   Shows Selma as a black box with its two primary actors
+' Milestone: v1.0.0
+' Version:   1.0.0
+' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities
+' Review:    pending
+' ============================================================
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Context.puml
+!theme plain
+
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title Selma -- Context Diagram
+
+Person(regulatory_official, "Regulatory Official", "Rule Author and Governance Owner. Creates, modifies, retires directives.")
+Person(compliance_rep, "Compliance Representative", "Compliance Seeker and Remediation Owner. Submits inspections, manages findings.")
+
+System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles directives into executable controls, evaluates targets, and manages finding lifecycle.")
+
+Rel(regulatory_official, selma, "Creates and governs directives, reviews findings, resolves conflicts", "HTTPS")
+Rel(compliance_rep, selma, "Submits inspections, acknowledges findings, submits evidence", "HTTPS")
+
+@enduml
