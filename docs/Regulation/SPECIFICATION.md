@@ -162,6 +162,7 @@ merge(parent_a, parent_b) → merged_rule:
 **Merge Provenance Surfacing Requirements (Normative):**
 - All reporting tools MUST display both `parent_lineage_ids` and `parent_execution_ids` when rendering merged rule lineage
 - The `metadata.migration.merge_provenance.non_surviving_parents` field SHOULD be used to preserve semantic context of non-surviving parents
+- `metadata.migration.merge_provenance.merged_at` is optional for backward compatibility but strongly RECOMMENDED for audit compliance; omission does not violate any invariant but may reduce audit trail completeness
 - Lineage tracing APIs MUST support queries by both surviving and non-surviving parent IDs
 - Audit reports MUST include complete merge provenance information for regulatory compliance
 
@@ -1233,6 +1234,7 @@ defer_to_reference_resolution:
        e. If multiple active rules exist (post-fork ambiguity): return Conflict Artifact — human resolution required; do NOT apply defer_to override
     5. Else (target not found in ruleset at all): ignore override; fall through to computed resolution
   - Active rule definition: status is `active` or `draft` (draft compiles as active per §2.8.1)
+  - **Active lineage definition:** A lineage is active if it contains at least one rule with status `active` or `draft`. When resolving a deprecated `defer_to` target via lineage chain successor lookup (step 4): if exactly one active rule exists in that lineage, resolve to it; if zero active rules exist, ignore the override and fall through to computed resolution; if more than one active rule exists (post-fork ambiguity after sequential forks), escalate to Conflict Artifact — do NOT apply the `defer_to` override
   - The resolved target MUST be compiled into the same CG-IR snapshot as the deferring rule
   - defer_to MUST NOT reference the rule's own id (self-deference is ignored)
 
@@ -1332,7 +1334,7 @@ For reproducibility, all hashing uses:
 | Type | Canonical Fields | Serialization |
 | :--- | :--- | :--- |
 | `regex` | `pattern`, `flags` | `{"flags":"","pattern":"..."}` (sorted keys) |
-| `field_check` | `field`, `operator`, `value` | `{"field":"...","operator":"...","value":...}`. Operator `matches` performs regex matching against the field value (RE2-compatible). |
+| `field_check` | `field`, `operator`, `value` | `{"field":"...","operator":"...","value":...}`. Operator `matches` performs regex matching against the field value. The `matches` operator is RE2-compatible per §2.9 portability constraints (regex dialect, prohibited PCRE-only features, flags limited to `{i,m,s}`). |
 | `threshold` | `field`, `operator`, `threshold` | `{"field":"...","operator":"...","threshold":...}` |
 | `composite` | `logic`, `sub_evaluators` | Each sub_evaluator serialized recursively as `{"evaluator_config":{...},"evaluator_type":"..."}` |
 
@@ -1879,7 +1881,7 @@ The root `metadata` object and per-rule `metadata` (if present) are **informatio
             "context": "string (human-readable contribution description, optional)"
           }
         ],
-        "merged_at": "datetime (ISO 8601 UTC, optional)",
+        "merged_at": "datetime (ISO 8601 UTC, optional — strongly RECOMMENDED for audit compliance)",
         "merge_notes": "string (optional)"
       }
     }
@@ -1887,7 +1889,7 @@ The root `metadata` object and per-rule `metadata` (if present) are **informatio
 }
 ```
 
-**`merge_provenance` (optional, merge operations):** When a merge assigns `lineage_id := MIN(parent_a, parent_b)`, the non-surviving parent's semantic identity is lost from the primary lineage graph. Authors SHOULD populate `metadata.migration.merge_provenance` on the merged rule to preserve audit context. This field is informational only — it does NOT participate in `semantic_hash` and MUST NOT be read at evaluation runtime. Downstream lineage tracing tools SHOULD consult both `lineage.parent_lineage_ids` and `merge_provenance.non_surviving_parents`.
+**`merge_provenance` (optional, merge operations):** When a merge assigns `lineage_id := MIN(parent_a, parent_b)`, the non-surviving parent's semantic identity is lost from the primary lineage graph. Authors SHOULD populate `metadata.migration.merge_provenance` on the merged rule to preserve audit context. The `merged_at` timestamp is optional for backward compatibility but strongly RECOMMENDED for audit trail completeness; its omission does not violate any invariant. This field is informational only — it does NOT participate in `semantic_hash` and MUST NOT be read at evaluation runtime. Downstream lineage tracing tools SHOULD consult both `lineage.parent_lineage_ids` and `merge_provenance.non_surviving_parents`.
 
 - Declared namespaces (`audit`, `vendor`, `author`, `migration`, `domain`, `jurisdiction`, `project`) are preferred for all metadata
 - Custom top-level keys are permitted for backward compatibility and vendor extensions; validators MAY warn on undeclared keys but MUST NOT reject datasets solely for custom metadata keys within the same MAJOR version
@@ -2170,3 +2172,4 @@ Architectural audit gates are non-blocking for spec conformance of the document 
 | 8.2.3-c | 2026-07-05 | Formal verification audit remediation: `compatible_overrides()` for symmetric override pairs (§2.15 D-01/F-02), `defer_to` missing-target fall-through reconciliation (§2.15 D-02/F-03), DFS `defer_to` cycle detection (§2.15 D-07/F-08), cross-lineage advisory resolution algorithm (§2.15.2 D-10/F-07), compilation deadlock prevention (§3.4 D-12/F-15), RE2 canary test vectors (§9.2.6 D-13/F-12), portable validator requirements for UTC/NaN/flags (§9.2.15 D-11/F-04–F-06), architectural audit validation gates (§9.9 D-09/F-16), `merge_provenance` normative documentation (§7.1 D-05) |
 | 8.2.4 | 2026-07-05 | Formal verification audit (v2) delta items: JSON Schema Draft-07 enforcement limitation documented with custom compile-time validator requirement (§2.9 F-001/Δ-001–Δ-002), `depends_on` execution ID semantics clarified (§2.8, §2.8.1 F-002/Δ-003), metadata size standardized to 16 384 bytes (§2.9, §8 F-005/Δ-005), merge provenance loss risk documented (§2.2.2 F-004/Δ-004), §8 System Invariants completeness verified (F-003/Δ-007) |
 | 8.2.4-d | 2026-07-05 | Formal verification audit (v8.2.2 corpus) remediation: audit corpus requirement (F-001), `x-finding-fsm` annotation (F-003), `x-discriminator-note` for evaluator_type safety (F-004), metadata `patternProperties` structural guard (F-005), `x-portability-note` compile-time engine invariants (F-006), `policy_contract_version` cross-file check documentation (F-010), worked algorithm examples in User_Stories.md, version sync to 8.2.4 |
+| 8.2.4-e | 2026-07-05 | Formal verification audit (v8.2.4 production-readiness) clarifications: active lineage definition for `defer_to` resolution after multi-fork (§2.15 D-01/F-002), `matches` operator RE2 cross-reference to §2.9 portability (§2.16.1 D-02/F-004), `merged_at` strongly RECOMMENDED guidance (§2.2.2, §7.1 D-04/F-001), S-30 explicit AA-01–AA-07 gate-ID traceability (User_Stories.md D-03/F-005) |

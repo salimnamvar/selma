@@ -224,7 +224,7 @@
                   },
                   "minItems": 1
                 },
-                "merged_at": { "$ref": "#/definitions/utc_datetime", "description": "Timestamp of the merge operation." },
+                "merged_at": { "$ref": "#/definitions/utc_datetime", "description": "Timestamp of the merge operation. Optional for backward compatibility; strongly RECOMMENDED for audit trail completeness." },
                 "merge_notes": { "type": "string", "description": "Additional context about the merge rationale." }
               },
               "required": ["non_surviving_parents"],
