@@ -12,81 +12,15 @@
 
 ## Executive Architectural Overview
 
-SELMA is designed as a highly disciplined, domain-agnostic compliance and rule-regularity engine. Its core architecture relies on an elegant separation between human governance intent, strict machine-executable structural invariants, and a purely functional runtime execution model.
+SELMA is a domain-agnostic rule regularity platform. This document defines the behavioral contract for Selma 8.2.4 as 35 user stories across 7 epics.
 
-The architecture is built upon **three runtime primitives** (plus an execution artifact layer):
+### Architecture Reference
+See SPECIFICATION.md §2 for the normative architecture.
 
-1. **Directive Graph:** The human-authored, structured source of truth.
-2. **Compiled Control DAG (CG-IR):** The content-addressed, immutable executable intermediate representation.
-3. **Finding Event Stream:** An append-only, chronologically consistent event log driven by Hybrid Logical Clocks (HLC).
-4. **Execution Artifacts:** The reproducible inspection snapshots and pipeline traces.
-
-### Layered Dominance & Cross-Layer Binding
-
-The foundation of SELMA rests on a strict three-layer dominance hierarchy designed to eliminate runtime interpretation ambiguity:
-
-| Layer | Document | Role | Runtime Authority |
-| :--- | :--- | :--- | :--- |
-| **Normative** | `SPECIFICATION.md` | Defines absolute system behaviors, algorithms, and invariants | **Highest.** The sole source of runtime semantics |
-| **Structural** | `rule_schema.json` | Structural JSON Schema projection of spec invariants | **Data Carrier.** Read by the engine; contains no executable logic |
-| **Governance** | `policy_doctrine.yaml` | Human-facing governance intent and formatting guide | **None.** Completely prohibited at inspection and evaluation runtime |
-
-### The Policy Runtime Prohibition
-
-A key architectural strength is the **Policy Runtime Prohibition**. The compilation and execution engines never interpret prose fields from the governance layer. Instead, the policy layer dictates human authoring constraints (enforced via compile-time schema validation), ensuring that runtime execution evaluates *only* highly structured schema fields.
-
-### Version Synchronization Invariant
-
-Cross-layer compatibility enforces strict semantic version consistency across all layers via a major-version math boundary:
-
-```
-dataset(S) accepts policy(P) ⟺ ⌊S⌋ == ⌊P⌋
-```
-
-Minor and patch versions are allowed to evolve independently within the same major family, but a major version mismatch results in an absolute compile-time rejection.
-
----
-
-## Cross-Layer Binding
-
-| Layer | Document | Role |
-| :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.2.4 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.2.4 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.2.4 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 8.2.4 | This document — behavioral contract |
-
-**Rule:** Spec is normative; schema and policy MUST conform. MAJOR versions MUST match across all documents; MINOR and PATCH MAY differ (compatibility matrix, not strict equality). Policy is never read at runtime — only schema fields compiled per spec.
-
-**Schema Annotations:** All `x-*` keys in `rule_schema.json` are informative and non-normative. On conflict, SPECIFICATION.md wins.
-
-**Cross-Field Constraints (semantic, not structural):**
-- `evaluator_type` ↔ `evaluator_config` consistency requires compile-time dependent-schema validation beyond partial subschema checks (§2.9)
-- `priority` ordering vs `depends_on` consistency is a semantic invariant, not a structural one
-- `lineage.operation` constraints beyond required fields are semantic invariants
-
-**Custom Compile-Time Validator (Normative):**
-- Evaluator complexity limits (depth ≤ 32, total nodes ≤ 256, width ≤ 64) require custom AST-walking validators — JSON Schema Draft-07 cannot enforce recursive depth or aggregate node count limits (§2.9)
-- The custom validator MUST execute after JSON Schema structural validation and before CG-IR generation
-- Engines that skip the custom validator are non-conformant
-
-**Conflict Resolution:** Declared in three places (schema `conflict_resolution` field, cross-layer binding, policy intent section). All three MUST remain synchronized on precedence chain: explicit override → `compatible_overrides` → priority → specificity → recency → Conflict Artifact. SPECIFICATION.md §2.15 is normative; policy describes governance intent only.
-
-**Audit Corpus:** Formal verification audits MUST include all five documents: SPECIFICATION.md, rule_schema.json, policy_doctrine.yaml, User_Stories.md, and the Contracts Directory (README.md). Omitting SPECIFICATION.md prevents mechanical verification of normative algorithms.
-
-**Compile-Time Engine Invariants (schema necessary, engine mandatory):**
-
-| Invariant | JSON Schema Role | Engine Role |
-| :--- | :--- | :--- |
-| RE2 regex compatibility | Flags whitelist only | RE2 linter + canary vectors (S-21, S-31) |
-| NFC string normalization | Not enforceable | Normalize before evaluator invocation |
-| IEEE 754 finite numerics | `x-deterministic-serialization` annotation | Reject NaN/±Infinity in reference validator |
-| UTC timestamps | `utc_datetime` pattern (`…Z$`) | Reject offset timestamps; normalize before hash |
-| Evaluator type safety | `oneOf` + `additionalProperties: false` (primary) | AST-walking discriminator (§2.9) — normative gate |
-| Evaluator complexity | Per-level `maxItems` | Recursive AST walk: depth ≤ 32, nodes ≤ 256 |
-| Metadata non-executability | `patternProperties` guard on executable-sounding keys | Ignore metadata at evaluation runtime |
-| Policy version match | `policy_contract_version` required | Verify `major` matches paired policy at compile time |
-| Finding FSM | `x-finding-fsm` informative annotation | Finding FSM Engine at runtime (§3.1) |
+### Invariant Reference
+All system invariants are normatively defined in SPECIFICATION.md §8.
+This document references invariants by name; see the Traceability table
+for spec section mappings.
 
 ---
 
@@ -123,29 +57,6 @@ Minor and patch versions are allowed to evolve independently within the same maj
 │   - Pipeline traces         │
 └─────────────────────────────┘
 ```
-
-### Architectural Strengths
-
-| Strength | Description |
-| :--- | :--- |
-| **Content-Addressed Storage** | CG-IR nodes are deduplicated by hash; identical rule content across snapshots shares storage |
-| **Incremental Compilation** | Unchanged subgraphs are reused via semantic_hash; only dirty nodes are recompiled |
-| **Pure Evaluation** | Evaluators are side-effect-free functions; same inputs always produce same outputs |
-| **HLC Event Ordering** | Hybrid Logical Clocks ensure total ordering without wall-clock dependency |
-| **Hermetic Reproducibility** | Frozen environment pins all non-deterministic factors; identical inputs → identical CG-IR |
-
-### Architectural Risks & Mitigations
-
-| Risk | Description | Mitigation |
-| :--- | :--- | :--- |
-| **Lossy Metadata in Lexicographic Merges** | Merging `PAY-800` and `AUTH-001` permanently forces `AUTH-001` as lineage root; structural provenance of payment chain survives only in metadata array | Use optional `metadata.migration.merge_provenance` field to explicitly map non-surviving parent semantics; downstream metadata parsing for lineage tracing; `MERGE-NN` namespace (e.g. `MGR-18`) deferred to v9.0.0 |
-| **Time Realism in `finding_aggregates`** | Aggregates are pre-computed from past inspections; current-inspection findings not included in real-time | Multi-pass inspection loop or delayed escalation alerts until reinspection; document at-least-one-inspection-cycle delay in dashboards; use Finding Event Stream for immediate alerting |
-| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce formal AST-walking discriminator validation (§2.9) at compile time; ship canonical reference validator + invalid-pairing test corpus (§9.2.15, S-30, S-31) |
-| **Cascade Invisibility via Skipped Nodes** | Dependency failures silently bypass downstream checks; compliance review may miss unverified infrastructure | Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings |
-| **`defer_to` Reference Ambiguity** | Post-fork lineage chains may have multiple active execution IDs; underspecified resolution breaks deterministic conflict resolution | Normative active-lineage resolution algorithm in §2.15; multiple active children escalate to Conflict Artifact |
-| **Segregation of Duties via Merge** | Merging directives could allow an author to waive findings against a merged rule they partially created | `creator_provenance` inherits union of all parent `authored_by` values; enforced at `finding.waive` gate |
-| **Policy Runtime Prohibition (unverified)** | Design assertion alone cannot prevent accidental runtime loading of policy_doctrine.yaml | CI static analysis (`scripts/validate_contracts.py`) scans runtime source; boot-time assertion recommended |
-| **Evaluator Complexity Exhaustion (JSON Schema Limitation)** | JSON Schema Draft-07 cannot enforce recursive depth ≤ 32 or total node count ≤ 256 across nested evaluator trees; malicious/buggy rules could cause stack exhaustion | Custom compile-time validator MUST walk evaluator AST before CG-IR generation (§2.9); engines skipping this validator are non-conformant |
 
 ---
 
@@ -213,7 +124,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | `finding.acknowledge` | ❌ | ✅ | ❌ | — |
 | `finding.dismiss` | ✅ | ❌ | ❌ | — |
 | `finding.waive` | ✅ | ❌ | ❌ | Actor MUST NOT be in `creator_provenance` for the finding's directive (S-29) |
-| `finding.approve_remediation` | ✅ | ❌ | ❌ | Actor MUST NOT have submitted evidence for this finding (S-14) |
+| `finding.approve_remediation` | ✅ | ❌ | ❌ | Actor MUST NOT have submitted evidence for this finding (S-14a, S-33) |
 | `finding.reject_remediation` | ✅ | ❌ | ❌ | — |
 | `evidence.submit` | ❌ | ✅ | ❌ | — |
 | `finding.supersede` | ✅ | ❌ | ❌ | — |
@@ -239,43 +150,39 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 
 ## Key Concepts
 
-| Concept | Definition |
+| Concept | Reference |
 | :--- | :--- |
 | **Directive Graph** | Human-authored source-of-truth. Structured, versioned, diffable. |
-| **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Determinism: identical inputs → identical hash. compiled_at excluded from hash (execution artifact metadata only). |
-| **Semantic vs Presentation Hash** | `semantic_hash` covers evaluator/scope/priority (compilation cache). `presentation_hash` covers description/revision. `node_hash` composes both (§2.6). Editorial description changes do not invalidate semantic cache. |
-| **Specificity Score** | Normative integer algorithm (§2.15): scope constraints via `scope_specificity_score` (×100) + evaluator field bindings. Two engines MUST agree on scores for identical node bodies. |
-| **Merge Identity** | Merged `lineage_id` = lexicographic min of parent lineage_ids; new execution_id per §2.2.2 deterministic formula. |
-| **Metadata Namespacing** | Informational only. Declared namespaces: audit, vendor, author, migration. No executable hints (§7.1). |
-| **Anchor Reference** | `anchor_ref` MUST use `section:<id>` or JSON Pointer syntax (§7.2). |
-| **Array Ordering** | Ordered: `sub_evaluators`, `pipeline_trace`. Unordered (sorted before hash): `depends_on`, `conflicts_with`, `parent_*_ids` (§2.16.1). |
-| **Evaluator Complexity Limits** | Max depth 32, max nodes 256, max width 64, max regex 4096 chars, max metadata 16 384 bytes (§2.9). Enforced by custom compile-time validator — JSON Schema Draft-07 cannot natively enforce recursive depth or aggregate node count limits. |
+| **CG-IR Snapshot** | SPECIFICATION.md §2.6 |
+| **Semantic vs Presentation Hash** | `semantic_hash` covers evaluator/scope/priority (compilation cache). `presentation_hash` covers description/revision. `node_hash` composes both. Editorial description changes do not invalidate semantic cache. See SPECIFICATION.md §2.6. |
+| **Specificity Score** | SPECIFICATION.md §2.15 |
+| **Merge Identity** | SPECIFICATION.md §2.2.2 |
+| **Metadata Namespacing** | Informational only. Declared namespaces: audit, vendor, author, migration. No executable hints. See SPECIFICATION.md §7.1. |
+| **Anchor Reference** | `anchor_ref` MUST use `section:<id>` or JSON Pointer syntax. See SPECIFICATION.md §7.2. |
+| **Array Ordering** | SPECIFICATION.md §2.16.1 |
+| **Evaluator Complexity Limits** | SPECIFICATION.md §2.9 |
 | **Finding Event Stream** | Append-only audit log with HLC ordering. Finding FSM enforced. |
 | **Execution Artifacts** | Immutable inspection snapshots, pipeline traces, system state hashes. |
 | **Hermetic Compilation** | Frozen environment ensures reproducibility. Read lock on Directive Graph. |
 | **Control Node** | CG-IR node with pure evaluator, scope, severity, dependencies. |
 | **Evaluator** | Pure function. Types: regex, field_check, threshold, composite. |
 | **Evaluator Config** | Schema-enforced if/then binding — config MUST match evaluator_type. |
-| **Evaluator Portability** | Cross-runtime determinism: RE2-compatible regex, IEEE 754 numerics, UTC timestamps, NFC strings. |
-| **Finding FSM** | Strict state machine: Created → Open → Acknowledged → Evidence Submitted → Pending Verification → Verified → Closed (system) / Rejected → Open |
-| **Hybrid Logical Clock** | Total order: physical_time → logical_counter → node_id → event_id; per-node tuple strictly non-decreasing; absorbs wall clock regression |
+| **Evaluator Portability** | SPECIFICATION.md §2.9 |
+| **Finding FSM** | SPECIFICATION.md §3.1 |
+| **Hybrid Logical Clock** | SPECIFICATION.md §3.3 |
 | **Capability Model** | Role → Capability → Action. Enforced at request ingress and stage gates. Deny = hard reject. |
 | **Policy Runtime Prohibition** | policy_doctrine.yaml is authoring guidance only; never read during inspection/evaluation/FSM |
-| **CG-IR Node Hashing** | Local content identity: node_hash from node_body only; graph context in edges + snapshot manifest |
-| **CG-IR Edge Hashing** | edge_hash = SHA-256(canonical_json({source: directive_id, target: directive_id})). Directional. Independent of node content. |
+| **CG-IR Node Hashing** | SPECIFICATION.md §2.6 |
+| **CG-IR Edge Hashing** | SPECIFICATION.md §2.6 |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
-| **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → compatible_overrides for symmetric pairs → priority → specificity → recency → Conflict Artifact. DFS defer_to cycle detection; missing defer_to targets fall through to computed resolution. Cross-lineage advisories per §2.15.2. All inputs frozen in CG-IR snapshot — deterministic per snapshot. |
-| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. `additionalProperties: true` objects normalized by sorting keys before hashing. Schema `$ref` resolved at validation time only, excluded from canonical form. |
-| **Provenance Canonicalization** | All provenance fields canonicalized before hash inclusion; no non-deterministic ordering. |
-| **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_snapshot_hash, frozen_env, engine, target_hash)`. Captures inspection reproducibility only; event ordering excluded. |
+| **Conflict Resolution Mapping** | SPECIFICATION.md §2.15 |
+| **Deterministic Serialization** | SPECIFICATION.md §2.16 |
+| **Provenance Canonicalization** | SPECIFICATION.md §2.6 |
+| **Version Resolution** | `system_state_hash` captures inspection reproducibility only; event ordering excluded. |
 | **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
 | **Concurrency Model** | Compilation = read lock; modification = write lock (exclusive). Queue serializes requests. |
 | **CG-IR Storage** | Content-addressed: snapshots → nodes → edges. Deduplication by hash. |
 | **Identity Refinement** | Machine ID ↔ lineage_id bijective at root-assignment level. Fork/split allows shared lineage_id with distinct execution_ids. Rule-level key: (lineage_id, id). |
-
-Cross-runtime portability rules, evaluator complexity limits, and evaluator constraints are defined normatively in SPECIFICATION.md §2.9. This document references those contracts by behavior:
-
-Conflict resolution follows the deterministic precedence chain defined in SPECIFICATION.md §2.15: explicit override → priority → specificity → recency → Conflict Artifact. All inputs are frozen in CG-IR `node_body`, making outcomes fully snapshot-bound.
 
 ### Conflict Resolution & Hashing Deep Dive
 
@@ -372,7 +279,7 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 
 **Segregation of Duties:**
 - Directive creator ≠ Finding waiver: holders of `finding.waive` MUST NOT waive findings raised by directives they authored (S-29)
-- Evidence submitter ≠ Remediation approver: holders of `evidence.submit` MUST NOT approve remediation for the same finding (S-14)
+- Evidence submitter ≠ Remediation approver: holders of `evidence.submit` MUST NOT approve remediation for the same finding (S-14a, S-33)
 
 ---
 
@@ -403,7 +310,7 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | **S-22** | Regulatory Official | I want to verify provenance canonicalization. | **Given** I request provenance audit. **When** Selma processes it. **Then** Selma validates all provenance fields are in canonical form before hash computation, confirms no non-deterministic ordering in provenance inclusion, and reports any canonicalization violations. | **P1** |
 | **S-27** | Regulatory Official | I want to verify evaluator complexity limits. | **Given** I request complexity audit. **When** Selma processes it. **Then** Selma validates composite depth ≤ 32, total evaluator nodes ≤ 256, composite width ≤ 64, regex patterns ≤ 4096 chars, metadata ≤ 16 384 bytes, and lineage ancestry depth ≤ 64. **And** rejects rules exceeding limits at compile time via custom compile-time validator (JSON Schema Draft-07 alone cannot enforce recursive depth/node count limits — see §2.9). **And** the custom validator executes AFTER JSON Schema structural validation and BEFORE CG-IR generation. | **P1** |
 | **S-28** | Regulatory Official | I want conflict resolution to be fully deterministic. | **Given** I request consistency review on a frozen CG-IR snapshot. **When** Selma applies `resolve_conflict`. **Then** Selma computes `specificity_score` per §2.15 normative algorithm, compares `priority_level` integers (not enum labels), resolves compatible override pairs (`{always_wins, never_wins}`, identical `defer_to` targets) via `compatible_overrides()`, ignores `defer_to` overrides on missing/ambiguous targets (fall through to computed resolution), detects `defer_to` cycles via DFS, and produces identical outcomes on repeated runs. | **P1** |
-| **S-30** | Regulatory Official | I want architectural audit gates verified before production certification. | **Given** I request architectural audit per §9.9. **When** Selma runs the AA-01 through AA-07 gate suite. **Then** Selma reports pass/fail per gate with explicit gate-ID traceability: **AA-01** Mediated Feedback — no analytics→CG-IR write path (S-17, S-18); **AA-02** Declarative Governance — policy runtime prohibition, schema/CG-IR fields only (S-05); **AA-03** Evaluator Purity — no IO, randomness, or environment reads (S-10, S-21); **AA-04** Segregation of Duties — `finding.waive` denied when actor ∈ `creator_provenance`; `finding.approve_remediation` denied when actor submitted evidence (S-14, S-29); **AA-05** Conflict Resolution Determinism — identical CG-IR snapshot + target → byte-identical conflict outcomes including `compatible_overrides()` pairs (S-05, S-28); **AA-06** Discriminator Completeness — invalid `evaluator_type`/`evaluator_config` pairings rejected by reference validator (S-21, S-27); **AA-07** Portable Serialization — RE2 canary vectors (§9.2.6) and UTC/NaN rejection tests pass (S-21, S-31). | **P1** |
+| **S-30** | Regulatory Official | I want architectural audit gates verified before production certification. | **Given** I request architectural audit per §9.9. **When** Selma runs the AA-01 through AA-07 gate suite. **Then** Selma reports pass/fail per gate with explicit gate-ID traceability: **AA-01** Mediated Feedback — no analytics→CG-IR write path (S-17, S-18); **AA-02** Declarative Governance — policy runtime prohibition, schema/CG-IR fields only (S-05); **AA-03** Evaluator Purity — no IO, randomness, or environment reads (S-10, S-21); **AA-04** Segregation of Duties — `finding.waive` denied when actor ∈ `creator_provenance`; `finding.approve_remediation` denied when actor submitted evidence (S-14a, S-29); **AA-05** Conflict Resolution Determinism — identical CG-IR snapshot + target → byte-identical conflict outcomes including `compatible_overrides()` pairs (S-05, S-28); **AA-06** Discriminator Completeness — invalid `evaluator_type`/`evaluator_config` pairings rejected by reference validator (S-21, S-27); **AA-07** Portable Serialization — RE2 canary vectors (§9.2.6) and UTC/NaN rejection tests pass (S-21, S-31). | **P1** |
 | **S-31** | Regulatory Official | I want a canonical reference validator for portable compile-time checks. | **Given** I submit a rule dataset for validation. **When** Selma runs the reference validator. **Then** Selma enforces UTC-only timestamps (reject ±HH:MM offsets), rejects NaN/Infinity in numeric fields, whitelists regex flags to `{i,m,s}`, runs the §2.9 AST-walking discriminator validator, and executes RE2 canary test vectors. **And** invalid `evaluator_type`/`evaluator_config` pairings from the rejection corpus are rejected with `SchemaError`. | **P1** |
 
 ---
@@ -427,7 +334,9 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | **S-11** | Compliance Representative | I want to view all findings. | **Given** I request findings. **When** Selma processes it. **Then** Selma returns findings with FSM state, computed disposition, severity, inspection reference, control node. | **P0** |
 | **S-12** | Compliance Representative | I want to acknowledge a finding. | **Given** I specify finding. **When** I acknowledge (valid FSM transition: Open → Acknowledged). **Then** Selma creates Remediation record, status "In Progress", records timestamp and actor. **And** event log unchanged. | **P1** |
 | **S-13** | Compliance Representative | I want to submit remediation evidence. | **Given** I specify finding and evidence. **When** I submit evidence (valid FSM transition: Acknowledged → Evidence Submitted). **Then** Selma attaches evidence, records submission. **And** system automatically transitions Evidence Submitted → Pending Verification. **And** event log unchanged. | **P1** |
-| **S-14** | Regulatory Official | I want to review remediation evidence. | **Given** I request pending reviews AND I hold `finding.approve_remediation` and `finding.reject_remediation` capabilities. **When** Selma presents evidence with Finding FSM state = Pending Verification. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed) or reject (Pending Verification → Rejected). **And** reopening a rejected finding requires a separate explicit action (Rejected → Open with comments). **And** human actor triggers only approve/reject; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order. **And** I MUST NOT be the same actor who submitted the evidence (segregation of duties: evidence.submitter ≠ remediation.approver). **And** capability check occurs at Finding FSM Engine gate before state transition. | **P1** |
+| **S-14a** | Regulatory Official | I want to approve remediation evidence. | **Given** I request pending reviews AND I hold `finding.approve_remediation` capability. **When** Selma presents evidence with Finding FSM state = Pending Verification. **Then** I approve (Pending Verification → Verified; system automatically transitions Verified → Closed). **And** human actor triggers only approve; closure is system-automatic per FSM. **And** event log append-only with event_hash and HLC total order. **And** I MUST NOT be the same actor who submitted the evidence (segregation of duties: S-33). **And** capability check occurs at Finding FSM Engine gate before state transition. | **P1** |
+| **S-14b** | Regulatory Official | I want to reject remediation evidence. | **Given** I request pending reviews AND I hold `finding.reject_remediation` capability. **When** Selma presents evidence with Finding FSM state = Pending Verification. **Then** I reject (Pending Verification → Rejected). **And** event log append-only with event_hash and HLC total order. **And** capability check occurs at Finding FSM Engine gate before state transition. | **P1** |
+| **S-14c** | Regulatory Official | I want to reopen a rejected finding. | **Given** I hold `finding.reject_remediation` capability and a finding is in Rejected state. **When** I reopen with comments (valid FSM transition: Rejected → Open). **Then** Selma transitions finding to Open state, records comments, records actor and timestamp. **And** event log append-only with event_hash and HLC total order. **And** capability check occurs at Finding FSM Engine gate before state transition. | **P1** |
 | **S-25** | Regulatory Official | I want to dismiss an invalid finding. | **Given** I determine a finding is incorrect AND I hold `finding.dismiss` capability. **When** I dismiss (valid FSM transition: Open → Dismissed). **Then** Selma transitions finding to Dismissed state, records disposition "invalid", records actor and timestamp. **And** event log append-only with event_hash and HLC total order. **And** dismissed findings have no outgoing FSM transitions. **And** capability check occurs at Finding FSM Engine gate before state transition. **And** the finding remains in Finding Event Stream for audit purposes. | **P1** |
 | **S-29** | Regulatory Official | I want to waive a finding as accepted risk. | **Given** I determine a finding is legitimate but the risk is accepted AND I hold `finding.waive` capability. **When** I waive (valid FSM transition: Open → Waived). **Then** Selma transitions finding to Waived state, records disposition "waived", records actor and timestamp. **And** system automatically transitions Waived → Closed. **And** event log append-only with event_hash and HLC total order. **And** I MUST NOT be the directive creator (segregation of duties: actor ∉ `creator_provenance` for finding.control_id). **And** capability check occurs at Finding FSM Engine gate before state transition. **And** waive action requires explicit `finding.waive` capability. | **P1** |
 
@@ -449,11 +358,11 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | Directive Lifecycle | 2 | 4 | 0 | **6** |
 | Directive Governance | 1 | 9 | 1 | **11** |
 | Inspection | 1 | 4 | 0 | **5** |
-| Finding Management | 1 | 5 | 0 | **6** |
+| Finding Management | 1 | 7 | 0 | **8** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
 | Segregation of Duties | 2 | 0 | 0 | **2** |
 | Capability Validation | 0 | 1 | 0 | **1** |
-| **Total** | **6** | **24** | **2** | **32** |
+| **Total** | **7** | **26** | **2** | **35** |
 
 ---
 
@@ -467,13 +376,13 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | Open → Waived | waive (accepted risk) | Regulatory Official | S-29 |
 | Acknowledged → Evidence Submitted | submit evidence | Compliance Representative | S-13 |
 | Evidence Submitted → Pending Verification | Automatic on evidence receipt | System | — |
-| Pending Verification → Verified | approve | Regulatory Official | S-14 |
-| Pending Verification → Rejected | reject | Regulatory Official | S-14 |
-| Rejected → Open | reopen with comments | Regulatory Official | S-14 |
+| Pending Verification → Verified | approve | Regulatory Official | S-14a |
+| Pending Verification → Rejected | reject | Regulatory Official | S-14b |
+| Rejected → Open | "finding.reopen" (requires comments) | Regulatory Official | S-14c |
 | Verified → Closed | Automatic after verification | System | — |
 | Waived → Closed | Automatic after waive | System | — |
 
-**Binding:** S-14 covers human approve/reject only. S-25 covers dismiss. S-29 covers waive. Verified → Closed and Waived → Closed are never human actions.
+**Binding:** S-14a covers approve, S-14b covers reject, S-14c covers reopen. S-25 covers dismiss. S-29 covers waive. Verified → Closed and Waived → Closed are never human actions.
 
 ---
 
@@ -487,10 +396,10 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | Inspection Consistency (point-in-time) | S-10 |
 | Evaluator Type Safety | S-10 |
 | Evaluator Portability (cross-runtime determinism) | S-10, S-21 |
-| Finding FSM | S-11, S-12, S-13, S-14, S-25, S-29 |
-| HLC Event Ordering | S-14 |
-| Capability-Based Permissions | S-14, S-25, S-29, S-32, S-33, S-34 |
-| Segregation of Duties | S-14, S-29, S-32, S-33 |
+| Finding FSM | S-11, S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29 |
+| HLC Event Ordering | S-14a, S-14b, S-14c |
+| Capability-Based Permissions | S-14a, S-14b, S-14c, S-25, S-29, S-32, S-33, S-34 |
+| Segregation of Duties | S-14a, S-29, S-32, S-33 |
 | Formal Capability Model (§3.2.1) | S-32, S-33, S-34 |
 | Conflict Resolution Mapping (explicit override first) | S-05, S-28 |
 | Compatible Override Pairs (`compatible_overrides`) | S-05, S-28 |
@@ -567,22 +476,6 @@ Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normativ
 | **Array Ordering Classification** | Ordered vs unordered arrays per §2.16.1 |
 | **Metadata Informational Only** | Namespaced metadata; no executable content (§7.1); schema `patternProperties` rejects executable-sounding keys; engine MUST ignore metadata at evaluation runtime |
 | **Merge Identity Determinism** | Merged `lineage_id` = lexicographic min of parents (§2.2.2) |
-
----
-
-## Internal View
-
-| Engine | What It Does |
-| :--- | :--- |
-| **Directive Drafting Engine** | Natural language → Directive Graph entries |
-| **Structural Compliance Reviewer** | Validates against schema, spec invariants, and contamination rules |
-| **Control Compilation Engine** | Directive Graph → CG-IR snapshot. Hermetic. Incremental. Content-addressed. |
-| **DAG Evaluation Engine** | Topological sort, parallel execution, strict context, fault taxonomy handling |
-| **Conflict Resolution Engine** | Applies `resolve_conflict` (override → compatible_overrides → computed factors), DFS defer_to cycle detection, cross-lineage advisory artifacts (§2.15.2) |
-| **Reference Validator** | Canonical compile-time validator: UTC/NaN/flags enforcement, AST discriminator walk, RE2 canary corpus (§9.2.15) |
-| **Finding FSM Engine** | Enforces state transitions, validates capability permissions |
-| **Provenance Manager** | Tracks lineage IDs, execution IDs, revisions, frozen_env hashes, causal traceability |
-| **Analytics Engine** | Read-only aggregates from Finding Event Stream. Feeds context. Never modifies CG-IR. |
 
 ---
 
