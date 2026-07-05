@@ -52,7 +52,7 @@ Four known edge cases require monitoring during implementation. See `docs/User-S
 | :--- | :--- | :--- |
 | **Lossy Lexicographic Merges** | `lineage_id := MIN(parent_a, parent_b)` is deterministic but may obscure provenance | Metadata parsing for lineage tracing; future `MERGE-NN` namespace (e.g. `MGR-18`) |
 | **Time Realism in `finding_aggregates`** | Pre-computed aggregates exclude current-inspection findings | Multi-pass inspection or delayed escalation until reinspection |
-| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` may bypass standard JSON Schema engines | Dependent-schema validation at compile time |
+| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` may bypass standard JSON Schema engines | Canonical reference validator with AST-walking discriminator (§2.9) + invalid-pairing test corpus (§9.2.15, S-31) |
 | **Cascade Invisibility via Skipped Nodes** | Dependency failures bypass downstream checks without findings | Surface `skipped_nodes` in pipeline trace and dashboards |
 
 **Binding Rules:**
@@ -139,7 +139,9 @@ All three documents share the same MAJOR version. MINOR and PATCH may differ ind
 
 ## Conflict Resolution Mapping
 
-**Precedence Chain:** Explicit override (schema `conflict_resolution` field) → priority → specificity → recency → Conflict Artifact. All inputs are frozen in the CG-IR snapshot, making outcomes deterministic per snapshot.
+**Precedence Chain:** Explicit override (schema `conflict_resolution` field) → `compatible_overrides()` for symmetric pairs (`{always_wins, never_wins}`, identical `defer_to` targets) → priority → specificity → recency → Conflict Artifact. Missing or ambiguous `defer_to` targets fall through to computed resolution (not Conflict Artifact). Cross-lineage pairs produce advisory Conflict Artifacts only (§2.15.2). All inputs are frozen in the CG-IR snapshot, making outcomes deterministic per snapshot.
+
+**Precedence Clarifier:** Policy prose describes governance *intent* for human authors. Schema `conflict_resolution` is structural override *data*. SPECIFICATION.md §2.15 is the sole *algorithm*. On any conflict between the three layers, spec wins; policy is never read at runtime.
 
 | Schema `priority` enum | `priority_level` integer |
 | :--- | :--- |
@@ -151,7 +153,11 @@ All three documents share the same MAJOR version. MINOR and PATCH may differ ind
 
 Enum values are presentation; all comparisons use `priority_level` integers.
 
-See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and `resolve_conflict` function.
+See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and `resolve_conflict` function (including `compatible_overrides()`, DFS `defer_to` cycle detection, and §2.15.2 cross-lineage advisory resolution).
+
+## Reference Validator
+
+Production-grade implementations SHOULD ship a canonical reference validator satisfying §9.2.15 portable checks (UTC-only timestamps, finite numerics, regex flags whitelist, AST discriminator walk) and §9.2.6 RE2 canary test vectors. User stories S-30 (architectural audit gates) and S-31 (reference validator) define the behavioral contract.
 
 
 

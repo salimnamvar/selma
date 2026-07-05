@@ -937,15 +937,24 @@ Enum values are presentation; all comparisons use `priority_level` integers.
 ```
 resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact
 
-// Step 1: Explicit override takes precedence
+// Step 1: Explicit override takes precedence (single-sided)
 1. if rule_a.conflict_resolution and not rule_b.conflict_resolution:
-     return apply_strategy(rule_a.conflict_resolution, rule_a, rule_b)
+     result := apply_strategy(rule_a.conflict_resolution, rule_a, rule_b)
+     if result is WinningRule: return result
+     // null → fall through to Step 2
 2. if rule_b.conflict_resolution and not rule_a.conflict_resolution:
-     return apply_strategy(rule_b.conflict_resolution, rule_b, rule_a)
-3. if both have conflict_resolution:
-     return Conflict Artifact (escalate — ambiguous override)
+     result := apply_strategy(rule_b.conflict_resolution, rule_b, rule_a)
+     if result is WinningRule: return result
+     // null → fall through to Step 2
 
-// Step 2: Computed resolution (when no explicit override)
+// Step 1b: Dual explicit overrides — compatible pairs resolve deterministically
+3. if both have conflict_resolution:
+     if compatible_overrides(rule_a.conflict_resolution, rule_b.conflict_resolution):
+       return apply_compatible_overrides(rule_a, rule_b)
+     else:
+       return Conflict Artifact (escalate — incompatible override pairing)
+
+// Step 2: Computed resolution (when no explicit override applies)
 4. if rule_a.priority != rule_b.priority:
      return rule with lower priority_level number
 5. if specificity(rule_a) != specificity(rule_b):
@@ -956,18 +965,68 @@ resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact
 // Step 3: Unresolvable
 7. return Conflict Artifact (escalate to human)
 
-apply_strategy(strategy, rule, other_rule) → winning_rule | Conflict Artifact:
+compatible_overrides(strategy_a, strategy_b) → bool:
+  // Complementary symmetric pairs — deterministic, not ambiguous
+  if (strategy_a.strategy == "always_wins" and strategy_b.strategy == "never_wins") or
+     (strategy_a.strategy == "never_wins" and strategy_b.strategy == "always_wins"):
+    return true
+  // Identical defer_to target — both defer to the same execution ID
+  if strategy_a.strategy == "defer_to" and strategy_b.strategy == "defer_to":
+    return strategy_a.defer_to == strategy_b.defer_to
+  return false
+
+apply_compatible_overrides(rule_a, rule_b) → winning_rule | Conflict Artifact:
+  sa := rule_a.conflict_resolution
+  sb := rule_b.conflict_resolution
+  if sa.strategy == "always_wins" and sb.strategy == "never_wins":
+    return rule_a
+  if sa.strategy == "never_wins" and sb.strategy == "always_wins":
+    return rule_b
+  if sa.strategy == "defer_to" and sb.strategy == "defer_to":
+    target := resolve_defer_to_target(sa, rule_a, rule_b)
+    if target is ActiveRule: return target
+    return null  // fall through to Step 2 computed resolution
+  return Conflict Artifact
+
+apply_strategy(strategy, rule, other_rule) → winning_rule | null:
   - "always_wins": return rule
   - "never_wins": return other_rule
-  - "defer_to": 
-      if target rule exists and is active:
-        return rule with ID = strategy.defer_to
-      else:
-        return Conflict Artifact (target not found — fall through to computed resolution)
+  - "defer_to":
+      target := resolve_defer_to_target(strategy, rule, other_rule)
+      if target is ActiveRule: return target
+      return null  // target not found or ambiguous — fall through to computed resolution (Step 2)
 
-cycle_detection:
-  If A defers_to B and B defers_to A → both overrides ignored → fall through to computed resolution
-  If chain A → B → C → A → cycle detected → all overrides ignored → fall through to computed resolution
+resolve_defer_to_target(strategy, rule, other_rule) → ActiveRule | null:
+  // Delegates to defer_to_reference_resolution algorithm below.
+  // Returns null (not Conflict Artifact) when target is missing, deprecated-with-no-successor,
+  // or post-fork ambiguous — caller falls through to computed resolution.
+  // Returns Conflict Artifact ONLY when called from apply_compatible_overrides with
+  // post-fork ambiguity on a dual-defer_to pair (both rules defer to same target that
+  // itself cannot be resolved — escalate).
+
+defer_to_cycle_detection(defer_graph) → bool:
+  // defer_graph: map of rule_id → defer_to target_execution_id (only rules with strategy=defer_to)
+  // Returns true if any directed cycle exists (cycle found → all defer_to overrides ignored)
+  visited := empty set
+  for each node in defer_graph:
+    if dfs_has_cycle(node, defer_graph, visited, path=empty set):
+      return true
+  return false
+
+dfs_has_cycle(node, graph, visited, path) → bool:
+  if node in path: return true          // back-edge → cycle
+  if node in visited: return false      // already explored acyclic subtree
+  path.add(node)
+  if node in graph:
+    next := graph[node]
+    if dfs_has_cycle(next, graph, visited, path): return true
+  path.remove(node)
+  visited.add(node)
+  return false
+
+// Before applying any defer_to override in a conflict pair, engines MUST run
+// defer_to_cycle_detection on the {rule_a, rule_b} defer_to subgraph.
+// If a cycle is detected, both defer_to overrides are ignored → fall through to Step 2.
 
 defer_to_reference_resolution:
   - defer_to contains a rule id (execution ID), not a lineage_id
@@ -991,6 +1050,41 @@ scope_boundary:
   Conflict resolution applies within same lineage_id.
   Cross-lineage conflicts are flagged as Conflict Artifacts for human review.
 ```
+
+#### 2.15.2 Cross-Lineage Advisory Resolution
+
+Cross-lineage conflicts do not invoke `resolve_conflict` automatically (§2.15.1 Mechanism 2). When a human requests cross-lineage analysis (S-05), the engine produces **advisory Conflict Artifacts** — informational records that do not alter finding dispositions or CG-IR state.
+
+**Advisory Resolution Algorithm (normative):**
+
+```
+cross_lineage_advisory(rule_a, rule_b) → AdvisoryConflictArtifact
+
+preconditions:
+  - rule_a.lineage_id != rule_b.lineage_id
+  - both rules are active in the current CG-IR snapshot
+  - human actor holds conflict.resolve capability (or consistency review is requested)
+
+steps:
+  1. Compute pairwise specificity_score for both rules (§2.15 algorithm)
+  2. Compute priority_level integers for both rules
+  3. Record created_at timestamps for both rules
+  4. Apply the same precedence chain as resolve_conflict Steps 2–3:
+     priority → specificity → recency
+  5. Emit AdvisoryConflictArtifact with:
+     - recommended_winner: rule selected by precedence chain (or null if tied on all factors)
+     - resolution_basis: {priority, specificity, recency} scores used
+     - binding_status: "advisory" (MUST NOT auto-dismiss or auto-merge findings)
+     - requires_human_action: true
+
+constraints:
+  - Advisory outcomes MUST NOT modify finding FSM state
+  - Advisory outcomes MUST NOT be replayed as automatic resolution on subsequent inspections
+  - Identical CG-IR snapshot + identical rule pair → identical advisory output (deterministic)
+  - If both rules produce only Pass findings for the target, no advisory artifact is emitted
+```
+
+**Distinction from within-lineage resolution:** Within-lineage conflicts bind finding dispositions via `resolve_conflict`. Cross-lineage advisories inform governance review only; the Regulatory Official MUST explicitly act (e.g., directive merge via S-20, retire via S-03) to resolve structural conflicts.
 
 ### 2.16 Deterministic Serialization Rules
 
@@ -1276,6 +1370,14 @@ Compile-time validation MUST verify that every active rule has a non-empty `meta
 - Each request includes a request_id for tracking
 - Duplicate requests (same Directive Graph version + same frozen_env) are deduplicated
 
+**Deadlock Prevention:**
+- Compilation holds **read locks only**; directive modification holds **write locks only** — no lock type inversion (read-then-write on the same request path is prohibited)
+- Write lock acquisition uses FIFO queue ordering; a pending write request blocks new read lock grants (writer-preference) to prevent write starvation
+- Read locks never wait on other read locks; only write lock acquisition may block
+- No circular wait: the dependency graph is strictly `read_lock → (optional) write_lock`, never `write_lock → read_lock` within a single transaction
+- Engines MUST NOT hold a write lock while awaiting compilation completion; compilation and modification are separate transactions
+- Queue position and lock holder identity MUST be observable for operator diagnostics
+
 ### 3.5 CG-IR Storage and Hashing Granularity
 
 **Storage Model:**
@@ -1492,11 +1594,24 @@ The root `metadata` object and per-rule `metadata` (if present) are **informatio
     "author": {},
     "migration": {
       "superseded_by": "string (rule id, when status=superseded)",
-      "migration_notes": "string (optional)"
+      "migration_notes": "string (optional)",
+      "merge_provenance": {
+        "non_surviving_parents": [
+          {
+            "lineage_id": "string (non-surviving parent lineage_id)",
+            "semantic_weight": "primary | secondary | informational (optional)",
+            "context": "string (human-readable contribution description, optional)"
+          }
+        ],
+        "merged_at": "datetime (ISO 8601 UTC, optional)",
+        "merge_notes": "string (optional)"
+      }
     }
   }
 }
 ```
+
+**`merge_provenance` (optional, merge operations):** When a merge assigns `lineage_id := MIN(parent_a, parent_b)`, the non-surviving parent's semantic identity is lost from the primary lineage graph. Authors SHOULD populate `metadata.migration.merge_provenance` on the merged rule to preserve audit context. This field is informational only — it does NOT participate in `semantic_hash` and MUST NOT be read at evaluation runtime. Downstream lineage tracing tools SHOULD consult both `lineage.parent_lineage_ids` and `merge_provenance.non_surviving_parents`.
 
 - Declared namespaces (`audit`, `vendor`, `author`, `migration`, `domain`, `jurisdiction`, `project`) are preferred for all metadata
 - Custom top-level keys are permitted for backward compatibility and vendor extensions; validators MAY warn on undeclared keys but MUST NOT reject datasets solely for custom metadata keys within the same MAJOR version
@@ -1634,6 +1749,45 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 13. Regex pattern length ≤ 4096 characters
 14. Cross-field discriminator: `evaluator_type` ↔ `evaluator_config` verified by compile-time AST-walking validator (not partial subschema validation alone). The validator MUST implement the algorithm specified in §2.9 Discriminator Validation.
 
+#### 9.2.6 RE2 Compatibility Validation
+
+Compile-time validation MUST verify all regex patterns against RE2 syntax constraints (§2.9 portability). Validation MUST reject:
+
+| Prohibited Feature | Example Pattern | Rejection Reason |
+| :--- | :--- | :--- |
+| Backreferences | `(a)\1` | PCRE-only; RE2 incompatible |
+| Atomic groups | `(?>a+)` | PCRE-only |
+| Lookbehind beyond fixed-width | `(?<=a*)b` | Variable-width lookbehind |
+| Possessive quantifiers | `a++` | PCRE-only |
+
+**Canary Test Vectors (normative):** Reference validators MUST pass all vectors below. Failing any vector is a portability violation.
+
+| Vector ID | Pattern | Flags | Input | Expected Match | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| RE2-C01 | `^[a-z]+$` | `""` | `"hello"` | `true` | Basic anchor |
+| RE2-C02 | `(?i)hello` | `""` | `"HELLO"` | `true` | Inline case flag (RE2) |
+| RE2-C03 | `^line$` | `m` | `"a\nline\nb"` | `true` on `"line"` | Multiline `^`/`$` |
+| RE2-C04 | `a.b` | `s` | `"a\nb"` | `true` | Dot-all |
+| RE2-C05 | `(a\|b)+` | `""` | `"abab"` | `true` | Alternation, linear time |
+| RE2-C06 | `(a)\1` | `""` | `"aa"` | **REJECT at compile** | Backreference prohibited |
+| RE2-C07 | `(?>a+)` | `""` | `"aaa"` | **REJECT at compile** | Atomic group prohibited |
+
+Implementations SHOULD ship the canary corpus as a standalone test suite runnable against any regex engine binding.
+
+#### 9.2.15 Portable Validator Requirements
+
+JSON Schema structural validation alone is insufficient for cross-runtime determinism. Compile-time validators MUST implement the following portable checks beyond Draft-07 schema validation:
+
+| Check | Requirement | Failure Signal |
+| :--- | :--- | :--- |
+| **UTC-only timestamps** | All `format: "date-time"` fields MUST match `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$`. Offsets (`±HH:MM`) MUST be rejected. | `SchemaError: non-UTC timestamp` |
+| **Finite numerics** | All `type: "number"` fields MUST be finite (not NaN, not ±Infinity). Validators MUST reject non-finite values at parse time before schema validation. | `SchemaError: non-finite number` |
+| **Regex flags whitelist** | `evaluator_config.flags` MUST match `^[ims]*$` (subset of `{i,m,s}` only). | `SchemaError: invalid regex flags` |
+| **NFC string normalization** | All string values participating in evaluator comparison SHOULD be NFC-normalized at validation time. | `SchemaError: non-NFC string` (warning) |
+| **AST discriminator walk** | `evaluator_type` ↔ `evaluator_config` pairing verified by §2.9 algorithm, not `if`/`then` alone. | `SchemaError: evaluator pairing mismatch` |
+
+Reference implementations SHOULD use strict JSON parsing (reject duplicate keys, reject trailing content) and explicit NaN/Infinity guards before delegating to JSON Schema engines. Ajv `strict: true` mode or equivalent is RECOMMENDED but not sufficient alone — the finite-numeric and UTC checks MUST be implemented as explicit pre-validation passes.
+
 ### 9.3 CG-IR Validation
 
 1. All nodes reference valid lineage_ids
@@ -1690,6 +1844,22 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 
 All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They document cross-layer bindings for human maintainers. On conflict between an `x-*` annotation and this specification, **this specification wins**.
 
+### 9.9 Architectural Audit Validation
+
+Certain §8 invariants require architectural review beyond mechanical JSON/schema validation. The following gates MUST be satisfied before a reference implementation is certified against this specification:
+
+| Gate ID | Invariant | Validation Method | Stories |
+| :--- | :--- | :--- | :--- |
+| AA-01 | **Mediated Feedback** | Verify analytics engine has no write path to CG-IR or Finding FSM; integration test proving finding events cannot trigger compilation | S-17, S-18 |
+| AA-02 | **Declarative Governance** | Static analysis confirming runtime modules load only schema/CG-IR fields; policy_doctrine.yaml absent from runtime data paths | S-05, all |
+| AA-03 | **Evaluator Purity** | AST analysis or sandboxed execution proving evaluators perform no IO, no randomness, no environment reads | S-10, S-21 |
+| AA-04 | **Segregation of Duties** | Integration test: `finding.waive` denied when actor ∈ `creator_provenance`; `finding.approve_remediation` denied when actor submitted evidence | S-14, S-29 |
+| AA-05 | **Conflict Resolution Determinism** | Replay test: identical CG-IR snapshot + identical target → byte-identical conflict outcomes including compatible_overrides pairs | S-05, S-28 |
+| AA-06 | **Discriminator Completeness** | Corpus of invalid `evaluator_type`/`evaluator_config` pairings MUST be rejected by reference validator (§2.9, §9.2.15) | S-21, S-27 |
+| AA-07 | **Portable Serialization** | RE2 canary vectors (§9.2.6) + UTC/NaN rejection tests pass on reference validator | S-21 |
+
+Architectural audit gates are non-blocking for spec conformance of the document suite itself but MUST be satisfied for production-grade reference implementation certification.
+
 ---
 
 ## 10. References
@@ -1720,3 +1890,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.2.2-auditfix | 2026-07-05 | Audit report fixes: schema Draft-07 compliance (dependentRequired→dependencies, $defs→definitions), deontic_type added to CG-IR node and semantic_body, scope object added to rule schema, per-rule metadata and directive_revision/control_version fields added, regex flags pattern restriction, composite evaluator width/not constraints, lineage parent cardinality enforcement, retry policy clarified (deterministic vs timeout), User_Stories S-03 Retired→deprecated, event_hash composition defined, finding.supersede capability added, superseded disposition added, snapshot hash determinism clarified, matches operator semantics defined, README deduplicated |
 | 8.2.3 | 2026-07-05 | Formal verification audit findings: normative `defer_to` active-lineage resolution algorithm with post-fork Conflict Artifact escalation (§2.15), `authored_by` creator provenance inheritance through fork/merge/split with `creator_provenance` snapshot field (§3.2, §2.8.1), cross-lineage presentation correlation guidance (§2.13.1), NeedsReview+Fail operational guidance (§2.15.1), Policy Runtime Prohibition CI enforcement mechanism (§9.7), User_Stories capability matrix segregation column |
 | 8.2.3-b | 2026-07-05 | Formal verification audit deltas: normative AST-walking discriminator validation algorithm superseding JSON Schema if/then (§2.9), optional `metadata.migration.merge_provenance` for merge lineage preservation (§7.1), aggregation latency warning in §2.11 and §3.7, MERGE-NN namespace documented as v9.0.0 candidate (§2.2.2) |
+| 8.2.3-c | 2026-07-05 | Formal verification audit remediation: `compatible_overrides()` for symmetric override pairs (§2.15 D-01/F-02), `defer_to` missing-target fall-through reconciliation (§2.15 D-02/F-03), DFS `defer_to` cycle detection (§2.15 D-07/F-08), cross-lineage advisory resolution algorithm (§2.15.2 D-10/F-07), compilation deadlock prevention (§3.4 D-12/F-15), RE2 canary test vectors (§9.2.6 D-13/F-12), portable validator requirements for UTC/NaN/flags (§9.2.15 D-11/F-04–F-06), architectural audit validation gates (§9.9 D-09/F-16), `merge_provenance` normative documentation (§7.1 D-05) |

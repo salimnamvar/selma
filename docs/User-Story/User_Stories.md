@@ -65,7 +65,7 @@ Minor and patch versions are allowed to evolve independently within the same maj
 - `priority` ordering vs `depends_on` consistency is a semantic invariant, not a structural one
 - `lineage.operation` constraints beyond required fields are semantic invariants
 
-**Conflict Resolution:** Declared in three places (schema `conflict_resolution` field, cross-layer binding, policy intent section). All three MUST remain synchronized. SPECIFICATION.md §2.15 is normative; policy describes governance intent only.
+**Conflict Resolution:** Declared in three places (schema `conflict_resolution` field, cross-layer binding, policy intent section). All three MUST remain synchronized on precedence chain: explicit override → `compatible_overrides` → priority → specificity → recency → Conflict Artifact. SPECIFICATION.md §2.15 is normative; policy describes governance intent only.
 
 ---
 
@@ -119,7 +119,7 @@ Minor and patch versions are allowed to evolve independently within the same maj
 | :--- | :--- | :--- |
 | **Lossy Metadata in Lexicographic Merges** | Merging `PAY-800` and `AUTH-001` permanently forces `AUTH-001` as lineage root; structural provenance of payment chain survives only in metadata array | Use optional `metadata.migration.merge_provenance` field to explicitly map non-surviving parent semantics; downstream metadata parsing for lineage tracing; consider `MERGE-NN` namespace (e.g. `MGR-18`) in future versions |
 | **Time Realism in `finding_aggregates`** | Aggregates are pre-computed from past inspections; current-inspection findings not included in real-time | Multi-pass inspection loop or delayed escalation alerts until reinspection; document at-least-one-inspection-cycle delay in dashboards; use Finding Event Stream for immediate alerting |
-| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce formal AST-walking discriminator validation (§2.9) at compile time; never rely solely on `if`/`then` or partial subschema validation |
+| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce formal AST-walking discriminator validation (§2.9) at compile time; ship canonical reference validator + invalid-pairing test corpus (§9.2.15, S-30, S-31) |
 | **Cascade Invisibility via Skipped Nodes** | Dependency failures silently bypass downstream checks; compliance review may miss unverified infrastructure | Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings |
 | **`defer_to` Reference Ambiguity** | Post-fork lineage chains may have multiple active execution IDs; underspecified resolution breaks deterministic conflict resolution | Normative active-lineage resolution algorithm in §2.15; multiple active children escalate to Conflict Artifact |
 | **Segregation of Duties via Merge** | Merging directives could allow an author to waive findings against a merged rule they partially created | `creator_provenance` inherits union of all parent `authored_by` values; enforced at `finding.waive` gate |
@@ -229,7 +229,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **CG-IR Node Hashing** | Local content identity: node_hash from node_body only; graph context in edges + snapshot manifest |
 | **CG-IR Edge Hashing** | edge_hash = SHA-256(canonical_json({source: directive_id, target: directive_id})). Directional. Independent of node content. |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
-| **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → priority → specificity → recency → Conflict Artifact. Cycles detected and resolved. All inputs frozen in CG-IR snapshot — deterministic per snapshot. |
+| **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → compatible_overrides for symmetric pairs → priority → specificity → recency → Conflict Artifact. DFS defer_to cycle detection; missing defer_to targets fall through to computed resolution. Cross-lineage advisories per §2.15.2. All inputs frozen in CG-IR snapshot — deterministic per snapshot. |
 | **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. `additionalProperties: true` objects normalized by sorting keys before hashing. Schema `$ref` resolved at validation time only, excluded from canonical form. |
 | **Provenance Canonicalization** | All provenance fields canonicalized before hash inclusion; no non-deterministic ordering. |
 | **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_snapshot_hash, frozen_env, engine, target_hash)`. Captures inspection reproducibility only; event ordering excluded. |
@@ -288,7 +288,7 @@ Conflict resolution follows the deterministic precedence chain defined in SPECIF
 | Story ID | Actor | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- | :--- |
 | **S-04** | Regulatory Official | I want to view all active requirements. | **Given** I request active requirements. **When** Selma processes it. **Then** Selma returns active directives and compiled nodes from current CG-IR snapshot. | **P0** |
-| **S-05** | Regulatory Official | I want to inspect the regulatory set for conflicts. | **Given** I request consistency review. **When** Selma processes it. **Then** Selma assesses CG-IR, applies Conflict Resolution Mapping (explicit override first, then priority → specificity → recency), issues report with Conflict Artifacts. **And** conflict outcomes are deterministic for a given CG-IR snapshot (all inputs frozen in node_body). | **P1** |
+| **S-05** | Regulatory Official | I want to inspect the regulatory set for conflicts. | **Given** I request consistency review. **When** Selma processes it. **Then** Selma assesses CG-IR, applies within-lineage `resolve_conflict` (explicit override → `compatible_overrides` for symmetric pairs → priority → specificity → recency), issues report with Conflict Artifacts for unresolvable within-lineage conflicts. **And** for cross-lineage pairs, Selma emits advisory Conflict Artifacts per §2.15.2 (binding_status=advisory, requires_human_action=true) without modifying finding dispositions. **And** conflict outcomes are deterministic for a given CG-IR snapshot (all inputs frozen in node_body). | **P1** |
 | **S-06** | Regulatory Official | I want a comprehensive audit. | **Given** I request full audit. **When** Selma processes it. **Then** Selma generates audit report with gaps, redundancies, remedial measures. | **P2** |
 | **S-07** | Regulatory Official | I want to view revision and lineage history of any directive. | **Given** I request history by lineage_id. **When** Selma processes it. **Then** Selma provides full revision log with timestamps, originator, changes, and lineage (fork/merge/split operations). Lineage_id constant across all revisions. | **P1** |
 | **S-08** | Regulatory Official | I want to restore a directive to a previous revision. | **Given** I specify directive lineage_id and target revision. **When** Selma processes it. **Then** Selma creates new revision copying target, recompiles to new CG-IR snapshot, records provenance. | **P1** |
@@ -296,7 +296,9 @@ Conflict resolution follows the deterministic precedence chain defined in SPECIF
 | **S-21** | Regulatory Official | I want to verify cross-runtime evaluator portability. | **Given** I request evaluator portability audit. **When** Selma processes it. **Then** Selma validates all regex patterns are RE2-compatible, confirms no prohibited regex features (backreferences, atomic groups), verifies numeric evaluators use IEEE 754 strict arithmetic, confirms timestamp evaluators use UTC-only, and reports any portability violations. | **P1** |
 | **S-22** | Regulatory Official | I want to verify provenance canonicalization. | **Given** I request provenance audit. **When** Selma processes it. **Then** Selma validates all provenance fields are in canonical form before hash computation, confirms no non-deterministic ordering in provenance inclusion, and reports any canonicalization violations. | **P1** |
 | **S-27** | Regulatory Official | I want to verify evaluator complexity limits. | **Given** I request complexity audit. **When** Selma processes it. **Then** Selma validates composite depth ≤ 32, total evaluator nodes ≤ 256, composite width ≤ 64, regex patterns ≤ 4096 chars, and lineage ancestry depth ≤ 64. **And** rejects rules exceeding limits at compile time. | **P1** |
-| **S-28** | Regulatory Official | I want conflict resolution to be fully deterministic. | **Given** I request consistency review on a frozen CG-IR snapshot. **When** Selma applies `resolve_conflict`. **Then** Selma computes `specificity_score` per §2.15 normative algorithm, compares `priority_level` integers (not enum labels), and produces identical outcomes on repeated runs. | **P1** |
+| **S-28** | Regulatory Official | I want conflict resolution to be fully deterministic. | **Given** I request consistency review on a frozen CG-IR snapshot. **When** Selma applies `resolve_conflict`. **Then** Selma computes `specificity_score` per §2.15 normative algorithm, compares `priority_level` integers (not enum labels), resolves compatible override pairs (`{always_wins, never_wins}`, identical `defer_to` targets) via `compatible_overrides()`, ignores `defer_to` overrides on missing/ambiguous targets (fall through to computed resolution), detects `defer_to` cycles via DFS, and produces identical outcomes on repeated runs. | **P1** |
+| **S-30** | Regulatory Official | I want architectural audit gates verified before production certification. | **Given** I request architectural audit per §9.9. **When** Selma runs the AA-01 through AA-07 gate suite. **Then** Selma verifies Mediated Feedback isolation (no analytics→CG-IR write path), Declarative Governance (policy runtime prohibition), Evaluator Purity, Segregation of Duties integration tests, conflict resolution replay determinism, discriminator rejection corpus, and RE2 canary vectors (§9.2.6). **And** reports pass/fail per gate with traceability to user stories. | **P1** |
+| **S-31** | Regulatory Official | I want a canonical reference validator for portable compile-time checks. | **Given** I submit a rule dataset for validation. **When** Selma runs the reference validator. **Then** Selma enforces UTC-only timestamps (reject ±HH:MM offsets), rejects NaN/Infinity in numeric fields, whitelists regex flags to `{i,m,s}`, runs the §2.9 AST-walking discriminator validator, and executes RE2 canary test vectors. **And** invalid `evaluator_type`/`evaluator_config` pairings from the rejection corpus are rejected with `SchemaError`. | **P1** |
 
 ---
 
@@ -339,11 +341,11 @@ Conflict resolution follows the deterministic precedence chain defined in SPECIF
 | Epic | P0 | P1 | P2 | Total |
 | :--- | :--- | :--- | :--- | :--- |
 | Directive Lifecycle | 2 | 4 | 0 | **6** |
-| Directive Governance | 1 | 7 | 1 | **9** |
+| Directive Governance | 1 | 9 | 1 | **11** |
 | Inspection | 1 | 4 | 0 | **5** |
 | Finding Management | 1 | 5 | 0 | **6** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
-| **Total** | **5** | **21** | **2** | **28** |
+| **Total** | **5** | **23** | **2** | **30** |
 
 ---
 
@@ -382,7 +384,12 @@ Conflict resolution follows the deterministic precedence chain defined in SPECIF
 | Capability-Based Permissions | S-14, S-25, S-29 |
 | Segregation of Duties | S-14, S-29 |
 | Conflict Resolution Mapping (explicit override first) | S-05, S-28 |
+| Compatible Override Pairs (`compatible_overrides`) | S-05, S-28 |
+| Cross-Lineage Advisory Resolution (§2.15.2) | S-05 |
 | Specificity Determinism (normative algorithm) | S-05, S-28 |
+| Architectural Audit Gates (§9.9) | S-30 |
+| Portable Validator Requirements (§9.2.15) | S-21, S-31 |
+| RE2 Canary Test Vectors (§9.2.6) | S-21, S-31 |
 | Evaluator Complexity Limits | S-27 |
 | Merge Identity Determinism | S-20 |
 | Semantic/Presentation Hash Split | S-23 |
@@ -442,6 +449,11 @@ Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normativ
 | **Evaluator Complexity Bounds** | Depth ≤ 32, total nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars, metadata ≤ 16 KiB (§2.9) |
 | **Lineage DAG Acyclicity** | Ancestry graph acyclic; max depth 64 (§2.2.3) |
 | **Specificity Determinism** | `specificity_score` algorithm in §2.15 is normative |
+| **Compatible Override Resolution** | Symmetric `{always_wins, never_wins}` and identical `defer_to` pairs resolve deterministically; incompatible dual overrides escalate to Conflict Artifact |
+| **Defer_to Fall-Through** | Missing or ambiguous `defer_to` targets ignore override and fall through to computed resolution (priority → specificity → recency) |
+| **Cross-Lineage Advisory Only** | Cross-lineage analysis produces advisory Conflict Artifacts; does not auto-modify findings or CG-IR |
+| **Compilation Deadlock Prevention** | Read/write lock ordering with writer-preference and FIFO queue (§3.4) |
+| **Architectural Audit Gates** | AA-01–AA-07 gates (§9.9) required for production-grade reference implementation certification |
 | **Semantic/Presentation Hash Split** | `semantic_hash` excludes description; `node_hash` composes both (§2.6) |
 | **Array Ordering Classification** | Ordered vs unordered arrays per §2.16.1 |
 | **Metadata Informational Only** | Namespaced metadata; no executable content (§7.1) |
@@ -457,7 +469,8 @@ Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normativ
 | **Structural Compliance Reviewer** | Validates against schema, spec invariants, and contamination rules |
 | **Control Compilation Engine** | Directive Graph → CG-IR snapshot. Hermetic. Incremental. Content-addressed. |
 | **DAG Evaluation Engine** | Topological sort, parallel execution, strict context, fault taxonomy handling |
-| **Conflict Resolution Engine** | Applies Conflict Resolution Mapping (explicit override first), creates Conflict Artifacts |
+| **Conflict Resolution Engine** | Applies `resolve_conflict` (override → compatible_overrides → computed factors), DFS defer_to cycle detection, cross-lineage advisory artifacts (§2.15.2) |
+| **Reference Validator** | Canonical compile-time validator: UTC/NaN/flags enforcement, AST discriminator walk, RE2 canary corpus (§9.2.15) |
 | **Finding FSM Engine** | Enforces state transitions, validates capability permissions |
 | **Provenance Manager** | Tracks lineage IDs, execution IDs, revisions, frozen_env hashes, causal traceability |
 | **Analytics Engine** | Read-only aggregates from Finding Event Stream. Feeds context. Never modifies CG-IR. |

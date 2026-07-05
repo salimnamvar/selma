@@ -32,7 +32,7 @@ cross_layer_binding:
     policy: "Declares computed-factor intent (priority, specificity, recency). No override fields."
     schema: "Optional conflict_resolution field is structural override data only."
     spec: "Normative resolve_conflict algorithm. Override checked before computed factors."
-    precedence: "explicit override → priority → specificity → recency → Conflict Artifact"
+    precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_prohibition: >
     This file MUST NOT be read during inspection, evaluation, finding FSM
     transitions, or conflict resolution at runtime. Policy influences execution
@@ -199,6 +199,7 @@ priority_hierarchy:
     first checks for explicit override, then applies computed resolution
     factors (in order):
     0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
+    0b. Compatible symmetric override pairs ({always_wins, never_wins}, identical defer_to targets) resolve deterministically per §2.15 compatible_overrides()
     1. Higher priority level wins
     2. If same level: more specific rule wins (specificity is a composite integer score per SPECIFICATION.md §2.15: scope constraints (weighted ×100) + evaluator field bindings + target_type via scope_specificity_score. Two engines MUST agree on scores for identical CG-IR node bodies.)
     3. If same specificity: newer rule wins
@@ -212,7 +213,7 @@ priority_hierarchy:
     normative_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
     structural_override: "rule_schema.json conflict_resolution field (optional)"
     policy_role: "Declarative intent for computed factors only"
-    order: "explicit override (schema) → priority → specificity → recency → Conflict Artifact"
+    order: "explicit override (schema) → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
 
 # ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
 # Describes versioning intent. The actual version resolution function
