@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 4.0.0  
+**Version:** 5.0.0  
 **Status:** Draft Standard  
 **Date:** 2026-07-05
 
@@ -14,9 +14,9 @@ This specification defines a universal framework for creating, maintaining, and 
 
 1. **Directive Graph** — The human-authored source-of-truth specification
 2. **Compiled Control DAG (CG-IR)** — The immutable executable intermediate representation
-3. **Finding Event Stream** — The append-only audit log
+3. **Finding Event Stream** — The append-only audit log with read-only analytics
 
-Everything else (policy prose, schema definitions, tooling, reports) is a documentation or rendering layer on top of these three primitives.
+Everything else is a documentation, rendering, or analytics layer on top of these three primitives.
 
 ### 1.2 Scope
 
@@ -41,43 +41,37 @@ This standard applies to:
 
 ### 2.1 Three Runtime Primitives
 
-The entire system reduces to three primitives:
-
 ```
 ┌─────────────────────────────┐
 │   1. Directive Graph        │
 │   (source-of-truth spec)    │
-│                             │
 │   - Human-authored rules    │
 │   - Structured metadata     │
 │   - Versioned as artifact   │
 └──────────────┬──────────────┘
-               │ compile (deterministic boundary)
+               │ compile (hermetic boundary)
                ▼
 ┌─────────────────────────────┐
 │   2. Compiled Control DAG   │
 │   (= CG-IR)                 │
-│   (immutable executable)    │
-│                             │
 │   - Content-addressed       │
-│   - DAG of control nodes    │
+│   - Incremental snapshots   │
 │   - Frozen at publish time  │
 └──────────────┬──────────────┘
-               │ evaluate (deterministic)
+               │ evaluate (pure functions)
                ▼
 ┌─────────────────────────────┐
 │   3. Finding Event Stream   │
-│   (append-only audit log)   │
-│                             │
-│   - Immutable events        │
+│   - Append-only events      │
 │   - Computed state          │
-│   - No feedback to CG-IR    │
+│   - Read-only analytics     │
+│   - Mediated feedback       │
 └─────────────────────────────┘
 ```
 
 ### 2.2 The Directive Graph
 
-The Directive Graph is the human-authored source of truth. Unlike pure prose, it is a **structured, versioned artifact** that can be validated, diffed, and migrated.
+The Directive Graph is the human-authored source of truth. It is a **structured, versioned artifact** that can be validated, diffed, and migrated.
 
 | Aspect | Description |
 | :--- | :--- |
@@ -86,11 +80,6 @@ The Directive Graph is the human-authored source of truth. Unlike pure prose, it
 | **Mutability** | Mutable (new revisions created on change) |
 | **Content** | Directives, scope, priority, prose sections, metadata |
 | **Validation** | Schema-validated at compile time |
-
-**Policy Versioning:** The Directive Graph is versioned as a structured artifact, not just prose. This enables:
-- Automated diff between versions
-- Migration scripts for schema evolution
-- Backward compatibility checking
 
 ### 2.3 The Compiled Control DAG (CG-IR)
 
@@ -104,50 +93,69 @@ The CG-IR is the immutable, executable intermediate representation. All directiv
 | **Content** | Control nodes, edges (dependencies), evaluation logic |
 | **Validation** | DAG structure validated at compile time |
 
-**CG-IR Schema Evolution:**
+**Incremental Compilation:**
 
-| Change Type | Strategy |
+Instead of full recompilation on every change, Selma supports delta CG-IR snapshots:
+
+| Change Type | Compilation Strategy |
 | :--- | :--- |
-| Add new control node | Backward-compatible (new CG-IR, old still valid) |
-| Remove control node | Breaking change (new MAJOR version required) |
-| Change evaluation logic | New control version (new CG-IR hash) |
-| Change dependency edges | New CG-IR (hash changes) |
-| Schema format change | Migration required (versioned schema with compatibility matrix) |
+| Add new directive | Append new nodes to existing DAG; reuse unchanged subgraph |
+| Modify directive | Recompile only affected nodes and their dependents |
+| Remove directive | Mark nodes as deprecated; reuse rest of DAG |
+| Change evaluator logic | Recompile only the affected node |
+| Change dependency edges | Recompile affected edges; reuse node evaluations |
 
-**Backward Compatibility Rules:**
-- New CG-IR versions must be evaluable by engine versions that support the schema version
-- Legacy CG-IR versions remain reproducible by pinning engine version
-- Schema migration is explicit and versioned
+**Node-Level Version Inheritance:**
 
-### 2.4 The Compile-Time Purity Boundary
+When a directive changes, only the nodes derived from it get new versions. Unchanged nodes inherit their previous version. This means:
+- CG-IR snapshots share common subgraphs
+- Historical inspections can reference specific node versions
+- Storage cost scales with change frequency, not total rule count
 
-The boundary between Directive Graph and CG-IR is the **purity boundary**. Everything downstream of CG-IR must be deterministic.
+### 2.4 The Hermetic Compilation Boundary
+
+The boundary between Directive Graph and CG-IR is the **hermetic boundary**. The compilation environment is fully frozen to ensure reproducibility.
 
 ```
-Directive Graph (may contain AI-assisted content)
+Directive Graph
         │
-        ▼ compile()
+        ▼ compile(frozen_env)
    ┌─────────────────────────────────────┐
-   │     COMPILE-TIME PURITY BOUNDARY    │
+   │     HERMETIC COMPILATION BOUNDARY   │
    │                                     │
-   │  - All AI outputs cached here       │
-   │  - All non-determinism resolved     │
-   │  - CG-IR is frozen                  │
+   │  Frozen environment:                │
+   │  - Engine version                   │
+   │  - Model weights (if AI-assisted)   │
+   │  - System prompts (if AI-assisted)  │
+   │  - Decoding parameters              │
+   │  - Toolchain version                │
+   │                                     │
+   │  All outputs cached and serialized  │
+   │  into CG-IR before publication      │
    └─────────────────────────────────────┘
         │
         ▼
-   CG-IR (fully deterministic)
+   CG-IR (deterministic given frozen_env)
         │
-        ▼ evaluate()
-   Findings (fully deterministic)
+        ▼ evaluate(pure_functions)
+   Findings (deterministic)
 ```
 
-**Rules:**
-1. AI-assisted compilation is allowed ONLY at the Directive Graph → CG-IR boundary
-2. AI outputs are cached and serialized into CG-IR before publication
-3. Once CG-IR is published, it is immutable and fully deterministic
-4. No AI, randomness, or external calls are permitted during CG-IR → Findings evaluation
-5. Findings must NEVER influence future CG-IR compilation (no feedback loops)
+**Hermeticity Rules:**
+1. Compilation is reproducible only when the entire environment is frozen
+2. The frozen environment is recorded in CG-IR provenance metadata
+3. To reproduce a historical CG-IR, pin: engine version + model version + system prompt hash + toolchain version
+4. AI-assisted compilation outputs are cached and serialized into CG-IR
+5. Once CG-IR is published, it is immutable
+
+**Reproducibility Guarantee:**
+
+| Scenario | Reproducibility |
+| :--- | :--- |
+| Same Directive Graph + same frozen_env | Same CG-IR (guaranteed) |
+| Same Directive Graph + different frozen_env | May differ (environment-dependent) |
+| Same CG-IR + same target | Same findings (guaranteed) |
+| Same CG-IR + different engine version | May fail (schema compatibility required) |
 
 ### 2.5 CG-IR Node Schema
 
@@ -160,14 +168,15 @@ Each node in the CG-IR DAG:
 | `directive_revision` | String | Revision of source directive |
 | `control_version` | String | Version of this node's evaluation logic |
 | `description` | String | Human-readable description |
-| `evaluation_type` | Enum | `deterministic`, `cached_ai` |
-| `evaluator` | Object | Evaluation function specification |
+| `evaluator` | Object | Evaluation function specification (see Section 2.6) |
 | `scope` | Object | Applicability context |
 | `severity_default` | Enum | Default severity on failure |
 | `depends_on` | Array | Node IDs that must be evaluated first |
 | `status` | Enum | `active`, `deprecated` |
 
-**Evaluator Function Signature:**
+### 2.6 Formal Evaluator Contract
+
+Evaluators are **pure functions** with strict constraints:
 
 ```
 evaluate(node, target, context) → {
@@ -178,21 +187,63 @@ evaluate(node, target, context) → {
 }
 ```
 
-### 2.6 DAG Execution Semantics
+**Evaluator Constraints:**
 
-The CG-IR is executed as a DAG with these semantics:
+| Constraint | Rule |
+| :--- | :--- |
+| **Purity** | No side effects. No network calls. No file I/O. No randomness. |
+| **Determinism** | Same inputs always produce same outputs. |
+| **Allowed operations** | String matching, regex, arithmetic, field extraction, comparison |
+| **Prohibited operations** | HTTP calls, database queries, file reads, environment variable access |
+| **Context object** | Read-only. Contains: target metadata, historical aggregates (see Section 2.7), domain constants |
+| **Canonical serialization** | Inputs and outputs are JSON-serializable with deterministic key ordering |
+
+**Evaluator Types:**
+
+| Type | Description | Guarantee |
+| :--- | :--- | :--- |
+| `regex` | Pattern matching against target content | Fully deterministic |
+| `field_check` | Validates specific fields in structured targets | Fully deterministic |
+| `threshold` | Numeric comparison against configured limits | Fully deterministic |
+| `composite` | Boolean combination of sub-evaluators | Fully deterministic |
+| `cached_ai` | AI-generated logic, frozen at compile time | Deterministic given frozen CG-IR |
+
+### 2.7 Context Object (State-Dependent Evaluation)
+
+The context object provides read-only historical state to evaluators, enabling state-dependent rules without breaking purity:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `target_metadata` | Object | Hash, type, submission time of current target |
+| `domain_constants` | Object | Jurisdiction, domain, scope filters |
+| `finding_aggregates` | Object | Pre-computed aggregates from Finding Event Stream |
+| `previous_inspections` | Object | Summary of prior inspections for this target |
+
+**Finding Aggregates (read-only):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_open_findings` | Integer | Count of open findings for this target |
+| `findings_by_severity` | Map | `{ severity: count }` |
+| `findings_by_control` | Map | `{ control_id: count }` |
+| `last_inspection_date` | DateTime | When this target was last inspected |
+| `recurrence_count` | Integer | How many times this control has failed for this target |
+
+**No Write-Back:** Context is populated by the DAG Evaluation Engine from the Finding Event Stream at inspection time. Evaluators cannot modify context.
+
+### 2.8 DAG Execution Semantics
 
 | Aspect | Rule |
 | :--- | :--- |
 | **Evaluation Order** | Topological sort respecting `depends_on` edges |
 | **Cycle Detection** | Enforced at compile time. Cycles cause compilation failure. |
-| **Parallel Execution** | Nodes with no interdependency may execute in parallel |
-| **State Propagation** | Each node receives only its declared inputs; no shared mutable state |
-| **Failure Handling** | See Section 2.7 |
+| **Parallel Execution** | Nodes with no interdependency execute in parallel |
+| **State Propagation** | Each node receives context (read-only) + target; no shared mutable state |
+| **Failure Handling** | See Section 2.9 |
 | **Timeout** | Each node has a configurable timeout (default: 30s) |
 | **Retry** | No automatic retries; failed nodes produce `NeedsReview` findings |
 
-### 2.7 Pipeline Failure Semantics
+### 2.9 Pipeline Failure Semantics
 
 | Failure Mode | Behavior |
 | :--- | :--- |
@@ -201,19 +252,11 @@ The CG-IR is executed as a DAG with these semantics:
 | **Dependency failure** | Dependent nodes are skipped; skip event logged |
 | **Cycle detected** | Compilation fails; no CG-IR published |
 | **Schema mismatch** | Compilation fails; migration required |
-| **Engine version mismatch** | Evaluation fails; pinned engine version required for reproducibility |
+| **Engine version mismatch** | Evaluation fails; pinned engine version required |
 
-**Pipeline is NOT atomic.** Partial results are valid. Each node's outcome is independent unless blocked by dependency failure. The inspection record captures the complete execution trace including skipped nodes.
+**Pipeline is NOT atomic.** Partial results are valid. Each node's outcome is independent unless blocked by dependency failure.
 
-### 2.8 Determinism Contract
-
-| Component | Determinism Level | Reproducibility Guarantee |
-| :--- | :--- | :--- |
-| Directive compilation | Deterministic (AI outputs cached) | Same Directive Graph version + same engine = same CG-IR |
-| CG-IR evaluation | Fully deterministic | Same CG-IR + same target = same findings |
-| Finding generation | Fully deterministic | Same evaluation results = same findings |
-
-### 2.9 Finding Event Stream
+### 2.10 Finding Event Stream
 
 Findings are append-only event logs. Current state is computed by replaying events.
 
@@ -225,7 +268,7 @@ Findings are append-only event logs. Current state is computed by replaying even
 | `DispositionChanged` | finding_id, old_disposition, new_disposition, actor, reason, timestamp | Disposition update |
 | `FindingClosed` | finding_id, actor, reason, timestamp | Lifecycle closure |
 
-**Computed State:**
+**Computed State (derived from event log):**
 
 | Field | Source |
 |-------|--------|
@@ -233,15 +276,44 @@ Findings are append-only event logs. Current state is computed by replaying even
 | `disposition` | Computed from `DispositionChanged` events |
 | `severity` | Set at creation, immutable |
 
-**Invariant:** Finding event streams are append-only. No events are modified or deleted.
+**Read-Only Analytics View:**
 
-**No Feedback Loops:** Findings must NEVER influence future CG-IR compilation. The Finding Event Stream is strictly an output, never an input to the Directive Graph or CG-IR.
+The Finding Event Stream provides a read-only analytics substrate:
+
+| Analytics | Description |
+| :--- | :--- |
+| `finding_aggregates` | Pre-computed aggregates fed into context object |
+| `trend_analysis` | Finding rates over time (read-only, does not influence CG-IR) |
+| `anomaly_detection` | Statistical outliers in finding patterns (read-only) |
+| `compliance_dashboard` | Real-time compliance posture view |
+
+**Mediated Feedback:**
+
+The Finding Event Stream can inform human-driven policy evolution through an **external, auditable process**:
+
+```
+Finding Event Stream
+    ↓ (read-only analytics)
+Analytics Dashboard
+    ↓ (human review + decision)
+Regulatory Official
+    ↓ (manual directive modification)
+Directive Graph
+    ↓ (recompile)
+New CG-IR
+```
+
+**Rules for mediated feedback:**
+1. Analytics are read-only; they never directly modify CG-IR
+2. All policy changes go through the standard Directive Graph → CG-IR compilation path
+3. The human decision is recorded as a provenance event on the directive revision
+4. Feedback loops are auditable: every directive change can be traced to its triggering analytics
 
 ---
 
 ## 3. Layered Namespace Model
 
-Instead of forbidden fields, each layer has a **typed namespace** with schema validation.
+Each layer has a **typed namespace** with schema validation.
 
 ### 3.1 Namespace Structure
 
@@ -256,11 +328,12 @@ CG-IR
 ├── nodes/          (control nodes)
 ├── edges/          (dependency graph)
 ├── evaluators/     (evaluation logic)
-└── provenance/     (compilation metadata)
+└── provenance/     (compilation metadata, frozen_env)
 
 Finding Event Stream
 ├── events/         (immutable event log)
-└── computed/       (derived state projections)
+├── computed/       (derived state projections)
+└── analytics/      (read-only aggregate views)
 ```
 
 ### 3.2 Cross-Layer References
@@ -271,6 +344,7 @@ Finding Event Stream
 | CG-IR → Directive Graph | `provenance` | CG-IR node → directive_id + revision |
 | CG-IR → Findings | `evaluation` | CG-IR hash + target_hash → finding events |
 | Findings → CG-IR | `causal_chain` | Finding → control_id → CG-IR node |
+| Findings → Context | `aggregates` | Pre-computed aggregates fed into evaluation context |
 
 ---
 
@@ -284,6 +358,7 @@ Finding Event Stream
 | CG-IR Schema Version | Semantic (MAJOR.MINOR.PATCH) | Immutable per snapshot |
 | Engine Version | Semantic (MAJOR.MINOR.PATCH) | Immutable per release |
 | Model Version | String (e.g., `llm-gpt4o-2024-05-13`) | Immutable per registration |
+| Frozen Environment | Content hash of compilation environment | Immutable per compilation |
 
 ### 4.2 Compatibility Rules
 
@@ -291,15 +366,9 @@ Finding Event Stream
 | :--- | :--- |
 | Evaluate CG-IR with engine | Engine version must support CG-IR schema version |
 | Compile Directive Graph | Engine version must support Directive Graph schema version |
-| Reproduce historical inspection | Pin: engine version + CG-IR hash + target hash + model version |
+| Reproduce historical inspection | Pin: frozen_env hash + CG-IR hash + target hash |
+| Reproduce historical CG-IR | Pin: frozen_env hash + Directive Graph version |
 | Migrate legacy CG-IR | Use migration tool matching source → target schema versions |
-
-### 4.3 Model Version Coupling
-
-| Model Type | Coupled To | Drift Handling |
-| :--- | :--- | :--- |
-| Compilation model (AI-assisted) | CG-IR nodes marked `cached_ai` | Model drift → new CG-IR with new nodes |
-| Evaluation model (probabilistic) | Deprecated in v4.0 | All evaluation is deterministic post-compilation |
 
 ---
 
@@ -319,8 +388,6 @@ Each namespace is validated against its schema. Cross-namespace contamination is
 ## 6. Policy Doctrine Contract
 
 ### 6.1 Structure
-
-A policy document MUST contain the following sections:
 
 | Section | Required | Content Type | Purpose |
 |---------|----------|--------------|---------|
@@ -386,7 +453,7 @@ A policy document MUST contain the following sections:
 | `target` | String | Who or what this rule applies to |
 | `status` | String | Lifecycle state (draft, active, deprecated, superseded) |
 | `anchor_ref` | String | Link back to human document section |
-| `evaluator_hint` | String | How to evaluate (regex, human_judgment, api_call) |
+| `evaluator_hint` | String | How to evaluate (regex, field_check, threshold, composite) |
 | `weight` | String | Priority/severity (critical, informative) |
 | `depends_on` | Array | IDs of rules that must be evaluated first |
 | `conflicts_with` | Array | IDs of rules that cannot coexist |
@@ -409,8 +476,9 @@ A policy document MUST contain the following sections:
 |-------|------|-------------|
 | `inspection_id` | String | Unique identifier |
 | `target_id` | String | Reference to the submitted target |
-| `target_hash` | String | Content hash of the target at time of inspection |
+| `target_hash` | String | Content hash of the target |
 | `ruleset_version` | String | CG-IR hash used for evaluation |
+| `frozen_env_hash` | String | Hash of the compilation environment |
 | `engine_version` | String | Engine version used for evaluation |
 | `inspector` | String | Actor who initiated the inspection |
 | `started_at` | DateTime | When evaluation began (event time) |
@@ -508,16 +576,17 @@ Finding → Control Node → Directive → Revision → Scope
 
 | Invariant | Description |
 | :--- | :--- |
-| **Compile-Time Purity** | All non-determinism is resolved before CG-IR publication. CG-IR is fully deterministic. |
+| **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env. Environment drift breaks reproducibility. |
 | **CG-IR Immutability** | Once published, CG-IR is immutable. Changes produce new snapshots. |
-| **Finding Event Immutability** | Finding event logs are append-only. No events are modified or deleted. |
-| **Inspection Immutability** | Once completed, an inspection record is never modified. |
-| **Directive ID Immutability** | A directive's identifier never changes across revisions. |
+| **Finding Event Immutability** | Finding event logs are append-only. No events modified or deleted. |
+| **Inspection Immutability** | Completed inspections are never modified. |
+| **Directive ID Immutability** | Directive identifiers never change across revisions. |
 | **Ruleset Version Anchoring** | Every inspection references the exact CG-IR hash used. |
 | **Causal Traceability** | Every finding traces: Finding → Control Node → Directive → Revision → Scope. |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver. |
-| **No Feedback Loops** | Findings never influence future CG-IR compilation. |
-| **DAG Acyclicity** | CG-IR dependency graph has no cycles. Enforced at compile time. |
+| **DAG Acyclicity** | CG-IR dependency graph is acyclic. Enforced at compile time. |
+| **Evaluator Purity** | Evaluators are pure functions: no IO, no randomness, no side effects. |
+| **Mediated Feedback** | Analytics inform humans; humans modify directives; no direct finding → CG-IR path. |
 | **Time Consistency** | All timestamps are event time. |
 
 ---
@@ -535,23 +604,32 @@ Finding → Control Node → Directive → Revision → Scope
 
 1. All nodes reference valid directives
 2. Dependency graph is acyclic
-3. All evaluators have valid function signatures
+3. All evaluators satisfy the pure function contract
 4. Content hash matches ruleset version
 5. No orphan nodes
+6. Frozen environment metadata is complete
 
-### 14.3 Inspection Validation
+### 14.3 Evaluator Validation
+
+1. No network calls, file I/O, or environment variable access in evaluator code
+2. All inputs/outputs are JSON-serializable
+3. Deterministic key ordering in serialized objects
+4. `cached_ai` evaluators have frozen logic recorded in provenance
+
+### 14.4 Inspection Validation
 
 1. Target hash matches submitted target
 2. CG-IR hash matches a published version
-3. Engine version supports CG-IR schema version
-4. Pipeline trace is complete
+3. Frozen environment hash matches CG-IR provenance
+4. Engine version supports CG-IR schema version
+5. Pipeline trace is complete
 
 ---
 
 ## 15. References
 
-- `docs/Contract/policy_doctrine.yaml` — The policy contract
-- `docs/Contract/rule_schema.json` — The rule schema contract
+- `docs/Regulation/policy_doctrine.yaml` — The policy contract
+- `docs/Regulation/rule_schema.json` — The rule schema contract
 - `docs/User_Story/User_Stories.md` — User stories defining the system behavior
 
 ---
@@ -563,4 +641,5 @@ Finding → Control Node → Directive → Revision → Scope
 | 1.0.0 | 2026-07-04 | Initial specification |
 | 2.0.0 | 2026-07-05 | Added Control Model, Inspection Pipeline, Finding Model |
 | 3.0.0 | 2026-07-05 | Added CG-IR, Determinism Contract, Model Versioning |
-| 4.0.0 | 2026-07-05 | Three runtime primitives, compile-time purity boundary, DAG execution semantics, pipeline failure semantics, namespace model, version compatibility matrix, no feedback loops |
+| 4.0.0 | 2026-07-05 | Three runtime primitives, compile-time purity boundary, DAG execution |
+| 5.0.0 | 2026-07-05 | Hermetic compilation, formal evaluator contract, context object, incremental compilation, mediated feedback, analytics substrate |
