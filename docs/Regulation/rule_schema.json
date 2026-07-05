@@ -2,12 +2,32 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
   "title": "Universal Rule Schema",
-  "description": "Machine-readable rule structure. Includes lifecycle, dependencies, and evaluation logic.",
+  "description": "Machine-readable rule structure with identity lifecycle, evaluation logic, and lineage tracking.",
   "x-identity-resolution": {
     "canonical_id_field": "id",
     "policy_mapping": "Machine ID in directive tables maps to rule.id",
     "spec_mapping": "directive_id in CG-IR nodes maps to rule.id",
-    "rule": "One canonical identifier per directive across all layers. rule.id = Machine ID = directive_id."
+    "rule": "One canonical identifier per directive across all layers."
+  },
+  "x-identity-lifecycle": {
+    "operations": {
+      "revision": "Same ID, new revision. Changes within same semantic intent.",
+      "fork": "Two new IDs. One directive splits into two distinct directives.",
+      "merge": "One new ID. Two directives combine into one.",
+      "split": "New IDs for each. One directive restructured into multiple.",
+      "rename": "Same ID. Display name changes, semantic intent unchanged.",
+      "retire": "Same ID, status=deprecated. Never reused."
+    },
+    "rule": "Once assigned, a Machine ID is never reused. Deprecated IDs remain in audit trail."
+  },
+  "x-deterministic-serialization": {
+    "json_key_ordering": "alphabetical",
+    "number_encoding": "integer as integer, float as float",
+    "string_encoding": "UTF-8 no BOM",
+    "datetime_encoding": "ISO 8601 UTC (YYYY-MM-DDTHH:MM:SSZ)",
+    "null_handling": "explicit null not omitted",
+    "hash_algorithm": "SHA-256",
+    "canonical_form": "All objects serialized with sorted keys before hashing"
   },
   "type": "object",
   "required": ["version", "rules"],
@@ -38,7 +58,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Stable unique identifier. This IS the Machine ID from the policy document and the directive_id in CG-IR nodes."
+            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+            "description": "Stable unique identifier. Machine ID = rule.id = directive_id."
           },
           "type": {
             "type": "string",
@@ -65,17 +86,30 @@
           "evaluator_type": {
             "type": "string",
             "enum": ["regex", "field_check", "threshold", "composite"],
-            "description": "Pure evaluator type. No IO-based evaluators allowed."
+            "description": "Pure evaluator type."
           },
           "evaluator_config": {
             "type": "object",
-            "description": "Evaluator configuration (pattern, field, operator, threshold, sub-evaluators).",
-            "additionalProperties": true
+            "description": "Evaluator configuration.",
+            "properties": {
+              "pattern": { "type": "string", "description": "Regex pattern (for regex type)" },
+              "field": { "type": "string", "description": "Field path (for field_check type)" },
+              "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"], "description": "Comparison operator" },
+              "threshold": { "type": "number", "description": "Threshold value (for threshold type)" },
+              "sub_evaluators": { "type": "array", "items": { "$ref": "#" }, "description": "Sub-evaluators (for composite type)" },
+              "logic": { "type": "string", "enum": ["and", "or", "not"], "description": "Composition logic (for composite type)" }
+            },
+            "additionalProperties": false
           },
           "weight": {
             "type": "string",
             "enum": ["critical", "high", "medium", "low", "informational"],
             "description": "Severity weight."
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
+            "default": "operational"
           },
           "depends_on": {
             "type": "array",
@@ -87,13 +121,24 @@
             "items": { "type": "string" },
             "description": "IDs of rules that cannot coexist."
           },
+          "conflict_resolution": {
+            "type": "object",
+            "description": "Explicit conflict resolution override.",
+            "properties": {
+              "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"], "description": "Resolution strategy" },
+              "defer_to": { "type": "string", "description": "Rule ID to defer to (for defer_to strategy)" }
+            },
+            "additionalProperties": false
+          },
           "created_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO 8601 UTC timestamp."
           },
           "expires_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "ISO 8601 UTC timestamp."
           },
           "parameters": {
             "type": "object",
@@ -108,10 +153,17 @@
             "type": "string",
             "description": "What to do if violated."
           },
-          "priority": {
-            "type": "string",
-            "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
-            "default": "operational"
+          "lineage": {
+            "type": "object",
+            "description": "Tracks identity lifecycle operations (fork, merge, split).",
+            "properties": {
+              "operation": { "type": "string", "enum": ["fork", "merge", "split"], "description": "The lifecycle operation that created this ID" },
+              "parent_ids": { "type": "array", "items": { "type": "string" }, "description": "Previous IDs this directive was derived from" },
+              "timestamp": { "type": "string", "format": "date-time", "description": "When the operation occurred" },
+              "reason": { "type": "string", "description": "Why the operation was performed" }
+            },
+            "required": ["operation", "parent_ids", "timestamp"],
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
