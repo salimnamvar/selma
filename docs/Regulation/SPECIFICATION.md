@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.0.0  
+**Version:** 8.1.0  
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -419,10 +419,22 @@ resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact
 // Step 3: Unresolvable
 7. return Conflict Artifact (escalate to human)
 
-apply_strategy(strategy, rule, other_rule) → winning_rule:
+apply_strategy(strategy, rule, other_rule) → winning_rule | Conflict Artifact:
   - "always_wins": return rule
   - "never_wins": return other_rule
-  - "defer_to": return rule with ID = strategy.defer_to
+  - "defer_to": 
+      if target rule exists and is active:
+        return rule with ID = strategy.defer_to
+      else:
+        return Conflict Artifact (target not found — fall through to computed resolution)
+
+cycle_detection:
+  If A defers_to B and B defers_to A → both overrides ignored → fall through to computed resolution
+  If chain A → B → C → A → cycle detected → all overrides ignored → fall through to computed resolution
+
+scope_boundary:
+  Conflict resolution applies within same lineage_id.
+  Cross-lineage conflicts are flagged as Conflict Artifacts for human review.
 ```
 
 ### 2.16 Deterministic Serialization Rules
@@ -433,6 +445,7 @@ For reproducibility, all hashing uses:
 | :--- | :--- |
 | **JSON key ordering** | Alphabetical (lexicographic) |
 | **Number encoding** | Integer as integer, float as IEEE 754 double |
+| **NaN/Infinity policy** | NOT permitted in serializable objects; validation rejects NaN/Infinity |
 | **String encoding** | UTF-8, no BOM |
 | **Datetime encoding** | ISO 8601 with UTC timezone (`YYYY-MM-DDTHH:MM:SSZ`) |
 | **Null handling** | Explicit `null`, not omitted |
@@ -444,8 +457,9 @@ For reproducibility, all hashing uses:
 
 **Recursive Structures:**
 - **Composite evaluators:** `sub_evaluators` are serialized as an ordered array of canonical JSON objects
-- **Lineage:** `parent_ids` are sorted lexicographically before hashing
+- **Lineage:** `parent_lineage_ids` and `parent_execution_ids` are sorted lexicographically before hashing
 - **Schema references ($ref):** Resolved at schema validation time only; NOT included in canonical form for hashing
+- **Map ordering:** Objects with `additionalProperties: true` have keys sorted lexicographically before hashing
 
 **Evaluator Config Serialization by Type:**
 
@@ -741,7 +755,6 @@ Execution Artifacts
 
 | Spec Version | Schema Version | Policy Version | Engine Compatibility |
 | :--- | :--- | :--- | :--- |
-| 7.x | 7.x | 7.x | Engine ≥ 7.0.0 |
 | 8.x | 8.x | 8.x | Engine ≥ 8.0.0 |
 
 **Version Compatibility Rules:**
@@ -815,17 +828,17 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Finding FSM** | Findings follow strict state transitions (see Section 3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
-| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (discriminated union) |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
+| **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
 | **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
-| **Deterministic Serialization** | Canonical JSON with sorted keys for all hashing |
-| **Event Ordering** | Hybrid Logical Clock ordering (physical_time + logical_counter + node_id) |
-| **Version Compatibility** | MAJOR versions must match across spec/schema/policy; MINOR/PATCH may differ |
-| **Cross-Layer Binding** | Schema MUST be derivable from spec invariants; no independent semantics |
-| **Lineage Enforcement** | Fork/merge/split MUST have lineage; revision/rename/retire MUST NOT |
-| **Concurrency Safety** | Compilation acquires read lock; modifications acquire write lock (exclusive) |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
+| **HLC Event Ordering** | physical_time + logical_counter + node_id |
+| **Version Compatibility** | MAJOR versions match across spec/schema/policy |
+| **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
+| **Concurrency Safety** | Compilation = read lock; modification = write lock |
 
 ---
 

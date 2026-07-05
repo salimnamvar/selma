@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 19.0  
+**Version:** 20.0  
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md v8.0.0
+**Normative Reference:** SPECIFICATION.md v8.1.0
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -14,10 +14,10 @@
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md v8.0.0 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json v8.0.0 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml v8.0.0 | Declarative governance intent |
-| **Behavioral** | User_Stories.md v19.0 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md v8.1.0 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json v8.1.0 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml v8.1.0 | Declarative governance intent |
+| **Behavioral** | User_Stories.md v20.0 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents.
 
@@ -87,13 +87,13 @@
 | **Hermetic Compilation** | Frozen environment ensures reproducibility. Read lock on Directive Graph. |
 | **Control Node** | CG-IR node with pure evaluator, scope, severity, dependencies. |
 | **Evaluator** | Pure function. Types: regex, field_check, threshold, composite. |
-| **Evaluator Config** | Discriminated union — config MUST match evaluator_type. |
+| **Evaluator Config** | Schema-enforced if/then binding — config MUST match evaluator_type. |
 | **Finding FSM** | Strict state machine: Created → Open → Acknowledged → Evidence Submitted → Pending Verification → Verified/Closed |
 | **Hybrid Logical Clock** | HLC ordering for distributed systems: physical_time + logical_counter + node_id |
 | **Capability Model** | Role → Capability → Action. Segregation of duties enforced. |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
-| **Conflict Resolution Mapping** | Deterministic operators. Explicit override takes precedence. |
-| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256. |
+| **Conflict Resolution Mapping** | Deterministic operators. Explicit override takes precedence. Cycles detected and resolved. |
+| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. |
 | **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_hash, frozen_env, engine, target_hash)` |
 | **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
 | **Concurrency Model** | Compilation = read lock; modification = write lock (exclusive). Queue serializes requests. |
@@ -219,7 +219,7 @@
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md v8.0.0 is the single normative source |
+| **Normative Source** | SPECIFICATION.md v8.1.0 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id never reused |
 | **Execution ID Stability** | Changes only on fork/merge/split |
@@ -230,13 +230,13 @@
 | **Finding FSM** | Strict state transitions enforced |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
-| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | No direct finding → CG-IR path |
 | **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
-| **Deterministic Serialization** | Canonical JSON with sorted keys for all hashing |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
 | **HLC Event Ordering** | physical_time + logical_counter + node_id |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |

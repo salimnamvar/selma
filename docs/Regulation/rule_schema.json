@@ -1,50 +1,35 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema v8.0",
+  "title": "Universal Rule Schema v8.1",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.0.0",
+  "x-spec-version": "8.1.0",
   "x-cross-layer-binding": {
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only."
   },
-  "x-identity-resolution": {
-    "lineage_id_field": "lineage_id",
-    "execution_id_field": "id",
-    "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id",
-    "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id",
-    "rule": "Dual identity: lineage_id (immutable root) + id (active execution identity). lineage_id never changes; id changes on fork/merge/split."
-  },
-  "x-identity-lifecycle": {
-    "operations": {
-      "revision": "Same lineage_id, same execution_id, new revision.",
-      "fork": "Same lineage_id inherited, two new execution_ids.",
-      "merge": "Two lineage_ids merged, one new execution_id.",
-      "split": "Same lineage_id inherited, multiple new execution_ids.",
-      "rename": "Same lineage_id, same execution_id.",
-      "retire": "Same lineage_id, same execution_id, status=deprecated."
+  "x-identity": {
+    "contract": {
+      "canonical": "id",
+      "root": "lineage_id",
+      "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id",
+      "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id"
     },
-    "rule": "lineage_id is immutable once assigned. execution_id changes only on fork/merge/split."
-  },
-  "x-identity-resolution": {
-    "canonical_id_field": "id",
-    "policy_mapping": "Machine ID in directive tables maps to rule.id",
-    "spec_mapping": "directive_id in CG-IR nodes maps to rule.id",
-    "rule": "One canonical identifier per directive across all layers."
-  },
-  "x-identity-lifecycle": {
-    "operations": {
-      "revision": "Same ID, new revision. Changes within same semantic intent. lineage field NOT required.",
-      "fork": "Two new IDs. One directive splits into two distinct directives. lineage field REQUIRED.",
-      "merge": "One new ID. Two directives combine into one. lineage field REQUIRED.",
-      "split": "New IDs for each. One directive restructured into multiple. lineage field REQUIRED.",
-      "rename": "Same ID. Display name changes, semantic intent unchanged. lineage field NOT required.",
-      "retire": "Same ID, status=deprecated. Never reused. lineage field NOT required."
+    "lifecycle": {
+      "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
+      "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
+      "merge": "Two lineage_ids merged, one new id. lineage field REQUIRED.",
+      "split": "Same lineage_id inherited, multiple new ids. lineage field REQUIRED.",
+      "rename": "Same lineage_id, same id. lineage field NOT required.",
+      "retire": "Same lineage_id, same id, status=deprecated. lineage field NOT required."
     },
-    "rule": "Once assigned, a Machine ID is never reused. Deprecated IDs remain in audit trail forever.",
-    "uniqueness_enforcement": "rule.id MUST be unique within a ruleset. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$"
+    "invariants": {
+      "lineage_id_immutable": "Once assigned, lineage_id is never reused.",
+      "id_stability": "id changes only on fork/merge/split.",
+      "uniqueness": "lineage_id MUST be unique within a ruleset."
+    }
   },
   "x-deterministic-serialization": {
     "json_key_ordering": "alphabetical (lexicographic)",
@@ -52,15 +37,19 @@
     "string_encoding": "UTF-8 no BOM",
     "datetime_encoding": "ISO 8601 UTC (YYYY-MM-DDTHH:MM:SSZ)",
     "null_handling": "explicit null not omitted",
+    "nan_policy": "NaN and Infinity are NOT permitted in serializable objects",
     "hash_algorithm": "SHA-256",
     "canonical_form": "All objects serialized with sorted keys before hashing",
-    "recursive_structures": "For recursive evaluator_config: serialize sub_evaluators as array of canonical JSON objects. For lineage: serialize parent_ids as sorted array.",
-    "schema_references": "$ref resolved at schema validation time; not included in canonical form for hashing"
+    "recursive_structures": "For recursive evaluator_config: serialize sub_evaluators as array of canonical JSON objects. For lineage: serialize parent_*_ids as sorted arrays.",
+    "schema_references": "$ref resolved at schema validation time; not included in canonical form for hashing",
+    "map_ordering": "Objects with additionalProperties: keys sorted lexicographically before hashing"
   },
   "x-conflict-resolution-binding": {
     "spec_model": "Deterministic multi-factor: priority → specificity → recency → explicit override",
     "schema_model": "conflict_resolution field provides explicit override only",
     "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
+    "cycle_handling": "If A defers_to B and B defers_to A, both overrides are ignored; fall through to computed resolution (priority → specificity → recency). If target rule in defer_to does not exist, the override is ignored; fall through to computed resolution.",
+    "scope_boundary": "Conflict resolution applies within same lineage. Cross-lineage conflicts are flagged as Conflict Artifacts for human review.",
     "policy_model": "Declarative intent description only. Compilation engine implements via spec multi-factor algorithm."
   },
   "type": "object",
@@ -89,8 +78,7 @@
     "rules": {
       "type": "array",
       "minItems": 1,
-      "description": "The list of directives. Every rule MUST have a unique lineage_id and id.",
-      "items": {
+      "description": "The list of directives. Every rule MUST have a unique lineage_id and id. Uniqueness enforced by external validator.",
         "type": "object",
         "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
         "properties": {
@@ -263,20 +251,90 @@
         "allOf": [
           {
             "if": { "properties": { "evaluator_type": { "const": "regex" } } },
-            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "regex" } } }
+            "then": { "properties": { "evaluator_config": { "required": ["pattern"] } } }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "field_check" } } },
-            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "field_check" } } }
+            "then": { "properties": { "evaluator_config": { "required": ["field", "operator", "value"] } } }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "threshold" } } },
-            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "threshold" } } }
+            "then": { "properties": { "evaluator_config": { "required": ["field", "operator", "threshold"] } } }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "composite" } } },
-            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "composite" } } }
+            "then": { "properties": { "evaluator_config": { "required": ["logic", "sub_evaluators"] } } }
           }
+        ]
+      }
+    ]
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "evaluator_config_entry": {
+      "type": "object",
+      "description": "A single sub-evaluator entry within a composite evaluator. Recursively typed to prevent open objects.",
+      "oneOf": [
+        {
+          "description": "Regex sub-evaluator",
+          "type": "object",
+          "properties": {
+            "evaluator_type": { "type": "string", "const": "regex" },
+            "evaluator_config": {
+              "type": "object",
+              "properties": {
+                "pattern": { "type": "string", "minLength": 1 },
+                "flags": { "type": "string", "default": "" }
+              },
+              "required": ["pattern"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["evaluator_type", "evaluator_config"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field check sub-evaluator",
+          "type": "object",
+          "properties": {
+            "evaluator_type": { "type": "string", "const": "field_check" },
+            "evaluator_config": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"] },
+                "value": {}
+              },
+              "required": ["field", "operator", "value"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["evaluator_type", "evaluator_config"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Threshold sub-evaluator",
+          "type": "object",
+          "properties": {
+            "evaluator_type": { "type": "string", "const": "threshold" },
+            "evaluator_config": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte"] },
+                "threshold": { "type": "number" }
+              },
+              "required": ["field", "operator", "threshold"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["evaluator_type", "evaluator_config"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
         ]
       },
       "uniqueItems": true

@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md v8.0.0
+# NORMATIVE SOURCE: SPECIFICATION.md v8.1.0
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.0.0"
+  version: "8.1.0"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.0.0"
-  rule_contract_version: "8.0.0"
+  spec_version: "8.1.0"
+  rule_contract_version: "8.1.0"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
