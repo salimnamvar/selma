@@ -334,7 +334,7 @@ Merged `lineage_id` = lexicographic minimum of parent lineage_ids. New execution
 ```
 merge(parent_a, parent_b) → merged_rule:
 1. lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically
-2. id := lineage_id + "-M" + SHA-256(canonical_json({parent_lineage_ids, parent_execution_ids, operation: "merge", timestamp}))[0:16].uppercase()
+2. id := lineage_id + "-M" + SHA-256(canonical_json({sorted(parent_lineage_ids), sorted(parent_execution_ids), operation: "merge", timestamp}))[0:16].uppercase()
 3. lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])
 4. lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])
 5. Both parent rules transition to status=deprecated
@@ -467,6 +467,30 @@ cg_ir_snapshot_hash = SHA-256(canonical_json({
 **compiled_at** is recorded in execution artifact metadata (inspection snapshots, pipeline traces) but NOT in the snapshot hash. This ensures that two compilations with identical directive graph content, engine version, and frozen environment produce the same `cg_ir_snapshot_hash` regardless of wall clock time.
 
 **Determinism guarantee:** Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical. The hash is **not a function of wall clock time, compilation node identity, or request context**.
+
+### Frozen Environment Schema (§2.7)
+
+```json
+{
+  "engine_version": "semver",
+  "toolchain": {
+    "compiler": "string",
+    "os_runtime_hash": "sha256"
+  },
+  "ai_components": [
+    {
+      "name": "string",
+      "model_hash": "sha256",
+      "prompt_hash": "sha256",
+      "decoder_hash": "sha256"
+    }
+  ],
+  "confidence_severity_cap_threshold": 0.5,
+  "frozen_env_hash": "sha256"
+}
+```
+
+`frozen_env_hash` = SHA-256(canonical_json(above minus `frozen_env_hash` itself)). The `frozen_env_hash` key is excluded from its own computation.
 
 ## Edge Hash Formula
 

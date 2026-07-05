@@ -181,12 +181,12 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Directive Graph** | Human-authored source-of-truth. Structured, versioned, diffable. |
 | **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Determinism: identical inputs → identical hash. compiled_at excluded from hash (execution artifact metadata only). |
 | **Semantic vs Presentation Hash** | `semantic_hash` covers evaluator/scope/priority (compilation cache). `presentation_hash` covers description/revision. `node_hash` composes both (§2.6). Editorial description changes do not invalidate semantic cache. |
-| **Specificity Score** | Normative integer algorithm (§2.15): target constraint + scope depth + evaluator field bindings. Two engines MUST agree on scores for identical node bodies. |
+| **Specificity Score** | Normative integer algorithm (§2.15): scope constraints via `scope_specificity_score` (×100) + evaluator field bindings. Two engines MUST agree on scores for identical node bodies. |
 | **Merge Identity** | Merged `lineage_id` = lexicographic min of parent lineage_ids; new execution_id per §2.2.2 deterministic formula. |
 | **Metadata Namespacing** | Informational only. Declared namespaces: audit, vendor, author, migration. No executable hints (§7.1). |
 | **Anchor Reference** | `anchor_ref` MUST use `section:<id>` or JSON Pointer syntax (§7.2). |
 | **Array Ordering** | Ordered: `sub_evaluators`, `pipeline_trace`. Unordered (sorted before hash): `depends_on`, `conflicts_with`, `parent_*_ids` (§2.16.1). |
-| **Evaluator Complexity Limits** | Max depth 32, max nodes 256, max width 64, max regex 4096 chars (§2.9). |
+| **Evaluator Complexity Limits** | Max depth 32, max nodes 256, max width 64, max regex 4096 chars, max metadata 16 KiB (§2.9). |
 | **Finding Event Stream** | Append-only audit log with HLC ordering. Finding FSM enforced. |
 | **Execution Artifacts** | Immutable inspection snapshots, pipeline traces, system state hashes. |
 | **Hermetic Compilation** | Frozen environment ensures reproducibility. Read lock on Directive Graph. |
@@ -261,7 +261,8 @@ Escalate to human review as a Conflict Artifact
 The `specificity_score` is computed explicitly:
 
 ```
-Score = (Target Constraint × 1000) + (Scope Depth × 100) + Bound Evaluator Fields
+Score = (Scope Specificity × 100) + Bound Evaluator Fields
+// Scope includes target_type, domain, jurisdiction, and filter count (§2.8.2)
 ```
 
 Because all variables (including `created_at`) are embedded directly inside the `node_body` at compile time, conflict resolution outcomes are completely snapshot-bound and immutable, leaving zero vulnerability to evaluation-time environmental variance.
