@@ -167,7 +167,7 @@ Cross-version migration follows the invariants defined in SPECIFICATION.md §2.2
 
 ## Composite Evaluator Recursion
 
-The schema supports recursive composite evaluators. See SPECIFICATION.md §2.9 for compile-time complexity limits (depth ≤ 32, nodes ≤ 256, width ≤ 64, pattern length ≤ 4096).
+The schema supports recursive composite evaluators. See SPECIFICATION.md §2.9 for compile-time complexity limits (depth ≤ 32, nodes ≤ 256, width ≤ 64, pattern length ≤ 4096, metadata ≤ 16 384 bytes). **Critical:** JSON Schema Draft-07 cannot natively enforce recursive depth or aggregate node count limits. Custom compile-time validators MUST walk the evaluator AST to enforce these limits (§2.9 JSON Schema Draft-07 Enforcement Limitation).
 
 ## Deterministic Serialization & Hashing
 
@@ -193,7 +193,7 @@ The evaluation layer enforces pure, mathematical isolation. See SPECIFICATION.md
 | Max composite width | 64 nodes | `SchemaError: evaluator width exceeded` |
 | Max regex pattern length | 4,096 chars | `SchemaError: pattern too long` |
 | Max ancestry depth | 64 steps | Compile-time lineage rejection |
-| Max metadata per rule | 16 KiB | `SchemaError: metadata too large` |
+| Max metadata per rule | 16 384 bytes (16 KiB) | `SchemaError: metadata too large` |
 
 ## Compilation Pipeline
 

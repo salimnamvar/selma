@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.2.3
+**Version:** 8.2.4
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -575,7 +575,7 @@ Directive Graph
 | `evaluator` | Object | Pure evaluator specification |
 | `scope` | Object | Applicability context (see §2.8.2) |
 | `severity_default` | Enum | Default severity on failure |
-| `depends_on` | Array | Node IDs evaluated first |
+| `depends_on` | Array | Node IDs (`directive_id` execution IDs) evaluated first — NOT `lineage_id`s |
 | `priority` | Enum | Authority level for conflict resolution |
 | `conflict_resolution` | Object | Optional explicit override |
 | `status` | Enum | `active`, `deprecated` |
@@ -595,7 +595,7 @@ Directive Graph
 | `weight` | `severity_default` | Direct copy | Weight maps to default severity on failure |
 | `target` | `scope.target_type` | Extract target_type if parseable | Compile-time only; best-effort extraction |
 | `priority` | `priority` | Direct copy | Used by conflict resolution |
-| `depends_on` | `depends_on` | Transform from rule.id refs to node directive_id refs | Resolved at compile time |
+| `depends_on` | `depends_on` | Transform from rule.id refs to node directive_id refs | Stores **execution IDs** (`rule.id` → `node.directive_id`), NOT `lineage_id`s. Resolved at compile time. After fork/split, multiple nodes may share a `lineage_id` — `depends_on` references the specific execution ID to disambiguate. |
 | `conflict_resolution` | `conflict_resolution` | Direct copy | Used by conflict resolution |
 | `status` | `status` | Map: `draft`→`active`, `active`→`active`, `deprecated`→`deprecated`, `superseded`→`deprecated` | Drafts compile as active for testing |
 | `created_at` | `created_at` | Direct copy | Frozen for conflict resolution recency |
@@ -704,7 +704,46 @@ evaluate(node, target, context) → {
 | Maximum total evaluator nodes per rule | 256 (including root) | `SchemaError: evaluator count exceeded` |
 | Maximum composite DAG width (`sub_evaluators` count at any level) | 64 | `SchemaError: evaluator width exceeded` |
 | Maximum regex pattern length | 4 096 characters | `SchemaError: pattern too long` |
-| Maximum `metadata` serialized size per rule | 16 KiB | `SchemaError: metadata too large` |
+| Maximum `metadata` serialized size per rule | 16 384 bytes (16 KiB) | `SchemaError: metadata too large` |
+
+**JSON Schema Draft-07 Enforcement Limitation (Normative):**
+
+JSON Schema Draft-07 cannot natively enforce recursive depth limits or aggregate node count limits across nested evaluator trees. Schema `maxItems` validates array length at a single level but does not recursively enforce total node counts across nested `sub_evaluators`. Therefore:
+
+1. The complexity limits above (depth ≤ 32, total nodes ≤ 256, width ≤ 64) **MUST** be enforced by custom compile-time validators — NOT by JSON Schema validation alone.
+2. JSON Schema validation serves as a **first-pass structural filter** (validating individual evaluator configs, field types, and array bounds at each level). The custom validator is the **normative gate** for recursive complexity limits.
+3. Reference implementations MUST ship a standalone evaluator complexity validator as part of the Control Compilation Engine. This validator MUST walk the evaluator AST and enforce all limits before CG-IR generation.
+4. Engines that skip the custom validator are **non-conformant** — schema structural validation alone is insufficient to prevent stack exhaustion from deeply nested composite evaluators.
+
+**Custom Validator Implementation Guidance (Informative):**
+
+```
+validate_evaluator_complexity(rule) → ValidationResult:
+  // Walk the evaluator tree recursively
+  result := count_evaluator_nodes(rule.evaluator, depth=0)
+  
+  if result.max_depth > 32:
+    return FAIL("SchemaError: evaluator depth exceeded")
+  if result.total_nodes > 256:
+    return FAIL("SchemaError: evaluator count exceeded")
+  if result.max_width > 64:
+    return FAIL("SchemaError: evaluator width exceeded")
+  
+  // Regex pattern length check
+  for each leaf_evaluator in walk_leaves(rule.evaluator):
+    if leaf_evaluator.type == "regex":
+      if length(leaf_evaluator.config.pattern) > 4096:
+        return FAIL("SchemaError: pattern too long")
+  
+  // Metadata size check
+  metadata_size := byte_length(canonical_json(rule.metadata))
+  if metadata_size > 16384:
+    return FAIL("SchemaError: metadata too large (exceeds 16,384 bytes / 16 KiB)")
+  
+  return PASS
+```
+
+**Validation Timing:** The custom complexity validator MUST execute as a mandatory pass AFTER JSON Schema structural validation and BEFORE CG-IR generation. If either validation fails, compilation MUST be rejected with no partial CG-IR output.
 
 **Evaluator Complexity Counting Algorithm (Normative):**
 
@@ -1933,7 +1972,7 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
-| **Evaluator Complexity Bounds** | Depth ≤ 32, total nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars (§2.9) |
+| **Evaluator Complexity Bounds** | Depth ≤ 32, total nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars, metadata ≤ 16 384 bytes (16 KiB) (§2.9) |
 | **Lineage DAG Acyclicity** | Ancestry graph acyclic; max depth 64 (§2.2.3) |
 | **Specificity Determinism** | `specificity_score` algorithm in §2.15 is normative |
 | **Semantic/Presentation Hash Split** | `semantic_hash` excludes description; `node_hash` composes both (§2.6) |
@@ -1976,11 +2015,12 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 7. Regex flags limited to: `i`, `m`, `s`
 8. No NaN or Infinity in evaluator_config numeric values
 9. No timezone-dependent operations in evaluator logic
-10. Composite recursion depth ≤ 32
-11. Total evaluator nodes per rule ≤ 256
+10. Composite recursion depth ≤ 32 (custom compile-time validator required; JSON Schema Draft-07 cannot enforce)
+11. Total evaluator nodes per rule ≤ 256 (custom compile-time validator required)
 12. Composite width (`sub_evaluators` count) ≤ 64 at any level
 13. Regex pattern length ≤ 4096 characters
 14. Cross-field discriminator: `evaluator_type` ↔ `evaluator_config` verified by compile-time AST-walking validator (not partial subschema validation alone). The validator MUST implement the algorithm specified in §2.9 Discriminator Validation.
+15. **Custom complexity validator:** A standalone compile-time validator MUST walk the evaluator AST to enforce depth, node count, width, and pattern length limits. JSON Schema structural validation alone is insufficient (see §2.9 JSON Schema Draft-07 Enforcement Limitation). Engines that skip this validator are non-conformant.
 
 #### 9.2.6 RE2 Compatibility Validation
 
@@ -2124,3 +2164,4 @@ Architectural audit gates are non-blocking for spec conformance of the document 
 | 8.2.3 | 2026-07-05 | Formal verification audit findings: normative `defer_to` active-lineage resolution algorithm with post-fork Conflict Artifact escalation (§2.15), `authored_by` creator provenance inheritance through fork/merge/split with `creator_provenance` snapshot field (§3.2, §2.8.1), cross-lineage presentation correlation guidance (§2.13.1), NeedsReview+Fail operational guidance (§2.15.1), Policy Runtime Prohibition CI enforcement mechanism (§9.7), User_Stories capability matrix segregation column |
 | 8.2.3-b | 2026-07-05 | Formal verification audit deltas: normative AST-walking discriminator validation algorithm superseding JSON Schema if/then (§2.9), optional `metadata.migration.merge_provenance` for merge lineage preservation (§7.1), aggregation latency warning in §2.11 and §3.7, MERGE-NN namespace documented as v9.0.0 candidate (§2.2.2) |
 | 8.2.3-c | 2026-07-05 | Formal verification audit remediation: `compatible_overrides()` for symmetric override pairs (§2.15 D-01/F-02), `defer_to` missing-target fall-through reconciliation (§2.15 D-02/F-03), DFS `defer_to` cycle detection (§2.15 D-07/F-08), cross-lineage advisory resolution algorithm (§2.15.2 D-10/F-07), compilation deadlock prevention (§3.4 D-12/F-15), RE2 canary test vectors (§9.2.6 D-13/F-12), portable validator requirements for UTC/NaN/flags (§9.2.15 D-11/F-04–F-06), architectural audit validation gates (§9.9 D-09/F-16), `merge_provenance` normative documentation (§7.1 D-05) |
+| 8.2.4 | 2026-07-05 | Formal verification audit (v2) delta items: JSON Schema Draft-07 enforcement limitation documented with custom compile-time validator requirement (§2.9 F-001/Δ-001–Δ-002), `depends_on` execution ID semantics clarified (§2.8, §2.8.1 F-002/Δ-003), metadata size standardized to 16 384 bytes (§2.9, §8 F-005/Δ-005), merge provenance loss risk documented (§2.2.2 F-004/Δ-004), §8 System Invariants completeness verified (F-003/Δ-007) |
