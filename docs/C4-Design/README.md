@@ -17,10 +17,10 @@ The Core Engine is structured as a **four-pillar pipeline**:
 
 | File | C4 Level | Version | Description |
 | ---- | -------- | ------- | ----------- |
-| [c4_selma_context.puml](c4_selma_context.puml) | Context | v1.0.0 | Selma as a system with 3 actors and 3 external systems |
-| [c4_selma_container.puml](c4_selma_container.puml) | Container | v1.0.0 | Internal containers: API, Core Engine, Contracts, Storage, LLM Adapter |
-| [c4_selma_component.puml](c4_selma_component.puml) | Component | v1.0.0 | Four-pillar engines, Steward orchestrator, supporting modules |
-| [common/c4_styles.puml](common/c4_styles.puml) | — | v1.0.0 | Shared palette, skinparam stereotypes, element + relationship tags |
+| [c4_selma_context.puml](c4_selma_context.puml) | Context | 1.0.0 | Selma as a system with 3 actors and 3 external systems |
+| [c4_selma_container.puml](c4_selma_container.puml) | Container | 1.0.0 | Internal containers: API, Core Engine, Contracts, Storage, LLM Adapter |
+| [c4_selma_component.puml](c4_selma_component.puml) | Component | 1.0.0 | Four-pillar engines, Steward orchestrator, supporting modules |
+| [common/c4_styles.puml](common/c4_styles.puml) | — | 1.0.0 | Shared palette, skinparam stereotypes, element + relationship tags |
 
 ## How to Read
 

@@ -5,7 +5,7 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md v8.1.0
+# NORMATIVE SOURCE: SPECIFICATION.md 8.1.0
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
@@ -171,7 +171,7 @@ versioning_strategy:
     patch: "Bug fixes and clarifications"
   synchronization_intent: >
     The governing body intends that policy version, schema version,
-    and spec version stay in sync. All three MUST match (e.g., all at 7.0.0).
+    and spec version stay in sync. All three MUST match (e.g., all at 8.1.0).
     The engine enforces this via validation.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────

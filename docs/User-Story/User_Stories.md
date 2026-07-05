@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 20.0  
+**Version:** 20.0.0  
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md v8.1.0
+**Normative Reference:** SPECIFICATION.md 8.1.0
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -14,10 +14,10 @@
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md v8.1.0 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json v8.1.0 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml v8.1.0 | Declarative governance intent |
-| **Behavioral** | User_Stories.md v20.0 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.1.0 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.1.0 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.1.0 | Declarative governance intent |
+| **Behavioral** | User_Stories.md 20.0.0 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents.
 
@@ -219,7 +219,7 @@
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md v8.1.0 is the single normative source |
+| **Normative Source** | SPECIFICATION.md 8.1.0 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id never reused |
 | **Execution ID Stability** | Changes only on fork/merge/split |
