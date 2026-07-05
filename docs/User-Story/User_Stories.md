@@ -10,6 +10,43 @@
 
 ---
 
+## Executive Architectural Overview
+
+SELMA is designed as a highly disciplined, domain-agnostic compliance and rule-regularity engine. Its core architecture relies on an elegant separation between human governance intent, strict machine-executable structural invariants, and a purely functional runtime execution model.
+
+The architecture is built upon **three runtime primitives** (plus an execution artifact layer):
+
+1. **Directive Graph:** The human-authored, structured source of truth.
+2. **Compiled Control DAG (CG-IR):** The content-addressed, immutable executable intermediate representation.
+3. **Finding Event Stream:** An append-only, chronologically consistent event log driven by Hybrid Logical Clocks (HLC).
+4. **Execution Artifacts:** The reproducible inspection snapshots and pipeline traces.
+
+### Layered Dominance & Cross-Layer Binding
+
+The foundation of SELMA rests on a strict three-layer dominance hierarchy designed to eliminate runtime interpretation ambiguity:
+
+| Layer | Document | Role | Runtime Authority |
+| :--- | :--- | :--- | :--- |
+| **Normative** | `SPECIFICATION.md` | Defines absolute system behaviors, algorithms, and invariants | **Highest.** The sole source of runtime semantics |
+| **Structural** | `rule_schema.json` | Structural JSON Schema projection of spec invariants | **Data Carrier.** Read by the engine; contains no executable logic |
+| **Governance** | `policy_doctrine.yaml` | Human-facing governance intent and formatting guide | **None.** Completely prohibited at inspection and evaluation runtime |
+
+### The Policy Runtime Prohibition
+
+A key architectural strength is the **Policy Runtime Prohibition**. The compilation and execution engines never interpret prose fields from the governance layer. Instead, the policy layer dictates human authoring constraints (enforced via compile-time schema validation), ensuring that runtime execution evaluates *only* highly structured schema fields.
+
+### Version Synchronization Invariant
+
+Cross-layer compatibility enforces strict semantic version consistency across all layers via a major-version math boundary:
+
+```
+dataset(S) accepts policy(P) ⟺ ⌊S⌋ == ⌊P⌋
+```
+
+Minor and patch versions are allowed to evolve independently within the same major family, but a major version mismatch results in an absolute compile-time rejection.
+
+---
+
 ## Cross-Layer Binding
 
 | Layer | Document | Role |
@@ -66,9 +103,30 @@
 └─────────────────────────────┘
 ```
 
+### Architectural Strengths
+
+| Strength | Description |
+| :--- | :--- |
+| **Content-Addressed Storage** | CG-IR nodes are deduplicated by hash; identical rule content across snapshots shares storage |
+| **Incremental Compilation** | Unchanged subgraphs are reused via semantic_hash; only dirty nodes are recompiled |
+| **Pure Evaluation** | Evaluators are side-effect-free functions; same inputs always produce same outputs |
+| **HLC Event Ordering** | Hybrid Logical Clocks ensure total ordering without wall-clock dependency |
+| **Hermetic Reproducibility** | Frozen environment pins all non-deterministic factors; identical inputs → identical CG-IR |
+
+### Architectural Risks & Mitigations
+
+| Risk | Description | Mitigation |
+| :--- | :--- | :--- |
+| **Lossy Metadata in Lexicographic Merges** | Merging `PAY-800` and `AUTH-001` permanently forces `AUTH-001` as lineage root; structural provenance of payment chain survives only in metadata array | Downstream metadata parsing for lineage tracing; consider `MGR-NN` merge namespace in future versions |
+| **Time Realism in `finding_aggregates`** | Aggregates are pre-computed from past inspections; current-inspection findings not included in real-time | Multi-pass inspection loop or delayed escalation alerts until reinspection |
+| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce dependent-schema validation at compile time; never rely solely on `if`/`then` |
+| **Cascade Invisibility via Skipped Nodes** | Dependency failures silently bypass downstream checks; compliance review may miss unverified infrastructure | Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings |
+
 ---
 
 ## Dual Identity Model
+
+SELMA avoids identity collision and preserves historical provenance during lifecycle shifts through a decoupled identity model:
 
 | ID Type | Purpose | Mutability | Format |
 | :--- | :--- | :--- | :--- |
@@ -84,6 +142,20 @@
 **Invariant:** `rule.lineage_id` is immutable. `rule.id` changes only on fork/merge/split. Policy `Machine ID` maps to lineage_id only — never to execution ID.
 
 **Machine ID semantics:** Stable external lineage identifier assigned at authoring time. At compile: `rule.lineage_id = Machine ID` (bijective at root-assignment level). On first creation: `rule.id = rule.lineage_id`. After fork/split, multiple active rules may share the same `lineage_id` with distinct execution_ids. Engine never reads policy tables at runtime.
+
+### Deterministic Merge Semantics
+
+When multiple rules converge, SELMA resolves identity mathematically to prevent semantic collision:
+
+1. The new rule's `lineage_id` defaults strictly to the **lexicographic minimum** of the parent IDs.
+2. The non-surviving parent root is permanently deprecated and preserved only within the `lineage.parent_lineage_ids` array metadata for downstream traceability.
+3. The new execution `id` is derived deterministically by appending a short SHA-256 slice of the sorted parent IDs and the string token `"merge"`.
+
+```
+merge(parent_a, parent_b)
+   ├── lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id)
+   └── execution_id := lineage_id + "-M" + SHA-256(sorted_parents)[0:8]
+```
 
 ---
 
@@ -137,6 +209,92 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Concurrency Model** | Compilation = read lock; modification = write lock (exclusive). Queue serializes requests. |
 | **CG-IR Storage** | Content-addressed: snapshots → nodes → edges. Deduplication by hash. |
 | **Identity Refinement** | Machine ID ↔ lineage_id bijective at root-assignment level. Fork/split allows shared lineage_id with distinct execution_ids. Rule-level key: (lineage_id, id). |
+
+### Evaluation Portability & Complexity Guardrails
+
+The evaluation layer enforces pure, mathematical isolation. Evaluators operate with zero side effects, zero I/O, and zero runtime randomness.
+
+#### Cross-Runtime Portability Rules
+
+To prevent execution drift when evaluating rules across disparate CPU architectures or runtimes, the system mandates strict computational portability:
+
+| Constraint | Rule | Rationale |
+| :--- | :--- | :--- |
+| **Regex Dialect** | Restricted entirely to **RE2-compatible syntax**. Advanced PCRE components (backreferences, lookaheads) are banned. | Mitigates catastrophic backtracking risks; ensures linear-time matching across implementations |
+| **Strict Numerics** | Numeric evaluations must strictly use **IEEE 754 double-precision floats**. Special float states like `NaN` and `Infinity` are proactively blocked at the schema level. | Prevents silent divergence across CPU architectures and language runtimes |
+| **Time & Strings** | Timestamps are strictly normalized to **ISO 8601 UTC** before comparison. String matches require **Unicode normalization form (NFC)**. | Eliminates DST/timezone ambiguity; prevents locale-sensitive ordering divergence |
+
+#### System Complexity Limits
+
+The compiler prevents execution engine stack exhaustion by tracking structural bounds:
+
+| Complexity Metric | Absolute Limit | Compilation Failure Signal |
+| :--- | :--- | :--- |
+| **Max Composite Recursion Depth** | 32 levels | `SchemaError: evaluator depth exceeded` |
+| **Max Total Evaluator Nodes / Rule** | 256 nodes | `SchemaError: evaluator count exceeded` |
+| **Max Composite Width (`sub_evaluators`)** | 64 nodes | `SchemaError: evaluator width exceeded` |
+| **Max Regex Pattern Length** | 4,096 chars | `SchemaError: pattern too long` |
+| **Max Ancestry Lineage DAG Depth** | 64 steps | Compile-time lineage cycle/depth rejection |
+
+### Conflict Resolution & Hashing Deep Dive
+
+#### The Deterministic Precedence Chain
+
+Runtime conflicts follow an unyielding, short-circuiting logical hierarchy executed via the normative algorithm in the specification:
+
+```
+Explicit Override (Schema conflict_resolution field)
+        │
+        ▼ [If no explicit override]
+Priority Level (Internal integer evaluation: 1 to 5)
+        │
+        ▼ [If priority levels match]
+Specificity Score (Normative score calculation)
+        │
+        ▼ [If specificity scores match]
+Recency (Comparison of frozen created_at authoring timestamps)
+        │
+        ▼ [If all conditions tie]
+Escalate to human review as a Conflict Artifact
+```
+
+The `specificity_score` is computed explicitly:
+
+```
+Score = (Target Constraint × 1000) + (Scope Depth × 100) + Bound Evaluator Fields
+```
+
+Because all variables (including `created_at`) are embedded directly inside the `node_body` at compile time, conflict resolution outcomes are completely snapshot-bound and immutable, leaving zero vulnerability to evaluation-time environmental variance.
+
+#### Split-Decomposition Hashing
+
+SELMA partitions node evaluation states using a highly optimized dual-hash configuration to streamline caching and validation:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                      NODE_BODY                         │
+├───────────────────────────┬────────────────────────────┤
+│       SEMANTIC_BODY       │     PRESENTATION_BODY      │
+│  - directive_id           │  - description             │
+│  - lineage_id             │  - directive_revision      │
+│  - evaluator              │  - control_version         │
+│  - scope                  │                            │
+│  - priority & status      │                            │
+│  - depends_on & created_at│                            │
+└─────────────┬─────────────┘             .──────────────┘
+              │                           │
+              ▼                           ▼
+        SEMANTIC_HASH             PRESENTATION_HASH
+              │                           │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+                        NODE_HASH (SHA-256)
+```
+
+By isolating the `semantic_hash` from editorial prose changes (like typos or description enhancements), the engine can execute incremental compilations and reuse downstream evaluator subgraphs without forcing unnecessary execution rebuilds.
+
+Graph topology is decoupled entirely from node content. The global `cg_ir_snapshot_hash` is computed as a master SHA-256 function of the sorted array of independent `node_hashes`, directional `edge_hashes` ($source \to target$), and canonicalized provenance metadata.
 
 ---
 
