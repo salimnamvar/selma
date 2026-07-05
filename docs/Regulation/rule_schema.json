@@ -10,7 +10,8 @@
     "policy_is_governance_intent": true,
     "policy_runtime_prohibition": "policy_doctrine.yaml MUST NOT be read at inspection, evaluation, or FSM runtime",
     "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
-    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only."
+    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
+    "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant enforced by if/then. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST check cross-field consistency."
   },
   "x-cg-ir-hashing": {
     "node_hash_scope": "local",
@@ -27,6 +28,7 @@
       "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id (immutable root). Execution ID maps to rule.id.",
       "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id"
     },
+    "pattern_relationship": "Execution ID pattern extends lineage_id pattern by appending zero or more -SUFFIX segments. Base [A-Z][A-Z0-9]+-[0-9]+ is shared. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes appended.",
     "lifecycle": {
       "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
       "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
@@ -52,7 +54,8 @@
     "canonical_form": "All objects serialized with sorted keys before hashing",
     "recursive_structures": "For recursive evaluator_config: serialize sub_evaluators as array of canonical JSON objects. For lineage: serialize parent_*_ids as sorted arrays.",
     "schema_references": "$ref resolved at schema validation time; not included in canonical form for hashing",
-    "map_ordering": "Objects with additionalProperties: keys sorted lexicographically before hashing"
+    "map_ordering": "Objects with additionalProperties: keys sorted lexicographically before hashing",
+    "normalization_rules": "additionalProperties: true objects have keys sorted before hashing. Default values NOT injected into canonical form. Only explicit values participate in hashing."
   },
   "x-conflict-resolution-binding": {
     "spec_model": "Deterministic multi-factor: explicit override → priority → specificity → recency",

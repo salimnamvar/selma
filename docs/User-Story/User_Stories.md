@@ -1,7 +1,7 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 20.3.0  
+**Version:** 8.1.2  
 **Date:** 2026-07-05  
 **Status:** Final  
 **Normative Reference:** SPECIFICATION.md 8.1.2
@@ -17,9 +17,16 @@
 | **Normative** | SPECIFICATION.md 8.1.2 | Defines system behavior, invariants, contracts |
 | **Structural** | rule_schema.json 8.1.2 | JSON Schema encoding of spec invariants |
 | **Governance** | policy_doctrine.yaml 8.1.2 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 20.3.0 | This document — behavioral contract |
+| **Behavioral** | User_Stories.md 8.1.2 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents. Policy is never read at runtime — only schema fields compiled per spec.
+
+**Cross-Field Constraints (semantic, not structural):**
+- `evaluator_type` ↔ `evaluator_config` consistency is enforced via schema if/then, but intermediate validators that only validate subschemas may miss invalid pairings
+- `priority` ordering vs `depends_on` consistency is a semantic invariant, not a structural one
+- `lineage.operation` constraints beyond required fields are semantic invariants
+
+**Conflict Resolution:** Declared in three places (schema `conflict_resolution` field, cross-layer binding, policy intent section). All three MUST remain synchronized. SPECIFICATION.md §2.15 is normative; policy describes governance intent only.
 
 ---
 
@@ -112,7 +119,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **CG-IR Node Hashing** | Local content identity: node_hash from node_body only; graph context in edges + snapshot manifest |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
 | **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → priority → specificity → recency → Conflict Artifact. Cycles detected and resolved. |
-| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. |
+| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. `additionalProperties: true` objects normalized by sorting keys before hashing. Schema `$ref` resolved at validation time only, excluded from canonical form. |
 | **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_snapshot_hash, frozen_env, engine, target_hash)`. `cg_ir_snapshot_hash` defined in SPECIFICATION.md §2.6. |
 | **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
 | **Concurrency Model** | Compilation = read lock; modification = write lock (exclusive). Queue serializes requests. |
@@ -267,7 +274,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Finding FSM** | Strict state transitions enforced |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
-| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then). Cross-field consistency is a semantic invariant — intermediate validators may not catch all invalid pairings. |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
@@ -276,7 +283,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
 | **Machine ID Semantics** | Machine ID = stable lineage root; 1:1 maps to rule.lineage_id at compile; engine never reads policy |
 | **CG-IR Local Node Hashing** | node_hash from node_body only; depends_on as sorted directive_id refs; edges/snapshot capture topology |
-| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id; `additionalProperties: true` keys sorted before hashing; `$ref` excluded from canonical form |
 | **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; tuple strictly non-decreasing per node |
 | **Capability Enforcement** | Checked at ingress and stage gates; deny = 403, no partial mutation, audit logged |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |

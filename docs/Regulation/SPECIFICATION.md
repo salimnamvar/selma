@@ -81,7 +81,7 @@ This standard applies to:
 └─────────────────────────────┘
 ```
 
-### 2.2 Canonical Identity Resolution
+### 2.3 Canonical Identity Resolution
 
 The identity model has two distinct ID types:
 
@@ -96,6 +96,7 @@ The identity model has two distinct ID types:
 - Used for CG-IR compilation and runtime evaluation
 - Tracks the current active version of a directive
 - Format: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$` (e.g., `TRAF-001-A`)
+- **Pattern relationship:** Execution ID extends lineage_id pattern by appending zero or more `-SUFFIX` segments. The base `[A-Z][A-Z0-9]+-[0-9]+` is shared. On first creation, execution_id equals lineage_id (zero suffix segments). After fork/merge/split, suffix segments are appended.
 
 **Identity Mapping:**
 
@@ -308,6 +309,7 @@ evaluate(node, target, context) → {
 | **Determinism** | Same inputs → same outputs, always. |
 | **Allowed operations** | String matching, regex, arithmetic, field extraction, comparison |
 | **Prohibited operations** | HTTP calls, DB queries, file reads, environment variables |
+| **Type Safety** | `evaluator_config` MUST match `evaluator_type` (schema if/then). This is a semantic invariant — intermediate validators that only validate subschemas may not catch invalid pairings. Compile-time validation MUST check cross-field consistency. |
 
 **Evaluator Types (pure only):**
 
@@ -565,6 +567,12 @@ For reproducibility, all hashing uses:
 | **Hash algorithm** | SHA-256 |
 
 **Canonical JSON:** All objects are serialized with sorted keys before hashing.
+
+**Normalization Rules (pre-serialization):**
+- Objects with `additionalProperties: true` have their keys sorted lexicographically before hashing
+- Schema `$ref` references are resolved at validation time only; NOT included in canonical form for hashing
+- Default values specified in schema are NOT injected into canonical form — only explicit values in the instance participate in hashing
+- Explicit `null` values are preserved (not omitted)
 
 **Recursive Structures:**
 - **Composite evaluators:** `sub_evaluators` are serialized as an ordered array of canonical JSON objects
@@ -835,7 +843,7 @@ CG-IR Content-Addressed Store
 }
 ```
 
-### 3.2 Pipeline Trace Entry
+### 3.7 Pipeline Trace Entry
 
 ```json
 {
