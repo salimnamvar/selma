@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.2.0
+**Version:** 8.2.1
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -36,7 +36,26 @@ The Selma system has three document layers with a strict dominance hierarchy:
 6. The engine validates schema against spec invariants at compile time
 7. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime. Policy influences execution only indirectly: human authors use it when writing directives, and compile-time validators check that schema fields (e.g., `priority`, `conflict_resolution`) conform to spec — never by interpreting policy prose as executable logic
 
-### 1.3 Scope
+### 1.3 Terminology
+
+The following terms are normatively defined for use across all layers:
+
+| Term | Definition |
+| :--- | :--- |
+| **Normative** | Binding system behavior defined exclusively in this specification. Schema and policy MUST conform; policy prose is never normative at runtime. |
+| **Structural Projection** | `rule_schema.json` encoding of spec invariants. Carries data; does not define algorithms. |
+| **Compile-Time** | Directive Graph validation, schema validation, CG-IR generation, and cross-field semantic checks. Policy MAY influence authors; engines MUST NOT read policy prose. |
+| **Inspection** | Point-in-time evaluation of a target against a frozen CG-IR snapshot. Produces immutable execution artifacts. |
+| **Evaluation** | Pure evaluator invocation within an inspection. No IO, no randomness. |
+| **Context** | Read-only object (§2.11) passed to evaluators. Evaluators MUST NOT mutate it. |
+| **Scope** | Applicability constraints compiled into CG-IR `scope`. Participates in specificity scoring (§2.15). |
+| **Target** | Submitted artifact conforming to §2.10. The subject of inspection. |
+| **Semantic Intent** | Human-declared purpose of a directive. Stable across revision/rename; changes on fork/split. |
+| **Conflict Artifact** | Escalation record when `resolve_conflict` cannot deterministically select a winner. Requires human review via `conflict.resolve` capability. |
+| **Authorized Governing Body** | Entity with ratification authority over policy amendments (§6.1 Governance & Amendment). |
+| **Finding FSM** | Strict state machine governing finding lifecycle (§3.1). |
+
+### 1.4 Scope
 
 This standard applies to:
 - Policy documents (prose rules, governance documents, standards)
@@ -80,6 +99,70 @@ This standard applies to:
 │   (immutable, reproducible) │
 └─────────────────────────────┘
 ```
+
+### 2.2 Identity Lifecycle Operations
+
+Lifecycle operations transform directive identity. Each operation MUST record provenance in the `lineage` field when required by schema.
+
+#### 2.2.1 Operation Semantics
+
+| Operation | `lineage_id` | `id` (execution) | `lineage` field |
+| :--- | :--- | :--- | :--- |
+| **revision** | Unchanged | Unchanged | NOT required |
+| **fork** | Inherited (shared) | Two new unique IDs | REQUIRED (`operation=fork`) |
+| **merge** | New root (see §2.2.2) | One new unique ID | REQUIRED (`operation=merge`) |
+| **split** | Inherited (shared) | Multiple new unique IDs | REQUIRED (`operation=split`) |
+| **rename** | Unchanged | Unchanged | NOT required |
+| **retire** | Unchanged | Unchanged; `status=deprecated` | NOT required |
+
+#### 2.2.2 Deterministic Merge Semantics
+
+When two directives merge, identity selection is fully deterministic:
+
+```
+merge(parent_a, parent_b) → merged_rule:
+
+1. lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically
+   // The lexicographically smaller parent lineage_id becomes the merged root.
+   // The other parent lineage_id is recorded only in lineage.parent_lineage_ids.
+
+2. id := lineage_id + "-M" + SHA-256(canonical_json({
+     parent_lineage_ids: sorted([parent_a.lineage_id, parent_b.lineage_id]),
+     parent_execution_ids: sorted([parent_a.id, parent_b.id]),
+     operation: "merge"
+   }))[0:8].uppercase()
+   // Example: TRAF-001-M3A7F2B1
+
+3. lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])
+4. lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])
+5. Both parent rules transition to status=deprecated
+```
+
+**Invariant:** The merged `lineage_id` equals the lexicographically minimum parent `lineage_id`. The non-surviving parent `lineage_id` remains in audit history via `lineage.parent_lineage_ids` but is never reused as an active root.
+
+#### 2.2.3 Lineage DAG Invariants
+
+The lineage ancestry graph MUST satisfy:
+
+1. **Acyclicity:** No directed cycle in `(parent_lineage_ids → child lineage_id)` edges
+2. **Single root per active rule:** Each active rule has exactly one `lineage_id`
+3. **Parent existence:** Every ID in `parent_lineage_ids` and `parent_execution_ids` MUST reference a rule that existed at `lineage.timestamp`
+4. **Operation consistency:**
+   - `fork`/`split`: exactly one entry in `parent_lineage_ids` (the inherited root)
+   - `merge`: exactly two entries in `parent_lineage_ids` (both parents)
+5. **No self-reference:** A rule MUST NOT list its own `lineage_id` or `id` as a parent
+6. **Depth bound:** Maximum ancestry depth = 64 operations from any leaf to root (compile-time rejection beyond limit)
+7. **Temporal ordering:** `lineage.timestamp` MUST be ≥ max(parent timestamps) when parent lineage records exist
+
+Pathological sequences (fork → merge → fork → merge chains) are permitted provided invariants 1–7 hold. Compile-time validation MUST reject cycles and depth violations.
+
+#### 2.2.4 Deprecation and Supersession
+
+| Transition | Semantics |
+| :--- | :--- |
+| `active` → `deprecated` | Rule retired; audit trail preserved; CG-IR nodes marked deprecated |
+| `active` → `superseded` | Rule replaced by another rule; `metadata.migration.superseded_by` MUST reference the successor `id` |
+| Successor binding | Compile-time validator MUST verify `superseded_by` references an active or draft rule |
 
 ### 2.3 Canonical Identity Resolution
 
@@ -216,17 +299,34 @@ Execution Artifacts (immutable, reproducible)
 
 Node identity is **local** — a node hash depends only on the node's own canonical content, not on global DAG position or neighbor context.
 
-```
-node_hash = SHA-256(canonical_json(node_body))
+**Dual Hash Model:**
 
-node_body = {
-  directive_id, lineage_id, directive_revision, control_version,
-  description, evaluator, scope, severity_default,
-  depends_on,           // sorted array of directive_id strings (references only)
+| Hash | Input | Purpose |
+| :--- | :--- | :--- |
+| **semantic_hash** | `semantic_body` (evaluator, scope, depends_on, priority, conflict_resolution, status, severity_default) | Compilation cache identity; unchanged by editorial description edits |
+| **presentation_hash** | `presentation_body` (description, directive_revision, control_version) | Audit/display drift detection |
+| **node_hash** | SHA-256(canonical_json({semantic_hash, presentation_hash})) | Content-addressed storage key |
+
+```
+semantic_body = {
+  directive_id, lineage_id,
+  evaluator, scope, severity_default,
+  depends_on,           // sorted array (§2.16)
   priority, conflict_resolution, status
 }
-// Excluded from node_body: graph edges, snapshot manifest position, neighbor hashes
+
+presentation_body = {
+  description, directive_revision, control_version
+}
+
+node_hash = SHA-256(canonical_json({
+  semantic_hash: SHA-256(canonical_json(semantic_body)),
+  presentation_hash: SHA-256(canonical_json(presentation_body))
+}))
+// Excluded from all hashes: graph edges, snapshot manifest position, neighbor hashes
 ```
+
+**Incremental reuse:** Unchanged `semantic_body` produces identical `semantic_hash` even when `description` changes. Downstream compilation MAY reuse evaluator subgraphs keyed on `semantic_hash`.
 
 | Hash Level | Input | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -273,7 +373,7 @@ cg_ir_snapshot_hash = SHA-256(canonical_json({
 **Provenance Canonicalization Requirement:** All provenance fields MUST be canonicalized (normalized to canonical form) before inclusion in the snapshot hash input. Provenance fields MUST NOT be appended in non-deterministic order. Specifically:
 - `engine_version` and `frozen_env_hash` are normalized strings (no trailing whitespace, case-insensitive where applicable)
 - `directive_graph_version` follows semver normalization
-- `compiled_at` is included in the snapshot hash but does NOT affect determinism for a given frozen compilation — two compilations with identical directive graph content, engine version, and frozen environment but different wall clock times produce the same `cg_ir_snapshot_hash` because `compiled_at` is NOT part of the snapshot hash input (it is part of execution artifact metadata only)
+- `compiled_at` is NOT part of the snapshot hash input — it is recorded in execution artifact metadata only. Two compilations with identical directive graph content, engine version, and frozen environment produce the same `cg_ir_snapshot_hash` regardless of wall clock time
 - If future extensions add provenance fields, each field MUST be declared with a canonical form before inclusion in hash computation
 
 **Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
@@ -361,6 +461,27 @@ evaluate(node, target, context) → {
 | `field_check` | Validates specific fields in structured targets |
 | `threshold` | Numeric comparison against configured limits |
 | `composite` | Boolean combination of sub-evaluators |
+
+**Evaluator Complexity Limits (compile-time enforced):**
+
+| Limit | Value | Violation |
+| :--- | :--- | :--- |
+| Maximum composite recursion depth | 32 levels | `SchemaError: evaluator depth exceeded` |
+| Maximum total evaluator nodes per rule | 256 (including root) | `SchemaError: evaluator count exceeded` |
+| Maximum composite DAG width (`sub_evaluators` count at any level) | 64 | `SchemaError: evaluator width exceeded` |
+| Maximum regex pattern length | 4 096 characters | `SchemaError: pattern too long` |
+| Maximum `metadata` serialized size per rule | 16 KiB | `SchemaError: metadata too large` |
+
+**Regex catastrophic backtracking mitigation:** All regex patterns MUST be RE2-compatible (§2.9 portability). Compile-time validation MUST reject patterns exceeding length limit. Runtime engines SHOULD enforce per-node evaluation timeout (§2.12).
+
+**Discriminator Validation:** `evaluator_type` ↔ `evaluator_config` consistency is a semantic invariant. JSON Schema `if`/`then` alone is insufficient — compile-time validation MUST apply dependent-schema checks equivalent to:
+
+```
+when evaluator_type = T → evaluator_config MUST match $defs for T exclusively
+reject any oneOf match where x-evaluator-type ≠ evaluator_type
+```
+
+Engines MUST NOT rely on partial subschema validation for evaluator pairing.
 
 ### 2.10 Target Schema (Strict)
 
@@ -538,7 +659,7 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 | Intent (Policy — authoring only) | Schema Field | Operator (CG-IR — runtime) | Implementation |
 | :--- | :--- | :--- | :--- |
 | "Higher priority wins" | `priority` | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
-| "More specific wins" | `target`, scope constraints | `specificity_score(rule_a) > specificity_score(rule_b)` | Count of scope constraints; higher = more specific |
+| "More specific wins" | `target`, scope constraints | `specificity_score(rule) > specificity_score(other)` | Formal algorithm below |
 | "Newer wins" | `created_at` | `max(created_at)` | ISO 8601 timestamp comparison |
 | N/A (schema-only) | `conflict_resolution` | `has_field(conflict_resolution)` | Checked first, before all computed factors |
 
@@ -551,6 +672,47 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 | **Spec (this document)** | Normative `resolve_conflict` algorithm. | **Sole executable source.** All runtime conflict decisions flow through this function. |
 
 **Compile-Time Translation (not runtime):** When compiling policy prose to schema, authors set `priority` and optional `conflict_resolution` fields. A compile-time validator MAY check that priority assignments are consistent with policy intent — but this validation produces errors/warnings at compile time only; it does not create a second runtime decision path.
+
+**Specificity Score Algorithm (normative):**
+
+```
+specificity_score(rule) → non-negative integer
+
+score = 0
+
+// 1. Target constraint specificity
+if rule.target is present and non-empty:
+  score += 1000 + len(rule.target)
+
+// 2. Scope constraint depth (compiled from CG-IR scope object)
+for each key in canonical_sorted(scope.keys()):
+  score += 100
+  if scope[key] is object:
+    score += depth(scope[key]) * 10    // nested keys add depth
+  else:
+    score += 1
+
+// 3. Evaluator field binding (more constrained = more specific)
+score += count_bound_fields(rule.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
+
+// 4. Explicit priority within same level does NOT affect specificity (handled by priority step)
+
+Tie on equal score → proceed to recency step
+```
+
+`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies.
+
+**Priority Level Mapping (internal integer):**
+
+| Schema `priority` enum | `priority_level` integer |
+| :--- | :--- |
+| `constitutional` | 1 |
+| `statutory` | 2 |
+| `regulatory` | 3 |
+| `operational` | 4 |
+| `advisory` | 5 |
+
+Enum values are presentation; all comparisons use `priority_level` integers.
 
 **Unified Conflict Resolution Function:**
 
@@ -606,7 +768,7 @@ For reproducibility, all hashing uses:
 | **String encoding** | UTF-8, no BOM |
 | **Datetime encoding** | ISO 8601 with UTC timezone (`YYYY-MM-DDTHH:MM:SSZ`) |
 | **Null handling** | Explicit `null`, not omitted |
-| **Array ordering** | Preserved as-is (insertion order) |
+| **Array ordering** | Classified per §2.16.1 — ordered arrays preserve insertion order; unordered arrays sorted lexicographically before hashing |
 | **Float precision** | IEEE 754 double; no rounding before hashing |
 | **Hash algorithm** | SHA-256 |
 
@@ -618,9 +780,23 @@ For reproducibility, all hashing uses:
 - Default values specified in schema are NOT injected into canonical form — only explicit values in the instance participate in hashing
 - Explicit `null` values are preserved (not omitted)
 
+#### 2.16.1 Array Ordering Classification
+
+| Array Field | Ordering | Serialization Rule |
+| :--- | :--- | :--- |
+| `sub_evaluators` | **Ordered** | Preserve author insertion order (logic evaluation order matters) |
+| `depends_on` | **Unordered (semantic set)** | Sort `directive_id` strings lexicographically |
+| `conflicts_with` | **Unordered (semantic set)** | Sort strings lexicographically |
+| `parent_lineage_ids` | **Unordered (semantic set)** | Sort lexicographically |
+| `parent_execution_ids` | **Unordered (semantic set)** | Sort lexicographically |
+| `node_hashes` (snapshot) | **Unordered (semantic set)** | Sort lexicographically |
+| `edge_hashes` (snapshot) | **Unordered (semantic set)** | Sort lexicographically |
+| `skipped_nodes` (inspection) | **Ordered** | Preserve pipeline execution order |
+| `pipeline_trace` | **Ordered** | Preserve chronological order |
+
 **Recursive Structures:**
-- **Composite evaluators:** `sub_evaluators` are serialized as an ordered array of canonical JSON objects
-- **Lineage:** `parent_lineage_ids` and `parent_execution_ids` are sorted lexicographically before hashing
+- **Composite evaluators:** `sub_evaluators` are serialized as an **ordered** array of canonical JSON objects
+- **Lineage:** `parent_lineage_ids` and `parent_execution_ids` are **unordered** — sorted lexicographically before hashing
 - **Schema references ($ref):** Resolved at schema validation time only; NOT included in canonical form for hashing
 - **Map ordering:** Objects with `additionalProperties: true` have keys sorted lexicographically before hashing
 
@@ -1029,6 +1205,56 @@ See `rule_schema.json` for the formal JSON Schema.
 
 Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure only), `evaluator_config`, `depends_on`, `priority`, `lineage` (fork/merge/split tracking).
 
+### 7.1 Metadata Namespacing
+
+The root `metadata` object and per-rule `metadata` (if present) are **informational only**. They MUST NOT contain executable hints, evaluator configuration, or runtime flags.
+
+**Required namespace structure:**
+
+```json
+{
+  "metadata": {
+    "audit": {
+      "authored_by": "string (actor ID)",
+      "approved_by": "string (actor ID, optional)",
+      "approved_at": "datetime (ISO 8601 UTC, optional)"
+    },
+    "vendor": {},
+    "author": {},
+    "migration": {
+      "superseded_by": "string (rule id, when status=superseded)",
+      "migration_notes": "string (optional)"
+    }
+  }
+}
+```
+
+- `additionalProperties` outside declared namespaces is PROHIBITED at root `metadata`
+- Unknown keys within a namespace MAY be rejected with warning at compile time
+- Metadata does NOT participate in `semantic_hash` unless explicitly declared in a future spec version
+
+### 7.2 Anchor Reference Syntax
+
+`anchor_ref` MUST conform to:
+
+```
+anchor_ref ::= section_ref | json_pointer
+
+section_ref ::= "section:" section_id ["/" subsection_id]
+
+section_id ::= "preamble" | "governance" | "definitions" | "principles"
+             | "directives" | "sanctions" | "references"
+
+json_pointer ::= "/" path_segment ("/" path_segment)*
+```
+
+**Examples:**
+- `section:directives/specific_directives`
+- `section:definitions`
+- `/directives/TRAF-001`
+
+Compile-time validation MUST verify `section:` references against policy document structure. Invalid references produce warnings; missing policy sections produce errors.
+
 ---
 
 ## 8. System Invariants
@@ -1067,6 +1293,13 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
+| **Evaluator Complexity Bounds** | Depth ≤ 32, total nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars (§2.9) |
+| **Lineage DAG Acyclicity** | Ancestry graph acyclic; max depth 64 (§2.2.3) |
+| **Specificity Determinism** | `specificity_score` algorithm in §2.15 is normative |
+| **Semantic/Presentation Hash Split** | `semantic_hash` excludes description; `node_hash` composes both (§2.6) |
+| **Array Ordering Classification** | Ordered vs unordered arrays per §2.16.1 |
+| **Metadata Informational Only** | Namespaced metadata; no executable content (§7.1) |
+| **Merge Identity Determinism** | Merged `lineage_id` = lexicographic min of parents (§2.2.2) |
 
 ---
 
@@ -1103,6 +1336,11 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 7. Regex flags limited to: `i`, `m`, `s`
 8. No NaN or Infinity in evaluator_config numeric values
 9. No timezone-dependent operations in evaluator logic
+10. Composite recursion depth ≤ 32
+11. Total evaluator nodes per rule ≤ 256
+12. Composite width (`sub_evaluators` count) ≤ 64 at any level
+13. Regex pattern length ≤ 4096 characters
+14. Cross-field discriminator: `evaluator_type` ↔ `evaluator_config` verified by compile-time validator (not partial subschema validation alone)
 
 ### 9.3 CG-IR Validation
 
@@ -1151,6 +1389,14 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 4. evaluator_config fields match evaluator_type (no invalid state combinations)
 5. Runtime engines do not read policy_doctrine.yaml (verified by architecture audit)
 6. Conflict resolution at runtime uses spec algorithm over schema/CG-IR fields only
+7. `anchor_ref` conforms to §7.2 syntax
+8. `metadata` uses declared namespaces only; no executable hints
+9. Lineage DAG satisfies §2.2.3 invariants (acyclicity, depth ≤ 64)
+10. Merge operations produce lineage_id per §2.2.2 deterministic algorithm
+
+### 9.8 Schema Annotation Status
+
+All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They document cross-layer bindings for human maintainers. On conflict between an `x-*` annotation and this specification, **this specification wins**.
 
 ---
 
@@ -1158,7 +1404,7 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 
 - `docs/Regulation/policy_doctrine.yaml` — Policy contract (declarative governance)
 - `docs/Regulation/rule_schema.json` — Rule schema (machine structure)
-- `docs/User_Story/User_Stories.md` — User stories (behavioral contract)
+- `docs/User-Story/User_Stories.md` — User stories (behavioral contract)
 
 ---
 
@@ -1177,3 +1423,4 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | 8.1.1 | 2026-07-05 | Architectural review: policy runtime prohibition, Machine ID single interpretation, HLC monotonicity under clock regression, CG-IR local node hashing scope, capability enforcement gates, DAG reference hashing |
 | 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
 | 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
+| 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |

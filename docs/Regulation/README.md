@@ -35,9 +35,10 @@ Three-layer architecture for universal rule governance. Spec is normative; schem
 2. rule_schema.json MUST be derivable from spec invariants — no schema element may contradict spec
 3. policy_doctrine.yaml describes governance intent only — no executable fields
 4. When spec and schema conflict, spec wins
-5. Version synchronization is a compatibility matrix, not strict equality
-6. The engine validates schema against spec invariants at compile time
-7. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime
+5. Version synchronization is a compatibility matrix: MAJOR MUST match; MINOR/PATCH MAY differ
+6. All `x-*` keys in rule_schema.json are informative and non-normative
+7. The engine validates schema against spec invariants at compile time
+8. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime
 
 ## The Separation Principle
 
@@ -64,7 +65,9 @@ The contracts connect in exactly **one** way:
 
 This forms a strict bidirectional pointer:
 - Policy says: *"This paragraph is about Rule `R-001`."*
-- Rule says: *"Rule `R-001` points back to `section:directives`."*
+- Rule says: *"Rule `R-001` points back to `section:directives/specific_directives`."*
+
+**Anchor Reference Syntax (§7.2):** `section:<id>[/<subsection>]` or JSON Pointer (`/path/to/section`).
 
 ## Contamination Guards
 
@@ -110,20 +113,35 @@ Both contracts follow semantic versioning (MAJOR.MINOR.PATCH):
 
 ## Composite Evaluator Recursion
 
-The schema supports recursive composite evaluators (`sub_evaluators` → `evaluator_config_entry` → `composite` → `sub_evaluators`). This is valid but creates:
-- Exponential validation cost on deep trees
-- Potential stack depth issues in naive validators
-- Requirement for tail-recursive or iterative evaluation engines
+The schema supports recursive composite evaluators (`sub_evaluators` → `evaluator_config_entry` → `composite` → `sub_evaluators`). Compile-time limits (§2.9):
+
+| Limit | Value |
+| :--- | :--- |
+| Max recursion depth | 32 |
+| Max total evaluator nodes | 256 |
+| Max composite width | 64 |
+| Max regex pattern length | 4096 chars |
+
+Evaluators MUST use iterative (not naive recursive) evaluation to avoid stack exhaustion.
 
 ## Deterministic Serialization
 
 Canonical form for hashing:
 - JSON keys sorted lexicographically
-- Objects with `additionalProperties: true` — keys sorted before hashing
+- **Ordered arrays** (preserve insertion order): `sub_evaluators`, `pipeline_trace`, `skipped_nodes`
+- **Unordered arrays** (sorted lexicographically before hash): `depends_on`, `conflicts_with`, `parent_lineage_ids`, `parent_execution_ids`
 - Schema `$ref` resolved at validation time only; excluded from canonical form
 - Default values NOT injected — only explicit values participate in hashing
 - NaN/Infinity prohibited
-- `depends_on` serialized as sorted array of directive_id strings
+- Dual hash model: `semantic_hash` (evaluator/scope) + `presentation_hash` (description) compose `node_hash`
+
+## Metadata Namespacing
+
+Root `metadata` is informational only. Declared namespaces: `audit`, `vendor`, `author`, `migration`. No executable hints permitted (§7.1).
+
+## Merge Semantics
+
+Merged `lineage_id` = lexicographic minimum of parent lineage_ids. New execution_id generated deterministically per §2.2.2.
 
 ## Specification
 

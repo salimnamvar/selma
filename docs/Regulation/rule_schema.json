@@ -1,10 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema 8.2.0",
+  "title": "Universal Rule Schema 8.2.1",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.2.0",
+  "x-spec-version": "8.2.1",
+  "x-normative-status": "All x-* keys in this schema are informative and non-normative. SPECIFICATION.md is the sole normative source.",
   "x-cross-layer-binding": {
+    "normative_status": "informative",
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
@@ -14,14 +16,18 @@
     "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant enforced by if/then. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST check cross-field consistency."
   },
   "x-cg-ir-hashing": {
+    "normative_status": "informative",
     "node_hash_scope": "local",
-    "node_body_fields": ["directive_id", "lineage_id", "directive_revision", "control_version", "description", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status"],
+    "dual_hash_model": "semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status) + presentation_hash (description, directive_revision, control_version) compose node_hash per SPECIFICATION.md §2.6",
+    "semantic_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status"],
+    "presentation_body_fields": ["description", "directive_revision", "control_version"],
     "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
     "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
     "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
     "incremental_reuse": "unchanged node_body produces identical node_hash across snapshots"
   },
   "x-identity": {
+    "normative_status": "informative",
     "contract": {
       "canonical": "id",
       "root": "lineage_id",
@@ -32,7 +38,7 @@
     "lifecycle": {
       "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
       "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
-      "merge": "Two lineage_ids merged, one new id. lineage field REQUIRED.",
+      "merge": "Merged lineage_id = lexicographic min of parent lineage_ids; new execution id per §2.2.2. lineage field REQUIRED.",
       "split": "Same lineage_id inherited, multiple new ids. lineage field REQUIRED.",
       "rename": "Same lineage_id, same id. lineage field NOT required.",
       "retire": "Same lineage_id, same id, status=deprecated. lineage field NOT required."
@@ -44,6 +50,9 @@
     }
   },
   "x-deterministic-serialization": {
+    "normative_status": "informative",
+    "ordered_arrays": ["sub_evaluators", "skipped_nodes", "pipeline_trace"],
+    "unordered_arrays": ["depends_on", "conflicts_with", "parent_lineage_ids", "parent_execution_ids", "node_hashes", "edge_hashes"],
     "json_key_ordering": "alphabetical (lexicographic)",
     "number_encoding": "integer as integer, float as IEEE 754 double",
     "string_encoding": "UTF-8 no BOM",
@@ -57,7 +66,20 @@
     "map_ordering": "Objects with additionalProperties: keys sorted lexicographically before hashing",
     "normalization_rules": "additionalProperties: true objects have keys sorted before hashing. Default values NOT injected into canonical form. Only explicit values participate in hashing."
   },
+  "x-complexity-limits": {
+    "normative_status": "informative",
+    "normative_reference": "SPECIFICATION.md §2.9",
+    "max_composite_depth": 32,
+    "max_evaluator_nodes_per_rule": 256,
+    "max_composite_width": 64,
+    "max_regex_pattern_length": 4096,
+    "max_metadata_bytes_per_rule": 16384,
+    "max_lineage_ancestry_depth": 64
+  },
   "x-conflict-resolution-binding": {
+    "normative_status": "informative",
+    "specificity_algorithm": "SPECIFICATION.md §2.15 specificity_score (normative)",
+    "priority_level_mapping": {"constitutional": 1, "statutory": 2, "regulatory": 3, "operational": 4, "advisory": 5},
     "spec_model": "Deterministic multi-factor: explicit override → priority → specificity → recency",
     "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
     "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
@@ -85,8 +107,32 @@
     },
     "metadata": {
       "type": "object",
-      "description": "Open container for context (jurisdiction, domain, project).",
-      "additionalProperties": true
+      "description": "Informational context only. MUST NOT contain executable hints. See SPECIFICATION.md §7.1.",
+      "properties": {
+        "audit": {
+          "type": "object",
+          "properties": {
+            "authored_by": { "type": "string" },
+            "approved_by": { "type": "string" },
+            "approved_at": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        },
+        "vendor": { "type": "object", "additionalProperties": { "type": "string" } },
+        "author": { "type": "object", "additionalProperties": { "type": "string" } },
+        "migration": {
+          "type": "object",
+          "properties": {
+            "superseded_by": { "type": "string" },
+            "migration_notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "domain": { "type": "string" },
+        "jurisdiction": { "type": "string" },
+        "project": { "type": "string" }
+      },
+      "additionalProperties": false
     },
     "rules": {
       "type": "array",
@@ -127,7 +173,8 @@
           },
           "anchor_ref": {
             "type": "string",
-            "description": "Link back to the human document section."
+            "pattern": "^(section:(preamble|governance|definitions|principles|directives|sanctions|references)(/[a-z_]+)?|/.+)$",
+            "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2."
           },
           "evaluator_type": {
             "type": "string",
@@ -140,7 +187,7 @@
                 "description": "Regex evaluator config",
                 "type": "object",
                 "properties": {
-                  "pattern": { "type": "string", "minLength": 1 },
+                  "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
                   "flags": { "type": "string", "default": "" }
                 },
                 "required": ["pattern"],
@@ -262,22 +309,71 @@
           }
         },
         "additionalProperties": false,
+        "dependentRequired": {
+          "evaluator_type": ["evaluator_config"]
+        },
         "allOf": [
           {
             "if": { "properties": { "evaluator_type": { "const": "regex" } } },
-            "then": { "properties": { "evaluator_config": { "required": ["pattern"] } } }
+            "then": {
+              "properties": {
+                "evaluator_config": {
+                  "type": "object",
+                  "required": ["pattern"],
+                  "properties": {
+                    "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                    "flags": { "type": "string", "default": "" }
+                  },
+                  "not": { "required": ["field", "operator", "threshold", "logic", "sub_evaluators"] },
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "field_check" } } },
-            "then": { "properties": { "evaluator_config": { "required": ["field", "operator", "value"] } } }
+            "then": {
+              "properties": {
+                "evaluator_config": {
+                  "type": "object",
+                  "required": ["field", "operator", "value"],
+                  "not": { "required": ["pattern", "threshold", "logic", "sub_evaluators"] },
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "threshold" } } },
-            "then": { "properties": { "evaluator_config": { "required": ["field", "operator", "threshold"] } } }
+            "then": {
+              "properties": {
+                "evaluator_config": {
+                  "type": "object",
+                  "required": ["field", "operator", "threshold"],
+                  "not": { "required": ["pattern", "logic", "sub_evaluators"] },
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           {
             "if": { "properties": { "evaluator_type": { "const": "composite" } } },
-            "then": { "properties": { "evaluator_config": { "required": ["logic", "sub_evaluators"] } } }
+            "then": {
+              "properties": {
+                "evaluator_config": {
+                  "type": "object",
+                  "required": ["logic", "sub_evaluators"],
+                  "not": { "required": ["pattern", "threshold"] },
+                  "properties": {
+                    "sub_evaluators": {
+                      "type": "array",
+                      "maxItems": 64
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           {
             "if": { "properties": { "lineage": { "properties": { "operation": { "enum": ["fork", "merge", "split"] } } } } },
@@ -305,7 +401,7 @@
             "evaluator_config": {
               "type": "object",
               "properties": {
-                "pattern": { "type": "string", "minLength": 1 },
+                "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
                 "flags": { "type": "string", "default": "" }
               },
               "required": ["pattern"],

@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 8.2.0
+# NORMATIVE SOURCE: SPECIFICATION.md 8.2.1
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.2.0"
+  version: "8.2.1"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.2.0"
-  rule_contract_version: "8.2.0"
+  spec_version: "8.2.1"
+  rule_contract_version: "8.2.1"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -80,10 +80,17 @@ identity_resolution:
 identity_lifecycle_intent:
   revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
-  merge: "Use when two directives combine into one with unified semantic intent."
+  merge: >
+    Use when two directives combine into one with unified semantic intent.
+    The governing body intends that the lexicographically smaller parent
+    Machine ID becomes the merged lineage root (see SPECIFICATION.md §2.2.2).
   split: "Use when one directive restructured into multiple independent directives."
   rename: "Use when display name changes but semantic intent is unchanged."
   retire: "Use when directive is no longer applicable. ID preserved in audit trail."
+  dag_intent: >
+    Lineage ancestry MUST form a directed acyclic graph. Cycles and excessive
+    depth (>64 operations) are prohibited. Implementation invariants are
+    defined in SPECIFICATION.md §2.2.3.
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
 # This document MUST NOT contain machine-executable logic.
@@ -110,6 +117,10 @@ contamination_guard:
     - technical_hints
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
+  metadata_note: >
+    Schema metadata fields are informational only. They MUST NOT contain
+    executable hints, evaluator configuration, or runtime flags. Use
+    declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
   note: >
     Priority hierarchy and conflict resolution below are DECLARATIVE
     DESCRIPTIONS of governance intent for human authors. They describe
@@ -145,6 +156,10 @@ priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
     that higher-priority rules take precedence. This is intent, not code.
+  internal_representation: >
+    Priority levels are represented internally as integers (1–5) for
+    comparison. Enum labels (constitutional, statutory, etc.) are presentation
+    only. See SPECIFICATION.md §2.15 priority_level mapping.
   levels:
     - id: constitutional
       level: 1
@@ -178,7 +193,7 @@ priority_hierarchy:
     factors (in order):
     0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
     1. Higher priority level wins
-    2. If same level: more specific rule wins
+    2. If same level: more specific rule wins (specificity algorithm in SPECIFICATION.md §2.15)
     3. If same specificity: newer rule wins
     4. If still tied: escalate as Conflict Artifact for human review
     This is governance intent only — not executable logic in this file.
@@ -197,19 +212,18 @@ priority_hierarchy:
 # lives in the Provenance Manager engine.
 versioning_strategy:
   description: >
-    Both policy doctrine and rule schema follow semantic versioning.
+    Policy doctrine, rule schema, and specification follow semantic versioning.
     This describes intent. The version resolution function is in the engine.
-    Policy version, schema version, and spec version MUST be synchronized.
   format: "MAJOR.MINOR.PATCH"
   intent:
     major: "Breaking changes that require migration"
     minor: "New backward-compatible features"
     patch: "Bug fixes and clarifications"
   synchronization_intent: >
-    The governing body intends that policy version, schema version,
-    and spec version stay in sync. All three MUST share the same MAJOR
-    version. MINOR and PATCH versions may differ independently
-    (see SPECIFICATION.md §5 version compatibility matrix).
+    All three documents MUST share the same MAJOR version. MINOR and PATCH
+    versions MAY differ independently within the same MAJOR family
+    (see SPECIFICATION.md §5 version compatibility matrix). MAJOR mismatch
+    is incompatible. This is a compatibility matrix, not strict version equality.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:

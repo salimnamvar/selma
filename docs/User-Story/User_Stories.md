@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 8.2.0  
+**Version:** 8.2.1  
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md 8.2.0
+**Normative Reference:** SPECIFICATION.md 8.2.1
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -14,15 +14,17 @@
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.2.0 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.2.0 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.2.0 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 8.2.0 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.2.1 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.2.1 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.2.1 | Declarative governance intent (authoring only) |
+| **Behavioral** | User_Stories.md 8.2.1 | This document — behavioral contract |
 
-**Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents. Policy is never read at runtime — only schema fields compiled per spec.
+**Rule:** Spec is normative; schema and policy MUST conform. MAJOR versions MUST match across all documents; MINOR and PATCH MAY differ (compatibility matrix, not strict equality). Policy is never read at runtime — only schema fields compiled per spec.
+
+**Schema Annotations:** All `x-*` keys in `rule_schema.json` are informative and non-normative. On conflict, SPECIFICATION.md wins.
 
 **Cross-Field Constraints (semantic, not structural):**
-- `evaluator_type` ↔ `evaluator_config` consistency is enforced via schema if/then, but intermediate validators that only validate subschemas may miss invalid pairings
+- `evaluator_type` ↔ `evaluator_config` consistency requires compile-time dependent-schema validation beyond partial subschema checks (§2.9)
 - `priority` ordering vs `depends_on` consistency is a semantic invariant, not a structural one
 - `lineage.operation` constraints beyond required fields are semantic invariants
 
@@ -96,7 +98,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Inspection | Pipeline entry | `inspection.submit`, `inspection.reinspect` |
 | Finding transitions | Finding FSM Engine | `finding.acknowledge`, `finding.approve_remediation`, … |
 
-**Segregation of duties** is checked at the same gates. No capability delegation in v8.1.2.
+**Segregation of duties** is checked at the same gates. No capability delegation in v8.2.1.
 
 ---
 
@@ -106,6 +108,13 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | :--- | :--- |
 | **Directive Graph** | Human-authored source-of-truth. Structured, versioned, diffable. |
 | **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Determinism: identical inputs → identical hash. compiled_at excluded from hash (execution artifact metadata only). |
+| **Semantic vs Presentation Hash** | `semantic_hash` covers evaluator/scope/priority (compilation cache). `presentation_hash` covers description/revision. `node_hash` composes both (§2.6). Editorial description changes do not invalidate semantic cache. |
+| **Specificity Score** | Normative integer algorithm (§2.15): target constraint + scope depth + evaluator field bindings. Two engines MUST agree on scores for identical node bodies. |
+| **Merge Identity** | Merged `lineage_id` = lexicographic min of parent lineage_ids; new execution_id per §2.2.2 deterministic formula. |
+| **Metadata Namespacing** | Informational only. Declared namespaces: audit, vendor, author, migration. No executable hints (§7.1). |
+| **Anchor Reference** | `anchor_ref` MUST use `section:<id>` or JSON Pointer syntax (§7.2). |
+| **Array Ordering** | Ordered: `sub_evaluators`, `pipeline_trace`. Unordered (sorted before hash): `depends_on`, `conflicts_with`, `parent_*_ids` (§2.16.1). |
+| **Evaluator Complexity Limits** | Max depth 32, max nodes 256, max width 64, max regex 4096 chars (§2.9). |
 | **Finding Event Stream** | Append-only audit log with HLC ordering. Finding FSM enforced. |
 | **Execution Artifacts** | Immutable inspection snapshots, pipeline traces, system state hashes. |
 | **Hermetic Compilation** | Frozen environment ensures reproducibility. Read lock on Directive Graph. |
@@ -165,7 +174,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **S-02** | Regulatory Official | I want to modify an existing directive. | **Given** I specify directive execution_id and change. **When** Selma processes it. **Then** Selma acquires write lock, creates new revision (same lineage_id), incrementally compiles to new CG-IR snapshot (reuses unchanged subgraph via content-addressed store), re-assesses consistency, records provenance. **And** lineage_id unchanged. **And** new Ruleset Version. | **P0** |
 | **S-03** | Regulatory Official | I want to retire a directive. | **Given** I specify directive to retire. **When** Selma processes it. **Then** Selma transitions to "Retired", records reason, marks CG-IR nodes deprecated, generates new snapshot. | **P1** |
 | **S-19** | Regulatory Official | I want to fork a directive into two distinct directives. | **Given** I specify a directive and describe the split. **When** Selma processes it. **Then** Selma creates two new execution_ids (inheriting lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=fork), compiles both to CG-IR, deprecates original nodes. **And** both new rules share the same lineage_id. **And** execution_ids are globally unique. | **P1** |
-| **S-20** | Regulatory Official | I want to merge two directives into one. | **Given** I specify two directives and describe the merge. **When** Selma processes it. **Then** Selma creates one new lineage_id and one new execution_id, records parent lineage_ids in `lineage.parent_lineage_ids`, records parent execution_ids in `lineage.parent_execution_ids`, compiles to CG-IR, deprecates both originals. **And** new lineage_id is distinct from both parents. | **P1** |
+| **S-20** | Regulatory Official | I want to merge two directives into one. | **Given** I specify two directives and describe the merge. **When** Selma processes it. **Then** Selma assigns merged `lineage_id` = lexicographic min of parent lineage_ids, generates deterministic execution_id per §2.2.2, records sorted `lineage.parent_lineage_ids` and `lineage.parent_execution_ids`, compiles to CG-IR, deprecates both originals. **And** non-surviving parent lineage_id remains in audit history only. | **P1** |
 | **S-26** | Regulatory Official | I want to split a directive into multiple independent directives. | **Given** I specify a directive and describe the restructuring. **When** Selma processes it. **Then** Selma creates multiple new execution_ids (inheriting parent lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=split), compiles to CG-IR, deprecates original. **And** each child has a unique execution_id. **And** all children share the parent lineage_id. | **P1** |
 
 ---
@@ -182,6 +191,8 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **S-09** | Regulatory Official | I want to preview impact before finalizing. | **Given** I request change. **When** Selma generates proposal. **Then** Selma shows current vs proposed CG-IR snapshots, requires confirmation. | **P2** |
 | **S-21** | Regulatory Official | I want to verify cross-runtime evaluator portability. | **Given** I request evaluator portability audit. **When** Selma processes it. **Then** Selma validates all regex patterns are RE2-compatible, confirms no prohibited regex features (backreferences, atomic groups), verifies numeric evaluators use IEEE 754 strict arithmetic, confirms timestamp evaluators use UTC-only, and reports any portability violations. | **P1** |
 | **S-22** | Regulatory Official | I want to verify provenance canonicalization. | **Given** I request provenance audit. **When** Selma processes it. **Then** Selma validates all provenance fields are in canonical form before hash computation, confirms no non-deterministic ordering in provenance inclusion, and reports any canonicalization violations. | **P1** |
+| **S-27** | Regulatory Official | I want to verify evaluator complexity limits. | **Given** I request complexity audit. **When** Selma processes it. **Then** Selma validates composite depth ≤ 32, total evaluator nodes ≤ 256, composite width ≤ 64, regex patterns ≤ 4096 chars, and lineage ancestry depth ≤ 64. **And** rejects rules exceeding limits at compile time. | **P1** |
+| **S-28** | Regulatory Official | I want conflict resolution to be fully deterministic. | **Given** I request consistency review on a frozen CG-IR snapshot. **When** Selma applies `resolve_conflict`. **Then** Selma computes `specificity_score` per §2.15 normative algorithm, compares `priority_level` integers (not enum labels), and produces identical outcomes on repeated runs. | **P1** |
 
 ---
 
@@ -223,11 +234,11 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Epic | P0 | P1 | P2 | Total |
 | :--- | :--- | :--- | :--- | :--- |
 | Directive Lifecycle | 2 | 4 | 0 | **6** |
-| Directive Governance | 1 | 5 | 1 | **7** |
+| Directive Governance | 1 | 7 | 1 | **9** |
 | Inspection | 1 | 4 | 0 | **5** |
 | Finding Management | 1 | 4 | 0 | **5** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
-| **Total** | **5** | **18** | **2** | **25** |
+| **Total** | **5** | **20** | **2** | **27** |
 
 ---
 
@@ -264,7 +275,14 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Finding FSM | S-11, S-12, S-13, S-14, S-25 |
 | HLC Event Ordering | S-14 |
 | Capability-Based Permissions | S-14 |
-| Conflict Resolution Mapping (explicit override first) | S-05 |
+| Conflict Resolution Mapping (explicit override first) | S-05, S-28 |
+| Specificity Determinism (normative algorithm) | S-05, S-28 |
+| Evaluator Complexity Limits | S-27 |
+| Merge Identity Determinism | S-20 |
+| Semantic/Presentation Hash Split | S-23 |
+| Metadata Namespacing | S-01 |
+| Anchor Reference Syntax | S-01 |
+| Lineage DAG Invariants | S-19, S-20, S-26 |
 | Conflict Resolution Temporal Binding | S-05 |
 | Mediated Feedback | S-17, S-18 |
 | DAG Execution with Fault Taxonomy | S-10 |
@@ -281,7 +299,7 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.2.0 is the single normative source |
+| **Normative Source** | SPECIFICATION.md 8.2.1 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id root never reused; fork/split allows shared lineage_id |
 | **Execution ID Stability** | Changes only on fork/merge/split; globally unique within ruleset |
@@ -305,8 +323,12 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **Declarative Governance** | Policy describes authoring intent only; runtime uses schema/CG-IR fields via spec resolve_conflict |
 | **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
 | **Machine ID Semantics** | Machine ID = stable lineage root; bijective at root-assignment level; fork/split allows shared lineage_id with distinct execution_ids |
-| **CG-IR Local Node Hashing** | node_hash from node_body only; depends_on as sorted directive_id refs; edges/snapshot capture topology |
-| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id; `additionalProperties: true` keys sorted before hashing; `$ref` excluded from canonical form |
+| **CG-IR Local Node Hashing** | Dual hash: semantic_hash + presentation_hash compose node_hash; depends_on as sorted directive_id refs; edges/snapshot capture topology |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; ordered vs unordered arrays per §2.16.1; NaN/Infinity prohibited; metadata namespaced and informational only; `$ref` excluded from canonical form |
+| **Evaluator Complexity Bounds** | Depth ≤ 32, nodes ≤ 256, width ≤ 64, regex ≤ 4096 chars |
+| **Lineage DAG Acyclicity** | Ancestry acyclic; max depth 64; merge lineage_id = lexicographic min of parents |
+| **Specificity Determinism** | Normative `specificity_score` algorithm; priority compared as integers |
+| **Schema x-* Informative Only** | All `x-*` annotations non-normative; spec wins on conflict |
 | **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; tuple strictly non-decreasing per node |
 | **system_state_hash Scope** | Captures inspection reproducibility only; event ordering excluded (circular dependency avoidance) |
 | **Conflict Resolution Temporal Binding** | created_at frozen in CG-IR node_body; conflict outcomes snapshot-bound, not evaluation-time-dependent |
