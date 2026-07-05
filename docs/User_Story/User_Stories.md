@@ -1,10 +1,21 @@
 # Selma — Unified User Stories
 **Project:** Selma — Rule Regularity Platform
-**Version:** 5.1
+**Version:** 6.0
 **Date:** 2026-07-05
 **Status:** Final
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
+
+---
+
+## Foundational Interaction Assumptions
+
+Selma operates as a unified regulatory platform with two integrated bodies:
+
+1. **Regulatory Body**: The user defines, modifies, and retires directives (rules). Selma standardizes them for human and machine consumption.
+2. **Inspection Body**: The user submits a target (document, code, book, file, context, or any information format). Selma applies the applicable rules to the target, identifies deviations, and produces a formal inspection report with findings and corrective recommendations.
+
+The user interacts with Selma as a single unified authority—not a collection of tools. Selma handles all standardization, validation, and inspection automatically.
 
 ---
 
@@ -47,13 +58,14 @@
 
 ## Epic 2: Regulatory Inspection & Compliance Review
 
-*The user requests inspections, conflict assessments, and full compliance audits.*
+*The user requests inspections of external targets, conflict assessments, and full compliance audits.*
 
 | Story ID | User Story | Acceptance Criteria (Given-When-Then) | Priority |
 | :--- | :--- | :--- | :--- |
 | **S-04** | As a Regulated Entity, I want to view all active regulatory requirements for my domain, so that I know what is currently expected and enforced. | **Given** I request the active requirements for my domain. <br> **When** Selma processes it. <br> **Then** Selma returns all active directives in both a formal reference format and a technical format suitable for implementation. | **P0** |
 | **S-05** | As a Regulated Entity, I want to know if any directives conflict with one another, so that I can resolve contradictions before they cause compliance issues. | **Given** I request a regulatory consistency review. <br> **When** Selma processes it. <br> **Then** Selma conducts a full assessment and issues a formal inspection report with findings, identified conflicts, contradictions, and required corrective actions. | **P1** |
 | **S-06** | As a Regulated Entity, I want to receive a comprehensive compliance audit of my entire regulatory set, so that I understand redundancies, gaps, and circular dependencies. | **Given** I request a full compliance audit. <br> **When** Selma processes it. <br> **Then** Selma generates a formal compliance inspection report with findings, deficiencies, redundancies, logical gaps, and required corrective actions. | **P2** |
+| **S-10** | As a Regulated Entity, I want to submit a target (document, code, file, or any information format) for inspection against my active directives, so that I can identify deviations and receive corrective recommendations. | **Given** I provide a target and optionally specify which rules to apply. <br> **When** Selma processes it. <br> **Then** Selma reads the target, applies the applicable rules, identifies deviations, and produces a formal inspection report with findings and corrective recommendations. | **P0** |
 
 ---
 
@@ -74,9 +86,9 @@
 | Epic | P0 | P1 | P2 | Total |
 | :--- | :--- | :--- | :--- | :--- |
 | Regulatory Directive Submission | 2 | 1 | 0 | **3** |
-| Regulatory Inspection & Compliance Review | 1 | 1 | 1 | **3** |
+| Regulatory Inspection & Compliance Review | 2 | 1 | 1 | **4** |
 | Regulatory Revision History & Provenance | 0 | 2 | 1 | **3** |
-| **Total** | **3** | **4** | **2** | **9** |
+| **Total** | **4** | **4** | **2** | **10** |
 
 ---
 
@@ -86,7 +98,8 @@
 | :--- | :--- |
 | **Rule Creation & Maintenance** | ✅ S-01, S-02, S-03 (Submit, Modify, Retire) |
 | **Automatic Compliance Verification** | ✅ Selma performs structural reviews and consistency checks automatically during S-01 and S-02. |
-| **Inspection & Feedback** | ✅ S-05 and S-06 provide formal inspection reports with findings and recommended corrective actions (mirroring the regulator–regulatee feedback loop). |
+| **Inspection of External Targets** | ✅ S-10 allows the user to submit any target (document, code, file) for inspection against active directives. |
+| **Meta-Inspection (Rule Consistency)** | ✅ S-05 and S-06 inspect the ruleset itself for conflicts, gaps, and redundancies. |
 | **Provenance & Audit Trail** | ✅ S-07 ensures full traceability of every directive's evolution. |
 | **Corrective Action & Restoration** | ✅ S-08 allows restoration to a prior compliant state (mirroring corrective action implementation). |
 
@@ -94,13 +107,14 @@
 
 ## The Internal View (For Implementation)
 
-While the user only sees a unified regulatory platform, Selma internally has four engines that work together. This is purely an implementation detail and is **never exposed** to the user:
+While the user only sees a unified regulatory platform, Selma internally has five engines that work together. This is purely an implementation detail and is **never exposed** to the user:
 
 | Internal Engine | What It Does | Exposed to User? |
 | :--- | :--- | :--- |
 | **Directive Drafting Engine** | Translates natural language into formal directives and technical specifications. | ❌ No. The user just "submits a directive." |
 | **Structural Compliance Reviewer** | Checks that directives are correctly formatted, structured, and free of technical contamination. | ❌ No. The user just "submits" and it passes automatically. |
 | **Regulatory Consistency Assessor** | Detects conflicts, contradictions, and circular dependencies between directives. | ❌ No. The user simply "requests an inspection" and receives the report. |
+| **External Inspection Engine** | Reads any target (document, code, file, context) and applies active rules to identify deviations. | ❌ No. The user just "submits a target" and receives the inspection report. |
 | **Revision & Provenance Manager** | Tracks all changes, versions, and restorations. | ❌ No. The user just "views history" or "restores" a directive. |
 
 The user interacts with Selma as a single, unified regulatory authority—not as a collection of tools. Selma performs the inspection, provides the findings, and issues the corrective feedback automatically, exactly as a regulator would.
