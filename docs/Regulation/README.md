@@ -62,9 +62,9 @@ Four known edge cases require monitoring during implementation. See `docs/User-S
 
 | Risk | Summary | Mitigation |
 | :--- | :--- | :--- |
-| **Lossy Lexicographic Merges** | `lineage_id := MIN(parent_a, parent_b)` is deterministic but may obscure provenance | Metadata parsing for lineage tracing; future `MERGE-NN` namespace (e.g. `MGR-18`) |
+| **Lossy Lexicographic Merges** | `lineage_id := MIN(parent_a, parent_b)` is deterministic but may obscure provenance | Metadata parsing for lineage tracing; future `MERGE-NN` namespace (e.g. `MGR-18`) in v9.0.0 |
 | **Time Realism in `finding_aggregates`** | Pre-computed aggregates exclude current-inspection findings | Multi-pass inspection or delayed escalation until reinspection |
-| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` may bypass standard JSON Schema engines | Canonical reference validator with AST-walking discriminator (§2.9) + invalid-pairing test corpus (§9.2.15, S-31) |
+| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce formal AST-walking discriminator validation (§2.9) at compile time; ship canonical reference validator + invalid-pairing test corpus (§9.2.15, S-30, S-31) |
 | **Cascade Invisibility via Skipped Nodes** | Dependency failures bypass downstream checks without findings | Surface `skipped_nodes` in pipeline trace and dashboards |
 
 **Binding Rules:**
