@@ -104,6 +104,8 @@ This forms a strict bidirectional pointer:
 
 The compilation engine implements all runtime behavior over schema/CG-IR fields only. Policy prose is authoritative for human authoring but never interpreted by the engine.
 
+**Mechanical enforcement:** CI runs `scripts/validate_contracts.py` to scan runtime source paths (`src/`) for references to `policy_doctrine.yaml`. Runtime startup MAY additionally assert the doctrine file is absent from configured data paths (SPECIFICATION.md §9.7 item 5).
+
 ## Contamination Guards
 
 Each contract explicitly lists what it MUST NOT contain:

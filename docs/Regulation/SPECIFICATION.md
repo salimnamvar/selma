@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.2.2
+**Version:** 8.2.3
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -494,7 +494,8 @@ Directive Graph
 | `parameters` | Merged into `evaluator.config` | Shallow merge | Parameters override evaluator_config keys on conflict |
 | `expires_at` | _(not compiled)_ | Dropped | Compile-time-only field; expiration is a separate scheduler concern |
 | `lineage` | _(not in node_body)_ | Recorded in provenance only | Lineage metadata in snapshot provenance, not node body |
-| `metadata` (per-rule) | _(not compiled)_ | Dropped | Per-rule metadata is informational only (§7.1); not compiled into CG-IR |
+| `metadata.audit.authored_by` (per-rule) | `creator_provenance` (snapshot node provenance) | Copy as sorted unique array | Excluded from `node_body` hash; used for segregation of duties at `finding.waive` (§3.2) |
+| `metadata` (per-rule, other) | _(not compiled)_ | Dropped | Other per-rule metadata is informational only (§7.1); not compiled into CG-IR |
 
 ### 2.8.2 Scope Object Schema
 
@@ -700,6 +701,8 @@ Reinspection creates a completely new inspection with a new `inspection_id` and 
 
 **Correlation model:** Findings are correlated by `target_id` + `lineage_id`. A dashboard view MAY group findings across inspections by these fields, but this is a presentation concern — the Finding Event Stream remains append-only with no cross-inspection mutation.
 
+**Cross-lineage presentation correlation:** When a target is reinspected after merge, split, or fork operations that change `lineage_id` associations, correlation by `target_id + lineage_id` alone will not group historical findings across lineage boundaries. Dashboards and reporting layers that require cross-inspection historical grouping MUST implement application-layer correlation logic (e.g., by `target_id` alone, by Machine ID root ancestry via `lineage.parent_lineage_ids`, or by explicit supersession links). The Finding Event Stream and inspection snapshots remain immutable; cross-lineage grouping is never a runtime engine responsibility.
+
 **Supersession (manual only):** A Regulatory Official MAY close a previous finding with disposition `superseded` via a manual FSM transition (if implemented) or by adding `superseded` as an additional disposition value with its own capability (`finding.supersede`). This is NOT automatic on reinspection.
 
 ### 2.14 Finding Event Stream
@@ -826,6 +829,8 @@ When two active rules sharing a `lineage_id` both produce `Fail` findings for th
 - Both Fail with same type: no conflict (both findings stand independently)
 - One Fail, one NeedsReview: no conflict (NeedsReview does not contradict)
 
+**Operational guidance (NeedsReview + Fail overlap):** When one rule produces `Fail` and another produces `NeedsReview` for the same target within the same lineage, automatic conflict detection does not fire (by design). Operational review workflows SHOULD treat co-occurring `Fail` and `NeedsReview` findings for the same target as a related set requiring joint human review, as ambiguity findings may contextualize or qualify violation findings.
+
 **Cross-Lineage:** Mechanism 2 does not apply across lineage boundaries. Cross-lineage findings never trigger automatic conflict resolution — they are always reported as independent findings. Humans may request cross-lineage analysis via S-05, which produces advisory Conflict Artifacts (not automatic resolution).
 
 **Temporal Binding Guarantee:** The `created_at` field used in conflict resolution is the directive's authoring timestamp, frozen into `node_body` at compilation time. It is a static property of the CG-IR node — NOT evaluation time, NOT wall clock time. For a given CG-IR snapshot, conflict resolution outcomes are fully deterministic because all inputs (`priority`, `conflict_resolution`, `created_at`, `scope` for specificity) are frozen in the immutable snapshot. Two evaluations of the same CG-IR snapshot against the same target always produce identical conflict outcomes, regardless of when evaluation occurs.
@@ -921,10 +926,20 @@ cycle_detection:
 
 defer_to_reference_resolution:
   - defer_to contains a rule id (execution ID), not a lineage_id
-  - At compile time, the engine resolves the execution ID to a CG-IR node
-  - If the target execution ID is deprecated or superseded, the engine follows the lineage chain to find the currently active execution ID for that lineage
-  - If no active execution ID exists (all deprecated/superseded with no active successor), the override is ignored and conflict resolution falls through to computed factors
-  - If the target execution ID does not exist in the ruleset at all, the override is ignored and conflict resolution falls through to computed factors
+  - Resolution occurs at compile time: the engine resolves the referenced execution ID to a CG-IR node in the current ruleset snapshot
+  - Resolution algorithm (normative):
+    1. Let target_execution_id = strategy.defer_to
+    2. If target_execution_id == rule.id (self-reference): ignore override; fall through to computed resolution
+    3. If target_execution_id exists as an active rule id in the current ruleset: resolve to that rule
+    4. Else if target_execution_id exists as a deprecated or superseded rule id:
+       a. Let lineage_L = the lineage_id of the referenced rule
+       b. Find all active rules with lineage_id == lineage_L (status = active or draft)
+       c. If exactly one active rule exists: resolve to that rule (lineage chain successor)
+       d. If zero active rules exist: ignore override; fall through to computed resolution
+       e. If multiple active rules exist (post-fork ambiguity): return Conflict Artifact — human resolution required; do NOT apply defer_to override
+    5. Else (target not found in ruleset at all): ignore override; fall through to computed resolution
+  - Active rule definition: status is `active` or `draft` (draft compiles as active per §2.8.1)
+  - The resolved target MUST be compiled into the same CG-IR snapshot as the deferring rule
   - defer_to MUST NOT reference the rule's own id (self-deference is ignored)
 
 scope_boundary:
@@ -1143,6 +1158,23 @@ Findings follow a strict state transition model:
 **Segregation of Duties:**
 - Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it; enforced on `finding.waive` — see S-29)
 - Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it; enforced on `finding.approve_remediation` — see S-14)
+
+**Creator Provenance (`authored_by`):**
+
+Segregation of duties requires tracking directive authorship across identity lifecycle operations. The canonical creator identity is stored at `metadata.audit.authored_by` (actor ID) on each rule. At compile time, the engine copies this into per-node snapshot provenance as `creator_provenance` (sorted array of unique actor IDs, excluded from `node_body` hash per §7.1).
+
+**Inheritance rules (normative):**
+- On `directive.create`: `metadata.audit.authored_by` MUST be set to the authenticated actor performing the create operation
+- On `directive.modify`: `authored_by` is preserved from the parent revision unless explicitly reassigned by an authorized governance process (out of scope for automatic inheritance)
+- On `fork`: each child rule inherits `authored_by` from the parent directive being forked
+- On `split`: each child rule inherits `authored_by` from the parent directive being split
+- On `merge`: the merged rule's `creator_provenance` is the sorted-set union of all parent `authored_by` values (deduplicated). Segregation enforcement applies if the requesting actor appears in ANY parent's authorship set
+
+**Enforcement gates:**
+- `finding.waive`: DENY (`403 CapabilityDenied`) if `actor` is present in `creator_provenance` for the directive identified by `finding.control_id` in the active CG-IR snapshot
+- `finding.approve_remediation`: DENY if `actor` submitted the evidence for this finding (tracked via Finding Event Stream `DispositionChanged` events with `evidence.submit` actor, not via `authored_by`)
+
+Compile-time validation MUST verify that every active rule has a non-empty `metadata.audit.authored_by` before CG-IR compilation.
 
 **Runtime Enforcement Points:**
 
@@ -1494,7 +1526,7 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 | **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
 | **Evaluator Portability** | RE2-compatible regex only; IEEE 754 strict numerics; UTC-only timestamps; NFC-normalized strings |
 | **DAG Acyclicity** | Enforced at compile time |
-| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
+| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver; `authored_by` inherited through lineage ops; enforced at `finding.waive` and `finding.approve_remediation` (§3.2) |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
 | **Declarative Governance** | Policy describes authoring intent only; runtime engine reads schema/CG-IR fields via spec algorithm |
@@ -1602,7 +1634,7 @@ Result after merge: `{"field": "coverage", "operator": "gte", "threshold": 95}`
 2. No schema element contradicts a spec invariant
 3. No policy field violates contamination guard
 4. evaluator_config fields match evaluator_type (no invalid state combinations)
-5. Runtime engines do not read policy_doctrine.yaml (verified by architecture audit)
+5. Runtime engines do not read policy_doctrine.yaml — enforced by: (a) architecture discipline (runtime modules MUST NOT import or load policy_doctrine.yaml); (b) CI static analysis scanning runtime source paths for references to policy_doctrine.yaml (see `scripts/validate_contracts.py`); (c) boot-time assertion (recommended): runtime startup MAY verify policy_doctrine.yaml is absent from configured data paths
 6. Conflict resolution at runtime uses spec algorithm over schema/CG-IR fields only
 7. `anchor_ref` conforms to §7.2 syntax
 8. `metadata` uses declared namespaces only; no executable hints
@@ -1641,3 +1673,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
 | 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale; cross-document audit: HLC in Finding Event Immutability (§8), delegation model v8.2.2 alignment, explicit S-29/S-14 segregation binding in §3.2 |
 | 8.2.2-auditfix | 2026-07-05 | Audit report fixes: schema Draft-07 compliance (dependentRequired→dependencies, $defs→definitions), deontic_type added to CG-IR node and semantic_body, scope object added to rule schema, per-rule metadata and directive_revision/control_version fields added, regex flags pattern restriction, composite evaluator width/not constraints, lineage parent cardinality enforcement, retry policy clarified (deterministic vs timeout), User_Stories S-03 Retired→deprecated, event_hash composition defined, finding.supersede capability added, superseded disposition added, snapshot hash determinism clarified, matches operator semantics defined, README deduplicated |
+| 8.2.3 | 2026-07-05 | Formal verification audit clarifications: normative `defer_to` active-lineage resolution algorithm with post-fork Conflict Artifact escalation (§2.15), `authored_by` creator provenance inheritance through fork/merge/split with `creator_provenance` snapshot field (§3.2, §2.8.1), cross-lineage presentation correlation guidance (§2.13.1), NeedsReview+Fail operational guidance (§2.15.1), Policy Runtime Prohibition CI enforcement mechanism (§9.7), User_Stories capability matrix segregation column |

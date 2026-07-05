@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema 8.2.2",
+  "title": "Universal Rule Schema 8.2.3",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.2.2",
+  "x-spec-version": "8.2.3",
   "x-normative-status": "All x-* keys in this schema are informative and non-normative. SPECIFICATION.md is the sole normative source.",
   "x-cross-layer-binding": {
     "normative_status": "informative",
@@ -75,6 +75,20 @@
     "normative_reference": "SPECIFICATION.md §2.2.3",
     "max_ancestry_depth": 64
   },
+  "x-creator-provenance": {
+    "normative_status": "informative",
+    "normative_reference": "SPECIFICATION.md §3.2",
+    "field": "metadata.audit.authored_by",
+    "cg_ir_field": "creator_provenance",
+    "inheritance": {
+      "create": "Set to authenticated actor",
+      "modify": "Preserved from parent revision",
+      "fork": "Inherited from parent",
+      "split": "Inherited from parent",
+      "merge": "Sorted-set union of all parent authored_by values"
+    },
+    "enforcement": "finding.waive denies if actor is in creator_provenance; finding.approve_remediation denies if actor submitted evidence"
+  },
   "x-complexity-limits": {
     "normative_status": "informative",
     "normative_reference": "SPECIFICATION.md §2.9",
@@ -95,6 +109,7 @@
     "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
     "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
     "cycle_handling": "If A defers_to B and B defers_to A, both overrides are ignored; fall through to computed resolution (priority → specificity → recency). If target rule in defer_to does not exist, the override is ignored; fall through to computed resolution.",
+    "defer_to_resolution": "SPECIFICATION.md §2.15 defer_to_reference_resolution (normative): resolve to active rule by execution ID; follow lineage chain for deprecated targets; if multiple active children exist post-fork, escalate to Conflict Artifact",
     "scope_boundary": "Conflict resolution applies within same lineage. Cross-lineage conflicts are flagged as Conflict Artifacts for human review.",
     "policy_model": "Declarative intent description only. Compilation engine implements via spec multi-factor algorithm."
   },
@@ -296,7 +311,22 @@
           },
           "metadata": {
             "type": "object",
-            "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1.",
+            "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1. metadata.audit.authored_by is required for active rules and compiled to creator_provenance per §3.2.",
+            "properties": {
+              "audit": {
+                "type": "object",
+                "properties": {
+                  "authored_by": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Actor ID of directive creator. Inherited through lineage operations. Compiled to creator_provenance for segregation enforcement."
+                  },
+                  "approved_by": { "type": "string" },
+                  "approved_at": { "type": "string", "format": "date-time" }
+                },
+                "additionalProperties": false
+              }
+            },
             "additionalProperties": true
           },
           "weight": {

@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 8.2.2
+**Version:** 8.2.3
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md 8.2.2
+**Normative Reference:** SPECIFICATION.md 8.2.3
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -51,10 +51,10 @@ Minor and patch versions are allowed to evolve independently within the same maj
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.2.2 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.2.2 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.2.2 | Declarative governance intent (authoring only) |
-| **Behavioral** | User_Stories.md 8.2.2 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.2.3 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.2.3 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.2.3 | Declarative governance intent (authoring only) |
+| **Behavioral** | User_Stories.md 8.2.3 | This document — behavioral contract |
 
 **Rule:** Spec is normative; schema and policy MUST conform. MAJOR versions MUST match across all documents; MINOR and PATCH MAY differ (compatibility matrix, not strict equality). Policy is never read at runtime — only schema fields compiled per spec.
 
@@ -121,6 +121,9 @@ Minor and patch versions are allowed to evolve independently within the same maj
 | **Time Realism in `finding_aggregates`** | Aggregates are pre-computed from past inspections; current-inspection findings not included in real-time | Multi-pass inspection loop or delayed escalation alerts until reinspection |
 | **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` consistency requires custom compile-time checks beyond standard JSON Schema subschema engines | Enforce dependent-schema validation at compile time; never rely solely on `if`/`then` |
 | **Cascade Invisibility via Skipped Nodes** | Dependency failures silently bypass downstream checks; compliance review may miss unverified infrastructure | Pipeline trace entries record skipped nodes; dashboard views should surface `skipped_nodes` alongside findings |
+| **`defer_to` Reference Ambiguity** | Post-fork lineage chains may have multiple active execution IDs; underspecified resolution breaks deterministic conflict resolution | Normative active-lineage resolution algorithm in §2.15; multiple active children escalate to Conflict Artifact |
+| **Segregation of Duties via Merge** | Merging directives could allow an author to waive findings against a merged rule they partially created | `creator_provenance` inherits union of all parent `authored_by` values; enforced at `finding.waive` gate |
+| **Policy Runtime Prohibition (unverified)** | Design assertion alone cannot prevent accidental runtime loading of policy_doctrine.yaml | CI static analysis (`scripts/validate_contracts.py`) scans runtime source; boot-time assertion recommended |
 
 ---
 
@@ -171,6 +174,31 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | Finding transitions | Finding FSM Engine | `finding.acknowledge`, `finding.approve_remediation`, … |
 
 **Segregation of duties** is checked at the same gates. No capability delegation in v8.2.2.
+
+### Capability Matrix
+
+| Capability | Regulatory Official | Compliance Representative | System | Segregation of Duties Constraint |
+| :--- | :---: | :---: | :---: | :--- |
+| `directive.create` | ✅ | ❌ | ❌ | — |
+| `directive.modify` | ✅ | ❌ | ❌ | — |
+| `directive.retire` | ✅ | ❌ | ❌ | — |
+| `directive.fork` | ✅ | ❌ | ❌ | — |
+| `directive.merge` | ✅ | ❌ | ❌ | — |
+| `directive.restore` | ✅ | ❌ | ❌ | — |
+| `inspection.submit` | ❌ | ✅ | ✅ | — |
+| `inspection.reinspect` | ❌ | ✅ | ❌ | — |
+| `finding.view` | ✅ | ✅ | ✅ | — |
+| `finding.acknowledge` | ❌ | ✅ | ❌ | — |
+| `finding.dismiss` | ✅ | ❌ | ❌ | — |
+| `finding.waive` | ✅ | ❌ | ❌ | Actor MUST NOT be in `creator_provenance` for the finding's directive (S-29) |
+| `finding.approve_remediation` | ✅ | ❌ | ❌ | Actor MUST NOT have submitted evidence for this finding (S-14) |
+| `finding.reject_remediation` | ✅ | ❌ | ❌ | — |
+| `evidence.submit` | ❌ | ✅ | ❌ | — |
+| `finding.supersede` | ✅ | ❌ | ❌ | — |
+| `analytics.view` | ✅ | ✅ | ✅ | — |
+| `conflict.resolve` | ✅ | ❌ | ❌ | — |
+
+`creator_provenance` is inherited through fork/merge/split per SPECIFICATION.md §3.2. On merge, the union of all parent `authored_by` values applies.
 
 ---
 
@@ -379,7 +407,7 @@ Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normativ
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.2.2 is the single normative source; schema and policy MUST conform |
+| **Normative Source** | SPECIFICATION.md 8.2.3 is the single normative source; schema and policy MUST conform |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node identity) |
 | **Lineage ID Immutability** | Once assigned, lineage_id root is never reused; multiple active rules may share lineage_id after fork/split |
 | **Execution ID Stability** | Execution ID changes only on fork/merge/split; globally unique within ruleset |
@@ -397,7 +425,7 @@ Behavioral projection of SPECIFICATION.md §8. On conflict, the spec is normativ
 | **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
 | **Evaluator Portability** | RE2-compatible regex only; IEEE 754 strict numerics; UTC-only timestamps; NFC-normalized strings |
 | **DAG Acyclicity** | Enforced at compile time |
-| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
+| **Segregation of Duties** | Directive creator ≠ Finding waiver (`authored_by` / `creator_provenance`); Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked at ingress and stage gates; deny = 403, no partial mutation, audit logged |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
 | **Declarative Governance** | Policy describes authoring intent only; runtime engine reads schema/CG-IR fields via spec algorithm |
