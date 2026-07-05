@@ -5,6 +5,8 @@
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
 
+**Version Synchronization:** All documents (SPECIFICATION.md, rule_schema.json, policy_doctrine.yaml, User_Stories.md) MUST share the same MAJOR version (8) and MUST NOT have conflicting version references. MINOR and PATCH versions MAY differ across documents within the same MAJOR family.
+
 ---
 
 ## 1. Introduction
@@ -35,6 +37,13 @@ The Selma system has three document layers with a strict dominance hierarchy:
 5. Version synchronization is a compatibility matrix, not strict equality (see Section 5)
 6. The engine validates schema against spec invariants at compile time
 7. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime. Policy influences execution only indirectly: human authors use it when writing directives, and compile-time validators check that schema fields (e.g., `priority`, `conflict_resolution`) conform to spec — never by interpreting policy prose as executable logic
+
+**Policy Runtime Prohibition Enforcement (Normative):**
+- Any engine implementation that loads, parses, or otherwise accesses `policy_doctrine.yaml` during runtime code paths (inspection, evaluation, FSM transitions, conflict resolution) is **non-conformant**
+- Engines MUST implement configuration checks that fail if policy files are accessible from runtime modules
+- Recommended: boot-time assertion that verifies policy_doctrine.yaml is absent from runtime data paths
+- CI/CD pipelines MUST include static analysis that scans runtime source code for policy_doctrine.yaml references (see `scripts/validate_contracts.py`)
+- Compile-time only: policy MAY be read by authors, validators, and compilation tools that generate schema/CG-IR from human prose
 
 ### 1.3 Terminology
 
@@ -145,7 +154,14 @@ merge(parent_a, parent_b) → merged_rule:
 **Merge Provenance Loss (Accepted Risk):** The lexicographic MIN strategy is deterministic but semantically lossy. Merging `PAY-800` with `AUTH-001` produces `AUTH-001` as the surviving root, which obscures the payment lineage provenance. Mitigations:
 - The optional `metadata.migration.merge_provenance` field (§7.1, schema) explicitly maps non-surviving parent `lineage_id`s with semantic weight and context
 - Downstream lineage tracing tools MUST parse `lineage.parent_lineage_ids` arrays, not rely solely on the primary identity graph
+- UI/reporting layers MUST prominently surface `parent_lineage_ids` and `parent_execution_ids` for merged rules to mitigate semantic loss
 - **Future (v9.0.0):** A dedicated `MERGE-NN` namespace (e.g., `MGR-18`) will replace lexicographic MIN to preserve full provenance identity in merged roots
+
+**Merge Provenance Surfacing Requirements (Normative):**
+- All reporting tools MUST display both `parent_lineage_ids` and `parent_execution_ids` when rendering merged rule lineage
+- The `metadata.migration.merge_provenance.non_surviving_parents` field SHOULD be used to preserve semantic context of non-surviving parents
+- Lineage tracing APIs MUST support queries by both surviving and non-surviving parent IDs
+- Audit reports MUST include complete merge provenance information for regulatory compliance
 
 #### 2.2.3 Lineage DAG Invariants
 
@@ -162,6 +178,96 @@ The lineage ancestry graph MUST satisfy:
 7. **Temporal ordering:** `lineage.timestamp` MUST be ≥ max(parent timestamps) when parent lineage records exist
 
 Pathological sequences (fork → merge → fork → merge chains) are permitted provided invariants 1–7 hold. Compile-time validation MUST reject cycles and depth violations.
+
+**Lineage DAG Mechanical Validation Algorithm (Normative):**
+
+The following algorithm MUST be executed at compile time to enforce lineage DAG invariants:
+
+```
+validate_lineage_dag(ruleset) → ValidationResult:
+  // Step 1: Build ancestry graph
+  graph := empty directed graph
+  for each rule in ruleset:
+    if rule.lineage and rule.lineage.parent_lineage_ids:
+      for each parent_id in rule.lineage.parent_lineage_ids:
+        add_edge(graph, parent_id → rule.lineage_id)
+
+  // Step 2: Detect cycles using DFS
+  visited := empty set
+  rec_stack := empty set
+  for each node in graph:
+    if node not in visited:
+      if has_cycle(node, graph, visited, rec_stack):
+        return FAIL("Lineage DAG cycle detected")
+
+  // Step 3: Validate parent existence
+  all_lineage_ids := set(rule.lineage_id for rule in ruleset)
+  for each rule in ruleset:
+    if rule.lineage:
+      for each parent_id in rule.lineage.parent_lineage_ids:
+        if parent_id not in all_lineage_ids:
+          return FAIL("Parent lineage_id does not exist: " + parent_id)
+      for each parent_id in rule.lineage.parent_execution_ids:
+        // Verify parent execution ID existed at lineage.timestamp
+        parent_rule := find_rule_by_execution_id(parent_id, ruleset)
+        if not parent_rule:
+          return FAIL("Parent execution_id does not exist: " + parent_id)
+        if parent_rule and parent_rule.lineage.timestamp > rule.lineage.timestamp:
+          return FAIL("Parent timestamp violates temporal ordering")
+
+  // Step 4: Validate operation consistency
+  for each rule in ruleset:
+    if rule.lineage:
+      op := rule.lineage.operation
+      parent_count := length(rule.lineage.parent_lineage_ids)
+      if op == "merge" and parent_count != 2:
+        return FAIL("Merge operation must have exactly 2 parent_lineage_ids")
+      if (op == "fork" or op == "split") and parent_count != 1:
+        return FAIL("Fork/Split operation must have exactly 1 parent_lineage_id")
+
+  // Step 5: Validate depth bound
+  for each rule in ruleset:
+    depth := compute_ancestry_depth(rule.lineage_id, graph)
+    if depth > 64:
+      return FAIL("Lineage depth exceeded: " + depth + " > 64")
+
+  // Step 6: Validate no self-reference
+  for each rule in ruleset:
+    if rule.lineage:
+      if rule.lineage_id in rule.lineage.parent_lineage_ids:
+        return FAIL("Rule references itself in parent_lineage_ids")
+      if rule.id in rule.lineage.parent_execution_ids:
+        return FAIL("Rule references itself in parent_execution_ids")
+
+  return PASS
+
+compute_ancestry_depth(lineage_id, graph) → integer:
+  visited := empty set
+  queue := [(lineage_id, 0)]
+  max_depth := 0
+  while queue not empty:
+    (current, depth) := dequeue(queue)
+    if current in visited: continue
+    visited.add(current)
+    max_depth := max(max_depth, depth)
+    for each parent in graph.get_parents(current):
+      enqueue(queue, (parent, depth + 1))
+  return max_depth
+
+has_cycle(node, graph, visited, rec_stack) → bool:
+  visited.add(node)
+  rec_stack.add(node)
+  for each child in graph.get_children(node):
+    if child not in visited:
+      if has_cycle(child, graph, visited, rec_stack):
+        return true
+    else if child in rec_stack:
+      return true
+  rec_stack.remove(node)
+  return false
+```
+
+**Validation Artifact:** The validation result MUST be recorded in the CG-IR snapshot provenance as `lineage_validation: {status: PASS|FAIL, timestamp, algorithm_version: "1.0"}`
 
 #### 2.2.4 Deprecation and Supersession
 
@@ -599,6 +705,49 @@ evaluate(node, target, context) → {
 | Maximum composite DAG width (`sub_evaluators` count at any level) | 64 | `SchemaError: evaluator width exceeded` |
 | Maximum regex pattern length | 4 096 characters | `SchemaError: pattern too long` |
 | Maximum `metadata` serialized size per rule | 16 KiB | `SchemaError: metadata too large` |
+
+**Evaluator Complexity Counting Algorithm (Normative):**
+
+The following algorithm MUST be used to compute evaluator complexity metrics:
+
+```
+count_evaluator_nodes(evaluator, depth=0) → {total_nodes, max_depth, max_width}:
+  // Initialize counters
+  total_nodes := 1  // Count current evaluator
+  max_depth := depth
+  max_width := 0
+  current_width := 0
+
+  // Handle composite evaluators
+  if evaluator.type == "composite":
+    current_width := length(evaluator.config.sub_evaluators)
+    max_width := max(max_width, current_width)
+    
+    if depth >= 32:
+      return ERROR("Max depth exceeded")
+    
+    if current_width > 64:
+      return ERROR("Max width exceeded")
+    
+    // Recursively count sub-evaluators
+    for each sub_eval in evaluator.config.sub_evaluators:
+      child_result := count_evaluator_nodes(sub_eval, depth + 1)
+      total_nodes += child_result.total_nodes
+      max_depth := max(max_depth, child_result.max_depth)
+      max_width := max(max_width, child_result.max_width)
+      
+      if total_nodes > 256:
+        return ERROR("Max nodes exceeded")
+
+  // Handle leaf evaluators
+  elif evaluator.type == "regex":
+    if length(evaluator.config.pattern) > 4096:
+      return ERROR("Pattern too long")
+
+  return {total_nodes, max_depth, max_width}
+```
+
+**Complexity Validation Timing:** All complexity checks MUST be performed at compile time. Engines MUST reject rules that exceed any complexity limit before CG-IR generation.
 
 **Regex catastrophic backtracking mitigation:** All regex patterns MUST be RE2-compatible (§2.9 portability). Compile-time validation MUST reject patterns exceeding length limit. Runtime engines SHOULD enforce per-node evaluation timeout (§2.12).
 
@@ -1333,6 +1482,83 @@ Compile-time validation MUST verify that every active rule has a non-empty `meta
 
 **Delegation Model:** Not supported in v8.2.2. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
 
+### 3.2.1 Formal Capability Model
+
+The Selma capability model enforces strict segregation of duties and role-based access control:
+
+**Role Definitions:**
+| Role | Purpose | Actor Type |
+| :--- | :--- | :--- |
+| **Regulatory Official** | Rule author and governance owner | Human or AI Agent |
+| **Compliance Representative** | Compliance seeker and remediation owner | Human or System |
+| **System** | Automated processes and services | Service Account |
+
+**Capability Matrix (Normative):**
+| Capability | Regulatory Official | Compliance Representative | System |
+| :--- | :---: | :---: | :---: |
+| `directive.create` | ✅ | ❌ | ❌ |
+| `directive.modify` | ✅ | ❌ | ❌ |
+| `directive.retire` | ✅ | ❌ | ❌ |
+| `directive.fork` | ✅ | ❌ | ❌ |
+| `directive.merge` | ✅ | ❌ | ❌ |
+| `directive.restore` | ✅ | ❌ | ❌ |
+| `inspection.submit` | ❌ | ✅ | ✅ |
+| `inspection.reinspect` | ❌ | ✅ | ❌ |
+| `finding.view` | ✅ | ✅ | ✅ |
+| `finding.acknowledge` | ❌ | ✅ | ❌ |
+| `finding.dismiss` | ✅ | ❌ | ❌ |
+| `finding.waive` | ✅ | ❌ | ❌ |
+| `finding.approve_remediation` | ✅ | ❌ | ❌ |
+| `finding.reject_remediation` | ✅ | ❌ | ❌ |
+| `evidence.submit` | ❌ | ✅ | ❌ |
+| `finding.supersede` | ✅ | ❌ | ❌ |
+| `analytics.view` | ✅ | ✅ | ✅ |
+| `conflict.resolve` | ✅ | ❌ | ❌ |
+
+**Segregation of Duties Constraints (Normative):**
+1. **Creator ≠ Waiver:** Actors with `finding.waive` capability MUST NOT waive findings raised by directives they authored
+2. **Evidence Submitter ≠ Remediation Approver:** Actors who submitted evidence via `evidence.submit` MUST NOT approve remediation for the same finding via `finding.approve_remediation`
+
+**Creator Provenance Tracking (Normative):**
+- `metadata.audit.authored_by` MUST be set to the authenticated actor ID on `directive.create`
+- `authored_by` is inherited through fork/merge/split operations
+- On merge: `creator_provenance` = sorted-set union of all parent `authored_by` values
+- Segregation enforcement uses `creator_provenance` snapshot field (excluded from `node_body` hash)
+
+**Capability Enforcement Algorithm (Normative):**
+```
+enforce_capability(actor, action, target) → Allow | Deny:
+  // Step 1: Check basic capability matrix
+  capability := get_capability_for_action(action)
+  role := get_role_for_actor(actor)
+  
+  if capability_matrix[role][capability] == ❌:
+    return Deny("Capability not granted to role")
+  
+  // Step 2: Check segregation of duties
+  if action == "finding.waive":
+    directive_id := target.finding.control_id
+    creator_provenance := get_creator_provenance(directive_id)
+    if actor in creator_provenance:
+      return Deny("Segregation of duties: creator cannot waive own findings")
+  
+  if action == "finding.approve_remediation":
+    finding_id := target.finding_id
+    evidence_submitter := get_evidence_submitter(finding_id)
+    if actor == evidence_submitter:
+      return Deny("Segregation of duties: evidence submitter cannot approve own remediation")
+  
+  // Step 3: Allow
+  return Allow
+```
+
+**Enforcement Points:** Capability checks MUST occur at:
+1. Request ingress (API Gateway / Command Handler)
+2. Directive mutations (Compilation Engine)
+3. Inspection submit (Pipeline entry)
+4. Finding FSM transitions (Finding FSM Engine)
+5. Conflict resolution (Conflict Resolution Engine)
+
 ### 3.3 Execution Fault Taxonomy
 
 | Fault Class | Type | Behavior | Retry |
@@ -1579,6 +1805,13 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 ### 7.1 Metadata Namespacing
 
 The root `metadata` object and per-rule `metadata` (if present) are **informational only**. They MUST NOT contain executable hints, evaluator configuration, or runtime flags.
+
+**Metadata Non-Executability Clause (Normative):**
+- `metadata` fields and all `x-*` keys MUST NOT influence evaluation outcomes or conflict resolution
+- Engines MUST treat all metadata as informational and ignore it during runtime execution
+- `metadata` does NOT participate in `semantic_hash` computation and MUST NOT affect CG-IR node hashing
+- Validation engines MAY read metadata at compile time for structural validation, but MUST NOT use it for runtime decisions
+- This clause extends to all custom namespaces and vendor-specific metadata fields
 
 **Required namespace structure:**
 
