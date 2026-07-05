@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.1.0  
+**Version:** 8.1.1
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -34,6 +34,7 @@ The Selma system has three document layers with a strict dominance hierarchy:
 4. When spec and schema conflict, spec wins
 5. Version synchronization is a compatibility matrix, not strict equality (see Section 5)
 6. The engine validates schema against spec invariants at compile time
+7. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime. Policy influences execution only indirectly: human authors use it when writing directives, and compile-time validators check that schema fields (e.g., `priority`, `conflict_resolution`) conform to spec — never by interpreting policy prose as executable logic
 
 ### 1.3 Scope
 
@@ -100,12 +101,27 @@ The identity model has two distinct ID types:
 
 | Layer | Lineage ID Field | Execution ID Field |
 | :--- | :--- | :--- |
-| Policy Doctrine | `Machine ID` → lineage_id | Not represented until fork/merge/split (then tracked in schema) |
+| Policy Doctrine | `Machine ID` → lineage_id | Not represented (assigned at schema compile as `rule.id`) |
 | Rule Schema | `rule.lineage_id` | `rule.id` |
 | CG-IR | `node.lineage_id` | `node.directive_id` |
 | Finding | `finding.lineage_id` | `finding.control_id` → node |
 
 **Invariant:** `rule.lineage_id` is immutable. `rule.id` is the active execution identity. On fork/merge/split, `rule.id` changes but `rule.lineage_id` is inherited from the parent.
+
+**Machine ID — Single Interpretation:**
+
+`Machine ID` has exactly one meaning across all layers: the **stable external lineage identifier** assigned at directive authoring time.
+
+| Property | Rule |
+| :--- | :--- |
+| **What it is** | Human-assigned lineage root label in policy directive tables |
+| **What it is not** | An execution ID, a compile-time artifact, or a runtime lookup key |
+| **Assignment** | Assigned once when a directive is first authored; never reassigned |
+| **Compile binding** | At schema compile: `rule.lineage_id = Machine ID` (1:1, bijective within ruleset) |
+| **Initial execution ID** | On first creation: `rule.id = rule.lineage_id` |
+| **After fork/merge/split** | `rule.lineage_id` unchanged or inherited; `rule.id` diverges per lifecycle rules |
+| **Referential integrity** | Every `Machine ID` in policy MUST map to exactly one `rule.lineage_id`; every `rule.lineage_id` MUST have exactly one `Machine ID` |
+| **Runtime** | Engine uses `rule.lineage_id` / `node.lineage_id` — never reads policy tables |
 
 **Lineage Tracking:**
 
@@ -186,6 +202,32 @@ Execution Artifacts (immutable, reproducible)
 | **Compilation Process** | Transient | Generates a new snapshot; does not modify existing ones |
 
 **Incremental Compilation:** The compilation process reuses unchanged subgraphs from previous snapshots, but the output is always a new, complete, immutable snapshot.
+
+**CG-IR Node Hashing Scope (Local Content Identity):**
+
+Node identity is **local** — a node hash depends only on the node's own canonical content, not on global DAG position or neighbor context.
+
+```
+node_hash = SHA-256(canonical_json(node_body))
+
+node_body = {
+  directive_id, lineage_id, directive_revision, control_version,
+  description, evaluator, scope, severity_default,
+  depends_on,           // sorted array of directive_id strings (references only)
+  priority, conflict_resolution, status
+}
+// Excluded from node_body: graph edges, snapshot manifest position, neighbor hashes
+```
+
+| Hash Level | Input | Scope | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Node** | `node_body` only | Local content | Deduplication across snapshots; stable under incremental reuse |
+| **Edge** | `{source: directive_id, target: directive_id}` | Pair identity | Graph structure separate from node content |
+| **Snapshot** | `{node_hashes: sorted[], edge_hashes: sorted[], provenance}` | Global composition | Snapshot identity; structure without embedding neighbors in node hash |
+
+**Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
+
+**Cycle Safety:** `depends_on` stores directive_id references as a sorted string array. Edges are validated for acyclicity at compile time. Hashing does not recursively embed neighbor node content — no cyclic hash dependency.
 
 ### 2.7 The Hermetic Compilation Boundary
 
@@ -369,40 +411,46 @@ To handle distributed systems and clock skew, events use a Hybrid Logical Clock:
 3. If equal, compare `node_id` (lexicographic)
 4. If all equal, compare `event_id` (lexicographic)
 
-**HLC Clock Advancement (per node):**
+**HLC State (per node):** Persisted tuple `(pt, lc)` where `pt` = last emitted physical_time, `lc` = last emitted logical_counter.
+
+**HLC Clock Advancement:**
 
 ```
-on_local_event(physical_time_pt):
-  l = max(l, last_logical_counter)
-  if physical_time_pt > last_physical_time:
-    last_physical_time = physical_time_pt
-    last_logical_counter = 0
+// pt_wall = current wall clock (UTC). May regress due to NTP/VM migration.
+function hlc_send(pt_wall):
+  pt_new = max(pt, pt_wall)
+  if pt_new > pt:
+    lc_new = 0
   else:
-    last_logical_counter = last_logical_counter + 1
-  emit { physical_time: last_physical_time, logical_counter: last_logical_counter, node_id }
+    lc_new = lc + 1
+  pt, lc = pt_new, lc_new
+  return { physical_time: pt, logical_counter: lc, node_id }
 
-on_receive_remote(remote_hlc):
-  l = max(l, remote_hlc.logical_counter)
-  if remote_hlc.physical_time > last_physical_time:
-    last_physical_time = remote_hlc.physical_time
-    last_logical_counter = remote_hlc.logical_counter
-  else if remote_hlc.physical_time == last_physical_time:
-    last_logical_counter = max(last_logical_counter, remote_hlc.logical_counter) + 1
+function hlc_receive(remote_pt, remote_lc, pt_wall):
+  pt_new = max(pt, pt_wall, remote_pt)
+  if pt_new > pt:
+    lc_new = 0
+  else if pt_new == pt:
+    lc_new = max(lc, remote_lc) + 1
   else:
-    last_logical_counter = last_logical_counter + 1
+    lc_new = lc + 1
+  pt, lc = pt_new, lc_new
+  return { physical_time: pt, logical_counter: lc, node_id }
 ```
 
-**Monotonic Counter Rules:**
-- `logical_counter` is a non-negative integer, initialized to 0 per node
-- Counter resets to 0 only when `physical_time` advances strictly past the previous value
-- Counter MUST NOT decrease; validation rejects regressive HLC tuples
-- On node restart: load last persisted HLC state; if wall clock is behind persisted `physical_time`, retain persisted `physical_time` and increment `logical_counter`
+**Monotonicity Guarantee (per node_id):**
+- The emitted tuple `(physical_time, logical_counter)` is **strictly lexicographically non-decreasing** across all events from the same `node_id`
+- `physical_time` in the persisted state NEVER decreases — wall clock regression is absorbed by incrementing `logical_counter` instead
+- `logical_counter` NEVER decreases
+- Counter resets to 0 **only** when `physical_time` strictly advances (`pt_new > pt`); never because wall clock alone regressed
+- On node restart: load persisted `(pt, lc)`; apply `hlc_send` with current wall clock — if `pt_wall < pt`, tuple becomes `(pt, lc+1)` preserving monotonicity
 
 **Multi-Node Reconciliation:**
-- Each event carries the emitting node's HLC tuple; receivers apply `on_receive_remote` before appending
+- Each event carries the emitting node's HLC tuple; receivers apply `hlc_receive` before appending locally originated events
 - Total order is reconstructed by sorting all events by the 4-level key (physical_time → logical_counter → node_id → event_id)
-- Partition tolerance: nodes may diverge during partition; on heal, merged stream is re-sorted by total order key (no causal overwrite of committed events)
-- Identical `node_id` with equal physical_time and logical_counter cannot occur from a single node; cross-node ties are broken by `node_id`, then `event_id`
+- Partition tolerance: nodes may diverge during partition; on heal, merged stream is re-sorted by total order key (no overwrite of committed events)
+- Cross-node ties at equal `(physical_time, logical_counter)` are broken by `node_id`, then `event_id`
+- Validation rejects any event where the new tuple is lexicographically less than the node's previous tuple
 
 **Event Immutability:** Once written, events are never modified. The `event_hash` ensures integrity.
 
@@ -422,22 +470,24 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 
 ### 2.15 Conflict Resolution Mapping
 
-The declarative intent in policy is mapped to deterministic operators. **Explicit override takes precedence.**
+**Explicit override takes precedence.** The runtime engine executes ONLY the algorithm below over schema/CG-IR fields. Policy prose is never consulted at runtime.
 
-| Intent (Policy) | Operator (CG-IR) | Implementation |
-| :--- | :--- | :--- |
-| "Higher priority wins" | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
-| "More specific wins" | `specificity_score(rule_a) > specificity_score(rule_b)` | Count of scope constraints; higher = more specific |
-| "Newer wins" | `max(created_at)` | ISO 8601 timestamp comparison |
-| "Explicit override wins" | `has_field(conflict_resolution)` | Boolean: does rule have explicit override? Applied first, before computed factors |
+| Intent (Policy — authoring only) | Schema Field | Operator (CG-IR — runtime) | Implementation |
+| :--- | :--- | :--- | :--- |
+| "Higher priority wins" | `priority` | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
+| "More specific wins" | `target`, scope constraints | `specificity_score(rule_a) > specificity_score(rule_b)` | Count of scope constraints; higher = more specific |
+| "Newer wins" | `created_at` | `max(created_at)` | ISO 8601 timestamp comparison |
+| N/A (schema-only) | `conflict_resolution` | `has_field(conflict_resolution)` | Checked first, before all computed factors |
 
 **Cross-Layer Precedence Chain:**
 
-| Layer | Role in Conflict Resolution |
-| :--- | :--- |
-| **Policy** | Declares governance intent (priority hierarchy, specificity preference, recency preference). No executable override fields. |
-| **Schema** | Optional `conflict_resolution` field is a structural explicit override. Not an algorithm — a data carrier consumed by the engine. |
-| **Spec (this document)** | Normative `resolve_conflict` algorithm. Explicit override checked first; computed resolution is deterministic fallback. |
+| Layer | Role | Runtime Influence |
+| :--- | :--- | :--- |
+| **Policy** | Declares governance intent for human authors. Documents what priority levels mean. | **None.** Not read at inspection, evaluation, or conflict resolution runtime. |
+| **Schema** | Encodes `priority`, `created_at`, `conflict_resolution` as structural fields. | **Data carrier only.** Fields are read by the engine; schema itself is not an algorithm. |
+| **Spec (this document)** | Normative `resolve_conflict` algorithm. | **Sole executable source.** All runtime conflict decisions flow through this function. |
+
+**Compile-Time Translation (not runtime):** When compiling policy prose to schema, authors set `priority` and optional `conflict_resolution` fields. A compile-time validator MAY check that priority assignments are consistent with policy intent — but this validation produces errors/warnings at compile time only; it does not create a second runtime decision path.
 
 **Unified Conflict Resolution Function:**
 
@@ -504,6 +554,12 @@ For reproducibility, all hashing uses:
 - **Lineage:** `parent_lineage_ids` and `parent_execution_ids` are sorted lexicographically before hashing
 - **Schema references ($ref):** Resolved at schema validation time only; NOT included in canonical form for hashing
 - **Map ordering:** Objects with `additionalProperties: true` have keys sorted lexicographically before hashing
+
+**DAG Reference Hashing (CG-IR):**
+- `depends_on` is serialized as a sorted array of `directive_id` strings — neighbor node content is NOT embedded
+- Edge objects hash `{source, target}` directive_id pairs independently of node bodies
+- Snapshot manifest composes sorted `node_hash[]` + sorted `edge_hash[]` — shared node reuse across snapshots preserves hash identity (see Section 2.6)
+- Acyclicity is enforced at compile time before hashing; no cycle-chasing in hash computation
 
 **Evaluator Config Serialization by Type:**
 
@@ -633,6 +689,24 @@ Findings follow a strict state transition model:
 - Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it)
 - Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it)
 
+**Runtime Enforcement Points:**
+
+| Pipeline Stage | Gate | Capabilities Checked | Failure Semantics |
+| :--- | :--- | :--- | :--- |
+| **Request ingress** | API Gateway / Command Handler | All mutating capabilities before dispatch | `403 CapabilityDenied`; no state mutation; audit log entry with actor, requested action, denial reason |
+| **Directive mutations** | Directive Drafting / Compilation Engine | `directive.*` capabilities | Reject before write lock acquired; no partial Directive Graph update |
+| **Inspection submit** | Inspection Pipeline entry | `inspection.submit`, `inspection.reinspect` | Reject before target validation; no inspection snapshot created |
+| **Finding FSM transitions** | Finding FSM Engine | Per-transition capability (e.g., `finding.acknowledge`, `finding.approve_remediation`) | Reject transition; FSM state unchanged; no event appended |
+| **Conflict resolution** | Conflict Resolution Engine | `conflict.resolve` | Reject; Conflict Artifact remains open |
+| **Analytics** | Analytics Engine | `analytics.view` | Reject; no aggregate data returned |
+
+**Failure Semantics (uniform):**
+- Deny = hard reject; no partial writes, no compensating events, no degraded-mode execution
+- All denials produce an append-only audit record: `{actor, capability, action, outcome: denied, timestamp, reason}`
+- Escalation is NOT automatic on denial; caller receives error and decides next action
+
+**Delegation Model:** Not supported in v8.1.0. Capabilities bind directly to authenticated actor identity. AI agents use the same capability matrix with `actor` set to agent ID.
+
 ### 3.3 Execution Fault Taxonomy
 
 | Fault Class | Type | Behavior | Retry |
@@ -697,9 +771,10 @@ CG-IR Content-Addressed Store
 | **Frozen Env** | Entire compilation environment | Reproducibility guarantee |
 
 **Deduplication Rules:**
-- Nodes with identical content share storage (same node_hash)
+- Nodes with identical `node_body` share storage (same `node_hash`) — hash is local to node content (Section 2.6)
 - Edges are stored once per unique (source, target) pair
 - Snapshots reference nodes/edges by hash, not copy
+- Incremental compilation reuses prior `node_hash` values when `node_body` is unchanged; snapshot hash still changes if graph topology or provenance differs
 - Storage cost scales with unique content, not total rule count
 
 **Retention Policy:**
@@ -837,7 +912,8 @@ Execution Artifacts
 
 | Field | Policy Layer | Schema Layer | Spec Layer |
 | :--- | :--- | :--- | :--- |
-| `Machine ID` / `rule.id` | ✅ Allowed | ✅ Required | ✅ Defined |
+| `Machine ID` / `rule.lineage_id` | ✅ Allowed (lineage root only) | ✅ Required | ✅ Defined |
+| `rule.id` (execution ID) | ❌ Not represented | ✅ Required | ✅ Defined |
 | `evaluator_type` | ❌ Prohibited | ✅ Required | ✅ Defined |
 | `evaluator_config` | ❌ Prohibited | ✅ Required | ✅ Defined |
 | `lineage` | ❌ Prohibited | ⚠️ Conditional | ✅ Defined |
@@ -845,7 +921,7 @@ Execution Artifacts
 | `conflict_resolution_intent` | ✅ Declarative | ✅ As `conflict_resolution` field | ✅ Defined |
 | `conflict_resolution` | ❌ Prohibited | ✅ Optional override | ✅ Defined |
 
-**Note:** Priority hierarchy and conflict resolution are DECLARATIVE DESCRIPTIONS of governance intent in policy. The compilation engine translates intent into CG-IR logic via the Conflict Resolution Mapping (Section 2.15).
+**Note:** Priority hierarchy and conflict resolution are DECLARATIVE DESCRIPTIONS of governance intent in policy. Human authors use them when setting schema fields (`priority`, `conflict_resolution`). The runtime engine executes ONLY Section 2.15 over schema/CG-IR fields — policy prose is never read at runtime.
 
 ---
 
@@ -877,9 +953,13 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
-| **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
-| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
-| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; monotonic counter per node |
+| **Declarative Governance** | Policy describes authoring intent only; runtime engine reads schema/CG-IR fields via spec algorithm |
+| **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
+| **Machine ID Semantics** | Machine ID = stable external lineage identifier; maps 1:1 to rule.lineage_id at compile time |
+| **CG-IR Local Node Hashing** | node_hash depends on node_body only; graph context captured in edges and snapshot manifest |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id |
+| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; per-node tuple strictly non-decreasing |
+| **Capability Enforcement** | Checked at request ingress and stage-specific gates; deny = hard reject, no partial mutation |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
@@ -899,6 +979,8 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 7. No duplicate lineage_id values within a ruleset
 8. Lineage field is present for fork/merge/split operations
 9. Lineage field is absent for revision/rename/retire operations
+10. Machine ID ↔ rule.lineage_id is bijective within ruleset (no duplicates, no orphans)
+11. On first creation, rule.id equals rule.lineage_id unless lineage operation dictates otherwise
 
 ### 9.2 Evaluator Validation
 
@@ -919,7 +1001,10 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 3. Content hash matches ruleset version
 4. Frozen environment metadata complete
 5. Snapshot is immutable (no mutation after publish)
-6. Node hashes are content-addressed (identical content = identical hash)
+6. Node hashes are content-addressed (identical `node_body` = identical `node_hash`)
+7. `node_hash` excludes graph position and neighbor content (local scope only)
+8. `depends_on` contains sorted directive_id references only
+9. Incremental reuse preserves `node_hash` when `node_body` unchanged across snapshots
 
 ### 9.4 Inspection Validation
 
@@ -937,12 +1022,16 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 3. finding_id references valid finding
 4. No duplicate event_ids
 5. Finding state transitions follow FSM (Section 3.1)
+6. Per-node HLC tuple is strictly lexicographically non-decreasing
+7. Wall clock regression does not produce a regressive HLC tuple
 
 ### 9.6 Permission Validation
 
-1. All actions checked against capability matrix (Section 3.2)
+1. All actions checked against capability matrix (Section 3.2) at defined enforcement gates
 2. Segregation of duties enforced (creator ≠ waiver, submitter ≠ approver)
 3. AI agent actions logged with actor identity
+4. Denied requests produce no partial state mutation and no compensating events
+5. Capability checks occur before FSM transition and before Directive Graph write lock
 
 ### 9.7 Cross-Layer Validation
 
@@ -950,6 +1039,8 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 2. No schema element contradicts a spec invariant
 3. No policy field violates contamination guard
 4. evaluator_config fields match evaluator_type (no invalid state combinations)
+5. Runtime engines do not read policy_doctrine.yaml (verified by architecture audit)
+6. Conflict resolution at runtime uses spec algorithm over schema/CG-IR fields only
 
 ---
 
@@ -973,3 +1064,4 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | 6.0.0 | 2026-07-05 | Canonical identity, transformation pipeline, declarative governance |
 | 7.0.0 | 2026-07-05 | Identity lifecycle, execution artifact schema, deterministic serialization, conflict resolution mapping, event schema, version incompatibility handling, target/context strict schemas |
 | 8.1.0 | 2026-07-05 | Cross-layer compliance audit: fixed identity mapping (Machine ID → lineage_id), HLC clock advancement and monotonic counter rules, cross-layer conflict resolution precedence chain, FSM human/system transition binding |
+| 8.1.1 | 2026-07-05 | Architectural review: policy runtime prohibition, Machine ID single interpretation, HLC monotonicity under clock regression, CG-IR local node hashing scope, capability enforcement gates, DAG reference hashing |

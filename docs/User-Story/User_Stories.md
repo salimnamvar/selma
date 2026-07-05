@@ -1,10 +1,10 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 20.1.0  
+**Version:** 20.2.0  
 **Date:** 2026-07-05  
 **Status:** Final  
-**Normative Reference:** SPECIFICATION.md 8.1.0
+**Normative Reference:** SPECIFICATION.md 8.1.1
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
 
@@ -14,12 +14,12 @@
 
 | Layer | Document | Role |
 | :--- | :--- | :--- |
-| **Normative** | SPECIFICATION.md 8.1.0 | Defines system behavior, invariants, contracts |
-| **Structural** | rule_schema.json 8.1.0 | JSON Schema encoding of spec invariants |
-| **Governance** | policy_doctrine.yaml 8.1.0 | Declarative governance intent |
-| **Behavioral** | User_Stories.md 20.1.0 | This document — behavioral contract |
+| **Normative** | SPECIFICATION.md 8.1.1 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json 8.1.1 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml 8.1.1 | Declarative governance intent (authoring only) |
+| **Behavioral** | User_Stories.md 20.2.0 | This document — behavioral contract |
 
-**Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents.
+**Rule:** Spec is normative; schema and policy MUST conform. Version MAJOR must match across all documents. Policy is never read at runtime — only schema fields compiled per spec.
 
 ---
 
@@ -74,6 +74,23 @@
 
 **Invariant:** `rule.lineage_id` is immutable. `rule.id` changes only on fork/merge/split. Policy `Machine ID` maps to lineage_id only — never to execution ID.
 
+**Machine ID semantics:** Stable external lineage identifier assigned at authoring time. At compile: `rule.lineage_id = Machine ID` (1:1 bijective). On first creation: `rule.id = rule.lineage_id`. Engine never reads policy tables at runtime.
+
+---
+
+## Capability Enforcement
+
+All mutating actions are gated before dispatch. Denial is a hard reject — no partial state mutation.
+
+| Stage | Gate | Example Capabilities |
+| :--- | :--- | :--- |
+| Request ingress | API Gateway / Command Handler | All mutating capabilities |
+| Directive mutations | Compilation Engine | `directive.create`, `directive.modify`, … |
+| Inspection | Pipeline entry | `inspection.submit`, `inspection.reinspect` |
+| Finding transitions | Finding FSM Engine | `finding.acknowledge`, `finding.approve_remediation`, … |
+
+**Segregation of duties** is checked at the same gates. No capability delegation in v8.1.1.
+
 ---
 
 ## Key Concepts
@@ -89,8 +106,10 @@
 | **Evaluator** | Pure function. Types: regex, field_check, threshold, composite. |
 | **Evaluator Config** | Schema-enforced if/then binding — config MUST match evaluator_type. |
 | **Finding FSM** | Strict state machine: Created → Open → Acknowledged → Evidence Submitted → Pending Verification → Verified → Closed (system) / Rejected → Open |
-| **Hybrid Logical Clock** | Total order: physical_time → logical_counter → node_id → event_id; monotonic counter per node |
-| **Capability Model** | Role → Capability → Action. Segregation of duties enforced. |
+| **Hybrid Logical Clock** | Total order: physical_time → logical_counter → node_id → event_id; per-node tuple strictly non-decreasing; absorbs wall clock regression |
+| **Capability Model** | Role → Capability → Action. Enforced at request ingress and stage gates. Deny = hard reject. |
+| **Policy Runtime Prohibition** | policy_doctrine.yaml is authoring guidance only; never read during inspection/evaluation/FSM |
+| **CG-IR Node Hashing** | Local content identity: node_hash from node_body only; graph context in edges + snapshot manifest |
 | **Execution Fault Taxonomy** | Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption |
 | **Conflict Resolution Mapping** | Precedence chain: explicit override (schema) → priority → specificity → recency → Conflict Artifact. Cycles detected and resolved. |
 | **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256, NaN/Infinity prohibited. |
@@ -236,7 +255,7 @@
 
 | Invariant | Description |
 | :--- | :--- |
-| **Normative Source** | SPECIFICATION.md 8.1.0 is the single normative source |
+| **Normative Source** | SPECIFICATION.md 8.1.1 is the single normative source |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node) |
 | **Lineage ID Immutability** | Once assigned, lineage_id never reused |
 | **Execution ID Stability** | Changes only on fork/merge/split |
@@ -252,9 +271,13 @@
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | No direct finding → CG-IR path |
-| **Declarative Governance** | Policy describes computed-factor intent only; schema carries optional explicit override; engine implements via SPECIFICATION.md resolve_conflict |
-| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited |
-| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; monotonic counter per node |
+| **Declarative Governance** | Policy describes authoring intent only; runtime uses schema/CG-IR fields via spec resolve_conflict |
+| **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
+| **Machine ID Semantics** | Machine ID = stable lineage root; 1:1 maps to rule.lineage_id at compile; engine never reads policy |
+| **CG-IR Local Node Hashing** | node_hash from node_body only; depends_on as sorted directive_id refs; edges/snapshot capture topology |
+| **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id |
+| **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; tuple strictly non-decreasing per node |
+| **Capability Enforcement** | Checked at ingress and stage gates; deny = 403, no partial mutation, audit logged |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |

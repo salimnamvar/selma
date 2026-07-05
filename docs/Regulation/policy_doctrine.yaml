@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 8.1.0
+# NORMATIVE SOURCE: SPECIFICATION.md 8.1.1
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.1.0"
+  version: "8.1.1"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.1.0"
-  rule_contract_version: "8.1.0"
+  spec_version: "8.1.1"
+  rule_contract_version: "8.1.1"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -33,6 +33,12 @@ cross_layer_binding:
     schema: "Optional conflict_resolution field is structural override data only."
     spec: "Normative resolve_conflict algorithm. Override checked before computed factors."
     precedence: "explicit override → priority → specificity → recency → Conflict Artifact"
+  runtime_prohibition: >
+    This file MUST NOT be read during inspection, evaluation, finding FSM
+    transitions, or conflict resolution at runtime. Policy influences execution
+    only indirectly: authors use it when writing directives, and compile-time
+    validators check schema field legality against spec — never by interpreting
+    policy prose as executable logic.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
@@ -54,6 +60,13 @@ identity_resolution:
     Machine ID maps exclusively to lineage_id (immutable root).
     Execution ID is NOT represented in policy tables; it is assigned
     at schema compilation time as rule.id and may diverge after fork/merge/split.
+  machine_id_semantics:
+    definition: "Stable external lineage identifier assigned at directive authoring time"
+    not: ["execution ID", "compile-time artifact", "runtime lookup key"]
+    assignment: "Assigned once at first authoring; never reassigned"
+    compile_binding: "rule.lineage_id = Machine ID (1:1 bijective within ruleset)"
+    initial_execution_id: "rule.id = rule.lineage_id on first creation"
+    runtime: "Engine uses rule.lineage_id / node.lineage_id — never reads policy tables"
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle: >
     Identity lifecycle operations (fork, merge, split) are defined in
@@ -98,10 +111,12 @@ contamination_guard:
     - "Machine ID columns in directive tables (cross-reference labels only)"
   note: >
     Priority hierarchy and conflict resolution below are DECLARATIVE
-    DESCRIPTIONS of governance intent. They describe WHAT the governing
-    body intends, not HOW the machine implements it. The compilation
-    engine reads these descriptions and generates executable CG-IR logic
-    via the Conflict Resolution Mapping defined in SPECIFICATION.md.
+    DESCRIPTIONS of governance intent for human authors. They describe
+    WHAT the governing body intends, not HOW the machine implements it.
+    Human authors use this guidance when setting schema fields (priority,
+    conflict_resolution). The runtime engine executes ONLY
+    SPECIFICATION.md Section 2.15 over schema/CG-IR fields — this file
+    is never read at inspection, evaluation, or conflict resolution runtime.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:

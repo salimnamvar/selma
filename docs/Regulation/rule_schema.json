@@ -1,14 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema 8.1.0",
+  "title": "Universal Rule Schema 8.1.1",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.1.0",
+  "x-spec-version": "8.1.1",
   "x-cross-layer-binding": {
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
+    "policy_runtime_prohibition": "policy_doctrine.yaml MUST NOT be read at inspection, evaluation, or FSM runtime",
+    "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only."
+  },
+  "x-cg-ir-hashing": {
+    "node_hash_scope": "local",
+    "node_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "priority", "conflict_resolution", "depends_on", "status"],
+    "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
+    "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
+    "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
+    "incremental_reuse": "unchanged node_body produces identical node_hash across snapshots"
   },
   "x-identity": {
     "contract": {
