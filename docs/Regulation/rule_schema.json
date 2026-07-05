@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema 8.2.3",
-  "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.2.3",
+  "title": "Universal Rule Schema 8.2.4",
+  "description": "Machine-readable rule structure with dual identity, evaluation logic, and lineage tracking. Finding lifecycle states are documented in x-finding-fsm (informative; normative source: SPECIFICATION.md §3.1).",
+  "x-spec-version": "8.2.4",
   "x-normative-status": "All x-* keys in this schema are informative and non-normative. SPECIFICATION.md is the sole normative source.",
   "x-cross-layer-binding": {
     "normative_status": "informative",
@@ -14,7 +14,47 @@
     "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
     "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
-    "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant. JSON Schema if/then is a first-pass filter only. The compilation engine MUST implement a formal AST-walking validator per SPECIFICATION.md §2.9 Discriminator Validation. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST use the AST walker, not partial subschema validation alone."
+    "cross_field_constraints": "evaluator_type ↔ evaluator_config consistency is a semantic invariant. JSON Schema if/then is a first-pass filter only. The compilation engine MUST implement a formal AST-walking validator per SPECIFICATION.md §2.9 Discriminator Validation. Intermediate validators that only validate subschemas may miss invalid pairings. Compile-time validation MUST use the AST walker, not partial subschema validation alone.",
+    "policy_contract_version_check": "JSON Schema cannot enforce that policy_contract_version matches the paired policy_doctrine.yaml version. The compilation engine MUST reject datasets where major(policy_contract_version) != major(policy.version) at compile time.",
+    "audit_corpus": "Formal verification audits MUST include SPECIFICATION.md, rule_schema.json, policy_doctrine.yaml, User_Stories.md, and this Contracts Directory (README.md) as the complete normative corpus."
+  },
+  "x-discriminator-note": {
+    "normative_status": "informative",
+    "primary_discriminator": "evaluator_config oneOf branches with required fields and additionalProperties: false — this is the sole structural discriminator for evaluator type safety",
+    "secondary_filter": "allOf if/then not:{required:[field1,field2,...]} is a weak first-pass filter only; it rejects instances only when ALL listed forbidden fields are simultaneously present. Subsets (e.g. {pattern, field}) pass the not check but are rejected by oneOf.",
+    "normative_gate": "SPECIFICATION.md §2.9 AST-walking discriminator validator is mandatory; engines relying on JSON Schema alone are non-conformant"
+  },
+  "x-finding-fsm": {
+    "normative_status": "informative",
+    "normative_reference": "SPECIFICATION.md §3.1",
+    "states": ["Created", "Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Verified", "Rejected", "Dismissed", "Waived", "Closed"],
+    "terminal_states": ["Closed", "Dismissed"],
+    "transitions": [
+      {"from": "Created", "to": "Open", "trigger": "automatic", "actor": "system"},
+      {"from": "Open", "to": "Acknowledged", "trigger": "finding.acknowledge", "actor": "compliance_representative", "story": "S-12"},
+      {"from": "Open", "to": "Dismissed", "trigger": "finding.dismiss", "actor": "regulatory_official", "story": "S-25"},
+      {"from": "Open", "to": "Waived", "trigger": "finding.waive", "actor": "regulatory_official", "story": "S-29"},
+      {"from": "Acknowledged", "to": "Evidence Submitted", "trigger": "evidence.submit", "actor": "compliance_representative", "story": "S-13"},
+      {"from": "Evidence Submitted", "to": "Pending Verification", "trigger": "automatic", "actor": "system"},
+      {"from": "Pending Verification", "to": "Verified", "trigger": "finding.approve_remediation", "actor": "regulatory_official", "story": "S-14"},
+      {"from": "Pending Verification", "to": "Rejected", "trigger": "finding.reject_remediation", "actor": "regulatory_official", "story": "S-14"},
+      {"from": "Rejected", "to": "Open", "trigger": "finding.reopen", "actor": "regulatory_official", "story": "S-14"},
+      {"from": "Verified", "to": "Closed", "trigger": "automatic", "actor": "system"},
+      {"from": "Waived", "to": "Closed", "trigger": "automatic", "actor": "system"}
+    ],
+    "note": "FSM is enforced at runtime by the Finding FSM Engine, not by JSON Schema structural validation of rule datasets."
+  },
+  "x-portability-note": {
+    "normative_status": "informative",
+    "normative_reference": "SPECIFICATION.md §2.9, §9.2.15",
+    "schema_limitation": "JSON Schema structural validation is necessary but insufficient for cross-runtime determinism",
+    "compile_time_engine_invariants": [
+      "RE2-compatible regex patterns only — PCRE features (backreferences, atomic groups) rejected by RE2 linter pass",
+      "NFC string normalization enforced before evaluator invocation",
+      "IEEE 754 finite doubles only — NaN and ±Infinity rejected in numeric fields",
+      "UTC-only timestamps — ISO 8601 with Z suffix; ±HH:MM offsets rejected"
+    ],
+    "enforcement": "Reference validator (§9.2.15) and RE2 canary vectors (§9.2.6) are mandatory compile-time gates; see User_Stories.md S-21, S-31"
   },
   "x-cg-ir-hashing": {
     "normative_status": "informative",
@@ -135,7 +175,7 @@
     "policy_contract_version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Version of the paired policy_doctrine.yaml. MUST match policy version."
+      "description": "Version of the paired policy_doctrine.yaml. Compile-time engine MUST verify major(policy_contract_version) == major(policy.version); JSON Schema cannot enforce cross-file version consistency."
     },
     "policy_contract_id": {
       "type": "string",
@@ -196,6 +236,9 @@
         "domain": { "type": "string" },
         "jurisdiction": { "type": "string" },
         "project": { "type": "string" }
+      },
+      "patternProperties": {
+        "^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.).*": false
       },
       "additionalProperties": true
     },
@@ -361,6 +404,9 @@
                 },
                 "additionalProperties": false
               }
+            },
+            "patternProperties": {
+              "^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.).*": false
             },
             "additionalProperties": true
           },

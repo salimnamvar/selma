@@ -7,6 +7,8 @@
 
 **Version Synchronization:** All documents (SPECIFICATION.md, rule_schema.json, policy_doctrine.yaml, User_Stories.md) MUST share the same MAJOR version (8) and MUST NOT have conflicting version references. MINOR and PATCH versions MAY differ across documents within the same MAJOR family.
 
+**Audit Corpus:** Formal verification audits MUST include all five contract documents: SPECIFICATION.md (this file), rule_schema.json, policy_doctrine.yaml, User_Stories.md, and the Contracts Directory (README.md). Projections (schema, policy, user stories) cannot substitute for the normative source when verifying algorithms in §2.6, §2.8.2, §2.15, §2.2.2, and §3.1.
+
 ---
 
 ## 1. Introduction
@@ -790,7 +792,7 @@ count_evaluator_nodes(evaluator, depth=0) → {total_nodes, max_depth, max_width
 
 **Regex catastrophic backtracking mitigation:** All regex patterns MUST be RE2-compatible (§2.9 portability). Compile-time validation MUST reject patterns exceeding length limit. Runtime engines SHOULD enforce per-node evaluation timeout (§2.12).
 
-**Discriminator Validation:** `evaluator_type` ↔ `evaluator_config` consistency is a semantic invariant. JSON Schema `if`/`then` alone is insufficient — compile-time validation MUST apply a formal AST-walking validator that implements the following algorithm:
+**Discriminator Validation:** `evaluator_type` ↔ `evaluator_config` consistency is a semantic invariant. JSON Schema `if`/`then` `not:{required:[…]}` blocks are a weak first-pass filter only (they reject only when all listed forbidden fields are simultaneously present). The primary structural discriminator is `evaluator_config` `oneOf` with `additionalProperties: false` per branch. Compile-time validation MUST apply a formal AST-walking validator that implements the following algorithm:
 
 ```
 validate_evaluator_pairing(rule):
@@ -1852,6 +1854,8 @@ The root `metadata` object and per-rule `metadata` (if present) are **informatio
 - Validation engines MAY read metadata at compile time for structural validation, but MUST NOT use it for runtime decisions
 - This clause extends to all custom namespaces and vendor-specific metadata fields
 
+**Structural Guard (Schema):** `rule_schema.json` applies `patternProperties` to reject keys matching `^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.).*`. This is a compile-time structural filter — semantic non-executability remains an engine invariant regardless of keys present.
+
 **Required namespace structure:**
 
 ```json
@@ -2165,3 +2169,4 @@ Architectural audit gates are non-blocking for spec conformance of the document 
 | 8.2.3-b | 2026-07-05 | Formal verification audit deltas: normative AST-walking discriminator validation algorithm superseding JSON Schema if/then (§2.9), optional `metadata.migration.merge_provenance` for merge lineage preservation (§7.1), aggregation latency warning in §2.11 and §3.7, MERGE-NN namespace documented as v9.0.0 candidate (§2.2.2) |
 | 8.2.3-c | 2026-07-05 | Formal verification audit remediation: `compatible_overrides()` for symmetric override pairs (§2.15 D-01/F-02), `defer_to` missing-target fall-through reconciliation (§2.15 D-02/F-03), DFS `defer_to` cycle detection (§2.15 D-07/F-08), cross-lineage advisory resolution algorithm (§2.15.2 D-10/F-07), compilation deadlock prevention (§3.4 D-12/F-15), RE2 canary test vectors (§9.2.6 D-13/F-12), portable validator requirements for UTC/NaN/flags (§9.2.15 D-11/F-04–F-06), architectural audit validation gates (§9.9 D-09/F-16), `merge_provenance` normative documentation (§7.1 D-05) |
 | 8.2.4 | 2026-07-05 | Formal verification audit (v2) delta items: JSON Schema Draft-07 enforcement limitation documented with custom compile-time validator requirement (§2.9 F-001/Δ-001–Δ-002), `depends_on` execution ID semantics clarified (§2.8, §2.8.1 F-002/Δ-003), metadata size standardized to 16 384 bytes (§2.9, §8 F-005/Δ-005), merge provenance loss risk documented (§2.2.2 F-004/Δ-004), §8 System Invariants completeness verified (F-003/Δ-007) |
+| 8.2.4-d | 2026-07-05 | Formal verification audit (v8.2.2 corpus) remediation: audit corpus requirement (F-001), `x-finding-fsm` annotation (F-003), `x-discriminator-note` for evaluator_type safety (F-004), metadata `patternProperties` structural guard (F-005), `x-portability-note` compile-time engine invariants (F-006), `policy_contract_version` cross-file check documentation (F-010), worked algorithm examples in User_Stories.md, version sync to 8.2.4 |

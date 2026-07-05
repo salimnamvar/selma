@@ -2,6 +2,18 @@
 
 Three-layer architecture for universal rule governance. Spec is normative; schema and policy conform.
 
+## Audit Corpus
+
+Formal verification audits MUST include the complete five-document corpus below. Omitting `SPECIFICATION.md` renders approximately 60% of normative algorithm claims (specificity_score, merge formula, CG-IR hash composition, HLC ordering, Finding FSM) unverifiable from projections alone.
+
+| Document | Role | Version (current) |
+| :--- | :--- | :--- |
+| [SPECIFICATION.md](SPECIFICATION.md) | Normative behavioral source | 8.2.4 |
+| [rule_schema.json](rule_schema.json) | Structural JSON Schema projection | 8.2.4 |
+| [policy_doctrine.yaml](policy_doctrine.yaml) | Governance intent (authoring only) | 8.2.4 |
+| [User_Stories.md](../User-Story/User_Stories.md) | Behavioral contract | 8.2.4 |
+| README.md (this file) | Cross-layer binding and compatibility matrix | — |
+
 ## Architecture
 
 ```
@@ -158,6 +170,20 @@ See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and 
 ## Reference Validator
 
 Production-grade implementations SHOULD ship a canonical reference validator satisfying §9.2.15 portable checks (UTC-only timestamps, finite numerics, regex flags whitelist, AST discriminator walk) and §9.2.6 RE2 canary test vectors. User stories S-30 (architectural audit gates) and S-31 (reference validator) define the behavioral contract.
+
+## Compile-Time Engine Invariants
+
+JSON Schema Draft-07 structural validation is **necessary but insufficient** for full contract conformance. The following semantic invariants MUST be enforced by the compilation engine (reference validator) at compile time — they cannot be expressed structurally in JSON Schema alone:
+
+| Invariant | Schema Coverage | Engine Responsibility |
+| :--- | :--- | :--- |
+| **Evaluator portability** | Regex flags whitelist (`^[ims]*$`) | RE2 linter pass; reject PCRE features (backreferences, lookaheads). NFC string normalization. IEEE 754 finite numerics (reject NaN/±Infinity). |
+| **UTC timestamps** | `utc_datetime` pattern (`…Z$`) | Normalize all timestamps to UTC before hashing; reject `±HH:MM` offsets. |
+| **Evaluator type safety** | `oneOf` + `additionalProperties: false` (primary); `allOf` `not:{required:[…]}` (weak secondary) | AST-walking discriminator validator per §2.9 — mandatory normative gate. |
+| **Evaluator complexity** | Per-level `maxItems` only | Recursive AST walk: depth ≤ 32, total nodes ≤ 256, width ≤ 64. |
+| **Metadata non-executability** | `patternProperties` rejects `x-exec*`, `x-eval*`, `x-hint*`, `evaluator_*` keys | Engine MUST ignore metadata at evaluation runtime regardless of content. |
+| **Policy version consistency** | `policy_contract_version` field required | Engine MUST verify `major(policy_contract_version) == major(policy.version)`. |
+| **Finding FSM** | `x-finding-fsm` informative annotation only | Finding FSM Engine enforces transitions per SPECIFICATION.md §3.1 at runtime. |
 
 
 
