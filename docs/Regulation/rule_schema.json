@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema 8.1.2",
+  "title": "Universal Rule Schema 8.2.0",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
-  "x-spec-version": "8.1.2",
+  "x-spec-version": "8.2.0",
   "x-cross-layer-binding": {
     "spec_is_normative": true,
     "schema_is_structural_projection": true,

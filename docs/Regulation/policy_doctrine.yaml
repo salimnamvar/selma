@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 8.1.2
+# NORMATIVE SOURCE: SPECIFICATION.md 8.2.0
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.1.2"
+  version: "8.2.0"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.1.2"
-  rule_contract_version: "8.1.2"
+  spec_version: "8.2.0"
+  rule_contract_version: "8.2.0"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -64,8 +64,9 @@ identity_resolution:
     definition: "Stable external lineage identifier assigned at directive authoring time"
     not: ["execution ID", "compile-time artifact", "runtime lookup key"]
     assignment: "Assigned once at first authoring; never reassigned"
-    compile_binding: "rule.lineage_id = Machine ID (1:1 bijective within ruleset)"
+    compile_binding: "rule.lineage_id = Machine ID (bijective at root-assignment level)"
     initial_execution_id: "rule.id = rule.lineage_id on first creation"
+    post_fork_split: "Multiple active rules may share lineage_id with distinct execution_ids"
     runtime: "Engine uses rule.lineage_id / node.lineage_id — never reads policy tables"
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle: >

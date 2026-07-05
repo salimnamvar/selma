@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 8.1.2
+**Version:** 8.2.0
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -118,11 +118,19 @@ The identity model has two distinct ID types:
 | **What it is** | Human-assigned lineage root label in policy directive tables |
 | **What it is not** | An execution ID, a compile-time artifact, or a runtime lookup key |
 | **Assignment** | Assigned once when a directive is first authored; never reassigned |
-| **Compile binding** | At schema compile: `rule.lineage_id = Machine ID` (1:1, bijective within ruleset) |
+| **Compile binding** | At schema compile: `rule.lineage_id = Machine ID` (1:1 bijective at lineage-root level) |
 | **Initial execution ID** | On first creation: `rule.id = rule.lineage_id` |
 | **After fork/merge/split** | `rule.lineage_id` unchanged or inherited; `rule.id` diverges per lifecycle rules |
-| **Referential integrity** | Every `Machine ID` in policy MUST map to exactly one `rule.lineage_id`; every `rule.lineage_id` MUST have exactly one `Machine ID` |
+| **Referential integrity** | Every `Machine ID` in policy MUST map to exactly one lineage root `lineage_id`; every lineage root `lineage_id` MUST have exactly one `Machine ID`. After fork/split, multiple active rules may share the same `lineage_id` — the bijection is at the root-assignment level, not at the per-rule-uniqueness level. |
 | **Runtime** | Engine uses `rule.lineage_id` / `node.lineage_id` — never reads policy tables |
+
+**Lineage-Uniqueness Refinement:**
+
+The invariant `lineage_id MUST be unique within a ruleset` (§9.1 item 7) is scoped as follows:
+- **Root uniqueness:** No two *distinct* lineage roots may share the same `lineage_id`. Once assigned, a `lineage_id` root is never reused.
+- **Post-fork/split sharing:** After fork or split, multiple active rules may legitimately share the same `lineage_id` while having distinct `id` (execution ID) values.
+- **Primary key:** Rule identity within a ruleset is uniquely identified by `(lineage_id, id)`. The `id` field alone is also unique (execution ID uniqueness is global).
+- **Conflict resolution scope:** `resolve_conflict` operates on the set of active rules sharing a `lineage_id`. Cross-lineage conflicts produce Conflict Artifacts (§2.15).
 
 **Lineage Tracking:**
 
@@ -223,8 +231,24 @@ node_body = {
 | Hash Level | Input | Scope | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Node** | `node_body` only | Local content | Deduplication across snapshots; stable under incremental reuse |
-| **Edge** | `{source: directive_id, target: directive_id}` | Pair identity | Graph structure separate from node content |
+| **Edge** | `edge_body` (see formula below) | Pair identity | Graph structure separate from node content |
 | **Snapshot** | `{node_hashes: sorted[], edge_hashes: sorted[], provenance}` | Global composition | Snapshot identity; structure without embedding neighbors in node hash |
+
+**Edge Hash Formula:**
+
+```
+edge_hash = SHA-256(canonical_json(edge_body))
+
+edge_body = {
+  source: directive_id,    // string, the dependency source
+  target: directive_id     // string, the dependency target
+}
+```
+
+- Edges are directional: `edge_body = {source: "A", target: "B"}` ≠ `{source: "B", target: "A"}`
+- Duplicate edges (same source, same target) produce identical `edge_hash` values
+- The edge hash is independent of node body content — graph structure and node identity are fully decoupled
+- Edge ordering in the snapshot manifest is canonicalized by sorted `edge_hash[]` (not insertion order)
 
 **CG-IR Snapshot Hash Composition:**
 
@@ -235,13 +259,22 @@ cg_ir_snapshot_hash = SHA-256(canonical_json({
   provenance: {
     engine_version: string,     // pinned engine version
     frozen_env_hash: string,    // SHA-256 of frozen environment
-    directive_graph_version: string,
-    compiled_at: datetime       // ISO 8601 UTC
+    directive_graph_version: string
+    // Note: compiled_at is NOT included here — it is execution artifact
+    // metadata only. Including it would break snapshot hash determinism.
   }
 }))
 ```
 
+**compiled_at** is recorded in execution artifact metadata (inspection snapshots, pipeline traces) but NOT in the snapshot hash. This ensures that two compilations with identical directive graph content, engine version, and frozen environment produce the same `cg_ir_snapshot_hash` regardless of wall clock time.
+
 **Determinism guarantee:** Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical. The hash is **not a function of wall clock time, compilation node identity, or request context**.
+
+**Provenance Canonicalization Requirement:** All provenance fields MUST be canonicalized (normalized to canonical form) before inclusion in the snapshot hash input. Provenance fields MUST NOT be appended in non-deterministic order. Specifically:
+- `engine_version` and `frozen_env_hash` are normalized strings (no trailing whitespace, case-insensitive where applicable)
+- `directive_graph_version` follows semver normalization
+- `compiled_at` is included in the snapshot hash but does NOT affect determinism for a given frozen compilation — two compilations with identical directive graph content, engine version, and frozen environment but different wall clock times produce the same `cg_ir_snapshot_hash` because `compiled_at` is NOT part of the snapshot hash input (it is part of execution artifact metadata only)
+- If future extensions add provenance fields, each field MUST be declared with a canonical form before inclusion in hash computation
 
 **Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
 
@@ -310,6 +343,15 @@ evaluate(node, target, context) → {
 | **Allowed operations** | String matching, regex, arithmetic, field extraction, comparison |
 | **Prohibited operations** | HTTP calls, DB queries, file reads, environment variables |
 | **Type Safety** | `evaluator_config` MUST match `evaluator_type` (schema if/then). This is a semantic invariant — intermediate validators that only validate subschemas may not catch invalid pairings. Compile-time validation MUST check cross-field consistency. |
+
+**Evaluator Portability Constraints (cross-runtime determinism):**
+
+| Constraint | Rule | Rationale |
+| :--- | :--- | :--- |
+| **Regex dialect** | Engines MUST use RE2-compatible regex syntax. PCRE-only features (backreferences, lookaheads beyond lookahead/lookbehind, atomic groups) are PROHIBITED in evaluator patterns. Flags limited to: `i` (case-insensitive), `m` (multiline), `s` (dot-all). | RE2 guarantees linear-time matching and consistent behavior across implementations (Go, C++, Java, Python via `google-re2`). PCRE features create cross-runtime divergence. |
+| **Numeric normalization** | All numeric comparisons use IEEE 754 double-precision arithmetic. NaN and Infinity are NOT permitted in evaluator configs or target values (schema rejects). Float comparison uses exact IEEE 754 bitwise equality — no epsilon tolerance unless explicitly configured. | Prevents silent divergence across CPU architectures and language runtimes. |
+| **Timestamp handling** | All timestamp comparisons in evaluators use UTC (ISO 8601). Timezone-aware conversions are NOT permitted within evaluator logic. Target `submitted_at` and context `last_inspection_date` are always UTC-normalized before evaluator invocation. | Eliminates DST/timezone ambiguity across evaluation environments. |
+| **String comparison** | String equality and ordering use Unicode codepoint comparison (NFC-normalized). No locale-dependent collation. | Prevents locale-sensitive ordering divergence. |
 
 **Evaluator Types (pure only):**
 
@@ -491,6 +533,8 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 
 **Explicit override takes precedence.** The runtime engine executes ONLY the algorithm below over schema/CG-IR fields. Policy prose is never consulted at runtime.
 
+**Temporal Binding Guarantee:** The `created_at` field used in conflict resolution is the directive's authoring timestamp, frozen into `node_body` at compilation time. It is a static property of the CG-IR node — NOT evaluation time, NOT wall clock time. For a given CG-IR snapshot, conflict resolution outcomes are fully deterministic because all inputs (`priority`, `conflict_resolution`, `created_at`, `scope` for specificity) are frozen in the immutable snapshot. Two evaluations of the same CG-IR snapshot against the same target always produce identical conflict outcomes, regardless of when evaluation occurs.
+
 | Intent (Policy — authoring only) | Schema Field | Operator (CG-IR — runtime) | Implementation |
 | :--- | :--- | :--- | :--- |
 | "Higher priority wins" | `priority` | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
@@ -608,6 +652,8 @@ system_state_hash = SHA-256(canonical_json({
 ```
 
 To reproduce any historical inspection, pin all five dimensions.
+
+**Intentional Exclusion — Event Stream Ordering:** The `system_state_hash` captures inspection reproducibility, NOT event stream ordering. Event ordering is guaranteed by the HLC (§2.14) and is recorded independently in the Finding Event Stream via `event_hash` and `logical_clock` fields. Including event stream state in `system_state_hash` would create a circular dependency (inspection depends on events, events depend on inspection). The five dimensions above are sufficient to reproduce any inspection deterministically.
 
 **CG-IR Hash Binding Clarification:** The `cg_ir_hash` used in the system_state_hash formula refers to `cg_ir_snapshot_hash` as defined in §2.6. The `system_state_hash` is a second-level composition that additionally includes `target_hash` and `directive_graph_version`. This ensures full inspection reproducibility across directive state, execution target, compiled CG-IR snapshot, and engine + environment context.
 
@@ -966,28 +1012,33 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | :--- | :--- |
 | **Normative Source** | SPECIFICATION.md is the single normative source; schema and policy MUST conform |
 | **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node identity) |
-| **Lineage ID Immutability** | Once assigned, lineage_id is never reused |
-| **Execution ID Stability** | Execution ID changes only on fork/merge/split |
+| **Lineage ID Immutability** | Once assigned, lineage_id root is never reused; multiple active rules may share lineage_id after fork/split |
+| **Execution ID Stability** | Execution ID changes only on fork/merge/split; globally unique within ruleset |
+| **Rule-Level Uniqueness** | (lineage_id, id) pair is unique; id alone is also globally unique |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, a snapshot is immutable; compilation creates new snapshots |
 | **CG-IR Content Addressing** | Snapshot hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). Identical inputs → identical hash (§2.6). |
-| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash is a function of directive graph content, engine version, and frozen env only. Not a function of wall clock time, compilation node identity, or request context. |
+| **CG-IR Snapshot Hash Determinism** | cg_ir_snapshot_hash is a function of directive graph content, engine version, and frozen env only. compiled_at is NOT included in snapshot hash (execution artifact metadata only). |
+| **CG-IR Edge Hash Formula** | edge_hash = SHA-256(canonical_json({source: directive_id, target: directive_id})). Directional. Independent of node content. |
+| **Provenance Canonicalization** | All provenance fields MUST be canonicalized before inclusion in hash computation; no non-deterministic ordering |
 | **Finding Event Immutability** | Append-only; event_hash ensures integrity |
 | **Finding FSM** | Findings follow strict state transitions (see Section 3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
 | **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (schema-enforced if/then) |
+| **Evaluator Portability** | RE2-compatible regex only; IEEE 754 strict numerics; UTC-only timestamps; NFC-normalized strings |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Capability Enforcement** | All actions checked against capability matrix |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
 | **Declarative Governance** | Policy describes authoring intent only; runtime engine reads schema/CG-IR fields via spec algorithm |
 | **Policy Runtime Prohibition** | policy_doctrine.yaml MUST NOT be read during inspection, evaluation, or FSM transitions |
-| **Machine ID Semantics** | Machine ID = stable external lineage identifier; maps 1:1 to rule.lineage_id at compile time |
+| **Machine ID Semantics** | Machine ID = stable lineage root; bijective at root-assignment level; fork/split allows shared lineage_id with distinct execution_ids |
 | **CG-IR Local Node Hashing** | node_hash depends on node_body only; graph context captured in edges and snapshot manifest |
 | **Deterministic Serialization** | Canonical JSON with sorted keys; NaN/Infinity prohibited; DAG refs by sorted directive_id |
 | **HLC Event Ordering** | physical_time → logical_counter → node_id → event_id; per-node tuple strictly non-decreasing |
-| **Capability Enforcement** | Checked at request ingress and stage-specific gates; deny = hard reject, no partial mutation |
+| **system_state_hash Scope** | Captures inspection reproducibility only; event ordering excluded (circular dependency avoidance) |
+| **Conflict Resolution Temporal Binding** | created_at is frozen in CG-IR node_body; conflict outcomes are snapshot-bound, not evaluation-time-dependent |
 | **Version Compatibility** | MAJOR versions match across spec/schema/policy |
 | **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
 | **Concurrency Safety** | Compilation = read lock; modification = write lock |
@@ -1004,11 +1055,13 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 4. No orphan lineage_ids in any layer
 5. lineage_id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+$`
 6. execution_id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$`
-7. No duplicate lineage_id values within a ruleset
+7. No duplicate lineage_id ROOT values within a ruleset (post-fork/split, multiple active rules may share the same lineage_id with distinct execution_ids)
 8. Lineage field is present for fork/merge/split operations
 9. Lineage field is absent for revision/rename/retire operations
-10. Machine ID ↔ rule.lineage_id is bijective within ruleset (no duplicates, no orphans)
+10. Machine ID ↔ lineage_id root is bijective within ruleset (no duplicate roots, no orphan lineage roots)
 11. On first creation, rule.id equals rule.lineage_id unless lineage operation dictates otherwise
+12. Rule-level uniqueness: `(lineage_id, id)` pair is unique within a ruleset
+13. Execution ID uniqueness: `id` is globally unique within a ruleset (no two active rules share the same execution_id)
 
 ### 9.2 Evaluator Validation
 
@@ -1021,6 +1074,10 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
    - `composite` requires `logic`, `sub_evaluators`
 4. All inputs/outputs JSON-serializable
 5. Deterministic serialization verified
+6. Regex patterns validated for RE2 compatibility (no backreferences, no atomic groups, no PCRE-only features)
+7. Regex flags limited to: `i`, `m`, `s`
+8. No NaN or Infinity in evaluator_config numeric values
+9. No timezone-dependent operations in evaluator logic
 
 ### 9.3 CG-IR Validation
 
@@ -1094,3 +1151,4 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | 8.1.0 | 2026-07-05 | Cross-layer compliance audit: fixed identity mapping (Machine ID → lineage_id), HLC clock advancement and monotonic counter rules, cross-layer conflict resolution precedence chain, FSM human/system transition binding |
 | 8.1.1 | 2026-07-05 | Architectural review: policy runtime prohibition, Machine ID single interpretation, HLC monotonicity under clock regression, CG-IR local node hashing scope, capability enforcement gates, DAG reference hashing |
 | 8.1.2 | 2026-07-05 | CG-IR snapshot hash determinism: explicit composition formula (node_hashes + edge_hashes + provenance), system_state_hash binding clarification, snapshot hash determinism invariant |
+| 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
