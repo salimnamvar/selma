@@ -1,8 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema",
+  "title": "Universal Rule Schema v7.0",
   "description": "Machine-readable rule structure with identity lifecycle, evaluation logic, and lineage tracking.",
+  "x-spec-version": "7.0.0",
+  "x-cross-layer-binding": {
+    "spec_is_normative": true,
+    "schema_is_structural_projection": true,
+    "policy_is_governance_intent": true,
+    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only. All schema elements MUST be derivable from specification invariants."
+  },
   "x-identity-resolution": {
     "canonical_id_field": "id",
     "policy_mapping": "Machine ID in directive tables maps to rule.id",
@@ -11,37 +18,49 @@
   },
   "x-identity-lifecycle": {
     "operations": {
-      "revision": "Same ID, new revision. Changes within same semantic intent.",
-      "fork": "Two new IDs. One directive splits into two distinct directives.",
-      "merge": "One new ID. Two directives combine into one.",
-      "split": "New IDs for each. One directive restructured into multiple.",
-      "rename": "Same ID. Display name changes, semantic intent unchanged.",
-      "retire": "Same ID, status=deprecated. Never reused."
+      "revision": "Same ID, new revision. Changes within same semantic intent. lineage field NOT required.",
+      "fork": "Two new IDs. One directive splits into two distinct directives. lineage field REQUIRED.",
+      "merge": "One new ID. Two directives combine into one. lineage field REQUIRED.",
+      "split": "New IDs for each. One directive restructured into multiple. lineage field REQUIRED.",
+      "rename": "Same ID. Display name changes, semantic intent unchanged. lineage field NOT required.",
+      "retire": "Same ID, status=deprecated. Never reused. lineage field NOT required."
     },
-    "rule": "Once assigned, a Machine ID is never reused. Deprecated IDs remain in audit trail."
+    "rule": "Once assigned, a Machine ID is never reused. Deprecated IDs remain in audit trail forever.",
+    "uniqueness_enforcement": "rule.id MUST be unique within a ruleset. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$"
   },
   "x-deterministic-serialization": {
-    "json_key_ordering": "alphabetical",
-    "number_encoding": "integer as integer, float as float",
+    "json_key_ordering": "alphabetical (lexicographic)",
+    "number_encoding": "integer as integer, float as IEEE 754 double",
     "string_encoding": "UTF-8 no BOM",
     "datetime_encoding": "ISO 8601 UTC (YYYY-MM-DDTHH:MM:SSZ)",
     "null_handling": "explicit null not omitted",
     "hash_algorithm": "SHA-256",
-    "canonical_form": "All objects serialized with sorted keys before hashing"
+    "canonical_form": "All objects serialized with sorted keys before hashing",
+    "recursive_structures": "For recursive evaluator_config: serialize sub_evaluators as array of canonical JSON objects. For lineage: serialize parent_ids as sorted array.",
+    "schema_references": "$ref resolved at schema validation time; not included in canonical form for hashing"
+  },
+  "x-conflict-resolution-binding": {
+    "spec_model": "Deterministic multi-factor: priority → specificity → recency → explicit override",
+    "schema_model": "conflict_resolution field provides explicit override only",
+    "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
+    "policy_model": "Declarative intent description only. Compilation engine implements via spec multi-factor algorithm."
   },
   "type": "object",
-  "required": ["version", "rules"],
+  "required": ["version", "policy_contract_version", "policy_contract_id", "rules"],
   "properties": {
     "version": {
       "type": "string",
-      "description": "Version of this specific rule dataset."
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of this rule dataset. MUST match spec version for compatibility."
     },
     "policy_contract_version": {
       "type": "string",
-      "description": "Version of the paired policy_doctrine.yaml."
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Version of the paired policy_doctrine.yaml. MUST match policy version."
     },
     "policy_contract_id": {
       "type": "string",
+      "const": "universal-policy-doctrine",
       "description": "Identifier of the paired policy contract."
     },
     "metadata": {
@@ -51,15 +70,16 @@
     },
     "rules": {
       "type": "array",
-      "description": "The list of directives.",
+      "minItems": 1,
+      "description": "The list of directives. Every rule MUST have a unique id.",
       "items": {
         "type": "object",
-        "required": ["id", "type", "message"],
+        "required": ["id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
         "properties": {
           "id": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
-            "description": "Stable unique identifier. Machine ID = rule.id = directive_id."
+            "description": "Stable unique identifier. Machine ID = rule.id = directive_id. Never reused."
           },
           "type": {
             "type": "string",
@@ -68,6 +88,7 @@
           },
           "message": {
             "type": "string",
+            "minLength": 1,
             "description": "Human-readable output or description."
           },
           "target": {
@@ -86,20 +107,63 @@
           "evaluator_type": {
             "type": "string",
             "enum": ["regex", "field_check", "threshold", "composite"],
-            "description": "Pure evaluator type."
+            "description": "Pure evaluator type. Discriminator for evaluator_config."
           },
           "evaluator_config": {
-            "type": "object",
-            "description": "Evaluator configuration.",
-            "properties": {
-              "pattern": { "type": "string", "description": "Regex pattern (for regex type)" },
-              "field": { "type": "string", "description": "Field path (for field_check type)" },
-              "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"], "description": "Comparison operator" },
-              "threshold": { "type": "number", "description": "Threshold value (for threshold type)" },
-              "sub_evaluators": { "type": "array", "items": { "$ref": "#" }, "description": "Sub-evaluators (for composite type)" },
-              "logic": { "type": "string", "enum": ["and", "or", "not"], "description": "Composition logic (for composite type)" }
-            },
-            "additionalProperties": false
+            "oneOf": [
+              {
+                "description": "Regex evaluator config",
+                "type": "object",
+                "properties": {
+                  "pattern": { "type": "string", "minLength": 1 },
+                  "flags": { "type": "string", "default": "" }
+                },
+                "required": ["pattern"],
+                "additionalProperties": false,
+                "x-evaluator-type": "regex"
+              },
+              {
+                "description": "Field check evaluator config",
+                "type": "object",
+                "properties": {
+                  "field": { "type": "string", "minLength": 1 },
+                  "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"] },
+                  "value": {}
+                },
+                "required": ["field", "operator", "value"],
+                "additionalProperties": false,
+                "x-evaluator-type": "field_check"
+              },
+              {
+                "description": "Threshold evaluator config",
+                "type": "object",
+                "properties": {
+                  "field": { "type": "string", "minLength": 1 },
+                  "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte"] },
+                  "threshold": { "type": "number" }
+                },
+                "required": ["field", "operator", "threshold"],
+                "additionalProperties": false,
+                "x-evaluator-type": "threshold"
+              },
+              {
+                "description": "Composite evaluator config",
+                "type": "object",
+                "properties": {
+                  "logic": { "type": "string", "enum": ["and", "or", "not"] },
+                  "sub_evaluators": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/evaluator_config_entry"
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["logic", "sub_evaluators"],
+                "additionalProperties": false,
+                "x-evaluator-type": "composite"
+              }
+            ]
           },
           "weight": {
             "type": "string",
@@ -114,20 +178,25 @@
           "depends_on": {
             "type": "array",
             "items": { "type": "string" },
+            "uniqueItems": true,
             "description": "IDs of rules that must be evaluated first."
           },
           "conflicts_with": {
             "type": "array",
             "items": { "type": "string" },
+            "uniqueItems": true,
             "description": "IDs of rules that cannot coexist."
           },
           "conflict_resolution": {
             "type": "object",
-            "description": "Explicit conflict resolution override.",
+            "description": "Explicit conflict resolution override. Takes precedence over computed resolution.",
             "properties": {
-              "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"], "description": "Resolution strategy" },
-              "defer_to": { "type": "string", "description": "Rule ID to defer to (for defer_to strategy)" }
+              "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"] },
+              "defer_to": { "type": "string", "description": "Rule ID to defer to (required if strategy=defer_to)" }
             },
+            "required": ["strategy"],
+            "if": { "properties": { "strategy": { "const": "defer_to" } } },
+            "then": { "required": ["defer_to"] },
             "additionalProperties": false
           },
           "created_at": {
@@ -142,7 +211,7 @@
           },
           "parameters": {
             "type": "object",
-            "description": "Configuration values for evaluator_config.",
+            "description": "Configuration values passed to evaluator_config.",
             "additionalProperties": true
           },
           "rationale": {
@@ -155,20 +224,58 @@
           },
           "lineage": {
             "type": "object",
-            "description": "Tracks identity lifecycle operations (fork, merge, split).",
+            "description": "Tracks identity lifecycle operations. REQUIRED for fork, merge, split. NOT required for revision, rename, retire.",
             "properties": {
-              "operation": { "type": "string", "enum": ["fork", "merge", "split"], "description": "The lifecycle operation that created this ID" },
-              "parent_ids": { "type": "array", "items": { "type": "string" }, "description": "Previous IDs this directive was derived from" },
-              "timestamp": { "type": "string", "format": "date-time", "description": "When the operation occurred" },
-              "reason": { "type": "string", "description": "Why the operation was performed" }
+              "operation": { "type": "string", "enum": ["fork", "merge", "split"] },
+              "parent_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "reason": { "type": "string" }
             },
             "required": ["operation", "parent_ids", "timestamp"],
             "additionalProperties": false
           }
         },
-        "additionalProperties": false
-      }
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "evaluator_type": { "const": "regex" } } },
+            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "regex" } } }
+          },
+          {
+            "if": { "properties": { "evaluator_type": { "const": "field_check" } } },
+            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "field_check" } } }
+          },
+          {
+            "if": { "properties": { "evaluator_type": { "const": "threshold" } } },
+            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "threshold" } } }
+          },
+          {
+            "if": { "properties": { "evaluator_type": { "const": "composite" } } },
+            "then": { "properties": { "evaluator_config": { "x-evaluator-type": "composite" } } }
+          }
+        ]
+      },
+      "uniqueItems": true
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "evaluator_config_entry": {
+      "type": "object",
+      "description": "A single sub-evaluator entry within a composite evaluator.",
+      "properties": {
+        "evaluator_type": {
+          "type": "string",
+          "enum": ["regex", "field_check", "threshold"]
+        },
+        "evaluator_config": {
+          "type": "object",
+          "description": "Configuration for this sub-evaluator (same schema as top-level evaluator_config for the given type).",
+          "additionalProperties": true
+        }
+      },
+      "required": ["evaluator_type", "evaluator_config"],
+      "additionalProperties": false
+    }
+  }
 }

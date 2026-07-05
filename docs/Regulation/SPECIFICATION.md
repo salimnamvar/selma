@@ -2,7 +2,8 @@
 
 **Version:** 7.0.0  
 **Status:** Draft Standard  
-**Date:** 2026-07-05
+**Date:** 2026-07-05  
+**Normative Source:** This document is the normative behavioral source for the Selma system.
 
 ---
 
@@ -16,7 +17,25 @@ This specification defines a universal framework for creating, maintaining, and 
 2. **Compiled Control DAG (CG-IR)** — The immutable executable intermediate representation
 3. **Finding Event Stream** — The append-only audit log with read-only analytics
 
-### 1.2 Scope
+### 1.2 Cross-Layer Binding Contract
+
+The Selma system has three document layers with a strict dominance hierarchy:
+
+| Layer | Document | Role | Authority |
+| :--- | :--- | :--- | :--- |
+| **Normative** | SPECIFICATION.md | Defines system behavior, invariants, and contracts | Highest — all other layers MUST conform |
+| **Structural** | rule_schema.json | Structural projection of spec invariants | Derived from spec — MUST be valid JSON Schema encoding of spec |
+| **Governance** | policy_doctrine.yaml | Governance intent description | Descriptive only — MUST NOT contradict spec invariants |
+
+**Binding Rules:**
+1. SPECIFICATION.md is the single normative source for all system behavior
+2. rule_schema.json MUST be derivable from spec invariants — no schema element may contradict spec
+3. policy_doctrine.yaml describes governance intent only — no executable fields
+4. When spec and schema conflict, spec wins
+5. All three documents MUST share synchronized versions (all at 7.0.0)
+6. The engine validates schema against spec invariants at compile time
+
+### 1.3 Scope
 
 This standard applies to:
 - Policy documents (prose rules, governance documents, standards)
@@ -345,31 +364,43 @@ Finding Event Stream → Read-only analytics → Human review → Directive Grap
 
 ### 2.15 Conflict Resolution Mapping
 
-The declarative intent in policy is mapped to deterministic operators:
+The declarative intent in policy is mapped to deterministic operators. **Explicit override takes precedence.**
 
 | Intent (Policy) | Operator (CG-IR) | Implementation |
 | :--- | :--- | :--- |
 | "Higher priority wins" | `max(priority_level)` | Constitutional(1) > Statutory(2) > Regulatory(3) > Operational(4) > Advisory(5) |
-| "More specific wins" | ` specificity_score(rule) > specificity_score(rule)` | Count of scope constraints; higher = more specific |
+| "More specific wins" | `specificity_score(rule_a) > specificity_score(rule_b)` | Count of scope constraints; higher = more specific |
 | "Newer wins" | `max(created_at)` | ISO 8601 timestamp comparison |
 | "Explicit override wins" | `has_field(conflict_resolution)` | Boolean: does rule have explicit override? |
 
-**Conflict Resolution Function:**
+**Unified Conflict Resolution Function:**
 
 ```
-resolve_conflict(rule_a, rule_b) → winning_rule
+resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact
 
-1. if rule_a.priority != rule_b.priority:
+// Step 1: Explicit override takes precedence
+1. if rule_a.conflict_resolution and not rule_b.conflict_resolution:
+     return apply_strategy(rule_a.conflict_resolution, rule_a, rule_b)
+2. if rule_b.conflict_resolution and not rule_a.conflict_resolution:
+     return apply_strategy(rule_b.conflict_resolution, rule_b, rule_a)
+3. if both have conflict_resolution:
+     return Conflict Artifact (escalate — ambiguous override)
+
+// Step 2: Computed resolution (when no explicit override)
+4. if rule_a.priority != rule_b.priority:
      return rule with lower priority_level number
-2. if specificity(rule_a) != specificity(rule_b):
+5. if specificity(rule_a) != specificity(rule_b):
      return rule with higher specificity score
-3. if rule_a.created_at != rule_b.created_at:
+6. if rule_a.created_at != rule_b.created_at:
      return rule with newer timestamp
-4. if rule_a.conflict_resolution and not rule_b.conflict_resolution:
-     return rule_a
-5. if rule_b.conflict_resolution and not rule_a.conflict_resolution:
-     return rule_b
-6. return Conflict Artifact (escalate to human)
+
+// Step 3: Unresolvable
+7. return Conflict Artifact (escalate to human)
+
+apply_strategy(strategy, rule, other_rule) → winning_rule:
+  - "always_wins": return rule
+  - "never_wins": return other_rule
+  - "defer_to": return rule with ID = strategy.defer_to
 ```
 
 ### 2.16 Deterministic Serialization Rules
@@ -379,7 +410,7 @@ For reproducibility, all hashing uses:
 | Rule | Specification |
 | :--- | :--- |
 | **JSON key ordering** | Alphabetical (lexicographic) |
-| **Number encoding** | Integer as integer, float as float (no trailing zeros for integers) |
+| **Number encoding** | Integer as integer, float as IEEE 754 double |
 | **String encoding** | UTF-8, no BOM |
 | **Datetime encoding** | ISO 8601 with UTC timezone (`YYYY-MM-DDTHH:MM:SSZ`) |
 | **Null handling** | Explicit `null`, not omitted |
@@ -388,6 +419,20 @@ For reproducibility, all hashing uses:
 | **Hash algorithm** | SHA-256 |
 
 **Canonical JSON:** All objects are serialized with sorted keys before hashing.
+
+**Recursive Structures:**
+- **Composite evaluators:** `sub_evaluators` are serialized as an ordered array of canonical JSON objects
+- **Lineage:** `parent_ids` are sorted lexicographically before hashing
+- **Schema references ($ref):** Resolved at schema validation time only; NOT included in canonical form for hashing
+
+**Evaluator Config Serialization by Type:**
+
+| Type | Canonical Fields | Serialization |
+| :--- | :--- | :--- |
+| `regex` | `pattern`, `flags` | `{"flags":"","pattern":"..."}` (sorted keys) |
+| `field_check` | `field`, `operator`, `value` | `{"field":"...","operator":"...","value":...}` |
+| `threshold` | `field`, `operator`, `threshold` | `{"field":"...","operator":"...","threshold":...}` |
+| `composite` | `logic`, `sub_evaluators` | Each sub_evaluator serialized recursively as `{"evaluator_config":{...},"evaluator_type":"..."}` |
 
 ### 2.17 Version Resolution Function
 
@@ -495,10 +540,13 @@ Execution Artifacts
 
 | Axis | Format | Mutability |
 | :--- | :--- | :--- |
+| Specification Version | Semantic (MAJOR.MINOR.PATCH) | Immutable per release |
 | Directive Graph Version | Semantic (MAJOR.MINOR.PATCH) | Mutable |
 | CG-IR Schema Version | Semantic | Immutable per snapshot |
 | Engine Version | Semantic | Immutable per release |
 | Frozen Environment | Content hash | Immutable per compilation |
+
+**Version Synchronization Rule:** SPECIFICATION.md version, rule_schema.json version, and policy_doctrine.yaml version MUST be identical (e.g., all at 7.0.0). The engine rejects version mismatches.
 
 **Compatibility Rules:**
 
@@ -508,6 +556,7 @@ Execution Artifacts
 | Compile Directive Graph | Engine version must support Directive Graph schema |
 | Reproduce inspection | Pin: frozen_env_hash + CG-IR hash + target_hash + engine_version |
 | Migrate schema | Use migration tool; legacy snapshots remain with pinned engine |
+| Version mismatch | Spec version = schema version = policy version; engine rejects mismatches |
 
 ---
 
@@ -527,11 +576,23 @@ Execution Artifacts
 
 ### 6.2 Contamination Guard
 
-**Prohibited fields:** parameters, conditions, evaluator_hint, evaluator_type, weight, depends_on, conflicts_with, status, created_at, expires_at, remediation, target
+**Prohibited fields in policy:** parameters, conditions, evaluator_hint, evaluator_type, evaluator_config, weight, depends_on, conflicts_with, status, created_at, expires_at, remediation, target, lineage
 
 **Allowed:** Machine ID columns (cross-reference labels only)
 
-**Note:** Priority hierarchy and conflict resolution are DECLARATIVE DESCRIPTIONS of governance intent. The compilation engine translates intent into CG-IR logic via the Conflict Resolution Mapping (Section 2.15).
+**Cross-Layer Field Legality Matrix:**
+
+| Field | Policy Layer | Schema Layer | Spec Layer |
+| :--- | :--- | :--- | :--- |
+| `Machine ID` / `rule.id` | ✅ Allowed | ✅ Required | ✅ Defined |
+| `evaluator_type` | ❌ Prohibited | ✅ Required | ✅ Defined |
+| `evaluator_config` | ❌ Prohibited | ✅ Required | ✅ Defined |
+| `lineage` | ❌ Prohibited | ⚠️ Conditional | ✅ Defined |
+| `priority_hierarchy` | ✅ Declarative | ✅ As `priority` field | ✅ Defined |
+| `conflict_resolution_intent` | ✅ Declarative | ✅ As `conflict_resolution` field | ✅ Defined |
+| `conflict_resolution` | ❌ Prohibited | ✅ Optional override | ✅ Defined |
+
+**Note:** Priority hierarchy and conflict resolution are DECLARATIVE DESCRIPTIONS of governance intent in policy. The compilation engine translates intent into CG-IR logic via the Conflict Resolution Mapping (Section 2.15).
 
 ---
 
@@ -547,13 +608,16 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 
 | Invariant | Description |
 | :--- | :--- |
+| **Normative Source** | SPECIFICATION.md is the single normative source; schema and policy MUST conform |
 | **Canonical Identity** | One ID across all layers: Machine ID = rule.id = directive_id |
 | **Identity Immutability** | Once assigned, a Machine ID is never reused |
+| **Identity Uniqueness** | rule.id MUST be unique within a ruleset (enforced by pattern + validation) |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, a snapshot is immutable; compilation creates new snapshots |
 | **Finding Event Immutability** | Append-only; event_hash ensures integrity |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (discriminated union) |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
@@ -561,6 +625,9 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | **Deterministic Serialization** | Canonical JSON with sorted keys for all hashing |
 | **Event Ordering** | Strict total order by timestamp; ties by event_id |
 | **Version Forward-Only** | No downgrades; legacy snapshots pinned to engine versions |
+| **Version Synchronization** | Spec version = schema version = policy version |
+| **Cross-Layer Binding** | Schema MUST be derivable from spec invariants; no independent semantics |
+| **Lineage Enforcement** | Fork/merge/split MUST have lineage field; revision/rename/retire MUST NOT |
 
 ---
 
@@ -572,14 +639,22 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 2. Every rule.id has a Machine ID in policy
 3. Every CG-IR node.directive_id matches a rule.id
 4. No orphan IDs in any layer
-5. Lineage field is valid for fork/merge/split operations
+5. rule.id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$`
+6. No duplicate rule.id values within a ruleset
+7. Lineage field is present for fork/merge/split operations
+8. Lineage field is absent for revision/rename/retire operations
 
 ### 9.2 Evaluator Validation
 
-1. All evaluators are pure functions
+1. All evaluators are pure functions (no IO detected)
 2. evaluator_type is one of: regex, field_check, threshold, composite
-3. All inputs/outputs JSON-serializable
-4. Deterministic serialization verified
+3. evaluator_config matches evaluator_type (discriminated union):
+   - `regex` requires `pattern` field
+   - `field_check` requires `field`, `operator`, `value`
+   - `threshold` requires `field`, `operator`, `threshold`
+   - `composite` requires `logic`, `sub_evaluators`
+4. All inputs/outputs JSON-serializable
+5. Deterministic serialization verified
 
 ### 9.3 CG-IR Validation
 
@@ -603,6 +678,13 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 2. Events are in strict timestamp order
 3. finding_id references valid finding
 4. No duplicate event_ids
+
+### 9.6 Cross-Layer Validation
+
+1. Schema version = spec version = policy version
+2. No schema element contradicts a spec invariant
+3. No policy field violates contamination guard
+4. evaluator_config fields match evaluator_type (no invalid state combinations)
 
 ---
 

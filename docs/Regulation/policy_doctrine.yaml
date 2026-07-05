@@ -4,15 +4,34 @@
 # resolution are DECLARATIVE DESCRIPTIONS of governance intent, not
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
+#
+# NORMATIVE SOURCE: SPECIFICATION.md v7.0.0
+# This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "2.0.0"
+  version: "7.0.0"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  rule_contract_version: "2.0.0"
+  spec_version: "7.0.0"
+  rule_contract_version: "7.0.0"
   rule_contract_id: "universal-rule-schema"
+
+# ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
+# This policy is the governance intent layer.
+# SPECIFICATION.md is the normative behavioral source.
+# rule_schema.json is the structural projection of spec invariants.
+# Policy MUST NOT contain elements that contradict spec invariants.
+cross_layer_binding:
+  normative_source: "SPECIFICATION.md"
+  this_layer_purpose: "Governance intent description"
+  schema_layer_purpose: "Structural projection of spec invariants"
+  enforcement: "Engine validates schema against spec invariants at compile time"
+  field_legality:
+    policy_layer: "Descriptive only. No executable fields."
+    schema_layer: "Executable fields only. No prose governance."
+    spec_layer: "System behavior. Defines invariants for both other layers."
 
 # ─── IDENTITY RESOLUTION ────────────────────────────────────────
 # The canonical identifier for a directive is the "Machine ID" column
@@ -24,12 +43,28 @@ identity_resolution:
   schema_location: "rules[].id"
   spec_location: "CG-IR nodes[].directive_id"
   rule: "All three must match exactly. This is the single identity across all layers."
+  uniqueness: "Machine IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$"
+  lifecycle: >
+    Identity lifecycle operations (fork, merge, split) are defined in
+    SPECIFICATION.md Section 2.3 and encoded in rule_schema.json lineage field.
+    This policy describes governance intent for when to use each operation.
+
+# ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
+# Describes WHEN to use each lifecycle operation. Implementation details
+# are in SPECIFICATION.md and rule_schema.json.
+identity_lifecycle_intent:
+  revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
+  fork: "Use when one directive must become two distinct directives with separate semantic intent."
+  merge: "Use when two directives combine into one with unified semantic intent."
+  split: "Use when one directive restructured into multiple independent directives."
+  rename: "Use when display name changes but semantic intent is unchanged."
+  retire: "Use when directive is no longer applicable. ID preserved in audit trail."
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
 # This document MUST NOT contain machine-executable logic.
-# PROHIBITED: parameters, conditions, evaluator_hint, weight,
-# depends_on, conflicts_with, status, created_at, any field that
-# a machine parser/evaluator/validator consumes.
+# PROHIBITED: parameters, conditions, evaluator_hint, evaluator_type,
+# evaluator_config, weight, depends_on, conflicts_with, status,
+# created_at, expires_at, remediation, target, lineage.
 # ALLOWED: Machine ID columns (cross-reference labels only).
 contamination_guard:
   prohibited_fields:
@@ -46,6 +81,7 @@ contamination_guard:
     - expires_at
     - remediation
     - target
+    - lineage
     - technical_hints
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
@@ -53,7 +89,8 @@ contamination_guard:
     Priority hierarchy and conflict resolution below are DECLARATIVE
     DESCRIPTIONS of governance intent. They describe WHAT the governing
     body intends, not HOW the machine implements it. The compilation
-    engine reads these descriptions and generates executable CG-IR logic.
+    engine reads these descriptions and generates executable CG-IR logic
+    via the Conflict Resolution Mapping defined in SPECIFICATION.md.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:
@@ -75,7 +112,8 @@ writing_principles:
 
 # ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
 # This is a DESCRIPTION of governance intent, not an executable algorithm.
-# The compilation engine translates this into CG-IR conflict resolution logic.
+# The compilation engine translates this into CG-IR conflict resolution logic
+# via the Conflict Resolution Mapping in SPECIFICATION.md Section 2.15.
 priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
@@ -113,7 +151,9 @@ priority_hierarchy:
     2. If same level: more specific rule wins
     3. If same specificity: newer rule wins
     4. If same age: rule with explicit conflict resolution wins
-    This is governance intent. The compilation engine implements this as CG-IR logic.
+    This is governance intent. The compilation engine implements this via
+    the deterministic operators defined in SPECIFICATION.md Section 2.15.
+    Explicit conflict_resolution field in schema takes precedence.
 
 # ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
 # Describes versioning intent. The actual version resolution function
@@ -122,13 +162,15 @@ versioning_strategy:
   description: >
     Both policy doctrine and rule schema follow semantic versioning.
     This describes intent. The version resolution function is in the engine.
+    Policy version, schema version, and spec version MUST be synchronized.
   format: "MAJOR.MINOR.PATCH"
   intent:
     major: "Breaking changes that require migration"
     minor: "New backward-compatible features"
     patch: "Bug fixes and clarifications"
   synchronization_intent: >
-    The governing body intends that both contracts stay in sync.
+    The governing body intends that policy version, schema version,
+    and spec version stay in sync. All three MUST match (e.g., all at 7.0.0).
     The engine enforces this via validation.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────

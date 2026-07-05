@@ -1,11 +1,25 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 17.0  
+**Version:** 18.0  
 **Date:** 2026-07-05  
 **Status:** Final  
+**Normative Reference:** SPECIFICATION.md v7.0.0
 
 > **Note:** Selma is domain-agnostic. It can serve financial compliance, environmental standards, organizational governance, software engineering, or any other regulatory domain.
+
+---
+
+## Cross-Layer Binding
+
+| Layer | Document | Role |
+| :--- | :--- | :--- |
+| **Normative** | SPECIFICATION.md v7.0.0 | Defines system behavior, invariants, contracts |
+| **Structural** | rule_schema.json v7.0.0 | JSON Schema encoding of spec invariants |
+| **Governance** | policy_doctrine.yaml v7.0.0 | Declarative governance intent |
+| **Behavioral** | User_Stories.md v18.0 | This document — behavioral contract |
+
+**Rule:** All documents MUST share synchronized versions. Spec is normative; schema and policy MUST conform.
 
 ---
 
@@ -53,20 +67,20 @@ One directive has ONE identifier across all layers:
 | CG-IR | `node.directive_id` | `TRAF-001` |
 | Finding | `finding.control_id` → node | `TRAF-001` |
 
-**Invariant:** `Machine ID` = `rule.id` = `node.directive_id`.
+**Invariant:** `Machine ID` = `rule.id` = `node.directive_id`.  
+**Uniqueness:** `rule.id` is unique within a ruleset. Pattern: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$`.  
+**Immutability:** Once assigned, a Machine ID is never reused. Deprecated IDs persist in audit trail.
 
 ### Identity Lifecycle
 
-| Operation | New ID Required | Description |
+| Operation | New ID Required | Lineage Required |
 | :--- | :--- | :--- |
-| **Revision** | No | Changes within same semantic intent |
-| **Fork** | Yes (two new IDs) | One directive splits into two distinct directives |
-| **Merge** | Yes (one new ID) | Two directives combine into one |
-| **Split** | Yes (new IDs for each) | One directive restructured into multiple |
-| **Rename** | No | Display name changes, semantic intent unchanged |
-| **Retire** | No | Status = deprecated; ID never reused |
-
-**Lineage Tracking:** Fork/merge/split operations record parent IDs in the `lineage` field.
+| **Revision** | No | No |
+| **Fork** | Yes (two new IDs) | Yes |
+| **Merge** | Yes (one new ID) | Yes |
+| **Split** | Yes (new IDs for each) | Yes |
+| **Rename** | No | No |
+| **Retire** | No | No |
 
 ---
 
@@ -78,17 +92,16 @@ One directive has ONE identifier across all layers:
 | **CG-IR Snapshot** | Immutable, content-addressed DAG instance. Compilation creates new snapshots. |
 | **Finding Event Stream** | Append-only audit log with event hashes. Read-only analytics. |
 | **Execution Artifacts** | Immutable inspection snapshots, pipeline traces, system state hashes. |
-| **Hermetic Compilation** | Frozen environment (engine, model, prompts, toolchain, OS) ensures reproducibility. |
+| **Hermetic Compilation** | Frozen environment ensures reproducibility. |
 | **Control Node** | CG-IR node with pure evaluator, scope, severity, dependencies. |
-| **Evaluator** | Pure function: no IO, no randomness. Types: regex, field_check, threshold, composite. |
+| **Evaluator** | Pure function. Types: regex, field_check, threshold, composite. |
+| **Evaluator Config** | Discriminated union — config MUST match evaluator_type. |
 | **Context Object** | Strict schema: target_metadata, domain_constants, finding_aggregates. Read-only. |
 | **Target** | Strict schema: target_id, target_type, content_hash, submitted_at, content, metadata. |
-| **Incremental Compilation** | Reuses unchanged subgraph; output is always a new immutable snapshot. |
-| **Mediated Feedback** | Analytics → human → directive change → recompile. No direct finding → CG-IR. |
-| **Conflict Resolution Mapping** | Deterministic operators: priority ranking, specificity scoring, timestamp comparison. |
-| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256 hashing. |
+| **Conflict Resolution Mapping** | Deterministic operators. Explicit override takes precedence. |
+| **Deterministic Serialization** | Canonical JSON with sorted keys, ISO 8601 UTC, SHA-256. |
 | **Version Resolution** | `system_state_hash = f(directive_version, cg_ir_hash, frozen_env, engine, target_hash)` |
-| **Identity Immutability** | Once assigned, Machine IDs are never reused. Deprecated IDs persist in audit trail. |
+| **Cross-Layer Binding** | Spec is normative; schema is structural projection; policy is governance intent. |
 
 ---
 
@@ -131,7 +144,7 @@ One directive has ONE identifier across all layers:
 | Story ID | Actor | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- | :--- |
 | **S-04** | Regulatory Official | I want to view all active requirements. | **Given** I request active requirements. **When** Selma processes it. **Then** Selma returns active directives and compiled nodes from current CG-IR snapshot. | **P0** |
-| **S-05** | Regulatory Official | I want to inspect the regulatory set for conflicts. | **Given** I request consistency review. **When** Selma processes it. **Then** Selma assesses CG-IR, applies Conflict Resolution Mapping, issues report with Conflict Artifacts. | **P1** |
+| **S-05** | Regulatory Official | I want to inspect the regulatory set for conflicts. | **Given** I request consistency review. **When** Selma processes it. **Then** Selma assesses CG-IR, applies Conflict Resolution Mapping (explicit override first, then priority → specificity → recency), issues report with Conflict Artifacts. | **P1** |
 | **S-06** | Regulatory Official | I want a comprehensive audit. | **Given** I request full audit. **When** Selma processes it. **Then** Selma generates audit report with gaps, redundancies, remedial measures. | **P2** |
 | **S-07** | Regulatory Official | I want to view revision and lineage history of any directive. | **Given** I request history. **When** Selma processes it. **Then** Selma provides full revision log with timestamps, originator, changes, and lineage (fork/merge/split operations). Canonical ID constant. | **P1** |
 | **S-08** | Regulatory Official | I want to restore a directive to a previous revision. | **Given** I specify directive and target revision. **When** Selma processes it. **Then** Selma creates new revision copying target, recompiles to new CG-IR snapshot, records provenance. | **P1** |
@@ -143,7 +156,7 @@ One directive has ONE identifier across all layers:
 
 | Story ID | Actor | User Story | Acceptance Criteria | Priority |
 | :--- | :--- | :--- | :--- | :--- |
-| **S-10** | Compliance Representative | I want to submit a target for inspection. | **Given** I provide a target (conforming to target schema). **When** Selma processes it. **Then** Selma validates target schema, populates context (conforming to context schema), executes DAG pipeline, produces findings. **And** records inspection snapshot with: target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash. **And** failed nodes → NeedsReview; others continue. **And** report is consistent point-in-time snapshot. | **P0** |
+| **S-10** | Compliance Representative | I want to submit a target for inspection. | **Given** I provide a target (conforming to target schema). **When** Selma processes it. **Then** Selma validates target schema, populates context (conforming to context schema), validates evaluator_config matches evaluator_type, executes DAG pipeline, produces findings. **And** records inspection snapshot with: target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash. **And** failed nodes → NeedsReview; others continue. **And** report is consistent point-in-time snapshot. | **P0** |
 | **S-15** | Compliance Representative | I want to reinspect against latest directives. | **Given** I specify previously inspected target. **When** Selma processes it. **Then** Selma reads target (new hash), creates new inspection snapshot against current CG-IR, produces new Report. **And** original immutable. | **P1** |
 | **S-16** | Compliance Representative | I want Selma to explain why a finding was raised. | **Given** I request explanation. **When** Selma processes it. **Then** Selma traverses causal chain (Finding → Control Node → Directive → Revision → Scope), highlights target portions, explains reasoning. | **P1** |
 
@@ -190,14 +203,14 @@ One directive has ONE identifier across all layers:
 | Incremental Compilation (new snapshots) | S-02, S-03, S-19, S-20 |
 | Hermetic Reproducibility | S-10 |
 | Inspection Consistency (point-in-time) | S-10 |
-| State-Dependent Evaluation (strict context) | S-10 |
+| Evaluator Type Safety | S-10 |
 | Event-Sourced Findings (with hashes) | S-11, S-12, S-13, S-14 |
-| Conflict Resolution Mapping | S-05 |
+| Conflict Resolution Mapping (explicit override first) | S-05 |
 | Mediated Feedback | S-17, S-18 |
 | DAG Execution with Failure Handling | S-10 |
 | Declarative → Executable Logic | S-01, S-02 |
 | Deterministic Serialization | S-10 |
-| Version Forward-Only | All |
+| Cross-Layer Binding | All |
 
 ---
 
@@ -205,14 +218,16 @@ One directive has ONE identifier across all layers:
 
 | Invariant | Description |
 | :--- | :--- |
+| **Normative Source** | SPECIFICATION.md v7.0.0 is the single normative source |
 | **Canonical Identity** | Machine ID = rule.id = directive_id across all layers |
 | **Identity Immutability** | Once assigned, Machine IDs never reused |
+| **Identity Uniqueness** | rule.id unique within ruleset (pattern-enforced) |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, immutable; compilation creates new snapshots |
 | **Finding Event Immutability** | Append-only; event_hash ensures integrity |
 | **Inspection Immutability** | Completed snapshots never modified |
-| **Inspector Snapshot Consistency** | Report is point-in-time; partial results explicitly marked |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
+| **Evaluator Type Safety** | evaluator_config MUST match evaluator_type |
 | **DAG Acyclicity** | Enforced at compile time |
 | **Segregation of Duties** | Directive creator ≠ Finding waiver |
 | **Mediated Feedback** | No direct finding → CG-IR path |
@@ -220,7 +235,9 @@ One directive has ONE identifier across all layers:
 | **Deterministic Serialization** | Canonical JSON with sorted keys for all hashing |
 | **Event Ordering** | Strict total order by timestamp; ties by event_id |
 | **Version Forward-Only** | No downgrades; legacy snapshots pinned to engine versions |
-| **AI Actor Audit Equivalence** | AI agents have same permissions; all actions audit-logged |
+| **Version Synchronization** | Spec version = schema version = policy version |
+| **Cross-Layer Binding** | Schema MUST conform to spec; policy MUST NOT contradict spec |
+| **Lineage Enforcement** | Fork/merge/split MUST have lineage; revision/rename/retire MUST NOT |
 
 ---
 
@@ -229,9 +246,9 @@ One directive has ONE identifier across all layers:
 | Engine | What It Does |
 | :--- | :--- |
 | **Directive Drafting Engine** | Natural language → Directive Graph entries |
-| **Structural Compliance Reviewer** | Validates against schema and contamination rules |
+| **Structural Compliance Reviewer** | Validates against schema, spec invariants, and contamination rules |
 | **Control Compilation Engine** | Directive Graph → CG-IR snapshot. Hermetic. Incremental. |
 | **DAG Evaluation Engine** | Topological sort, parallel execution, strict context population, failure handling |
-| **Conflict Resolution Engine** | Detects conflicts, applies Conflict Resolution Mapping, creates Conflict Artifacts |
+| **Conflict Resolution Engine** | Applies Conflict Resolution Mapping (explicit override first), creates Conflict Artifacts |
 | **Provenance Manager** | Tracks versions, revisions, lineage, frozen_env hashes, causal traceability |
 | **Analytics Engine** | Read-only aggregates from Finding Event Stream. Feeds context. Never modifies CG-IR. |
