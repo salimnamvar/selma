@@ -15,8 +15,7 @@ Dual-schema architecture for universal rule governance. Two independent contract
 |  - Sanctions & Remedies       |  Label  |  - Evaluator Routing          |
 |  - Directive Tables           |  Only   |  - Parameters & Conditions    |
 |  - Priority Hierarchy         |         |  - Complexity Limits          |
-|  - Versioning Strategy        |         |  - Priority Reference         |
-|                               |         |                               |
+|                               |         |  - Priority Reference         |
 |  FORBIDDEN: parameters,       |         |  FORBIDDEN: preamble,         |
 |  conditions, evaluator_hint,  |         |  governance, definitions,     |
 |  weight, depends_on, etc.     |         |  principles, sanctions, etc.  |
@@ -78,16 +77,6 @@ Both contracts follow semantic versioning (MAJOR.MINOR.PATCH):
 - **MAJOR** - Breaking changes requiring migration
 - **MINOR** - New backward-compatible features
 - **PATCH** - Bug fixes and clarifications
-
-## Validation
-
-Use the **rule-manager** service to validate examples against these contracts:
-
-```bash
-cd services/rule-manager
-python validate.py <example_dir>
-python validate.py <policy.md> <rules.yaml>
-```
 
 ## Specification
 

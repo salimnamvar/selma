@@ -1,7 +1,7 @@
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  
-**Version:** 11.0.0 
+**Version:** 12.0  
 **Date:** 2026-07-05  
 **Status:** Final  
 
@@ -42,18 +42,22 @@ Selma
 | **Directive Revision** | A versioned change to a directive. The directive identifier never changes; only the revision increments. |
 | **Directive Scope** | The applicability context of a directive: domain, jurisdiction, context filters, and applicability rules that determine which targets the directive applies to. |
 | **Control** | A testable condition derived from a directive. A single directive may produce multiple controls. Controls are the units evaluated during inspection. Controls are versioned independently of directives—allowing control logic to evolve without directive edits. |
+| **Control Derivation** | The process of transforming a directive into testable controls. Derivation can be deterministic (fixed rules), AI-assisted (LLM interpretation), or hybrid. Each derivation produces a Control Version independent of the Directive Revision. |
 | **Control Version** | The version of a control's evaluation logic. A directive revision may or may not produce a new control version, and a control version may change without a directive revision. |
 | **Executable Representation** | A normalized constraint graph derived from controls, evaluated by the Inspection Authority. Its implementation is internal to Selma and independent of any particular execution technology. |
 | **Evaluation Semantics** | The rule by which a control resolves against a target. Each control produces one of: Pass, Fail, Partial, Needs Review, or Ambiguous. Evaluation semantics may be deterministic (rule engine) or probabilistic (AI judgment) depending on the control type. |
 | **Ruleset** | The set of all active directives (and their derived controls) for a domain, identified by a version number. A ruleset version pins both directive versions and control versions. |
+| **Ruleset Version** | An immutable snapshot of all active directives and their derived controls at a point in time. Once created, never modified. |
 | **Inspection** | An execution event: the evaluation of a target against a specific ruleset version. Each inspection is immutable once completed and references the exact ruleset version used. |
+| **Inspection Pipeline** | The sequence: Target → Normalize → Classify → Select Controls → Evaluate → Aggregate Findings → Generate Report. |
 | **Inspection Report** | A rendered artifact produced from inspection findings. Reports can be regenerated, reformatted, or viewed in multiple formats (legal, technical, executive) without rerunning the inspection. |
 | **Target** | Any external artifact submitted for inspection (document, code, file, context, or any information format). |
-| **Finding** | An immutable record of a deviation detected during inspection. **Finding Invariant:** Findings are permanent records—once created, they are never modified. A finding has three independent dimensions: lifecycle status (Open / Closed), disposition (Valid / Invalid / Waived), and severity (Critical / High / Medium / Low / Informational). Disposition changes are recorded on the finding; remediation is tracked separately. |
+| **Finding** | An immutable record of a deviation detected during inspection. **Finding Invariant:** Findings are permanent records—once created, they are never modified. A finding has three independent dimensions: lifecycle status (Open / Closed), disposition (Valid / Invalid / Waived), and severity (Critical / High / Medium / Low / Informational). Disposition changes are recorded as events on the finding's event log; remediation is tracked separately. |
 | **Finding Causal Chain** | The traceability graph linking a finding back through its origin: Finding → Control → Directive → Revision → Scope. This chain enables impact analysis ("which findings are affected by a rule change?") and explainability ("why was this finding raised?"). |
 | **Remediation** | A mutable record of corrective action taken in response to a finding. **Remediation Invariant:** Remediation is always attached to an immutable finding and never modifies the finding itself. Remediation has its own lifecycle: In Progress → Evidence Submitted → Pending Verification → Verified → Closed. |
 | **Evidence** | Data submitted by the Compliance Representative to demonstrate that a finding has been corrected. |
 | **Authorization Model** | The permission framework governing who can perform which actions on which resources. Roles (Regulatory Official, Compliance Representative) map to permissions (create directive, view findings, approve remediation, waive finding) via a Role → Permission → Action → Resource model. |
+| **Conflict Resolution** | The runtime mechanism for resolving contradictory directives or controls. Applies Priority Hierarchy, specificity rules, and temporal precedence. Unresolved conflicts escalate to Regulatory Official. |
 
 ---
 
@@ -116,7 +120,7 @@ Selma
 
 | Story ID | Actor | User Story | Acceptance Criteria (Given-When-Then) | Priority |
 | :--- | :--- | :--- | :--- | :--- |
-| **S-10** | Compliance Representative | I want to submit a target (document, code, file, or any information format) for inspection against my active controls, so that I can identify deviations and receive corrective recommendations. | **Given** I provide a target and optionally specify which controls to apply. <br> **When** Selma processes it. <br> **Then** Selma creates an Inspection record (Inspection ID, Target, Ruleset Version, Inspector, Date, Status), evaluates the target against the specified controls (or all active controls if none are specified) using the defined evaluation semantics, identifies deviations, produces Findings, and generates an Inspection Report. <br> **And** the inspection references the exact ruleset version used. | **P0** |
+| **S-10** | Compliance Representative | I want to submit a target (document, code, file, or any information format) for inspection against my active controls, so that I can identify deviations and receive corrective recommendations. | **Given** I provide a target and optionally specify which controls to apply. <br> **When** Selma processes it. <br> **Then** Selma executes the inspection pipeline: Normalize → Classify → Select Controls → Evaluate → Aggregate Findings → Generate Report. <br> **And** Selma creates an Inspection record (Inspection ID, Target, Ruleset Version, Inspector, Date, Status). <br> **And** the inspection references the exact ruleset version used. | **P0** |
 | **S-15** | Compliance Representative | I want to reinspect a previously inspected target against the latest active directives, so that I can determine whether regulatory changes introduce new findings. | **Given** I specify a previously inspected target. <br> **When** Selma processes it. <br> **Then** Selma reads the target again (in its current state) and creates a new Inspection record against the current active directives, producing a new Inspection Report. <br> **And** the original inspection remains immutable as historical record. | **P1** |
 | **S-16** | Compliance Representative | I want Selma to explain why a finding was raised, so that I understand the applicable control, the evidence considered, and the reasoning behind the decision. | **Given** I request an explanation for a finding. <br> **When** Selma processes it. <br> **Then** Selma traverses the finding's causal chain (Finding → Control → Directive → Revision → Scope), highlights the relevant portions of the submitted target, explains the reasoning that led to the finding, and suggests corrective actions where appropriate. | **P1** |
 
@@ -162,6 +166,7 @@ Selma
 | **Severity & Prioritization** | S-11 |
 | **Causal Traceability** | S-16 |
 | **Authorization & Segregation of Duties** | S-14 |
+| **Inspection Pipeline Execution** | S-10 |
 
 ---
 
@@ -171,23 +176,27 @@ These rules must never be violated:
 
 | Invariant | Description |
 | :--- | :--- |
-| **Finding Immutability** | Once created, a finding is never modified. Disposition changes are recorded on the finding; remediation is tracked on a separate mutable record. |
+| **Finding Immutability** | Once created, a finding is never modified. Disposition changes are recorded as events on the finding's event log; remediation is tracked on a separate mutable record. |
 | **Inspection Immutability** | Once completed, an inspection record is never modified. Reinspection creates a new inspection. |
 | **Directive ID Immutability** | A directive's identifier never changes across revisions. Only the revision number increments. |
 | **Ruleset Version Anchoring** | Every inspection references the exact ruleset version used. Historical inspections are never retroactively updated. |
 | **Causal Traceability** | Every finding must be traceable through its causal chain: Finding → Control → Directive → Revision → Scope. |
 | **Segregation of Duties** | The actor who creates a directive cannot be the same actor who waives a finding derived from it (requires separate authorization). |
+| **Control Version Independence** | Control versions are independent of directive revisions. A control version may change without a directive revision. |
+| **Pipeline Atomicity** | An inspection either produces all findings or fails entirely. No partial results. |
 
 ---
 
 ## The Internal View (For Implementation)
 
-The user interacts with Selma as a single, unified regulatory authority. Internally, Selma is composed of five engines—this is purely an implementation detail and is **never exposed** to the user:
+The user interacts with Selma as a single, unified regulatory authority. Internally, Selma is composed of seven engines—this is purely an implementation detail and is **never exposed** to the user:
 
 | Internal Engine | What It Does | Exposed to User? |
 | :--- | :--- | :--- |
 | **Directive Drafting Engine** | Translates natural language into formal directives and executable representations. | ❌ No. The user just "submits a directive." |
 | **Structural Compliance Reviewer** | Checks that directives are correctly formatted, structured, and free of contamination. | ❌ No. The user just "submits" and it passes automatically. |
+| **Control Derivation Engine** | Transforms directives into testable controls via deterministic rules, AI inference, or hybrid methods. Versions controls independently of directives. | ❌ No. Controls are derived automatically when directives are created or modified. |
 | **Regulatory Consistency Assessor** | Detects conflicts, contradictions, and circular dependencies *within the ruleset*. | ❌ No. The user simply "requests an inspection" of the ruleset and receives the report. |
-| **External Inspection Engine** | Reads any target (document, code, file, context), evaluates it against the control graph using defined evaluation semantics, and produces findings with severity and causal chains. | ❌ No. The user just "submits a target" and receives the inspection report. |
-| **Revision & Provenance Manager** | Tracks all changes, versions, and restorations. | ❌ No. The user just "views history" or "restores" a directive. |
+| **Conflict Resolution Engine** | Applies Priority Hierarchy, specificity rules, and temporal precedence to resolve contradictory directives or controls. Escalates unresolved conflicts. | ❌ No. Conflicts are resolved automatically or escalated to the Regulatory Official. |
+| **External Inspection Engine** | Executes the inspection pipeline: Normalize → Classify → Select Controls → Evaluate → Aggregate Findings → Generate Report. | ❌ No. The user just "submits a target" and receives the inspection report. |
+| **Revision & Provenance Manager** | Tracks all changes, versions, and restorations. Maintains the causal traceability graph. | ❌ No. The user just "views history" or "restores" a directive. |

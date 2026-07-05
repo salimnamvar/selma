@@ -1,8 +1,8 @@
 # Universal Rule Governance Specification
 
-**Version:** 1.3.0
-**Status:** Draft Standard
-**Date:** 2026-07-04
+**Version:** 2.0.0  
+**Status:** Draft Standard  
+**Date:** 2026-07-05
 
 ---
 
@@ -15,11 +15,16 @@ This specification defines a universal framework for creating, maintaining, and 
 1. **Policy Doctrine** — The human-readable contract governing how rules are written
 2. **Rule Schema** — The machine-readable contract defining how rules are executed
 
+Together with the Control Derivation Layer and Inspection Authority, these contracts form a complete **Regulatory Operating System (RegOS)**.
+
 ### 1.2 Scope
 
 This standard applies to:
 - Policy documents (prose rules, governance documents, standards)
 - Machine-executable rules (automated enforcement, validation, compliance)
+- Control derivation (translating directives into testable conditions)
+- Inspection execution (evaluating targets against controls)
+- Finding lifecycle (detection, disposition, remediation, closure)
 - Systems that bridge human understanding and machine execution
 
 ### 1.3 Audience
@@ -74,6 +79,52 @@ The contracts connect in exactly **one** way:
 This forms a strict bidirectional pointer:
 - Policy says: *"This paragraph is about Rule `R-001`."*
 - Rule says: *"Rule `R-001` points back to `section:directives`."*
+
+### 2.4 The Control Derivation Layer
+
+Between the Rule Schema and the Inspection Authority sits the **Control Derivation Layer**:
+
+```
+Directive (Rule Schema)
+    ↓
+Control Mapping Function: f(directive, scope, semantics) → ControlSet
+    ↓
+Controls (testable conditions)
+    ↓
+Executable Representation (normalized constraint graph)
+    ↓
+Inspection Authority (evaluation engine)
+```
+
+**Control Derivation Rules:**
+
+| Derivation Type | Description | Reversible |
+| :--- | :--- | :--- |
+| **Deterministic** | Directive fields map directly to control conditions via fixed rules | Yes |
+| **AI-Assisted** | LLM interprets natural language directive and proposes control conditions | Yes (with human review) |
+| **Hybrid** | Deterministic extraction + AI inference for ambiguous cases | Partially |
+
+Each derivation produces a **Control Version** that is independent of the Directive Revision. This allows control logic to evolve without editing the directive text.
+
+### 2.5 The Inspection Execution Pipeline
+
+The Inspection Authority processes targets through a defined pipeline:
+
+```
+Target
+  → Normalize (parse, extract, standardize)
+  → Classify (determine domain, jurisdiction, scope)
+  → Select Controls (apply directive scope filters)
+  → Evaluate (apply evaluation semantics per control)
+  → Aggregate Findings (collect, deduplicate, severity-rank)
+  → Generate Report (render findings in requested format)
+```
+
+**Pipeline Invariants:**
+- Each inspection pins the exact Ruleset Version used
+- Normalization is idempotent (same target + same ruleset = same findings)
+- Control evaluation order respects dependency graph
+- Findings are produced atomically (all or none for a single inspection)
 
 ---
 
@@ -272,9 +323,285 @@ Valid values: `constitutional`, `statutory`, `regulatory`, `operational`, `advis
 
 ---
 
-## 6. Validation
+## 6. Control Model
 
-### 6.1 Policy Validation
+### 6.1 Control Definition
+
+A **Control** is a testable condition derived from a directive. Controls are the atomic units evaluated during inspection.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `control_id` | String | Unique identifier (e.g., `CTRL-REG-024-01`) |
+| `directive_id` | String | Parent directive identifier |
+| `directive_revision` | String | Revision of the directive this control was derived from |
+| `control_version` | String | Version of this control's evaluation logic |
+| `description` | String | Human-readable description of the testable condition |
+| `evaluation_semantics` | Enum | How this control resolves: `deterministic`, `probabilistic`, `human_review` |
+| `scope` | Object | Applicability context (domain, jurisdiction, filters) |
+| `severity_default` | Enum | Default severity if evaluation fails: `critical`, `high`, `medium`, `low`, `informational` |
+| `depends_on` | Array | Control IDs that must pass before this control is evaluated |
+| `status` | Enum | `draft`, `active`, `deprecated` |
+
+### 6.2 Control Derivation Function
+
+```
+ControlSet = f(directive, directive_revision, scope) → [Control]
+```
+
+The derivation function is **versioned independently** of the directive. This means:
+- A directive can remain unchanged while its control logic evolves
+- A control version can change without a directive revision
+- The Ruleset Version pins both directive versions and control versions
+
+### 6.3 Evaluation Semantics
+
+Each control defines how it resolves against a target:
+
+| Outcome | Meaning | Required Action |
+| :--- | :--- | :--- |
+| **Pass** | Target complies with the control | None |
+| **Fail** | Target violates the control | Generate Finding |
+| **Partial** | Target partially complies | Generate Finding with partial disposition |
+| **Needs Review** | Control cannot be evaluated automatically | Escalate to human reviewer |
+| **Ambiguous** | Evaluation is uncertain | Apply confidence threshold or escalate |
+
+**Resolution Rules:**
+- `Ambiguous` outcomes with confidence ≥ threshold → resolve to Pass/Fail
+- `Ambiguous` outcomes below threshold → escalate to Regulatory Official
+- `Needs Review` → always escalate to Regulatory Official
+- `Partial` → generate Finding with severity proportional to deviation magnitude
+
+### 6.4 Ruleset Version
+
+A **Ruleset Version** is an immutable snapshot of all active directives and their derived controls at a point in time.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ruleset_version` | String | Semantic version (e.g., `3.2.0`) |
+| `created_at` | DateTime | Timestamp of snapshot creation |
+| `directive_versions` | Map | `{ directive_id: revision }` for all included directives |
+| `control_versions` | Map | `{ control_id: version }` for all included controls |
+| `scope_filter` | Object | Optional scope filter applied to the snapshot |
+
+**Invariants:**
+- Once created, a Ruleset Version is immutable
+- Historical inspections reference the exact Ruleset Version used
+- A new Ruleset Version is created whenever directives or controls change
+
+---
+
+## 7. Inspection Model
+
+### 7.1 Inspection Record
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `inspection_id` | String | Unique identifier |
+| `target_id` | String | Reference to the submitted target |
+| `ruleset_version` | String | Exact ruleset version used for evaluation |
+| `inspector` | String | Actor who initiated the inspection |
+| `started_at` | DateTime | When evaluation began |
+| `completed_at` | DateTime | When evaluation finished |
+| `status` | Enum | `pending`, `in_progress`, `completed`, `failed` |
+| `finding_count` | Integer | Total findings produced |
+
+**Invariant:** Once `completed`, an inspection record is never modified.
+
+### 7.2 Inspection Report
+
+An Inspection Report is a **renderable artifact** produced from inspection findings. Reports can be:
+- Regenerated without rerunning the inspection
+- Formatted for different audiences (legal, technical, executive)
+- Filtered by severity, disposition, or control type
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `report_id` | String | Unique identifier |
+| `inspection_id` | String | Reference to the inspection |
+| `format` | Enum | `legal`, `technical`, `executive`, `json` |
+| `generated_at` | DateTime | When the report was rendered |
+| `findings` | Array | Findings included in this report |
+
+---
+
+## 8. Finding Model
+
+### 8.1 Finding Record
+
+A Finding is an **immutable record** of a deviation detected during inspection.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `finding_id` | String | Unique identifier |
+| `inspection_id` | String | Reference to the inspection that produced this finding |
+| `control_id` | String | The control that was evaluated |
+| `directive_id` | String | The directive that produced the control |
+| `directive_revision` | String | Revision of the directive at time of inspection |
+| `control_version` | String | Version of the control at time of inspection |
+| `ruleset_version` | String | Ruleset version at time of inspection |
+| `target_id` | String | The target that was inspected |
+| `description` | String | What was observed |
+| `evidence` | String | Relevant portions of the target |
+| `reasoning` | String | Why this finding was raised |
+| `created_at` | DateTime | When the finding was created |
+| `lifecycle_status` | Enum | `open`, `closed` |
+| `disposition` | Enum | `valid`, `invalid`, `waived` |
+| `severity` | Enum | `critical`, `high`, `medium`, `low`, `informational` |
+
+**Invariant:** Once created, a Finding is never modified. Disposition changes are recorded as events on the finding's event log.
+
+### 8.2 Finding Causal Chain
+
+Every finding must be traceable through its causal chain:
+
+```
+Finding → Control → Directive → Revision → Scope
+```
+
+This chain enables:
+- **Explainability:** "Why was this finding raised?" (S-16)
+- **Impact Analysis:** "Which findings are affected by a rule change?"
+- **Reinspection Diffs:** "What changed between inspection v1 and v2?"
+
+### 8.3 Finding Severity Model
+
+| Severity | Description | Remediation SLA |
+| :--- | :--- | :--- |
+| **Critical** | Immediate risk, requires urgent action | 24 hours |
+| **High** | Significant non-compliance | 7 days |
+| **Medium** | Moderate deviation | 30 days |
+| **Low** | Minor deviation | 90 days |
+| **Informational** | Observation, not a violation | None |
+
+### 8.4 Finding Lifecycle
+
+```
+Finding Created (immutable)
+    ↓
+Lifecycle: Open
+    ↓
+Disposition: Valid | Invalid | Waived
+    ↓
+Remediation (mutable, attached to finding)
+    ↓
+Lifecycle: Closed
+```
+
+**Two independent dimensions:**
+- **Lifecycle Status:** Open / Closed (whether action is needed)
+- **Disposition:** Valid / Invalid / Waived (whether the finding is legitimate)
+
+---
+
+## 9. Remediation Model
+
+### 9.1 Remediation Record
+
+Remediation is a **mutable process** attached to an immutable finding.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `remediation_id` | String | Unique identifier |
+| `finding_id` | String | Reference to the finding |
+| `status` | Enum | `in_progress`, `evidence_submitted`, `pending_verification`, `verified`, `closed` |
+| `actor` | String | Who initiated remediation |
+| `started_at` | DateTime | When remediation began |
+| `evidence` | Array | Submitted evidence records |
+| `verified_by` | String | Who verified the remediation |
+| `verified_at` | DateTime | When verification occurred |
+| `resolution` | Enum | `fixed`, `waived`, `rejected` |
+
+### 9.2 Evidence Record
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `evidence_id` | String | Unique identifier |
+| `remediation_id` | String | Reference to the remediation |
+| `submitted_by` | String | Who submitted the evidence |
+| `submitted_at` | DateTime | When submitted |
+| `content` | String | The evidence itself (text, link, artifact reference) |
+| `type` | Enum | `document`, `code_change`, `configuration`, `process_change` |
+
+---
+
+## 10. Authorization Model
+
+### 10.1 Role-Permission Matrix
+
+| Role | Can Create Directive | Can Modify Directive | Can Retire Directive | Can View Findings | Can Acknowledge Finding | Can Submit Evidence | Can Approve Remediation | Can Waive Finding |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Regulatory Official | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Compliance Representative | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+
+### 10.2 Segregation of Duties
+
+- The actor who **creates** a directive cannot be the same actor who **waives** a finding derived from it
+- The actor who **submits** remediation evidence cannot be the same actor who **approves** it
+- These constraints ensure audit integrity
+
+### 10.3 Permission Evaluation Timing
+
+| Action | When Permission Is Checked |
+| :--- | :--- |
+| Create/Modify/Retire Directive | Pre-execution (before changes are applied) |
+| Submit Target for Inspection | Pre-execution (before inspection begins) |
+| Acknowledge Finding | Pre-execution (before remediation record is created) |
+| Submit Evidence | Pre-execution (before evidence is attached) |
+| Approve/Reject Remediation | Pre-execution (before finding status changes) |
+| Waive Finding | Pre-execution (before disposition is changed) |
+
+---
+
+## 11. Conflict Resolution Engine
+
+### 11.1 Directive Conflicts
+
+When two directives produce contradictory controls:
+
+1. Apply Priority Hierarchy (Section 4.4)
+2. If same priority: more specific directive wins
+3. If same specificity: newer directive wins
+4. If unresolved: flag for Regulatory Official review
+
+### 11.2 Control Conflicts
+
+When two controls produce contradictory findings for the same target:
+
+1. Check `depends_on` graph for ordering
+2. Apply directive priority hierarchy
+3. If same priority: generate both findings with `Ambiguous` disposition
+4. Escalate to Regulatory Official for resolution
+
+### 11.3 Finding Conflicts
+
+When a finding contradicts a previous finding for the same target + control:
+
+1. If same ruleset version: flag as duplicate (suppress)
+2. If different ruleset version: both findings are valid (regulatory change occurred)
+3. If different target version: both findings are valid (target changed)
+
+---
+
+## 12. System Invariants
+
+These rules must never be violated:
+
+| Invariant | Description |
+| :--- | :--- |
+| **Finding Immutability** | Once created, a finding is never modified. Disposition changes are recorded as events. |
+| **Inspection Immutability** | Once completed, an inspection record is never modified. Reinspection creates a new inspection. |
+| **Directive ID Immutability** | A directive's identifier never changes across revisions. Only the revision number increments. |
+| **Ruleset Version Anchoring** | Every inspection references the exact ruleset version used. Historical inspections are never retroactively updated. |
+| **Causal Traceability** | Every finding must be traceable: Finding → Control → Directive → Revision → Scope. |
+| **Segregation of Duties** | The actor who creates a directive cannot waive findings derived from it. |
+| **Control Version Independence** | Control versions are independent of directive revisions. |
+| **Pipeline Atomicity** | An inspection either produces all findings or fails entirely. No partial results. |
+
+---
+
+## 13. Validation
+
+### 13.1 Policy Validation
 
 A policy document is valid if:
 1. All required sections are present
@@ -282,7 +609,7 @@ A policy document is valid if:
 3. No forbidden fields appear as structured data keys
 4. Machine IDs are present in directive tables
 
-### 6.2 Rules Validation
+### 13.2 Rules Validation
 
 A rules file is valid if:
 1. It passes JSON Schema validation
@@ -290,7 +617,7 @@ A rules file is valid if:
 3. No forbidden fields appear at root level
 4. All rules have valid `anchor_ref` references
 
-### 6.3 Traceability Validation
+### 13.3 Traceability Validation
 
 Traceability is valid if:
 1. Every Machine ID in policy exists as an `id` in rules
@@ -298,7 +625,7 @@ Traceability is valid if:
 3. Every `anchor_ref` points to a valid section
 4. Versions are synchronized between contracts
 
-### 6.4 Contamination Validation
+### 13.4 Contamination Validation
 
 Contamination is valid if:
 1. Policy contains no forbidden fields as structured data keys
@@ -306,11 +633,19 @@ Contamination is valid if:
 3. No human prose appears in machine schemas
 4. No machine logic appears in human documents
 
+### 13.5 Control Validation
+
+Controls are valid if:
+1. Every control references a valid directive_id
+2. Every control has a valid evaluation_semantics value
+3. Dependency graph has no cycles
+4. Control versions are tracked independently
+
 ---
 
-## 7. Implementation Guide
+## 14. Implementation Guide
 
-### 7.1 Creating a New Domain
+### 14.1 Creating a New Domain
 
 1. Create a policy document (`policy.md`) for your domain:
    - Update Preamble with domain context
@@ -326,16 +661,16 @@ Contamination is valid if:
    python validate.py your-example/
    ```
 
-### 7.2 Building a Rule Engine
+### 14.2 Building a Rule Engine
 
 1. Parse `rule_schema.json` to understand the data structure
 2. Load `rules.yaml` instances
-3. Evaluate rules based on `type`, `conditions`, and `parameters`
-4. Use `evaluator_hint` to route to appropriate evaluation logic
+3. Derive controls from directives using the Control Mapping Function
+4. Evaluate controls based on `evaluation_semantics`
 5. Respect `priority` hierarchy when rules conflict
 6. Enforce `complexity` limits during rule evaluation
 
-### 7.3 Maintaining Governance
+### 14.3 Maintaining Governance
 
 1. Follow `policy_doctrine.yaml` writing principles
 2. Maintain traceability between policy and rules
@@ -344,15 +679,15 @@ Contamination is valid if:
 
 ---
 
-## 8. References
+## 15. References
 
-- `contracts/policy_doctrine.yaml` — The policy contract
-- `contracts/rule_schema.json` — The rule schema contract
-- `services/rule-manager/validate.py` — Validation tooling
+- `docs/Contract/policy_doctrine.yaml` — The policy contract
+- `docs/Contract/rule_schema.json` — The rule schema contract
+- `docs/User_Story/User_Stories.md` — User stories defining the system behavior
 
 ---
 
-## 9. Revision History
+## 16. Revision History
 
 | Version | Date | Changes |
 |---------|------|---------|
@@ -360,3 +695,4 @@ Contamination is valid if:
 | 1.1.0 | 2026-07-04 | Added complexity field |
 | 1.2.0 | 2026-07-04 | Added priority hierarchy |
 | 1.3.0 | 2026-07-04 | Added versioning strategy |
+| 2.0.0 | 2026-07-05 | Added Control Model, Inspection Pipeline, Finding Model, Remediation Model, Authorization Model, Conflict Resolution Engine, System Invariants |
