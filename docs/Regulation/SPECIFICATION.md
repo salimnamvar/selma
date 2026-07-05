@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 7.0.0  
+**Version:** 8.0.0  
 **Status:** Draft Standard  
 **Date:** 2026-07-05  
 **Normative Source:** This document is the normative behavioral source for the Selma system.
@@ -32,7 +32,7 @@ The Selma system has three document layers with a strict dominance hierarchy:
 2. rule_schema.json MUST be derivable from spec invariants — no schema element may contradict spec
 3. policy_doctrine.yaml describes governance intent only — no executable fields
 4. When spec and schema conflict, spec wins
-5. All three documents MUST share synchronized versions (all at 7.0.0)
+5. Version synchronization is a compatibility matrix, not strict equality (see Section 5)
 6. The engine validates schema against spec invariants at compile time
 
 ### 1.3 Scope
@@ -82,38 +82,41 @@ This standard applies to:
 
 ### 2.2 Canonical Identity Resolution
 
-One directive has ONE identifier across all layers:
+The identity model has two distinct ID types:
 
-| Layer | Field | Example |
+**Lineage ID (Immutable Root):**
+- Assigned once at directive creation
+- Never changes across revisions, forks, merges, or splits
+- Used for audit trail and historical traceability
+- Format: `^[A-Z][A-Z0-9]+-[0-9]+$` (e.g., `TRAF-001`)
+
+**Execution ID (Active Node Identity):**
+- May change on fork, merge, or split
+- Used for CG-IR compilation and runtime evaluation
+- Tracks the current active version of a directive
+- Format: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$` (e.g., `TRAF-001-A`)
+
+**Identity Mapping:**
+
+| Layer | Lineage ID Field | Execution ID Field |
 | :--- | :--- | :--- |
-| Policy Doctrine | `Machine ID` | `TRAF-001` |
-| Rule Schema | `rule.id` | `TRAF-001` |
-| CG-IR | `node.directive_id` | `TRAF-001` |
-| Finding | `finding.control_id` → node | `TRAF-001` |
+| Policy Doctrine | `Machine ID` | `Machine ID` (same until fork/merge/split) |
+| Rule Schema | `rule.lineage_id` | `rule.id` |
+| CG-IR | `node.lineage_id` | `node.directive_id` |
+| Finding | `finding.lineage_id` | `finding.control_id` → node |
 
-**Invariant:** `Machine ID` = `rule.id` = `node.directive_id`.
+**Invariant:** `rule.lineage_id` is immutable. `rule.id` is the active execution identity. On fork/merge/split, `rule.id` changes but `rule.lineage_id` is inherited from the parent.
 
-### 2.3 Identity Lifecycle Rules
-
-| Operation | Rule | New ID Required |
-| :--- | :--- | :--- |
-| **Revision** | Changes description, parameters, scope, or evaluator within same semantic intent | No — same ID, new revision |
-| **Fork** | Splits one directive into two with distinct semantic intent | Yes — two new IDs |
-| **Merge** | Combines two directives into one with unified semantic intent | Yes — one new ID; old IDs deprecated |
-| **Split** | Restructures a directive into multiple independent directives | Yes — new IDs for each; old ID deprecated |
-| **Rename** | Changes display name but not semantic intent | No — same ID |
-| **Retire** | Removes from active enforcement | No — ID preserved, status = deprecated |
-
-**Identity Immutability:** Once a Machine ID is assigned, it is never reused. Deprecated IDs remain in the audit trail forever.
-
-**Lineage Tracking:** When a directive is forked/merged/split, the `lineage` field records the parent IDs:
+**Lineage Tracking:**
 
 ```json
 {
+  "lineage_id": "TRAF-001",
   "id": "TRAF-001-A",
   "lineage": {
     "operation": "fork",
-    "parent_ids": ["TRAF-001"],
+    "parent_lineage_ids": ["TRAF-001"],
+    "parent_execution_ids": ["TRAF-001"],
     "timestamp": "2026-07-05T10:00:00Z"
   }
 }
@@ -338,13 +341,32 @@ An inspection produces a **point-in-time snapshot**:
   "finding_id": "string (required)",
   "event_type": "string (required, enum: [FindingCreated, DispositionChanged, FindingClosed])",
   "timestamp": "datetime (required, ISO 8601, UTC, event time)",
+  "logical_clock": "object (required, hybrid logical clock)",
   "actor": "string (required, human ID or AI agent ID)",
   "payload": "object (event-specific data)",
-  "event_hash": "string (required, SHA-256 of event_id + finding_id + event_type + timestamp + payload)"
+  "event_hash": "string (required, SHA-256)"
 }
 ```
 
-**Event Ordering:** Strict total ordering by timestamp. Ties broken by event_id (lexicographic).
+**Hybrid Logical Clock (HLC):**
+
+To handle distributed systems and clock skew, events use a Hybrid Logical Clock:
+
+```json
+{
+  "logical_clock": {
+    "physical_time": "datetime (wall clock, UTC)",
+    "logical_counter": "integer (monotonic counter, starts at 0)",
+    "node_id": "string (unique node identifier)"
+  }
+}
+```
+
+**Event Ordering:** Total ordering by `logical_clock`:
+1. Compare `physical_time` first
+2. If equal, compare `logical_counter`
+3. If equal, compare `node_id` (lexicographic)
+4. If all equal, compare `event_id` (lexicographic)
 
 **Event Immutability:** Once written, events are never modified. The `event_hash` ensures integrity.
 
@@ -463,7 +485,176 @@ To reproduce any historical inspection, pin all five dimensions.
 
 ## 3. Execution Artifact Schema
 
-### 3.1 Inspection Snapshot
+### 3.1 Finding State Machine (FSM)
+
+Findings follow a strict state transition model:
+
+```
+                    ┌─────────────┐
+                    │   Created   │
+                    └──────┬──────┘
+                           │
+                    ┌──────▼──────┐
+               ┌────│    Open     │────┐
+               │    └──────┬──────┘    │
+               │           │           │
+        ┌──────▼──────┐    │    ┌──────▼──────┐
+        │  Acknowledged│    │    │  Dismissed  │
+        │  (In Remedy) │    │    │  (Invalid)  │
+        └──────┬──────┘    │    └─────────────┘
+               │           │
+        ┌──────▼──────┐    │
+        │  Evidence    │    │
+        │  Submitted   │    │
+        └──────┬──────┘    │
+               │           │
+        ┌──────▼──────┐    │
+        │  Pending     │    │
+        │  Verification│    │
+        └──────┬──────┘    │
+               │           │
+      ┌────────┴────────┐  │
+      │                 │  │
+┌─────▼─────┐    ┌──────▼──────┐
+│  Verified  │    │  Rejected   │
+│  (Resolved)│    │  (Reopen)   │
+└─────┬─────┘    └──────┬──────┘
+      │                 │
+      │    ┌────────────┘
+      │    │
+┌─────▼─────┐
+│   Closed  │
+└───────────┘
+```
+
+**State Transitions:**
+
+| From | To | Trigger | Allowed Actor |
+| :--- | :--- | :--- | :--- |
+| Created | Open | System (automatic) | System |
+| Open | Acknowledged | S-12 (acknowledge) | Compliance Representative |
+| Open | Dismissed | Disposition = Invalid | Regulatory Official |
+| Acknowledged | Evidence Submitted | S-13 (submit evidence) | Compliance Representative |
+| Evidence Submitted | Pending Verification | System (automatic) | System |
+| Pending Verification | Verified | S-14 (approve) | Regulatory Official |
+| Pending Verification | Rejected | S-14 (reject) | Regulatory Official |
+| Rejected | Open | Reopen with comments | Regulatory Official |
+| Verified | Closed | System (automatic) | System |
+
+**Disposition Values:**
+
+| Disposition | Meaning |
+| :--- | :--- |
+| `valid` | Finding is legitimate; requires remediation |
+| `invalid` | Finding is incorrect; no action needed |
+| `waived` | Finding is legitimate but accepted as risk |
+
+### 3.2 Capability-Based Permission Model
+
+| Capability | Regulatory Official | Compliance Representative | System |
+| :--- | :---: | :---: | :---: |
+| `directive.create` | ✅ | ❌ | ❌ |
+| `directive.modify` | ✅ | ❌ | ❌ |
+| `directive.retire` | ✅ | ❌ | ❌ |
+| `directive.fork` | ✅ | ❌ | ❌ |
+| `directive.merge` | ✅ | ❌ | ❌ |
+| `directive.restore` | ✅ | ❌ | ❌ |
+| `inspection.submit` | ❌ | ✅ | ✅ |
+| `inspection.reinspect` | ❌ | ✅ | ❌ |
+| `finding.view` | ✅ | ✅ | ✅ |
+| `finding.acknowledge` | ❌ | ✅ | ❌ |
+| `finding.dismiss` | ✅ | ❌ | ❌ |
+| `finding.waive` | ✅ | ❌ | ❌ |
+| `finding.approve_remediation` | ✅ | ❌ | ❌ |
+| `finding.reject_remediation` | ✅ | ❌ | ❌ |
+| `evidence.submit` | ❌ | ✅ | ❌ |
+| `analytics.view` | ✅ | ✅ | ✅ |
+| `conflict.resolve` | ✅ | ❌ | ❌ |
+
+**Segregation of Duties:**
+- Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it)
+- Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it)
+
+### 3.3 Execution Fault Taxonomy
+
+| Fault Class | Type | Behavior | Retry |
+| :--- | :--- | :--- | :--- |
+| **Deterministic Evaluation** | Rule logic fails | Node → `Fail` finding | No |
+| **Deterministic Partial** | Partial compliance | Node → `Partial` finding | No |
+| **Ambiguous Evaluation** | Cannot determine | Node → `NeedsReview` finding | No |
+| **Dependency Failure** | Upstream node failed | Node skipped → `Skipped` trace entry | No |
+| **Timeout** | Node exceeds time limit | Node → `Timeout` finding | Configurable |
+| **Resource Exhaustion** | Memory/CPU limits | Node → `ResourceExhausted` finding | No |
+| **Schema Violation** | Target malformed | Pipeline → `SchemaError` | No |
+| **CG-IR Corruption** | Snapshot integrity fails | Pipeline → `Fatal` (abort inspection) | No |
+
+**Retry Policy:**
+- Deterministic failures: No retries (permanent state)
+- Timeouts: Configurable retry count (default: 0, max: 3)
+- Resource exhaustion: No retries (escalate to operator)
+- Schema violations: No retries (return error to submitter)
+
+### 3.4 Concurrency Model for Compilation
+
+**Directive Graph Locking:**
+- Compilation acquires a read lock on the Directive Graph
+- Concurrent compilations are allowed (read-only)
+- Directive modifications acquire a write lock (exclusive)
+- Write lock blocks compilation; compilation blocks writes
+
+**CG-IR Snapshot Creation:**
+- Snapshot creation is atomic (all-or-nothing)
+- Two compilations cannot produce the same snapshot hash (content-addressed)
+- If two compilations produce identical CG-IR, the second is a no-op (deduplication)
+
+**Compilation Queue:**
+- Multiple compilation requests are serialized through a queue
+- Each request includes a request_id for tracking
+- Duplicate requests (same Directive Graph version + same frozen_env) are deduplicated
+
+### 3.5 CG-IR Storage and Hashing Granularity
+
+**Storage Model:**
+
+```
+CG-IR Content-Addressed Store
+├── snapshots/           (full DAG snapshots, keyed by hash)
+│   └── {hash}/
+│       ├── manifest.json    (snapshot metadata)
+│       ├── nodes/           (individual node objects)
+│       │   └── {node_hash}.json
+│       └── edges/           (dependency graph)
+│           └── {edge_hash}.json
+└── shared/              (deduplicated node objects)
+    └── {node_hash}.json
+```
+
+**Hashing Granularity:**
+
+| Level | Hash Target | Use Case |
+| :--- | :--- | :--- |
+| **Node** | Individual control node content | Deduplication across snapshots |
+| **Edge** | Dependency relationship | Graph structure verification |
+| **Snapshot** | Full DAG manifest (includes node + edge hashes) | CG-IR version identity |
+| **Frozen Env** | Entire compilation environment | Reproducibility guarantee |
+
+**Deduplication Rules:**
+- Nodes with identical content share storage (same node_hash)
+- Edges are stored once per unique (source, target) pair
+- Snapshots reference nodes/edges by hash, not copy
+- Storage cost scales with unique content, not total rule count
+
+**Retention Policy:**
+
+| Artifact | Retention | Pruning |
+| :--- | :--- | :--- |
+| CG-IR Snapshots | Indefinite (immutable) | Never pruned |
+| Node Objects | Indefinite (shared) | Never pruned |
+| Inspection Snapshots | Configurable (default: 7 years) | Pruned after retention period |
+| Finding Events | Indefinite (audit trail) | Never pruned |
+| Pipeline Traces | Configurable (default: 1 year) | Pruned after retention period |
+
+### 3.6 Inspection Snapshot
 
 ```json
 {
@@ -546,17 +737,22 @@ Execution Artifacts
 | Engine Version | Semantic | Immutable per release |
 | Frozen Environment | Content hash | Immutable per compilation |
 
-**Version Synchronization Rule:** SPECIFICATION.md version, rule_schema.json version, and policy_doctrine.yaml version MUST be identical (e.g., all at 7.0.0). The engine rejects version mismatches.
+**Version Compatibility Matrix (Decoupled):**
 
-**Compatibility Rules:**
+| Spec Version | Schema Version | Policy Version | Engine Compatibility |
+| :--- | :--- | :--- | :--- |
+| 7.x | 7.x | 7.x | Engine ≥ 7.0.0 |
+| 8.x | 8.x | 8.x | Engine ≥ 8.0.0 |
 
-| Scenario | Requirement |
-| :--- | :--- |
-| Evaluate CG-IR | Engine version must be >= CG-IR schema version |
-| Compile Directive Graph | Engine version must support Directive Graph schema |
-| Reproduce inspection | Pin: frozen_env_hash + CG-IR hash + target_hash + engine_version |
-| Migrate schema | Use migration tool; legacy snapshots remain with pinned engine |
-| Version mismatch | Spec version = schema version = policy version; engine rejects mismatches |
+**Version Compatibility Rules:**
+1. Spec, schema, and policy versions MUST have the same MAJOR version
+2. MINOR and PATCH versions may differ (independent evolution)
+3. Engine version MUST be ≥ CG-IR schema MAJOR version
+4. MAJOR version mismatch = incompatible (reject)
+5. MINOR version mismatch = backward-compatible (accept with warning)
+6. PATCH version mismatch = fully compatible (accept silently)
+
+**Downgrade Policy:** Downgrades are not supported. The system only moves forward. Legacy CG-IR snapshots remain reproducible with pinned engine versions.
 
 ---
 
@@ -609,25 +805,27 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 | Invariant | Description |
 | :--- | :--- |
 | **Normative Source** | SPECIFICATION.md is the single normative source; schema and policy MUST conform |
-| **Canonical Identity** | One ID across all layers: Machine ID = rule.id = directive_id |
-| **Identity Immutability** | Once assigned, a Machine ID is never reused |
-| **Identity Uniqueness** | rule.id MUST be unique within a ruleset (enforced by pattern + validation) |
+| **Dual Identity** | Lineage ID (immutable root) + Execution ID (active node identity) |
+| **Lineage ID Immutability** | Once assigned, lineage_id is never reused |
+| **Execution ID Stability** | Execution ID changes only on fork/merge/split |
 | **Hermetic Compilation** | CG-IR reproducibility requires pinned frozen_env |
 | **CG-IR Snapshot Immutability** | Once published, a snapshot is immutable; compilation creates new snapshots |
+| **CG-IR Content Addressing** | Snapshots are content-addressed; identical content produces identical hash |
 | **Finding Event Immutability** | Append-only; event_hash ensures integrity |
+| **Finding FSM** | Findings follow strict state transitions (see Section 3.1) |
 | **Inspection Immutability** | Completed snapshots never modified |
 | **Evaluator Purity** | Pure functions: no IO, no randomness |
 | **Evaluator Type Safety** | evaluator_config MUST match evaluator_type (discriminated union) |
 | **DAG Acyclicity** | Enforced at compile time |
-| **Segregation of Duties** | Directive creator ≠ Finding waiver |
+| **Segregation of Duties** | Directive creator ≠ Finding waiver; Evidence submitter ≠ Approver |
 | **Mediated Feedback** | Analytics inform humans; no direct finding → CG-IR |
-| **Declarative Governance** | Policy describes intent; engine implements logic |
+| **Declarative Governance** | Policy describes intent; engine implements via Conflict Resolution Mapping |
 | **Deterministic Serialization** | Canonical JSON with sorted keys for all hashing |
-| **Event Ordering** | Strict total order by timestamp; ties by event_id |
-| **Version Forward-Only** | No downgrades; legacy snapshots pinned to engine versions |
-| **Version Synchronization** | Spec version = schema version = policy version |
+| **Event Ordering** | Hybrid Logical Clock ordering (physical_time + logical_counter + node_id) |
+| **Version Compatibility** | MAJOR versions must match across spec/schema/policy; MINOR/PATCH may differ |
 | **Cross-Layer Binding** | Schema MUST be derivable from spec invariants; no independent semantics |
-| **Lineage Enforcement** | Fork/merge/split MUST have lineage field; revision/rename/retire MUST NOT |
+| **Lineage Enforcement** | Fork/merge/split MUST have lineage; revision/rename/retire MUST NOT |
+| **Concurrency Safety** | Compilation acquires read lock; modifications acquire write lock (exclusive) |
 
 ---
 
@@ -635,14 +833,15 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 
 ### 9.1 Identity Validation
 
-1. Every Machine ID in policy exists as rule.id in schema
-2. Every rule.id has a Machine ID in policy
-3. Every CG-IR node.directive_id matches a rule.id
-4. No orphan IDs in any layer
-5. rule.id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$`
-6. No duplicate rule.id values within a ruleset
-7. Lineage field is present for fork/merge/split operations
-8. Lineage field is absent for revision/rename/retire operations
+1. Every lineage_id in policy exists as rule.lineage_id in schema
+2. Every rule.lineage_id has a Machine ID in policy
+3. Every CG-IR node.lineage_id matches a rule.lineage_id
+4. No orphan lineage_ids in any layer
+5. lineage_id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+$`
+6. execution_id matches pattern: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$`
+7. No duplicate lineage_id values within a ruleset
+8. Lineage field is present for fork/merge/split operations
+9. Lineage field is absent for revision/rename/retire operations
 
 ### 9.2 Evaluator Validation
 
@@ -658,11 +857,12 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 
 ### 9.3 CG-IR Validation
 
-1. All nodes reference valid directive_ids
+1. All nodes reference valid lineage_ids
 2. DAG is acyclic
 3. Content hash matches ruleset version
 4. Frozen environment metadata complete
 5. Snapshot is immutable (no mutation after publish)
+6. Node hashes are content-addressed (identical content = identical hash)
 
 ### 9.4 Inspection Validation
 
@@ -671,17 +871,25 @@ Key fields: `id` (canonical identity), `type`, `message`, `evaluator_type` (pure
 3. Frozen environment hash matches CG-IR provenance
 4. Pipeline trace complete
 5. System state hash correctly computed
+6. Finding FSM transitions are valid (no illegal state jumps)
 
 ### 9.5 Event Validation
 
 1. All events have valid event_hash
-2. Events are in strict timestamp order
+2. Events follow HLC ordering (physical_time + logical_counter + node_id)
 3. finding_id references valid finding
 4. No duplicate event_ids
+5. Finding state transitions follow FSM (Section 3.1)
 
-### 9.6 Cross-Layer Validation
+### 9.6 Permission Validation
 
-1. Schema version = spec version = policy version
+1. All actions checked against capability matrix (Section 3.2)
+2. Segregation of duties enforced (creator ≠ waiver, submitter ≠ approver)
+3. AI agent actions logged with actor identity
+
+### 9.7 Cross-Layer Validation
+
+1. Spec, schema, and policy MAJOR versions match
 2. No schema element contradicts a spec invariant
 3. No policy field violates contamination guard
 4. evaluator_config fields match evaluator_type (no invalid state combinations)

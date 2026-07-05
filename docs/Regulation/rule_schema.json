@@ -1,14 +1,32 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://schemas/universal-rule-schema.json",
-  "title": "Universal Rule Schema v7.0",
-  "description": "Machine-readable rule structure with identity lifecycle, evaluation logic, and lineage tracking.",
-  "x-spec-version": "7.0.0",
+  "title": "Universal Rule Schema v8.0",
+  "description": "Machine-readable rule structure with dual identity, evaluation logic, lineage tracking, and finding FSM.",
+  "x-spec-version": "8.0.0",
   "x-cross-layer-binding": {
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
-    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only. All schema elements MUST be derivable from specification invariants."
+    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only."
+  },
+  "x-identity-resolution": {
+    "lineage_id_field": "lineage_id",
+    "execution_id_field": "id",
+    "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id",
+    "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id",
+    "rule": "Dual identity: lineage_id (immutable root) + id (active execution identity). lineage_id never changes; id changes on fork/merge/split."
+  },
+  "x-identity-lifecycle": {
+    "operations": {
+      "revision": "Same lineage_id, same execution_id, new revision.",
+      "fork": "Same lineage_id inherited, two new execution_ids.",
+      "merge": "Two lineage_ids merged, one new execution_id.",
+      "split": "Same lineage_id inherited, multiple new execution_ids.",
+      "rename": "Same lineage_id, same execution_id.",
+      "retire": "Same lineage_id, same execution_id, status=deprecated."
+    },
+    "rule": "lineage_id is immutable once assigned. execution_id changes only on fork/merge/split."
   },
   "x-identity-resolution": {
     "canonical_id_field": "id",
@@ -71,15 +89,20 @@
     "rules": {
       "type": "array",
       "minItems": 1,
-      "description": "The list of directives. Every rule MUST have a unique id.",
+      "description": "The list of directives. Every rule MUST have a unique lineage_id and id.",
       "items": {
         "type": "object",
-        "required": ["id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
+        "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
         "properties": {
+          "lineage_id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+            "description": "Immutable root identifier. Assigned once, never reused. Used for audit trail."
+          },
           "id": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
-            "description": "Stable unique identifier. Machine ID = rule.id = directive_id. Never reused."
+            "description": "Active execution identifier. May change on fork/merge/split. Used for CG-IR compilation."
           },
           "type": {
             "type": "string",
@@ -227,11 +250,12 @@
             "description": "Tracks identity lifecycle operations. REQUIRED for fork, merge, split. NOT required for revision, rename, retire.",
             "properties": {
               "operation": { "type": "string", "enum": ["fork", "merge", "split"] },
-              "parent_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "parent_lineage_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Immutable root IDs of parent directives" },
+              "parent_execution_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Active execution IDs of parent directives at time of operation" },
               "timestamp": { "type": "string", "format": "date-time" },
               "reason": { "type": "string" }
             },
-            "required": ["operation", "parent_ids", "timestamp"],
+            "required": ["operation", "parent_lineage_ids", "parent_execution_ids", "timestamp"],
             "additionalProperties": false
           }
         },

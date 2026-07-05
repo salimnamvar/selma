@@ -5,17 +5,17 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md v7.0.0
+# NORMATIVE SOURCE: SPECIFICATION.md v8.0.0
 # This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "7.0.0"
+  version: "8.0.0"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "7.0.0"
-  rule_contract_version: "7.0.0"
+  spec_version: "8.0.0"
+  rule_contract_version: "8.0.0"
   rule_contract_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -34,19 +34,20 @@ cross_layer_binding:
     spec_layer: "System behavior. Defines invariants for both other layers."
 
 # ─── IDENTITY RESOLUTION ────────────────────────────────────────
-# The canonical identifier for a directive is the "Machine ID" column
-# in directive tables. This maps directly to rule.id in rule_schema.json
-# and directive_id in CG-IR nodes. One ID, three layers.
+# Selma uses a dual identity model:
+# - Lineage ID: immutable root for audit trail (assigned once, never changes)
+# - Execution ID: active node identity (changes on fork/merge/split)
+# The canonical identifier in policy is "Machine ID" which maps to lineage_id.
 identity_resolution:
   canonical_field: "Machine ID"
   policy_location: "directive_tables[].Machine ID"
-  schema_location: "rules[].id"
-  spec_location: "CG-IR nodes[].directive_id"
-  rule: "All three must match exactly. This is the single identity across all layers."
-  uniqueness: "Machine IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$"
+  schema_location: "rules[].lineage_id"
+  spec_location: "CG-IR nodes[].lineage_id"
+  rule: "Machine ID maps to lineage_id (immutable root). Execution ID (rule.id) may differ after fork/merge/split."
+  uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle: >
     Identity lifecycle operations (fork, merge, split) are defined in
-    SPECIFICATION.md Section 2.3 and encoded in rule_schema.json lineage field.
+    SPECIFICATION.md Section 2.2 and encoded in rule_schema.json lineage field.
     This policy describes governance intent for when to use each operation.
 
 # ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
