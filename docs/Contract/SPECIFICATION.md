@@ -1,6 +1,6 @@
 # Universal Rule Governance Specification
 
-**Version:** 2.0.0  
+**Version:** 3.0.0  
 **Status:** Draft Standard  
 **Date:** 2026-07-05
 
@@ -80,33 +80,62 @@ This forms a strict bidirectional pointer:
 - Policy says: *"This paragraph is about Rule `R-001`."*
 - Rule says: *"Rule `R-001` points back to `section:directives`."*
 
-### 2.4 The Control Derivation Layer
+### 2.4 The Canonical Intermediate Representation: Control Graph IR
 
-Between the Rule Schema and the Inspection Authority sits the **Control Derivation Layer**:
+The system is built around a single canonical intermediate representation: the **Control Graph IR (CG-IR)**. All transformations compile into it:
 
 ```
 Directive (Rule Schema)
     ↓
-Control Mapping Function: f(directive, scope, semantics) → ControlSet
+Control Compilation (deterministic, AI-assisted, or hybrid)
     ↓
-Controls (testable conditions)
+Control Graph IR (CG-IR)
     ↓
-Executable Representation (normalized constraint graph)
+Executable Representation (constraint graph)
     ↓
 Inspection Authority (evaluation engine)
 ```
 
+**CG-IR is the single source of truth for:**
+- What controls exist
+- How controls relate to each other (dependency graph)
+- How controls evaluate against targets
+- What the ruleset version hashes to
+
+**Invariants:**
+- CG-IR is immutable once published
+- Ruleset Version = content-addressed hash of CG-IR
+- Inspection reproducibility = CG-IR + model version + target snapshot
+
+### 2.5 The Control Compilation Layer
+
+Between the Rule Schema and the Inspection Authority sits the **Control Compilation Layer**:
+
 **Control Derivation Rules:**
 
-| Derivation Type | Description | Reversible |
-| :--- | :--- | :--- |
-| **Deterministic** | Directive fields map directly to control conditions via fixed rules | Yes |
-| **AI-Assisted** | LLM interprets natural language directive and proposes control conditions | Yes (with human review) |
-| **Hybrid** | Deterministic extraction + AI inference for ambiguous cases | Partially |
+| Derivation Type | Description | Determinism | Reproducibility |
+| :--- | :--- | :--- | :--- |
+| **Deterministic** | Directive fields map directly to control conditions via fixed rules | Fully deterministic | Guaranteed |
+| **AI-Assisted** | LLM interprets natural language directive and proposes control conditions | Non-deterministic | Requires model version pinning + output caching |
+| **Hybrid** | Deterministic extraction + AI inference for ambiguous cases | Partially deterministic | Deterministic portion guaranteed; AI portion cached |
 
-Each derivation produces a **Control Version** that is independent of the Directive Revision. This allows control logic to evolve without editing the directive text.
+**AI Determinism Boundary:**
+- AI-assisted derivation is allowed ONLY during **control compilation**, NOT at inspection runtime
+- AI outputs are cached and version-locked into Control Versions
+- Once a Control Version is published, it is immutable and deterministic
+- Model drift is handled by creating new Control Versions, not modifying existing ones
 
-### 2.5 The Inspection Execution Pipeline
+**Control Version Increment Triggers:**
+
+| Trigger | Increment Required |
+| :--- | :--- |
+| Directive text change | Yes (new directive revision) |
+| Control logic change (evaluator rules) | Yes |
+| AI model version change | Yes (new control version) |
+| Scope change | Yes |
+| No change | No |
+
+### 2.6 The Inspection Execution Pipeline
 
 The Inspection Authority processes targets through a defined pipeline:
 
@@ -114,17 +143,32 @@ The Inspection Authority processes targets through a defined pipeline:
 Target
   → Normalize (parse, extract, standardize)
   → Classify (determine domain, jurisdiction, scope)
-  → Select Controls (apply directive scope filters)
+  → Select Controls (apply directive scope filters from CG-IR snapshot)
   → Evaluate (apply evaluation semantics per control)
   → Aggregate Findings (collect, deduplicate, severity-rank)
   → Generate Report (render findings in requested format)
 ```
 
 **Pipeline Invariants:**
-- Each inspection pins the exact Ruleset Version used
-- Normalization is idempotent (same target + same ruleset = same findings)
+- Each inspection pins the exact Ruleset Version (CG-IR hash) used
+- Normalization is idempotent (same target + same CG-IR snapshot = same findings)
 - Control evaluation order respects dependency graph
 - Findings are produced atomically (all or none for a single inspection)
+- Probabilistic evaluation uses fixed seed + pinned model version for reproducibility
+
+### 2.7 Determinism Contract
+
+The system guarantees reproducibility under these conditions:
+
+| Component | Determinism Level | Reproducibility Guarantee |
+| :--- | :--- | :--- |
+| Directive compilation | Fully deterministic | Same directive + same scope = same CG-IR |
+| AI-assisted compilation | Non-deterministic at compilation, deterministic after caching | Same cached CG-IR = same controls |
+| Control evaluation (deterministic) | Fully deterministic | Same CG-IR + same target = same findings |
+| Control evaluation (probabilistic) | Deterministic given fixed seed + model version | Same CG-IR + same target + same seed + same model = same findings |
+| Finding generation | Fully deterministic | Same evaluation results = same findings |
+
+**Rule:** If a component cannot guarantee determinism, its outputs MUST be cached and pinned to a version before entering the inspection pipeline.
 
 ---
 
@@ -342,16 +386,16 @@ A **Control** is a testable condition derived from a directive. Controls are the
 | `depends_on` | Array | Control IDs that must pass before this control is evaluated |
 | `status` | Enum | `draft`, `active`, `deprecated` |
 
-### 6.2 Control Derivation Function
+### 6.2 Control Compilation Function
 
 ```
-ControlSet = f(directive, directive_revision, scope) → [Control]
+CG-IR = compile(directive, directive_revision, scope, compilation_config) → ControlGraph
 ```
 
-The derivation function is **versioned independently** of the directive. This means:
-- A directive can remain unchanged while its control logic evolves
-- A control version can change without a directive revision
-- The Ruleset Version pins both directive versions and control versions
+The compilation function produces a **Control Graph IR** that is:
+- Content-addressed (Ruleset Version = hash of CG-IR)
+- Immutable once published
+- Deterministic given the same inputs (AI outputs are cached before CG-IR creation)
 
 ### 6.3 Evaluation Semantics
 
@@ -371,22 +415,28 @@ Each control defines how it resolves against a target:
 - `Needs Review` → always escalate to Regulatory Official
 - `Partial` → generate Finding with severity proportional to deviation magnitude
 
+**Probabilistic Evaluation Constraint:**
+- Probabilistic evaluation MUST use a fixed random seed pinned to the inspection
+- The model version MUST be recorded in the inspection record
+- Same CG-IR + same target + same seed + same model version = same findings
+
 ### 6.4 Ruleset Version
 
-A **Ruleset Version** is an immutable snapshot of all active directives and their derived controls at a point in time.
+A **Ruleset Version** is a content-addressed snapshot of the Control Graph IR.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ruleset_version` | String | Semantic version (e.g., `3.2.0`) |
+| `ruleset_version` | String | SHA-256 hash of the CG-IR |
 | `created_at` | DateTime | Timestamp of snapshot creation |
+| `cg_ir_snapshot` | Object | The immutable CG-IR at this version |
 | `directive_versions` | Map | `{ directive_id: revision }` for all included directives |
 | `control_versions` | Map | `{ control_id: version }` for all included controls |
-| `scope_filter` | Object | Optional scope filter applied to the snapshot |
+| `compilation_config` | Object | Compilation parameters used (including model version if AI-assisted) |
 
 **Invariants:**
 - Once created, a Ruleset Version is immutable
 - Historical inspections reference the exact Ruleset Version used
-- A new Ruleset Version is created whenever directives or controls change
+- A new Ruleset Version is created whenever CG-IR changes
 
 ---
 
@@ -398,14 +448,20 @@ A **Ruleset Version** is an immutable snapshot of all active directives and thei
 |-------|------|-------------|
 | `inspection_id` | String | Unique identifier |
 | `target_id` | String | Reference to the submitted target |
-| `ruleset_version` | String | Exact ruleset version used for evaluation |
+| `target_hash` | String | Content hash of the target at time of inspection |
+| `ruleset_version` | String | Exact ruleset version (CG-IR hash) used for evaluation |
+| `model_version` | String | Version of evaluation model used (if probabilistic) |
+| `random_seed` | String | Fixed seed used for probabilistic evaluation |
 | `inspector` | String | Actor who initiated the inspection |
-| `started_at` | DateTime | When evaluation began |
-| `completed_at` | DateTime | When evaluation finished |
+| `started_at` | DateTime | When evaluation began (event time) |
+| `completed_at` | DateTime | When evaluation finished (event time) |
 | `status` | Enum | `pending`, `in_progress`, `completed`, `failed` |
 | `finding_count` | Integer | Total findings produced |
+| `pipeline_trace` | Array | Ordered log of pipeline stages with timestamps |
 
 **Invariant:** Once `completed`, an inspection record is never modified.
+
+**Time Model:** All timestamps are **event time** (when the event occurred), not processing time. The `pipeline_trace` provides processing-time audit if needed.
 
 ### 7.2 Inspection Report
 
@@ -426,9 +482,9 @@ An Inspection Report is a **renderable artifact** produced from inspection findi
 
 ## 8. Finding Model
 
-### 8.1 Finding Record
+### 8.1 Finding Record (Event-Sourced)
 
-A Finding is an **immutable record** of a deviation detected during inspection.
+A Finding is an **immutable event** of a deviation detected during inspection. The finding's current state is computed by replaying its event log.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -440,15 +496,29 @@ A Finding is an **immutable record** of a deviation detected during inspection.
 | `control_version` | String | Version of the control at time of inspection |
 | `ruleset_version` | String | Ruleset version at time of inspection |
 | `target_id` | String | The target that was inspected |
+| `target_hash` | String | Content hash of the target at time of inspection |
 | `description` | String | What was observed |
 | `evidence` | String | Relevant portions of the target |
 | `reasoning` | String | Why this finding was raised |
 | `created_at` | DateTime | When the finding was created |
-| `lifecycle_status` | Enum | `open`, `closed` |
-| `disposition` | Enum | `valid`, `invalid`, `waived` |
-| `severity` | Enum | `critical`, `high`, `medium`, `low`, `informational` |
 
-**Invariant:** Once created, a Finding is never modified. Disposition changes are recorded as events on the finding's event log.
+**Computed State (not stored, derived from event log):**
+
+| Field | Type | Source |
+|-------|------|--------|
+| `lifecycle_status` | Enum | Computed from `FindingCreated` + `FindingClosed` events |
+| `disposition` | Enum | Computed from `DispositionChanged` events |
+| `severity` | Enum | Set at creation, immutable |
+
+**Event Log:**
+
+| Event Type | Fields | Description |
+| :--- | :--- | :--- |
+| `FindingCreated` | finding_id, inspection_id, control_id, severity, description | Initial creation |
+| `DispositionChanged` | finding_id, old_disposition, new_disposition, actor, reason | Disposition update |
+| `FindingClosed` | finding_id, actor, reason, timestamp | Lifecycle closure |
+
+**Invariant:** Once created, a Finding event log is append-only. No events are modified or deleted.
 
 ### 8.2 Finding Causal Chain
 
@@ -476,18 +546,22 @@ This chain enables:
 ### 8.4 Finding Lifecycle
 
 ```
-Finding Created (immutable)
+FindingCreated (immutable event)
     ↓
-Lifecycle: Open
+Lifecycle: Open (computed from event log)
     ↓
-Disposition: Valid | Invalid | Waived
+DispositionChanged (immutable event)
+    ↓
+Disposition: Valid | Invalid | Waived (computed from event log)
     ↓
 Remediation (mutable, attached to finding)
     ↓
-Lifecycle: Closed
+FindingClosed (immutable event)
+    ↓
+Lifecycle: Closed (computed from event log)
 ```
 
-**Two independent dimensions:**
+**Two independent dimensions (both computed from event log):**
 - **Lifecycle Status:** Open / Closed (whether action is needed)
 - **Disposition:** Valid / Invalid / Waived (whether the finding is legitimate)
 
@@ -554,25 +628,40 @@ Remediation is a **mutable process** attached to an immutable finding.
 
 ## 11. Conflict Resolution Engine
 
-### 11.1 Directive Conflicts
+### 11.1 Conflict Artifact
+
+Conflicts are **first-class entities** in the system, not transient runtime states.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `conflict_id` | String | Unique identifier |
+| `conflict_type` | Enum | `directive_directive`, `control_control`, `finding_finding` |
+| `entity_a` | String | First conflicting entity ID |
+| `entity_b` | String | Second conflicting entity ID |
+| `resolution_rule` | String | Which rule was applied to resolve |
+| `resolved_by` | String | Actor or engine that resolved it |
+| `resolved_at` | DateTime | When resolved |
+| `status` | Enum | `detected`, `resolved`, `escalated` |
+
+### 11.2 Directive Conflicts
 
 When two directives produce contradictory controls:
 
 1. Apply Priority Hierarchy (Section 4.4)
 2. If same priority: more specific directive wins
 3. If same specificity: newer directive wins
-4. If unresolved: flag for Regulatory Official review
+4. If unresolved: create Conflict Artifact, escalate to Regulatory Official
 
-### 11.2 Control Conflicts
+### 11.3 Control Conflicts
 
 When two controls produce contradictory findings for the same target:
 
 1. Check `depends_on` graph for ordering
 2. Apply directive priority hierarchy
 3. If same priority: generate both findings with `Ambiguous` disposition
-4. Escalate to Regulatory Official for resolution
+4. Create Conflict Artifact, escalate to Regulatory Official for resolution
 
-### 11.3 Finding Conflicts
+### 11.4 Finding Conflicts
 
 When a finding contradicts a previous finding for the same target + control:
 
@@ -582,26 +671,52 @@ When a finding contradicts a previous finding for the same target + control:
 
 ---
 
-## 12. System Invariants
+## 12. Model Versioning
+
+### 12.1 Model Record
+
+When AI-assisted compilation or probabilistic evaluation is used, the model must be versioned:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_id` | String | Unique identifier (e.g., `llm-gpt4o-2024-05-13`) |
+| `model_type` | Enum | `compiler`, `evaluator`, `classifier` |
+| `version` | String | Model version string |
+| `registered_at` | DateTime | When registered |
+| `status` | Enum | `active`, `deprecated`, `retired` |
+| `drift_threshold` | Float | Maximum acceptable output drift before recompilation required |
+
+### 12.2 Model Drift Handling
+
+- Models are registered with a drift threshold
+- When model outputs drift beyond threshold, a new Control Version must be created
+- Old Control Versions remain immutable and reproducible with the original model
+- Model retirement triggers mandatory recompilation of affected controls
+
+---
+
+## 13. System Invariants
 
 These rules must never be violated:
 
 | Invariant | Description |
 | :--- | :--- |
-| **Finding Immutability** | Once created, a finding is never modified. Disposition changes are recorded as events. |
+| **Finding Immutability** | Finding event logs are append-only. No events are modified or deleted. |
 | **Inspection Immutability** | Once completed, an inspection record is never modified. Reinspection creates a new inspection. |
 | **Directive ID Immutability** | A directive's identifier never changes across revisions. Only the revision number increments. |
-| **Ruleset Version Anchoring** | Every inspection references the exact ruleset version used. Historical inspections are never retroactively updated. |
+| **Ruleset Version Anchoring** | Every inspection references the exact ruleset version (CG-IR hash) used. Historical inspections are never retroactively updated. |
 | **Causal Traceability** | Every finding must be traceable: Finding → Control → Directive → Revision → Scope. |
 | **Segregation of Duties** | The actor who creates a directive cannot waive findings derived from it. |
 | **Control Version Independence** | Control versions are independent of directive revisions. |
 | **Pipeline Atomicity** | An inspection either produces all findings or fails entirely. No partial results. |
+| **Determinism Boundary** | AI-assisted compilation outputs are cached before CG-IR creation. Runtime evaluation is deterministic. |
+| **Time Consistency** | All timestamps are event time. Processing-time deviations are logged in pipeline_trace. |
 
 ---
 
-## 13. Validation
+## 14. Validation
 
-### 13.1 Policy Validation
+### 14.1 Policy Validation
 
 A policy document is valid if:
 1. All required sections are present
@@ -609,7 +724,7 @@ A policy document is valid if:
 3. No forbidden fields appear as structured data keys
 4. Machine IDs are present in directive tables
 
-### 13.2 Rules Validation
+### 14.2 Rules Validation
 
 A rules file is valid if:
 1. It passes JSON Schema validation
@@ -617,7 +732,7 @@ A rules file is valid if:
 3. No forbidden fields appear at root level
 4. All rules have valid `anchor_ref` references
 
-### 13.3 Traceability Validation
+### 14.3 Traceability Validation
 
 Traceability is valid if:
 1. Every Machine ID in policy exists as an `id` in rules
@@ -625,7 +740,7 @@ Traceability is valid if:
 3. Every `anchor_ref` points to a valid section
 4. Versions are synchronized between contracts
 
-### 13.4 Contamination Validation
+### 14.4 Contamination Validation
 
 Contamination is valid if:
 1. Policy contains no forbidden fields as structured data keys
@@ -633,19 +748,29 @@ Contamination is valid if:
 3. No human prose appears in machine schemas
 4. No machine logic appears in human documents
 
-### 13.5 Control Validation
+### 14.5 Control Validation
 
 Controls are valid if:
 1. Every control references a valid directive_id
 2. Every control has a valid evaluation_semantics value
 3. Dependency graph has no cycles
 4. Control versions are tracked independently
+5. AI-assisted controls have cached outputs pinned to a model version
+
+### 14.6 CG-IR Validation
+
+The Control Graph IR is valid if:
+1. All controls are reachable from at least one directive
+2. No orphan controls exist
+3. Dependency graph is acyclic
+4. Content hash matches ruleset version
+5. All probabilistic evaluations have pinned seeds and model versions
 
 ---
 
-## 14. Implementation Guide
+## 15. Implementation Guide
 
-### 14.1 Creating a New Domain
+### 15.1 Creating a New Domain
 
 1. Create a policy document (`policy.md`) for your domain:
    - Update Preamble with domain context
@@ -661,16 +786,16 @@ Controls are valid if:
    python validate.py your-example/
    ```
 
-### 14.2 Building a Rule Engine
+### 15.2 Building a Rule Engine
 
 1. Parse `rule_schema.json` to understand the data structure
 2. Load `rules.yaml` instances
-3. Derive controls from directives using the Control Mapping Function
+3. Compile directives into CG-IR using the Control Compilation Layer
 4. Evaluate controls based on `evaluation_semantics`
 5. Respect `priority` hierarchy when rules conflict
 6. Enforce `complexity` limits during rule evaluation
 
-### 14.3 Maintaining Governance
+### 15.3 Maintaining Governance
 
 1. Follow `policy_doctrine.yaml` writing principles
 2. Maintain traceability between policy and rules
@@ -679,7 +804,7 @@ Controls are valid if:
 
 ---
 
-## 15. References
+## 16. References
 
 - `docs/Contract/policy_doctrine.yaml` — The policy contract
 - `docs/Contract/rule_schema.json` — The rule schema contract
@@ -687,7 +812,7 @@ Controls are valid if:
 
 ---
 
-## 16. Revision History
+## 17. Revision History
 
 | Version | Date | Changes |
 |---------|------|---------|
@@ -696,3 +821,4 @@ Controls are valid if:
 | 1.2.0 | 2026-07-04 | Added priority hierarchy |
 | 1.3.0 | 2026-07-04 | Added versioning strategy |
 | 2.0.0 | 2026-07-05 | Added Control Model, Inspection Pipeline, Finding Model, Remediation Model, Authorization Model, Conflict Resolution Engine, System Invariants |
+| 3.0.0 | 2026-07-05 | Added Control Graph IR (CG-IR), Determinism Contract, Model Versioning, Conflict Artifacts, Event-Sourced Findings, Time Model, AI Determinism Boundary |
