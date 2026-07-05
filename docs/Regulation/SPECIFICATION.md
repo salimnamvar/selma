@@ -307,13 +307,14 @@ The dual hash model separates compilation-relevant identity (`semantic_hash`) fr
 
 | Hash | Input | Purpose |
 | :--- | :--- | :--- |
-| **semantic_hash** | `semantic_body` (evaluator, scope, depends_on, priority, conflict_resolution, status, severity_default) | Compilation cache identity; unchanged by editorial description edits |
+| **semantic_hash** | `semantic_body` (deontic_type, evaluator, scope, depends_on, priority, conflict_resolution, status, severity_default) | Compilation cache identity; unchanged by editorial description edits |
 | **presentation_hash** | `presentation_body` (description, directive_revision, control_version) | Audit/display drift detection |
 | **node_hash** | SHA-256(canonical_json({semantic_hash, presentation_hash})) | Content-addressed storage key |
 
 ```
 semantic_body = {
   directive_id, lineage_id,
+  deontic_type,         // obligation | prohibition | permission — compiled from rule.type
   evaluator, scope, severity_default,
   depends_on,           // sorted array (§2.16)
   priority, conflict_resolution, status,
@@ -324,7 +325,7 @@ presentation_body = {
   description, directive_revision, control_version
 }
 
-node_body = union(semantic_body, presentation_body)  // 13 fields total
+node_body = union(semantic_body, presentation_body)  // 14 fields total
 
 node_hash = SHA-256(canonical_json({
   semantic_hash: SHA-256(canonical_json(semantic_body)),
@@ -456,6 +457,7 @@ Directive Graph
 | `node_id` | String | Unique node identifier |
 | `directive_id` | String | Canonical directive ID |
 | `lineage_id` | String | Immutable lineage root |
+| `deontic_type` | Enum | `obligation`, `prohibition`, or `permission`. Compiled from rule.`type`. Drives evaluation semantics (§2.8.3). |
 | `directive_revision` | String | Revision of source directive |
 | `control_version` | String | Version of evaluation logic |
 | `description` | String | Human-readable description |
@@ -474,7 +476,9 @@ Directive Graph
 | :--- | :--- | :--- | :--- |
 | `id` | `directive_id` | Direct copy | Execution ID becomes node's canonical ID |
 | `lineage_id` | `lineage_id` | Direct copy | Immutable root |
-| `type` | _(not in node_body)_ | Not compiled | Deontic classification is authoring-time metadata |
+| `type` | `deontic_type` | Direct copy | Compiled into CG-IR for evaluation semantics (§2.8.3). Permissions require informational-only findings on fail. |
+| `directive_revision` | `directive_revision` | Direct copy | Revision of source directive. Optional — empty string if not specified. |
+| `control_version` | `control_version` | Direct copy | Version of evaluation logic. Optional — empty string if not specified. |
 | `message` | `description` | Direct copy | Renamed for CG-IR convention |
 | `evaluator_type` + `evaluator_config` | `evaluator` | Merge into `{"type": evaluator_type, "config": evaluator_config}` | Single evaluator object in CG-IR |
 | `weight` | `severity_default` | Direct copy | Weight maps to default severity on failure |
@@ -490,7 +494,7 @@ Directive Graph
 | `parameters` | Merged into `evaluator.config` | Shallow merge | Parameters override evaluator_config keys on conflict |
 | `expires_at` | _(not compiled)_ | Dropped | Compile-time-only field; expiration is a separate scheduler concern |
 | `lineage` | _(not in node_body)_ | Recorded in provenance only | Lineage metadata in snapshot provenance, not node body |
-| `metadata` | _(not compiled)_ | Dropped | Root-level metadata is not per-rule |
+| `metadata` (per-rule) | _(not compiled)_ | Dropped | Per-rule metadata is informational only (§7.1); not compiled into CG-IR |
 
 ### 2.8.2 Scope Object Schema
 
@@ -538,7 +542,8 @@ Rules with no scope object (or all-default scope) have `scope_specificity_score 
 
 The following rule schema fields are NOT compiled into CG-IR nodes. They exist in the rule schema for authoring-time tooling, documentation, and human-readable reports. The runtime engine never accesses them:
 
-`anchor_ref`, `rationale`, `remediation`, `expires_at`, `conflicts_with` (consumed at compile time to generate candidate conflict pairs per §2.15.1; pairs recorded in snapshot metadata, not present in CG-IR nodes), `target` (best-effort extraction to `scope.target_type` only; the `target` field itself is not present in CG-IR nodes), `parameters` — values are shallow-merged into `evaluator.config` at compile time; the `parameters` field itself is not present in the CG-IR node, only the merged result within the evaluator object survives compilation
+`anchor_ref`, `rationale`, `remediation`, `expires_at`, `conflicts_with` (consumed at compile time to generate candidate conflict pairs per §2.15.1; pairs recorded in snapshot metadata, not present in CG-IR nodes), `target` (best-effort extraction to `scope.target_type` only; the `target` field itself is not present in CG-IR nodes), `parameters` — values are shallow-merged into `evaluator.config` at compile time; the `parameters` field itself is not present in the CG-IR node, only the merged result within the evaluator object survives compilation.
+`message` and `weight` are **compile-time-only** at the rule schema level. `message` maps to CG-IR `description`; `weight` maps to CG-IR `severity_default`. The rule-schema field names `message` and `weight` are not present in CG-IR nodes — only their renamed targets survive.
 
 ### 2.9 Formal Evaluator Contract
 
@@ -674,7 +679,7 @@ All targets must conform to:
 | **Parallel Execution** | Independent nodes execute in parallel |
 | **State Propagation** | Read-only context; no shared mutable state |
 | **Timeout** | Per-node configurable (default: 30s) |
-| **Retry** | No retries; failed nodes → `NeedsReview` |
+| **Retry** | Deterministic evaluation failures: no retries (permanent state). Infrastructure timeouts: configurable retry (default: 0, max: 3) per §3.3. Failed nodes → `NeedsReview`. |
 | **Skipped Nodes** | Dependency-failed nodes produce NO finding. They generate a `Skipped` pipeline trace entry only. The parent inspection snapshot records them in `skipped_nodes`. This prevents cascading false positives from dependency failures |
 
 ### 2.13 Inspection Consistency Model
@@ -783,6 +788,8 @@ function hlc_receive(remote_pt, remote_lc, pt_wall):
 - Cross-node ties at equal `(physical_time, logical_counter)` are broken by `node_id`, then `event_id`
 - Validation rejects any event where the new tuple is lexicographically less than the node's previous tuple
 
+**Event Hash Composition:** `event_hash` = SHA-256(canonical_json(event minus `event_hash` field)). The event (excluding `event_hash` itself) is serialized in canonical JSON form per §2.16 before hashing. This ensures `event_hash` covers all event fields including `logical_clock` and `payload`.
+
 **Event Immutability:** Once written, events are never modified. The `event_hash` ensures integrity.
 
 **Read-Only Analytics:**
@@ -837,6 +844,8 @@ When two active rules sharing a `lineage_id` both produce `Fail` findings for th
 | **Policy** | Declares governance intent for human authors. Documents what priority levels mean. | **None.** Not read at inspection, evaluation, or conflict resolution runtime. |
 | **Schema** | Encodes `priority`, `created_at`, `conflict_resolution` as structural fields. | **Data carrier only.** Fields are read by the engine; schema itself is not an algorithm. |
 | **Spec (this document)** | Normative `resolve_conflict` algorithm. | **Sole executable source.** All runtime conflict decisions flow through this function. |
+
+**`node_id` Mapping:** The CG-IR `node_id` is a unique node identifier generated at compilation time. It is derived from `directive_id` (the execution ID) to ensure global uniqueness within a snapshot. The mapping is: `rule.id` → `directive_id` → `node_id` (uniquely derived). Unlike `directive_id` and `lineage_id`, `node_id` is a compilation artifact and has no corresponding field in the rule schema — it is assigned during CG-IR generation.
 
 **Compile-Time Translation (not runtime):** When compiling policy prose to schema, authors set `priority` and optional `conflict_resolution` fields. A compile-time validator MAY check that priority assignments are consistent with policy intent — but this validation produces errors/warnings at compile time only; it does not create a second runtime decision path.
 
@@ -979,7 +988,7 @@ For reproducibility, all hashing uses:
 | Type | Canonical Fields | Serialization |
 | :--- | :--- | :--- |
 | `regex` | `pattern`, `flags` | `{"flags":"","pattern":"..."}` (sorted keys) |
-| `field_check` | `field`, `operator`, `value` | `{"field":"...","operator":"...","value":...}` |
+| `field_check` | `field`, `operator`, `value` | `{"field":"...","operator":"...","value":...}`. Operator `matches` performs regex matching against the field value (RE2-compatible). |
 | `threshold` | `field`, `operator`, `threshold` | `{"field":"...","operator":"...","threshold":...}` |
 | `composite` | `logic`, `sub_evaluators` | Each sub_evaluator serialized recursively as `{"evaluator_config":{...},"evaluator_type":"..."}` |
 
@@ -1083,6 +1092,7 @@ Findings follow a strict state transition model:
 | `valid` | Finding is legitimate; requires remediation |
 | `invalid` | Finding is incorrect; no action needed |
 | `waived` | Finding is legitimate but accepted as risk |
+| `superseded` | Finding replaced by a newer finding (manual transition via `finding.supersede` capability) |
 
 **Finding Object Schema:**
 
@@ -1126,6 +1136,7 @@ Findings follow a strict state transition model:
 | `finding.approve_remediation` | ✅ | ❌ | ❌ |
 | `finding.reject_remediation` | ✅ | ❌ | ❌ |
 | `evidence.submit` | ❌ | ✅ | ❌ |
+| `finding.supersede` | ✅ | ❌ | ❌ |
 | `analytics.view` | ✅ | ✅ | ✅ |
 | `conflict.resolve` | ✅ | ❌ | ❌ |
 
@@ -1180,7 +1191,7 @@ Findings follow a strict state transition model:
 
 **CG-IR Snapshot Creation:**
 - Snapshot creation is atomic (all-or-nothing)
-- Two compilations cannot produce the same snapshot hash (content-addressed)
+- Two compilations of identical directive graph content, engine version, and frozen environment produce the same snapshot hash (content-addressed determinism)
 - If two compilations produce identical CG-IR, the second is a no-op (deduplication)
 
 **Compilation Queue:**
@@ -1629,3 +1640,4 @@ All `x-*` keys in `rule_schema.json` are **informative and non-normative**. They
 | 8.2.0 | 2026-07-05 | Design review corrections: identity model refinement (bijection at root-assignment level, fork/split shared lineage_id), explicit edge hash formula, provenance canonicalization requirement, evaluator portability constraints (RE2 regex, IEEE 754, UTC timestamps, NFC strings), conflict resolution temporal binding guarantee, system_state_hash intentional exclusion documentation, compiled_at removed from snapshot hash |
 | 8.2.1 | 2026-07-05 | Architecture audit corrections: formal specificity algorithm, deterministic merge semantics, lineage DAG invariants, evaluator complexity limits, semantic/presentation hash split, ordered/unordered array classification, metadata namespacing, anchor_ref syntax, terminology glossary, x-* informative-only declaration, discriminator validation requirement |
 | 8.2.2 | 2026-07-05 | Deep audit corrections: created_at in node_body (13 fields), conflict detection (§2.15.1), scope schema (§2.8.2), rule-to-CG-IR mapping (§2.8.1), compile-time-only fields (§2.8.4), deontic semantics (§2.8.3), outcome-to-finding mapping (§2.9.1), defer_to resolution, skipped nodes, finding_aggregates pre-computation, reinspection semantics, frozen env schema, incremental compilation, pipeline stages, FSM story binding (S-25, S-29), flexible standards encoding; P0/P1/P2 fixes: hash_algorithm_version 2, metadata backward compatibility, CG-IR-only specificity (removed rule.target), merge ID timestamp + 16 hex chars, conflicts_with/parameters clarified, findings_by_directive_id naming, frozen_env_hash self-reference, confidence threshold in frozen env, anchor_ref relaxed, FindingCreated event payload, evaluator complexity specificity rationale; cross-document audit: HLC in Finding Event Immutability (§8), delegation model v8.2.2 alignment, explicit S-29/S-14 segregation binding in §3.2 |
+| 8.2.2-auditfix | 2026-07-05 | Audit report fixes: schema Draft-07 compliance (dependentRequired→dependencies, $defs→definitions), deontic_type added to CG-IR node and semantic_body, scope object added to rule schema, per-rule metadata and directive_revision/control_version fields added, regex flags pattern restriction, composite evaluator width/not constraints, lineage parent cardinality enforcement, retry policy clarified (deterministic vs timeout), User_Stories S-03 Retired→deprecated, event_hash composition defined, finding.supersede capability added, superseded disposition added, snapshot hash determinism clarified, matches operator semantics defined, README deduplicated |

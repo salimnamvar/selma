@@ -20,9 +20,9 @@
     "normative_status": "informative",
     "node_hash_scope": "local",
     "dual_hash_model": "semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (description, directive_revision, control_version) compose node_hash per SPECIFICATION.md §2.6",
-    "semantic_body_fields": ["directive_id", "lineage_id", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
+    "semantic_body_fields": ["directive_id", "lineage_id", "deontic_type", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
     "presentation_body_fields": ["description", "directive_revision", "control_version"],
-    "node_body_fields": ["directive_id", "lineage_id", "directive_revision", "control_version", "description", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
+    "node_body_fields": ["directive_id", "lineage_id", "deontic_type", "directive_revision", "control_version", "description", "evaluator", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
     "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
     "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
     "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
@@ -36,7 +36,7 @@
       "policy_mapping": "Machine ID in directive tables maps to rule.lineage_id (immutable root). Execution ID maps to rule.id.",
       "spec_mapping": "node.lineage_id in CG-IR maps to rule.lineage_id; node.directive_id maps to rule.id"
     },
-    "pattern_relationship": "Execution ID pattern extends lineage_id pattern by appending zero or more -SUFFIX segments. Base [A-Z][A-Z0-9]+-[0-9]+ is shared. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes appended. Suffix segments are hierarchical history tokens encoding the operation chain that produced the execution ID (e.g. TRAF-001-A-B means fork then fork). Suffixes carry no independent semantic meaning beyond provenance.",
+    "pattern_relationship": "Execution ID pattern extends lineage_id pattern by appending zero or more -SUFFIX segments. Base [A-Z][A-Z0-9]+-[0-9]+ is shared. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes appended. Suffix segments are hierarchical history tokens encoding the operation chain that produced the execution ID (e.g. TRAF-001-A-B means fork then fork). Suffixes carry no independent semantic meaning beyond provenance. NOTE: The 'operation chain encoding' is a human-conventional interpretation — the regex pattern does not enforce any encoding scheme on suffix segments; it permits any alphanumeric tokens.",
     "lifecycle": {
       "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
       "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
@@ -179,7 +179,41 @@
           },
           "target": {
             "type": "string",
-            "description": "Who or what this rule applies to."
+            "description": "Who or what this rule applies to. Deprecated in favor of scope for structured applicability filtering."
+          },
+          "scope": {
+            "type": "object",
+            "description": "Structured applicability context. Replaces bare target string for deterministic scope filtering and specificity scoring per SPECIFICATION.md §2.8.2.",
+            "properties": {
+              "target_type": {
+                "type": "string",
+                "enum": ["text", "structured", "binary", "any"]
+              },
+              "domain": {
+                "type": "string",
+                "description": "Regulatory or business domain (e.g. 'finance', 'environment', 'safety')."
+              },
+              "jurisdiction": {
+                "type": "string",
+                "description": "Legal or operational jurisdiction (e.g. 'EU', 'US-Federal', 'California')."
+              },
+              "filters": {
+                "type": "array",
+                "description": "Additional applicability filter predicates on target metadata or content.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": { "type": "string", "description": "Path within target metadata or content." },
+                    "operator": { "type": "string", "enum": ["eq", "neq", "in", "subset"] },
+                    "value": { "description": "Value to compare against." }
+                  },
+                  "required": ["field", "operator", "value"],
+                  "additionalProperties": false
+                },
+                "minItems": 0
+              }
+            },
+            "additionalProperties": false
           },
           "status": {
             "type": "string",
@@ -203,7 +237,7 @@
                 "type": "object",
                 "properties": {
                   "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
-                  "flags": { "type": "string", "default": "" }
+                  "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
                 },
                 "required": ["pattern"],
                 "additionalProperties": false,
@@ -241,7 +275,7 @@
                   "sub_evaluators": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/evaluator_config_entry"
+                      "$ref": "#/definitions/evaluator_config_entry"
                     },
                     "minItems": 1
                   }
@@ -251,6 +285,19 @@
                 "x-evaluator-type": "composite"
               }
             ]
+          },
+          "directive_revision": {
+            "type": "string",
+            "description": "Revision identifier of the source directive (e.g. 'v3', '2026-07-05-r2'). Maps to CG-IR node.directive_revision."
+          },
+          "control_version": {
+            "type": "string",
+            "description": "Version of evaluation logic for this rule. Maps to CG-IR node.control_version."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1.",
+            "additionalProperties": true
           },
           "weight": {
             "type": "string",
@@ -314,8 +361,18 @@
             "description": "Tracks identity lifecycle operations. REQUIRED for fork, merge, split. NOT required for revision, rename, retire.",
             "properties": {
               "operation": { "type": "string", "enum": ["fork", "merge", "split"] },
-              "parent_lineage_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Immutable root IDs of parent directives" },
-              "parent_execution_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Active execution IDs of parent directives at time of operation" },
+              "parent_lineage_ids": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "Immutable root IDs of parent directives. Cardinality: fork/split=1, merge=2."
+              },
+              "parent_execution_ids": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "description": "Active execution IDs of parent directives at time of operation. Cardinality matches parent_lineage_ids."
+              },
               "timestamp": { "type": "string", "format": "date-time" },
               "reason": { "type": "string" }
             },
@@ -324,7 +381,7 @@
           }
         },
         "additionalProperties": false,
-        "dependentRequired": {
+        "dependencies": {
           "evaluator_type": ["evaluator_config"]
         },
         "allOf": [
@@ -395,6 +452,18 @@
             "then": { "required": ["lineage"] }
           },
           {
+            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "fork" } } } } },
+            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
+          },
+          {
+            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "split" } } } } },
+            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
+          },
+          {
+            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "merge" } } } } },
+            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 2, "minItems": 2 }, "parent_execution_ids": { "maxItems": 2, "minItems": 2 } } } } }
+          },
+          {
             "if": { "properties": { "evaluator_type": { "const": "composite" }, "evaluator_config": { "properties": { "logic": { "const": "not" } } } } },
             "then": { "properties": { "evaluator_config": { "properties": { "sub_evaluators": { "maxItems": 1 } } } } }
           }
@@ -403,7 +472,7 @@
     }
   },
   "additionalProperties": false,
-  "$defs": {
+  "definitions": {
     "evaluator_config_entry": {
       "type": "object",
       "description": "A single sub-evaluator entry within a composite evaluator. Strict recursive typed union.",
@@ -413,21 +482,21 @@
           "type": "object",
           "properties": {
             "evaluator_type": { "type": "string", "const": "regex" },
-            "evaluator_config": {
-              "type": "object",
-              "properties": {
-                "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
-                "flags": { "type": "string", "default": "" }
-              },
-              "required": ["pattern"],
-              "additionalProperties": false
-            }
+              "evaluator_config": {
+                "type": "object",
+                "properties": {
+                  "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                  "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
+                },
+                "required": ["pattern"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["evaluator_type", "evaluator_config"],
+            "additionalProperties": false
           },
-          "required": ["evaluator_type", "evaluator_config"],
-          "additionalProperties": false
-        },
-        {
-          "description": "Field check sub-evaluator",
+          {
+            "description": "Field check sub-evaluator",
           "type": "object",
           "properties": {
             "evaluator_type": { "type": "string", "const": "field_check" },
@@ -475,10 +544,17 @@
                 "logic": { "type": "string", "enum": ["and", "or", "not"] },
                 "sub_evaluators": {
                   "type": "array",
-                  "items": { "$ref": "#/$defs/evaluator_config_entry" },
-                  "minItems": 1
+                  "items": { "$ref": "#/definitions/evaluator_config_entry" },
+                  "minItems": 1,
+                  "maxItems": 64
                 }
               },
+              "allOf": [
+                {
+                  "if": { "properties": { "logic": { "const": "not" } } },
+                  "then": { "properties": { "sub_evaluators": { "maxItems": 1 } } }
+                }
+              ],
               "required": ["logic", "sub_evaluators"],
               "additionalProperties": false
             }

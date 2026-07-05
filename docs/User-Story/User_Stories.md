@@ -210,92 +210,9 @@ All mutating actions are gated before dispatch. Denial is a hard reject — no p
 | **CG-IR Storage** | Content-addressed: snapshots → nodes → edges. Deduplication by hash. |
 | **Identity Refinement** | Machine ID ↔ lineage_id bijective at root-assignment level. Fork/split allows shared lineage_id with distinct execution_ids. Rule-level key: (lineage_id, id). |
 
-### Evaluation Portability & Complexity Guardrails
+Cross-runtime portability rules, evaluator complexity limits, and evaluator constraints are defined normatively in SPECIFICATION.md §2.9. This document references those contracts by behavior:
 
-The evaluation layer enforces pure, mathematical isolation. Evaluators operate with zero side effects, zero I/O, and zero runtime randomness.
-
-#### Cross-Runtime Portability Rules
-
-To prevent execution drift when evaluating rules across disparate CPU architectures or runtimes, the system mandates strict computational portability:
-
-| Constraint | Rule | Rationale |
-| :--- | :--- | :--- |
-| **Regex Dialect** | Restricted entirely to **RE2-compatible syntax**. Advanced PCRE components (backreferences, lookaheads) are banned. | Mitigates catastrophic backtracking risks; ensures linear-time matching across implementations |
-| **Strict Numerics** | Numeric evaluations must strictly use **IEEE 754 double-precision floats**. Special float states like `NaN` and `Infinity` are proactively blocked at the schema level. | Prevents silent divergence across CPU architectures and language runtimes |
-| **Time & Strings** | Timestamps are strictly normalized to **ISO 8601 UTC** before comparison. String matches require **Unicode normalization form (NFC)**. | Eliminates DST/timezone ambiguity; prevents locale-sensitive ordering divergence |
-
-#### System Complexity Limits
-
-The compiler prevents execution engine stack exhaustion by tracking structural bounds:
-
-| Complexity Metric | Absolute Limit | Compilation Failure Signal |
-| :--- | :--- | :--- |
-| **Max Composite Recursion Depth** | 32 levels | `SchemaError: evaluator depth exceeded` |
-| **Max Total Evaluator Nodes / Rule** | 256 nodes | `SchemaError: evaluator count exceeded` |
-| **Max Composite Width (`sub_evaluators`)** | 64 nodes | `SchemaError: evaluator width exceeded` |
-| **Max Regex Pattern Length** | 4,096 chars | `SchemaError: pattern too long` |
-| **Max Ancestry Lineage DAG Depth** | 64 steps | Compile-time lineage cycle/depth rejection |
-
-### Conflict Resolution & Hashing Deep Dive
-
-#### The Deterministic Precedence Chain
-
-Runtime conflicts follow an unyielding, short-circuiting logical hierarchy executed via the normative algorithm in the specification:
-
-```
-Explicit Override (Schema conflict_resolution field)
-        │
-        ▼ [If no explicit override]
-Priority Level (Internal integer evaluation: 1 to 5)
-        │
-        ▼ [If priority levels match]
-Specificity Score (Normative score calculation)
-        │
-        ▼ [If specificity scores match]
-Recency (Comparison of frozen created_at authoring timestamps)
-        │
-        ▼ [If all conditions tie]
-Escalate to human review as a Conflict Artifact
-```
-
-The `specificity_score` is computed explicitly:
-
-```
-Score = (Scope Specificity × 100) + Bound Evaluator Fields
-// Scope includes target_type, domain, jurisdiction, and filter count (§2.8.2)
-```
-
-Because all variables (including `created_at`) are embedded directly inside the `node_body` at compile time, conflict resolution outcomes are completely snapshot-bound and immutable, leaving zero vulnerability to evaluation-time environmental variance.
-
-#### Split-Decomposition Hashing
-
-SELMA partitions node evaluation states using a highly optimized dual-hash configuration to streamline caching and validation:
-
-```
-┌────────────────────────────────────────────────────────┐
-│                      NODE_BODY                         │
-├───────────────────────────┬────────────────────────────┤
-│       SEMANTIC_BODY       │     PRESENTATION_BODY      │
-│  - directive_id           │  - description             │
-│  - lineage_id             │  - directive_revision      │
-│  - evaluator              │  - control_version         │
-│  - scope                  │                            │
-│  - priority & status      │                            │
-│  - depends_on & created_at│                            │
-└─────────────┬─────────────┘             .──────────────┘
-              │                           │
-              ▼                           ▼
-        SEMANTIC_HASH             PRESENTATION_HASH
-              │                           │
-              └─────────────┬─────────────┘
-                            │
-                            ▼
-                        NODE_HASH (SHA-256)
-```
-
-By isolating the `semantic_hash` from editorial prose changes (like typos or description enhancements), the engine can execute incremental compilations and reuse downstream evaluator subgraphs without forcing unnecessary execution rebuilds.
-
-Graph topology is decoupled entirely from node content. The global `cg_ir_snapshot_hash` is computed as a master SHA-256 function of the sorted array of independent `node_hashes`, directional `edge_hashes` ($source \to target$), and canonicalized provenance metadata.
+Conflict resolution follows the deterministic precedence chain defined in SPECIFICATION.md §2.15: explicit override → priority → specificity → recency → Conflict Artifact. All inputs are frozen in CG-IR `node_body`, making outcomes fully snapshot-bound.
 
 ---
 
@@ -331,7 +248,7 @@ Graph topology is decoupled entirely from node content. The global `cg_ir_snapsh
 | :--- | :--- | :--- | :--- | :--- |
 | **S-01** | Regulatory Official | I want to submit a new directive. | **Given** I express a need. **When** Selma processes it. **Then** Selma assigns lineage_id + execution_id, records in Directive Graph, compiles to CG-IR snapshot via hermetic boundary (read lock), performs structural review. **And** directive in "Draft" state with scope. | **P0** |
 | **S-02** | Regulatory Official | I want to modify an existing directive. | **Given** I specify directive execution_id and change. **When** Selma processes it. **Then** Selma acquires write lock, creates new revision (same lineage_id), incrementally compiles to new CG-IR snapshot (reuses unchanged subgraph via content-addressed store), re-assesses consistency, records provenance. **And** lineage_id unchanged. **And** new Ruleset Version. | **P0** |
-| **S-03** | Regulatory Official | I want to retire a directive. | **Given** I specify directive to retire. **When** Selma processes it. **Then** Selma transitions to "Retired", records reason, marks CG-IR nodes deprecated, generates new snapshot. | **P1** |
+| **S-03** | Regulatory Official | I want to retire a directive. | **Given** I specify directive to retire. **When** Selma processes it. **Then** Selma transitions to `deprecated`, records reason, marks CG-IR nodes deprecated, generates new snapshot. | **P1** |
 | **S-19** | Regulatory Official | I want to fork a directive into two distinct directives. | **Given** I specify a directive and describe the split. **When** Selma processes it. **Then** Selma creates two new execution_ids (inheriting lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=fork), compiles both to CG-IR, deprecates original nodes. **And** both new rules share the same lineage_id. **And** execution_ids are globally unique. | **P1** |
 | **S-20** | Regulatory Official | I want to merge two directives into one. | **Given** I specify two directives and describe the merge. **When** Selma processes it. **Then** Selma assigns merged `lineage_id` = lexicographic min of parent lineage_ids, generates deterministic execution_id per §2.2.2, records sorted `lineage.parent_lineage_ids` and `lineage.parent_execution_ids`, compiles to CG-IR, deprecates both originals. **And** non-surviving parent lineage_id remains in audit history only. | **P1** |
 | **S-26** | Regulatory Official | I want to split a directive into multiple independent directives. | **Given** I specify a directive and describe the restructuring. **When** Selma processes it. **Then** Selma creates multiple new execution_ids (inheriting parent lineage_id), records lineage (parent_lineage_ids, parent_execution_ids, operation=split), compiles to CG-IR, deprecates original. **And** each child has a unique execution_id. **And** all children share the parent lineage_id. | **P1** |

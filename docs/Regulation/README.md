@@ -137,58 +137,7 @@ All three documents share the same MAJOR version. MINOR and PATCH may differ ind
 
 ## Conflict Resolution Mapping
 
-### Priority Hierarchy
-
-Rules exist at different authority levels. When two rules conflict, the higher-priority rule wins:
-
-1. **Constitutional** - Core principles that cannot be overridden
-2. **Statutory** - Rules enacted by authorized governing bodies
-3. **Regulatory** - Rules created by agencies to implement statutory requirements
-4. **Operational** - Day-to-day procedures implementing higher-level rules
-5. **Advisory** - Recommendations that are not mandatory
-
-### The Deterministic Precedence Chain
-
-Runtime conflicts follow an unyielding, short-circuiting logical hierarchy executed via the normative algorithm in the specification:
-
-```
-Explicit Override (Schema conflict_resolution field)
-        │
-        ▼ [If no explicit override]
-Priority Level (Internal integer evaluation: 1 to 5)
-        │
-        ▼ [If priority levels match]
-Specificity Score (Normative score calculation)
-        │
-        ▼ [If specificity scores match]
-Recency (Comparison of frozen created_at authoring timestamps)
-        │
-        ▼ [If all conditions tie]
-Escalate to human review as a Conflict Artifact
-```
-
-### Specificity Score Algorithm (Normative)
-
-```
-specificity_score(node) → non-negative integer
-
-score = 0
-
-// 1. Scope constraint specificity (§2.8.2 scope_specificity_score)
-//    Includes target_type discrimination (text | structured | binary | any)
-score += scope_specificity_score(scope) * 100
-
-// 2. Evaluator field binding (more constrained = more specific)
-score += count_bound_fields(node.evaluator)   // regex pattern=1, field_check=3, threshold=3, composite=sum(children)
-
-// 3. Explicit priority within same level does NOT affect specificity (handled by priority step)
-
-Tie on equal score → proceed to recency step
-```
-
-`count_bound_fields` recursively counts required evaluator config fields. Composite evaluators sum child scores. Evaluator complexity contributes to specificity because a rule with more evaluation constraints is more narrowly targeted. Two engines implementing this algorithm MUST produce identical scores for identical CG-IR node bodies. The algorithm operates exclusively on CG-IR node fields.
-
-### Priority Level Mapping (Internal Integer)
+**Precedence Chain:** Explicit override (schema `conflict_resolution` field) → priority → specificity → recency → Conflict Artifact. All inputs are frozen in the CG-IR snapshot, making outcomes deterministic per snapshot.
 
 | Schema `priority` enum | `priority_level` integer |
 | :--- | :--- |
@@ -200,303 +149,49 @@ Tie on equal score → proceed to recency step
 
 Enum values are presentation; all comparisons use `priority_level` integers.
 
-### Temporal Binding Guarantee
+See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and `resolve_conflict` function.
 
-The `created_at` field used in conflict resolution is the directive's authoring timestamp, frozen into `node_body` at compilation time. It is a static property of the CG-IR node — NOT evaluation time, NOT wall clock time. For a given CG-IR snapshot, conflict resolution outcomes are fully deterministic because all inputs (`priority`, `conflict_resolution`, `created_at`, `scope` for specificity) are frozen in the immutable snapshot.
 
-**Conflict Resolution Precedence Chain:** Explicit override (schema `conflict_resolution` field) → priority → specificity → recency → Conflict Artifact. Described in three places (schema, cross-layer binding, policy intent). All MUST remain synchronized. SPECIFICATION.md §2.15 is normative.
-
-**Identity Pattern Relationship:**
-- Lineage ID: `^[A-Z][A-Z0-9]+-[0-9]+$` (e.g., `TRAF-001`)
-- Execution ID: `^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$` (e.g., `TRAF-001-A`)
-- Execution ID extends lineage_id by appending `-SUFFIX` segments. On first creation, execution_id equals lineage_id (zero suffixes). After fork/merge/split, suffixes are appended.
-
-## Versioning Strategy
-
-Both contracts follow semantic versioning (MAJOR.MINOR.PATCH):
-- **MAJOR** - Breaking changes requiring migration
-- **MINOR** - New backward-compatible features
-- **PATCH** - Bug fixes and clarifications
 
 ## Migration Rules
 
-Cross-version migration follows these invariants:
-
-1. **Lineage preservation:** `lineage_id` is preserved across MAJOR versions by default (`identity_preserved`). Machine IDs retain their audit trail.
-2. **Additive changes:** New schema fields in a MAJOR version MUST have defaults so existing datasets remain valid without modification.
-3. **Breaking changes:** Field removals or renames require a migration descriptor in `metadata.migration` documenting the transformation, with `migration_required: true`.
-4. **Cross-version validation:** The compilation engine MUST validate that all `lineage_id` references resolve within the migrated dataset.
-5. **Audit replay:** Old `hash_algorithm_version` values remain valid for audit replay of historical compilations.
-
-**Migration descriptor fields:** `upgrade_from`, `upgrade_to`, `migration_required`, `lineage_preservation` (identity_preserved | identity_reassigned | requires_remap).
+Cross-version migration follows the invariants defined in SPECIFICATION.md §2.2.4 and §5. Key points: `lineage_id` is preserved across MAJOR versions by default; field removals require a migration descriptor (`metadata.migration`).
 
 ## Composite Evaluator Recursion
 
-The schema supports recursive composite evaluators (`sub_evaluators` → `evaluator_config_entry` → `composite` → `sub_evaluators`). Compile-time limits (§2.9):
+The schema supports recursive composite evaluators. See SPECIFICATION.md §2.9 for compile-time complexity limits (depth ≤ 32, nodes ≤ 256, width ≤ 64, pattern length ≤ 4096).
 
-| Limit | Value |
-| :--- | :--- |
-| Max recursion depth | 32 |
-| Max total evaluator nodes | 256 |
-| Max composite width | 64 |
-| Max regex pattern length | 4096 chars |
+## Deterministic Serialization & Hashing
 
-Evaluators MUST use iterative (not naive recursive) evaluation to avoid stack exhaustion.
+See SPECIFICATION.md §2.6, §2.16 for the normative hash formulas and §2.16.1 for the array ordering classification table.
 
-## Deterministic Serialization
-
-Canonical form for hashing:
-- JSON keys sorted lexicographically
-- **Ordered arrays** (preserve insertion order): `sub_evaluators`, `pipeline_trace`, `skipped_nodes`
-- **Unordered arrays** (sorted lexicographically before hash): `depends_on`, `conflicts_with`, `parent_lineage_ids`, `parent_execution_ids`
-- Schema `$ref` resolved at validation time only; excluded from canonical form
-- Default values NOT injected — only explicit values participate in hashing
-- NaN/Infinity prohibited
-- Dual hash model: `semantic_hash` (evaluator/scope) + `presentation_hash` (description) compose `node_hash`
-
-### Split-Decomposition Hashing
-
-SELMA partitions node evaluation states using a highly optimized dual-hash configuration to streamline caching and validation:
-
-```
-┌────────────────────────────────────────────────────────┐
-│                      NODE_BODY                         │
-├───────────────────────────┬────────────────────────────┤
-│       SEMANTIC_BODY       │     PRESENTATION_BODY      │
-│  - directive_id           │  - description             │
-│  - lineage_id             │  - directive_revision      │
-│  - evaluator              │  - control_version         │
-│  - scope                  │                            │
-│  - priority & status      │                            │
-│  - depends_on & created_at│                            │
-└─────────────┬─────────────┘             .──────────────┘
-              │                           │
-              ▼                           ▼
-        SEMANTIC_HASH             PRESENTATION_HASH
-              │                           │
-              └─────────────┬─────────────┘
-                            │
-                            ▼
-                        NODE_HASH (SHA-256)
-```
-
-By isolating the `semantic_hash` from editorial prose changes (like typos or description enhancements), the engine can execute incremental compilations and reuse downstream evaluator subgraphs without forcing unnecessary execution rebuilds.
-
-Graph topology is decoupled entirely from node content. The global `cg_ir_snapshot_hash` is computed as a master SHA-256 function of the sorted array of independent `node_hashes`, directional `edge_hashes` ($source \to target$), and canonicalized provenance metadata.
-
-### Array Ordering Classification
-
-| Array Field | Ordering | Serialization Rule |
-| :--- | :--- | :--- |
-| `sub_evaluators` | **Ordered** | Preserve author insertion order (logic evaluation order matters) |
-| `depends_on` | **Unordered (semantic set)** | Sort `directive_id` strings lexicographically |
-| `conflicts_with` | **Unordered (semantic set)** | Sort strings lexicographically |
-| `parent_lineage_ids` | **Unordered (semantic set)** | Sort lexicographically |
-| `parent_execution_ids` | **Unordered (semantic set)** | Sort lexicographically |
-| `node_hashes` (snapshot) | **Unordered (semantic set)** | Sort lexicographically |
-| `edge_hashes` (snapshot) | **Unordered (semantic set)** | Sort lexicographically |
-| `skipped_nodes` (inspection) | **Ordered** | Preserve pipeline execution order |
-| `pipeline_trace` | **Ordered** | Preserve chronological order |
-
-## Metadata Namespacing
-
-Root `metadata` is informational only. Declared namespaces: `audit`, `vendor`, `author`, `migration`, `domain`, `jurisdiction`, `project`. Custom top-level keys permitted for backward compatibility; validators MAY warn on undeclared keys. No executable hints permitted (§7.1).
-
-## Merge Semantics
-
-Merged `lineage_id` = lexicographic minimum of parent lineage_ids. New execution_id generated deterministically per §2.2.2.
-
-```
-merge(parent_a, parent_b) → merged_rule:
-1. lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically
-2. id := lineage_id + "-M" + SHA-256(canonical_json({sorted(parent_lineage_ids), sorted(parent_execution_ids), operation: "merge", timestamp}))[0:16].uppercase()
-3. lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])
-4. lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])
-5. Both parent rules transition to status=deprecated
-```
-
-**Invariant:** The merged `lineage_id` equals the lexicographically minimum parent `lineage_id`. The non-surviving parent `lineage_id` remains in audit history via `lineage.parent_lineage_ids` but is never reused as an active root.
+Key points:
+- **Dual hash model:** `semantic_hash` (evaluator/scope/priority/status/depends_on/created_at/deontic_type) + `presentation_hash` (description, directive_revision, control_version) compose `node_hash`
+- **Edge hash:** Directional `{source: directive_id, target: directive_id}` — independent of node content
+- **Snapshot hash:** SHA-256 of sorted `node_hashes[]` + sorted `edge_hashes[]` + provenance (compiled_at excluded)
+- **Ordered arrays:** `sub_evaluators`, `pipeline_trace`, `skipped_nodes`
+- **Unordered arrays (sorted before hash):** `depends_on`, `conflicts_with`, `parent_lineage_ids`, `parent_execution_ids`
 
 ## Evaluation Portability & Complexity Guardrails
 
-The evaluation layer enforces pure, mathematical isolation. Evaluators operate with zero side effects, zero I/O, and zero runtime randomness.
+The evaluation layer enforces pure, mathematical isolation. See SPECIFICATION.md §2.9 for the full evaluator contract and portability constraints.
 
-### Cross-Runtime Portability Rules
+### System Complexity Limits (Quick Reference)
 
-To prevent execution drift when evaluating rules across disparate CPU architectures or runtimes, the system mandates strict computational portability:
-
-| Constraint | Rule | Rationale |
+| Complexity Metric | Limit | Failure Signal |
 | :--- | :--- | :--- |
-| **Regex Dialect** | Restricted entirely to **RE2-compatible syntax**. Advanced PCRE components (backreferences, lookaheads beyond lookahead/lookbehind, atomic groups) are PROHIBITED. Flags limited to: `i` (case-insensitive), `m` (multiline), `s` (dot-all). | RE2 guarantees linear-time matching and consistent behavior across implementations (Go, C++, Java, Python via `google-re2`). PCRE features create cross-runtime divergence. |
-| **Strict Numerics** | All numeric comparisons use **IEEE 754 double-precision arithmetic**. NaN and Infinity are NOT permitted in evaluator configs or target values (schema rejects). Float comparison uses exact IEEE 754 bitwise equality — no epsilon tolerance unless explicitly configured. | Prevents silent divergence across CPU architectures and language runtimes. |
-| **Time & Strings** | All timestamp comparisons in evaluators use **UTC (ISO 8601)**. Timezone-aware conversions are NOT permitted within evaluator logic. Target `submitted_at` and context `last_inspection_date` are always UTC-normalized before evaluator invocation. String equality and ordering use Unicode codepoint comparison (NFC-normalized). No locale-dependent collation. | Eliminates DST/timezone ambiguity; prevents locale-sensitive ordering divergence. |
-
-### System Complexity Limits
-
-The compiler prevents execution engine stack exhaustion by tracking structural bounds:
-
-| Complexity Metric | Absolute Limit | Compilation Failure Signal |
-| :--- | :--- | :--- |
-| **Max Composite Recursion Depth** | 32 levels | `SchemaError: evaluator depth exceeded` |
-| **Max Total Evaluator Nodes / Rule** | 256 nodes | `SchemaError: evaluator count exceeded` |
-| **Max Composite Width (`sub_evaluators`)** | 64 nodes | `SchemaError: evaluator width exceeded` |
-| **Max Regex Pattern Length** | 4,096 chars | `SchemaError: pattern too long` |
-| **Max Ancestry Lineage DAG Depth** | 64 steps | Compile-time lineage cycle/depth rejection |
-| **Max Metadata Serialized Size** | 16 KiB per rule | `SchemaError: metadata too large` |
-
-### Evaluator Portability Constraints
-
-| Constraint | Rule |
-| :--- | :--- |
-| **Purity** | No side effects. No network calls. No file I/O. No randomness. |
-| **Determinism** | Same inputs → same outputs, always. |
-| **Allowed operations** | String matching, regex, arithmetic, field extraction, comparison |
-| **Prohibited operations** | HTTP calls, DB queries, file reads, environment variables |
-| **Type Safety** | `evaluator_config` MUST match `evaluator_type` (schema if/then). Cross-field consistency is a semantic invariant. |
+| Max composite recursion depth | 32 levels | `SchemaError: evaluator depth exceeded` |
+| Max evaluator nodes per rule | 256 nodes | `SchemaError: evaluator count exceeded` |
+| Max composite width | 64 nodes | `SchemaError: evaluator width exceeded` |
+| Max regex pattern length | 4,096 chars | `SchemaError: pattern too long` |
+| Max ancestry depth | 64 steps | Compile-time lineage rejection |
+| Max metadata per rule | 16 KiB | `SchemaError: metadata too large` |
 
 ## Compilation Pipeline
 
-The end-to-end lifecycle from policy authoring to runtime execution:
-
-```
-Policy Authoring (human writes policy_doctrine.yaml)
-        │
-        ▼
-Policy Validation (compile-time: contamination guard, no executable fields)
-        │
-        ▼
-Schema Validation (JSON Schema Draft-07: structure, types, constraints)
-        │
-        ▼
-Cross-Layer Validation (schema derivable from spec; cross-field evaluator_type ↔ evaluator_config)
-        │
-        ▼
-Identity Validation (lineage_id uniqueness, pattern compliance, DAG integrity)
-        │
-        ▼
-Conflict Graph Construction (override → priority → specificity → recency)
-        │
-        ▼
-CG-IR Generation (directives → nodes with dual identity)
-        │
-        ▼
-Semantic Hash Generation (node_hash, edge_hash, snapshot_hash per §2.6)
-        │
-        ▼
-Snapshot Manifest (deterministic serialization, sorted keys, UTF-8)
-        │
-        ▼
-Runtime Bundle (engine reads schema/CG-IR fields only)
-```
+The end-to-end lifecycle from policy authoring to runtime execution. See SPECIFICATION.md §2.4 for the canonical pipeline. Key stages:
+`normalize` → `classify` → `select_controls` → `evaluate` → `aggregate` → `report`
 
 Each stage performs a specific class of validation. The engine is the sole executor; policy is never interpreted at any stage after Policy Validation.
-
-### Pipeline Stage Descriptions
-
-| Stage | Description |
-| :--- | :--- |
-| `normalize` | Validate target schema, compute `target_hash` |
-| `classify` | Determine `target_type`, select evaluation strategy |
-| `select_controls` | Filter CG-IR nodes by scope applicability |
-| `evaluate` | DAG execution with topological ordering |
-| `aggregate` | Collect findings, compute severities per §2.9.1 |
-| `report` | Generate inspection snapshot |
-
-### Incremental Compilation Algorithm
-
-1. Compute the set of changed `lineage_id` values by comparing current vs. previous directive graph
-2. For each changed `lineage_id`, mark its node and all transitive dependents as dirty
-3. Recompute dirty nodes
-4. Reuse unchanged `node_hash` values from the previous snapshot
-5. Recompute edge hashes for any dirty node's edges
-6. Recompute snapshot hash
-
-**Incremental Reuse Guarantee:** If `node_body` is byte-identical across compilations, `node_hash` is identical regardless of which snapshot references it. Conflict resolution metadata (`priority`, `conflict_resolution`) is part of `node_body` — not lost by local hashing. Graph context (which nodes depend on which) is captured in edge hashes and the snapshot manifest only.
-
-## Hash Algorithm Versioning
-
-Hash algorithms may change over time (e.g. SHA-256 → BLAKE3). The `hash_algorithm_version` field in `x-deterministic-serialization` tracks the current algorithm version:
-
-- **Version 1**: Flat `node_body` hash (deprecated 8.2.0)
-- **Version 2**: Dual-hash model (`semantic_hash` + `presentation_hash`, current)
-- All `node_hash`, `edge_hash`, and `snapshot_hash` values are tagged with the algorithm version
-- Old versions remain valid for audit replay; new compilations MUST use the current version
-- Algorithm migration requires a MAJOR version bump
-
-## CG-IR Snapshot Hash Composition
-
-```
-cg_ir_snapshot_hash = SHA-256(canonical_json({
-  node_hashes: sorted[],        // sorted array of node_hash values
-  edge_hashes: sorted[],        // sorted array of edge_hash values
-  provenance: {
-    engine_version: string,     // pinned engine version
-    frozen_env_hash: string,    // SHA-256 of frozen environment
-    directive_graph_version: string
-    // Note: compiled_at is NOT included here — it is execution artifact
-    // metadata only. Including it would break snapshot hash determinism.
-  }
-}))
-```
-
-**compiled_at** is recorded in execution artifact metadata (inspection snapshots, pipeline traces) but NOT in the snapshot hash. This ensures that two compilations with identical directive graph content, engine version, and frozen environment produce the same `cg_ir_snapshot_hash` regardless of wall clock time.
-
-**Determinism guarantee:** Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical. The hash is **not a function of wall clock time, compilation node identity, or request context**.
-
-### Frozen Environment Schema (§2.7)
-
-```json
-{
-  "engine_version": "semver",
-  "toolchain": {
-    "compiler": "string",
-    "os_runtime_hash": "sha256"
-  },
-  "ai_components": [
-    {
-      "name": "string",
-      "model_hash": "sha256",
-      "prompt_hash": "sha256",
-      "decoder_hash": "sha256"
-    }
-  ],
-  "confidence_severity_cap_threshold": 0.5,
-  "frozen_env_hash": "sha256"
-}
-```
-
-`frozen_env_hash` = SHA-256(canonical_json(above minus `frozen_env_hash` itself)). The `frozen_env_hash` key is excluded from its own computation.
-
-## Edge Hash Formula
-
-```
-edge_hash = SHA-256(canonical_json(edge_body))
-
-edge_body = {
-  source: directive_id,    // string, the dependency source
-  target: directive_id     // string, the dependency target
-}
-```
-
-- Edges are directional: `edge_body = {source: "A", target: "B"}` ≠ `{source: "B", target: "A"}`
-- Duplicate edges (same source, same target) produce identical `edge_hash` values
-- The edge hash is independent of node body content — graph structure and node identity are fully decoupled
-- Edge ordering in the snapshot manifest is canonicalized by sorted `edge_hash[]` (not insertion order)
-
-## Version Resolution Function
-
-```
-system_state_hash = SHA-256(canonical_json({
-  directive_graph_version: "1.2.0",
-  cg_ir_hash: "abc123...",
-  frozen_env_hash: "def456...",
-  engine_version: "3.0.0",
-  target_hash: "789ghi..."
-}))
-```
-
-To reproduce any historical inspection, pin all five dimensions.
-
-**Intentional Exclusion — Event Stream Ordering:** The `system_state_hash` captures inspection reproducibility, NOT event stream ordering. Event ordering is guaranteed by the HLC (§2.14) and is recorded independently in the Finding Event Stream via `event_hash` and `logical_clock` fields. Including event stream state in `system_state_hash` would create a circular dependency (inspection depends on events, events depend on inspection). The five dimensions above are sufficient to reproduce any inspection deterministically.
 
 See [SPECIFICATION.md](SPECIFICATION.md) for the full universal rule governance specification.
