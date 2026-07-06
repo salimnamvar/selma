@@ -3,11 +3,11 @@
 ' Boundary:  CompilationEngine
 ' Purpose:   Three-pass validation, hermetic boundary, and compilation core with 18 components
 ' Milestone: v1.0.0
-' Version:   1.1.0
+' Version:   1.2.0
 ' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16
 ' Review:    pending
 ' ============================================================
-' SIM-01 EXCEPTION: 24 elements -- complete CompilationEngine internals (3 pass groups + 1 hermetic + 14 core + 3 stores + 3 inputs/outputs)
+' SIM-01 EXCEPTION: 25 elements -- complete CompilationEngine internals (validators + hermetic + conflict resolution + core + error + external)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
 !theme plain
@@ -37,26 +37,32 @@ Container_Boundary(compilation, "CompilationEngine") {
     Component(dep_graph, "DependencyGraphBuilder", "Python", "Topological sort, depends_on -> edges, acyclicity verification.")
     Component(conflict_pair, "ConflictPairGenerator", "Python", "Consumes conflicts_with, generates candidate pairs, records in snapshot metadata (2.8.4, 2.15.1).")
     Component(specificity_scorer, "ScopeSpecificityScorer", "Python", "scope_specificity_score x 100 + count_bound_fields (2.8.2, 2.15).")
+    Component(conflict_resolver, "ConflictResolver", "Python", "Precedence chain: explicit conflict_resolution -> compatible_overrides() -> priority_level -> specificity_score -> created_at recency -> ConflictArtifact. DFS cycle detection. defer_to resolution (2.15).")
     Component(hash_computer, "HashComputer", "Python", "semantic_hash (11 fields), presentation_hash (3 fields), node_hash = compose both. Canonical JSON, sorted keys, SHA-256 (2.6).")
     Component(edge_hasher, "EdgeHashComputer", "Python", "SHA-256({source, target}). Directional. Node-content independent (2.6).")
     Component(inc_compilation, "IncrementalCompilationManager", "Python", "Dirty marking by lineage_id, transitive dependent marking, cache lookup by semantic_hash, reuse unchanged node_hashes (2.6).")
     Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6).")
     Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
+    Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures (Pass 1 + Pass 2). Returns SchemaError to caller. Any FAIL stops pipeline.")
 }
 
 ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects.")
 ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth.")
-ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "Finding lifecycle events.")
+Container(directive_mgr_ext, "DirectiveManager", "Python", "Triggers compilation on directive mutation (Authoring Layer).")
 
 Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
 Rel(directive_store, policy_ver_checker, "authoring-time only", "SQL")
 
 Rel(js_validator, ast_discriminator, "PASS")
 Rel(js_validator, complexity_walker, "PASS")
-Rel(complexity_walker, lineage_dag_val, "PASS")
-Rel(lineage_dag_val, ref_validator, "PASS")
-Rel(ref_validator, policy_ver_checker, "PASS")
-Rel(policy_ver_checker, cross_field_val, "ALL PASS")
+Rel(js_validator, lineage_dag_val, "PASS")
+Rel(js_validator, ref_validator, "PASS")
+Rel(js_validator, policy_ver_checker, "PASS")
+Rel(ast_discriminator, cross_field_val, "PASS")
+Rel(complexity_walker, cross_field_val, "PASS")
+Rel(lineage_dag_val, cross_field_val, "PASS")
+Rel(ref_validator, cross_field_val, "PASS")
+Rel(policy_ver_checker, cross_field_val, "PASS")
 
 Rel(cross_field_val, concurrency_mgr, "ALL PASS")
 
@@ -67,8 +73,11 @@ Rel(identity_resolver, rule_to_node, "validated rules")
 Rel(rule_to_node, param_merger, "mapped rules")
 Rel(param_merger, dep_graph, "merged parameters")
 Rel(dep_graph, conflict_pair, "DAG structure")
-Rel(conflict_pair, specificity_scorer, "candidate pairs")
-Rel(specificity_scorer, hash_computer, "scored nodes")
+Rel(dep_graph, specificity_scorer, "all nodes")
+Rel(conflict_pair, conflict_resolver, "candidate pairs")
+Rel(specificity_scorer, conflict_resolver, "specificity scores")
+Rel(conflict_resolver, hash_computer, "resolved nodes (winner per conflict pair)")
+Rel(conflict_resolver, snapshot_assembler, "ConflictArtifact records (if any)")
 Rel(hash_computer, inc_compilation, "node hashes")
 Rel(dep_graph, edge_hasher, "node references")
 Rel(edge_hasher, inc_compilation, "edge hashes")
@@ -77,6 +86,14 @@ Rel(provenance_recorder, snapshot_assembler, "frozen env + lineage metadata")
 
 Rel(snapshot_assembler, cgir_store, "immutable CG-IR snapshot", "Content-addressed")
 Rel(inc_compilation, cgir_store, "reads previous snapshot for reuse", "Content-addressed")
-Rel(finding_event_store, provenance_recorder, "reads prior events (if needed)", "Read-only")
+Rel(frozen_env_mgr, concurrency_mgr, "hermetic boundary config", "Internal")
+Rel(directive_mgr_ext, concurrency_mgr, "compilation trigger (on mutation or on-demand)", "Internal")
+Rel(js_validator, error_handler, "FAIL: SchemaError")
+Rel(ast_discriminator, error_handler, "FAIL: ValidationError")
+Rel(complexity_walker, error_handler, "FAIL: ValidationError")
+Rel(lineage_dag_val, error_handler, "FAIL: ValidationError")
+Rel(ref_validator, error_handler, "FAIL: ValidationError")
+Rel(policy_ver_checker, error_handler, "FAIL: ValidationError")
+Rel(cross_field_val, error_handler, "FAIL: ValidationError")
 
 @enduml

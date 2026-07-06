@@ -60,7 +60,14 @@ Rel(api_gateway, inspection_pipeline, "inspection.submit (capability gate #3)", 
 Rel(api_gateway, finding_fsm, "finding transitions (capability gate #4)", "Internal")
 Rel(api_gateway, analytics_engine, "analytics queries", "Internal")
 Rel(api_gateway, directive_store, "read queries", "SQL")
-Rel(api_gateway, cgir_store, "read queries", "Content-addressed")
+Rel(api_gateway, cgir_store, "read queries, verification queries (S-22, S-23, S-24)", "Content-addressed")
+Rel(api_gateway, compilation_engine, "conflict.resolve (capability gate #5, S-05, S-28)", "Internal")
+Rel(api_gateway, compilation_engine, "impact-preview / dry-run (S-09), audit requests (S-21, S-27, S-31)", "Internal")
+
+note right of api_gateway
+  S-04 (directive.list): coordinated read from directive_store + cgir_store,
+  returning active directives and current CG-IR snapshot together.
+end note
 
 Rel(directive_mgr, directive_store, "persists directive graph", "SQL")
 Rel(directive_mgr, compilation_engine, "triggers compilation on mutation", "Internal")
@@ -72,12 +79,12 @@ Rel(compilation_engine, cgir_store, "CG-IR snapshot (immutable)", "Content-addre
 Rel(inspection_pipeline, cgir_store, "reads frozen CG-IR snapshot", "Content-addressed")
 Rel(inspection_pipeline, finding_event_store, "writes findings", "Append-only")
 Rel(inspection_pipeline, execution_artifact_store, "writes inspection snapshots", "Object PUT")
+Rel(finding_event_store, inspection_pipeline, "prior findings for context aggregation", "Read-only")
 
 Rel(finding_fsm, finding_event_store, "appends transition events", "Append-only")
+Rel(finding_event_store, finding_fsm, "current state, creator_provenance, evidence history", "Read-only")
 
 Rel(analytics_engine, finding_event_store, "reads aggregates (pre-computed)", "Read-only")
-
-policy_doc -[hidden]x- selma
 
 note right of policy_doc
   **PROHIBITED** at runtime

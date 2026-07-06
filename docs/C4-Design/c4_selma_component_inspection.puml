@@ -3,11 +3,11 @@
 ' Boundary:  InspectionPipeline
 ' Purpose:   DAG execution with fault taxonomy, finding aggregation, and snapshot serialization
 ' Milestone: v1.0.0
-' Version:   1.1.0
+' Version:   1.2.0
 ' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7
 ' Review:    pending
 ' ============================================================
-' SIM-01 EXCEPTION: 15 elements -- complete InspectionPipeline internals (2 input + 5 DAG + 5 output + 3 stores)
+' SIM-01 EXCEPTION: 15 elements -- complete InspectionPipeline internals (1 external + 2 input + 5 DAG + 4 output + 3 stores)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Component.puml
 !theme plain
@@ -26,36 +26,36 @@ Container_Boundary(pipeline, "InspectionPipeline") {
     Component(fault_classifier, "FaultTaxonomyClassifier", "Python", "Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption (2.12).")
     Component(skipped_tracker, "SkippedNodeTracker", "Python", "Records dependency-failed nodes. No finding generated. Skipped trace entry only. Prevents cascade false positives (2.12).")
 
-    Component(finding_aggregator, "FindingAggregator", "Python", "Collects evaluator outcomes. Applies deontic semantics (2.8.3). Severity rules (2.9.1). Confidence threshold cap. Permission -> informational.")
-    Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Resolves concurrent findings. Precedence chain per 2.15. All inputs frozen in snapshot. Deterministic per snapshot.")
+    Component(finding_aggregator, "FindingAggregator", "Python", "Collects evaluator outcomes. Applies deontic semantics (2.8.3). Severity rules (2.9.1). Confidence threshold cap (confidence_severity_cap_threshold). Permission -> informational.")
     Component(pipeline_tracer, "PipelineTraceRecorder", "Python", "Ordered array (2.16.1). Per-node: outcome, timing, fault classification, skipped status.")
     Component(snapshot_serializer, "InspectionSnapshotSerializer", "Python", "target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash (2.13).")
-    Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env, engine, target_hash). Event ordering EXCLUDED (2.6 note).")
+    Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env_hash, engine, target_hash). directive_version + frozen_env_hash from CG-IR snapshot provenance. Event ordering EXCLUDED (2.6 note).")
 }
 
+Container(api_gateway_ext, "ApiGateway", "FastAPI", "Submits inspection target to pipeline (capability gate #3).")
 ContainerDb(cgir_store, "CgIrStore", "CAS", "Frozen CG-IR snapshot.")
 ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "Finding lifecycle events.")
 ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots and pipeline traces.")
 
+Rel(api_gateway_ext, target_validator, "target payload (§2.10 schema)", "Internal")
 Rel(cgir_store, dag_scheduler, "reads CG-IR snapshot nodes", "Content-addressed")
 Rel(finding_event_store, context_populator, "reads prior findings (aggregates)", "Read-only")
 
 Rel(target_validator, context_populator, "validated target")
 Rel(context_populator, dag_scheduler, "read-only context")
 Rel(dag_scheduler, eval_dispatcher, "topological node order")
+Rel(dag_scheduler, finding_aggregator, "node metadata (deontic_type, severity_default, confidence_severity_cap_threshold)")
 Rel(eval_dispatcher, eval_pool, "node + target + context")
 Rel(eval_pool, finding_aggregator, "outcome: Pass/Fail/Partial/NeedsReview")
 Rel(eval_pool, fault_classifier, "timeout/error")
 Rel(fault_classifier, finding_aggregator, "NeedsReview finding")
 Rel(dag_scheduler, skipped_tracker, "dep failed")
-Rel(finding_aggregator, conflict_resolver_rt, "findings with severities")
+Rel(finding_aggregator, snapshot_serializer, "aggregated findings")
 Rel(finding_aggregator, pipeline_tracer, "outcome per node")
 Rel(skipped_tracker, pipeline_tracer, "skipped trace entries")
-Rel(conflict_resolver_rt, snapshot_serializer, "resolved findings")
 Rel(pipeline_tracer, snapshot_serializer, "pipeline trace entries")
 Rel(system_state_hash, snapshot_serializer, "system state hash")
-Rel(cgir_store, system_state_hash, "cg_ir_snapshot_hash")
-Rel(finding_event_store, system_state_hash, "directive_version")
+Rel(cgir_store, system_state_hash, "cg_ir_snapshot_hash, snapshot provenance (directive_version, frozen_env_hash)")
 
 Rel(snapshot_serializer, execution_artifact_store, "writes inspection snapshot", "Object PUT")
 Rel(finding_aggregator, finding_event_store, "writes findings", "Append-only")
