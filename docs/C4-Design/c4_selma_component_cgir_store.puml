@@ -21,9 +21,9 @@ Container_Boundary(cgir, "CgIrStore") {
     Component(node_dedup, "NodeDeduplicator", "Python", "Lookup by node_hash. Reuse existing if match. Store new if unique. Enables incremental compilation (2.6).")
     Component(edge_dedup, "EdgeDeduplicator", "Python", "Lookup by edge_hash. Reuse if {source, target} match exists. Independent of node content (2.6).")
 
-    Component(node_store, "NodeStore", "Python", "Key: node_hash. Value: node_body. Indices: semantic_hash, presentation_hash, lineage_id (2.6).")
-    Component(edge_store, "EdgeStore", "Python", "Key: edge_hash. Value: {source, target}. Indices: source, target (2.6).")
-    Component(snapshot_manifest, "SnapshotManifestStore", "Python", "Key: cg_ir_snapshot_hash. Value: {node_hashes: sorted[], edge_hashes: sorted[], provenance}. compiled_at in artifact, NOT in hash (2.6).")
+    Component(node_store, "NodeStore", "Python", "Key: node_hash. Value: node_body. Indices: semantic_hash, presentation_hash, lineage_id (2.6). [throughput: 1000 writes/s, latency: <100ms] [security: AES-256 at rest, TLS 1.3 in transit]")
+    Component(edge_store, "EdgeStore", "Python", "Key: edge_hash. Value: {source, target}. Indices: source, target (2.6). [throughput: 1000 writes/s, latency: <100ms] [security: AES-256 at rest, TLS 1.3 in transit]")
+    Component(snapshot_manifest, "SnapshotManifestStore", "Python", "Key: cg_ir_snapshot_hash. Value: {node_hashes: sorted[], edge_hashes: sorted[], provenance}. compiled_at in artifact, NOT in hash (2.6). [security: AES-256 at rest, TLS 1.3 in transit]")
 
     Component(node_lookup, "NodeLookup", "Python", "By node_hash, directive_id, lineage_id, semantic_hash.")
     Component(edge_lookup, "EdgeLookup", "Python", "By edge_hash, source directive_id, target directive_id.")

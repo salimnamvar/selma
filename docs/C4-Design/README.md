@@ -10,9 +10,12 @@
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | Context | `c4_selma_context.puml` | Context | 6 | System boundary, actors, external dependencies, policy prohibition (AA-02) |
-| Container | `c4_selma_container.puml` | Container | 18 | Deployable units organized by 5 layers with AA gate enforcement |
-| CompilationEngine | `c4_selma_component_compilation.puml` | Component | 27 | Three-pass validation, hermetic boundary, compilation core, AA-02, AA-05, AA-06, AA-07 gates |
-| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 15 | DAG execution, fault taxonomy, finding aggregation (AA-03 gate) |
+| Container | `c4_selma_container.puml` | Container | 17 | Deployable units organized by 5 layers with AA gate enforcement |
+| CompilationEngine Overview | `c4_selma_component_compilation.puml` | Component | 10 | High-level view of compilation subsystems — delegates to 4 focused diagrams |
+| CompilationEngine — Validation | `c4_selma_component_compilation_validation.puml` | Component | 12 | Three-pass validation pipeline with AA-02 gate enforcement (AA-06, AA-07) |
+| CompilationEngine — Core | `c4_selma_component_compilation_core.puml` | Component | 9 | Hermetic compilation: identity, transformation, hashing, incremental |
+| CompilationEngine — Conflict | `c4_selma_component_compilation_conflict.puml` | Component | 5 | Deterministic conflict resolution, snapshot assembly, provenance (AA-05) |
+| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 16 | DAG execution, fault taxonomy, finding aggregation, runtime conflict resolution (AA-03 gate) |
 | FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 8 | State machine with SoD enforcement (AA-04 gate), audit trail, and separate audit store |
 | CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 9 | Content-addressed storage with deduplication and lineage tracing (AA-06, AA-07) |
 
@@ -46,7 +49,12 @@
 | FindingEventStore | Append-Only Log | Container | HLC-ordered finding lifecycle events |
 | AuditEventStore | Append-Only Log | Container | Security audit entries: denials, transition attempts (S-32, S-33, S-34) |
 | ExecutionArtifactStore | Object Store | Container | Immutable inspection snapshots |
-| FrozenEnvConfig | Configuration | Container | Pinned environment configuration (Content-addressed) |
+
+### Configuration
+
+| Name | Technology | C4 Level | Description |
+| :--- | :--- | :--- | :--- |
+| FrozenEnvConfig | Configuration File | Container | Pinned environment configuration (Content-addressed). Not a deployable unit — external configuration consumed by CompilationEngine. |
 
 ### External Systems
 
@@ -55,7 +63,7 @@
 | CICDPipeline | System_Ext | Context | Scans runtime source for policy references |
 | PolicyDocument | System_Ext | Context | Governance intent. Authoring-time ONLY |
 
-### Compilation Engine Components (27)
+### Compilation Engine Components (24)
 
 | Name | Container | Pass | Description |
 | :--- | :--- | :--- | :--- |
@@ -96,6 +104,7 @@
 | FaultTaxonomyClassifier | InspectionPipeline | DAG | 8-class fault classification |
 | SkippedNodeTracker | InspectionPipeline | DAG | Dependency-failed node tracking |
 | FindingAggregator | InspectionPipeline | Output | Finding collection and severity application |
+| ConflictResolverRuntime | InspectionPipeline | Output | Runtime conflict resolution among concurrent findings |
 | PipelineTraceRecorder | InspectionPipeline | Output | Ordered trace entry recording |
 | InspectionSnapshotSerializer | InspectionPipeline | Output | Snapshot serialization |
 | SystemStateHasher | InspectionPipeline | Output | System state hash computation |
@@ -175,6 +184,148 @@ C4-Design.md is now part of the version synchronization matrix per SPECIFICATION
 | policy_doctrine.yaml | 8.2.4 | Synchronized |
 | User_Stories.md | 8.2.4 | Synchronized |
 | C4-Design/README.md | 8.2.4 | Synchronized ✅ |
+
+## Traceability Matrix
+
+Comprehensive mapping from C4 components to SPECIFICATION.md sections, User_Stories.md stories, and AA gates.
+
+### CompilationEngine
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| JsonSchemaValidator | validation | §2.9 | S-27 | — |
+| AstDiscriminatorWalker | validation | §2.9 | S-27, S-31 | AA-06 |
+| EvaluatorComplexityWalker | validation | §2.9 | S-27 | — |
+| LineageDagValidator | validation | §2.2.3 | S-19, S-20, S-26 | — |
+| ReferenceValidator | validation | §9.2.6 | S-21, S-31 | AA-07 |
+| PolicyVersionChecker | validation | §1.2 Rule 7 | — | — |
+| CrossFieldValidator | validation | §2.15 | S-05, S-28 | — |
+| PolicyAccessBlocker | validation | §1.2 | S-30 | AA-02 |
+| AAGateValidator | validation | §9.9 | S-30 | AA-01–07 |
+| ErrorHandler | validation | — | — | — |
+| FrozenEnvManager | core | §2.7 | S-01, S-02, S-10, S-23 | — |
+| ConcurrencyManager | core | §2.4 | S-01, S-02 | — |
+| IdentityResolver | core | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
+| RuleToNodeMapper | core | §2.8.1 | S-01, S-02 | — |
+| ParameterMerger | core | §2.8.1 | S-01, S-02 | — |
+| DependencyGraphBuilder | core | §2.8.4 | S-01, S-02 | — |
+| HashComputer | core | §2.6 | S-23, S-24 | — |
+| EdgeHashComputer | core | §2.6 | S-24 | — |
+| IncrementalCompilationManager | core | §2.6 | S-02, S-03, S-19, S-20, S-26 | — |
+| ConflictPairGenerator | conflict | §2.8.4, §2.15.1 | S-05, S-28 | — |
+| ScopeSpecificityScorer | conflict | §2.8.2, §2.15 | S-05, S-28 | — |
+| ConflictResolver | conflict | §2.15 | S-05, S-28 | AA-05 |
+| SnapshotAssembler | conflict | §2.6 | S-23 | — |
+| ProvenanceRecorder | conflict | §2.6, §3.2 | S-01, S-02, S-22 | — |
+
+### InspectionPipeline
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| TargetValidator | inspection | §2.10 | S-10 | — |
+| ContextPopulator | inspection | §2.11 | S-10, S-16 | — |
+| DagScheduler | inspection | §2.12 | S-10 | — |
+| EvaluatorDispatcher | inspection | §2.12 | S-10 | — |
+| EvaluatorPool | inspection | §2.9 | S-10, S-21 | AA-03 |
+| FaultTaxonomyClassifier | inspection | §2.12 | S-10 | — |
+| SkippedNodeTracker | inspection | §2.12 | S-10 | — |
+| FindingAggregator | inspection | §2.8.3, §2.9.1 | S-10 | — |
+| ConflictResolverRuntime | inspection | §2.15 | S-05, S-28 | — |
+| PipelineTraceRecorder | inspection | §2.16.1 | S-10 | — |
+| InspectionSnapshotSerializer | inspection | §2.13 | S-10, S-23 | — |
+| SystemStateHasher | inspection | §2.13 | S-10, S-23 | — |
+
+### FindingFsmEngine
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| CapabilityChecker | finding | §3.1–§3.4 | S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29, S-34 | — |
+| SegregationOfDutiesEnforcer | finding | §3.1–§3.4 | S-14a, S-29, S-32, S-33 | AA-04 |
+| FsmStateMachine | finding | §3.1 | S-11, S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29 | — |
+| HlcClockManager | finding | §3.3 | S-14a, S-14b, S-14c | — |
+| EventHasher | finding | §3.1 | S-14a, S-14b, S-14c | — |
+| EventAppender | finding | §3.1 | S-14a, S-14b, S-14c | — |
+| AuditLogger | finding | §3.1 | S-32, S-33, S-34 | — |
+| DenialHandler | finding | §3.1 | S-34 | — |
+
+### CgIrStore
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| NodeDeduplicator | cgir_store | §2.6 | S-02, S-23 | — |
+| EdgeDeduplicator | cgir_store | §2.6 | S-24 | — |
+| NodeStore | cgir_store | §2.6 | S-02, S-23 | — |
+| EdgeStore | cgir_store | §2.6 | S-24 | — |
+| SnapshotManifestStore | cgir_store | §2.6 | S-23 | — |
+| NodeLookup | cgir_store | §2.6 | S-04, S-07 | — |
+| EdgeLookup | cgir_store | §2.6 | S-04 | — |
+| SnapshotLookup | cgir_store | §2.6 | S-04, S-23 | — |
+| LineageTracer | cgir_store | §2.2.2, §2.2.3 | S-07, S-19, S-20, S-26 | — |
+
+### Cross-Component User Story Coverage
+
+Stories without direct component mapping are supported via container-level interactions:
+
+| Story | Support Path |
+| :--- | :--- |
+| S-03 (retire directive) | DirectiveManager → CompilationEngine → CgIrStore (deprecated nodes) |
+| S-04 (view active requirements) | ApiGateway → DirectiveStore (read) + CgIrStore (read) |
+| S-06 (comprehensive audit) | ApiGateway → CompilationEngine → AnalyticsEngine |
+| S-07 (revision/lineage history) | ApiGateway → DirectiveStore + CgIrStore LineageTracer |
+| S-08 (restore revision) | ApiGateway → DirectiveManager → CompilationEngine |
+| S-09 (impact preview) | ApiGateway → CompilationEngine (dry-run mode) |
+| S-15 (reinspect) | ApiGateway → InspectionPipeline (new target hash) |
+| S-16 (explain finding) | ApiGateway → FindingFsmEngine (causal chain traversal) |
+| S-17 (analytics) | ApiGateway → AnalyticsEngine (read-only aggregates) |
+| S-18 (propose change from analytics) | AnalyticsEngine → DirectiveManager (via S-02 path) |
+
+## Performance & Capacity Annotations
+
+Target performance characteristics for key components:
+
+| Component | Throughput | Latency | Notes |
+| :--- | :--- | :--- | :--- |
+| ApiGateway | 1000 req/s | <10ms routing | Rate limiting: 100 req/min per actor |
+| CompilationEngine | 50 compilations/s | <2s full, <200ms incremental | Per frozen_env_hash cache hit |
+| CgIrStore | — | read: <50ms, write: <100ms | Content-addressed; dedup reduces write volume |
+| FindingEventStore | 1000 events/s | append: <20ms | HLC-ordered; append-only |
+| AuditEventStore | 500 entries/s | append: <10ms | Separate retention policy |
+| EvaluatorPool | 1000 evaluators/s/node | <5ms/evaluator | Pure functions; parallelizable by DAG |
+| SnapshotAssembler | 20 snapshots/s | <500ms | Depends on node/edge count |
+
+## Security Annotations
+
+| Component | Security Properties |
+| :--- | :--- |
+| ApiGateway | TLS 1.3 inbound, JWT validation, rate limiting, capability gate enforcement |
+| Stores (all) | Encryption: AES-256 at rest, TLS 1.3 in transit |
+| FindingEventStore | Integrity: SHA-256 event_hash chain, append-only guarantee |
+| AuditEventStore | Integrity: SHA-256 hash chain, separate retention, tamper-evident |
+| CgIrStore | Immutability: content-addressed, no mutation of existing objects |
+| PolicyAccessBlocker | AA-02 enforcement: boot-time assertions, CI/CD static analysis |
+| SegregationOfDutiesEnforcer | SoD: creator_provenance check, evidence submitter check |
+
+## Design Principle Recommendations
+
+The following design principle improvements are recommended for future iterations (P2-P3 priority):
+
+| ID | Principle | Recommendation | Impact | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| DF-001 | Graceful Degradation | Add CircuitBreaker to ApiGateway with retry logic (max 3 attempts, exponential backoff: 1s/2s/4s). Add FallbackCache for CG-IR snapshots to enable read-only mode during store outages. | Resilience | P2 |
+| DF-002 | Reusability | Extract EvaluatorPool to separate EvaluatorService container. Both InspectionPipeline and CompilationEngine can depend on it. Evaluators are pure functions with zero dependencies. | Reusability | P2 |
+| DF-003 | Dependency Inversion | Introduce store interfaces: ICgIrStore, IDirectiveStore, IFindingEventStore, IExecutionArtifactStore. Use dependency injection. Components depend on abstractions, not concretions. | Testability | P2 |
+
+## Architecture Decision Records
+
+Major architectural decisions are documented in `/docs/adr/`:
+
+| ADR | Title | Spec Reference |
+| :--- | :--- | :--- |
+| ADR-001 | Hermetic Compilation Boundary | §2.7 |
+| ADR-002 | Content-Addressed Storage | §2.6 |
+| ADR-003 | Dual Identity Model | §2.2, §2.3 |
+| ADR-004 | Policy Runtime Prohibition | §1.2 Rule 7 |
+| ADR-005 | Conflict Resolution Determinism | §2.15 |
 
 ## Validation
 

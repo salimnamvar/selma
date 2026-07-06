@@ -1,0 +1,66 @@
+' ============================================================
+' Title:     Selma -- CompilationEngine Validation Pass
+' Boundary:  CompilationEngine (Validation)
+' Purpose:   Three-pass validation pipeline with AA-02 gate enforcement
+' Milestone: v2.0.0
+' Version:   2.0.0
+' Contract:  8.2.4
+' Source:    docs/Regulation/SPECIFICATION.md 2.9, docs/User-Story/User_Stories.md S-27, S-30, AA-02, AA-06
+' Review:    Enhanced — 2026-07-06
+' ============================================================
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- CompilationEngine Validation Pass
+
+Container_Boundary(compilation_val, "CompilationEngine — Validation") {
+
+    Component(policy_blocker, "PolicyAccessBlocker", "Python", "AA-02 gate: validates NO runtime access to policy_doctrine.yaml. Static analysis hooks for CI/CD (S-30). Boot-time assertions. Authoring-time only.")
+    Component(aa_gate_validator, "AAGateValidator", "Python", "Validates AA-01 through AA-07 gates: Mediated Feedback, Policy Runtime Prohibition, Evaluator Purity, SoD, Conflict Resolution Determinism, Discriminator Completeness, Portable Serialization (S-30).")
+
+    Component(js_validator, "JsonSchemaValidator", "Python", "First-pass structural filter (Draft-07). Field types, array bounds. if/then secondary filter (2.9).")
+
+    Component(ast_discriminator, "AstDiscriminatorWalker", "Python", "evaluator_type + config verification. Recursive oneOf. Cross-type leakage check. AA-06 normative gate (2.9, S-27, S-31).")
+    Component(complexity_walker, "EvaluatorComplexityWalker", "Python", "Depth <= 32, nodes <= 256, width <= 64, pattern <= 4096 chars, metadata <= 16 KiB (S-27).")
+    Component(lineage_dag_val, "LineageDagValidator", "Python", "Cycle detection (DFS), depth bound (<= 64), parent existence, operation consistency, temporal ordering (2.2.3).")
+    Component(ref_validator, "ReferenceValidator", "Python", "RE2 canary vectors (9.2.6), UTC-only timestamps, finite numerics, regex flags whitelist {i,m,s}, NFC normalization (S-21, S-31). AA-07 gate.")
+    Component(policy_ver_checker, "PolicyVersionChecker", "Python", "major(policy_contract_version) == major(policy.version). Cross-file consistency (1.2 Rule 7).")
+
+    Component(cross_field_val, "CrossFieldValidator", "Python", "scope + priority consistency, depends_on acyclicity, conflicts_with candidate pairs.")
+
+    Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures (Pass 1 + Pass 2). Returns SchemaError. Any FAIL stops pipeline.")
+}
+
+ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth.")
+
+Rel(policy_blocker, aa_gate_validator, "AA-02 validation")
+Rel(aa_gate_validator, js_validator, "all AA gates passed")
+Rel(policy_blocker, js_validator, "policy runtime prohibition check")
+
+Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
+
+Rel(js_validator, ast_discriminator, "PASS")
+Rel(js_validator, complexity_walker, "PASS")
+Rel(js_validator, lineage_dag_val, "PASS")
+Rel(js_validator, ref_validator, "PASS")
+Rel(js_validator, policy_ver_checker, "PASS")
+Rel(ast_discriminator, cross_field_val, "PASS")
+Rel(complexity_walker, cross_field_val, "PASS")
+Rel(lineage_dag_val, cross_field_val, "PASS")
+Rel(ref_validator, cross_field_val, "PASS")
+Rel(policy_ver_checker, cross_field_val, "PASS")
+
+Rel(js_validator, error_handler, "FAIL: SchemaError")
+Rel(aa_gate_validator, error_handler, "FAIL: AA Gate Violation")
+Rel(ast_discriminator, error_handler, "FAIL: ValidationError")
+Rel(complexity_walker, error_handler, "FAIL: ValidationError")
+Rel(lineage_dag_val, error_handler, "FAIL: ValidationError")
+Rel(ref_validator, error_handler, "FAIL: ValidationError")
+Rel(policy_ver_checker, error_handler, "FAIL: ValidationError")
+Rel(cross_field_val, error_handler, "FAIL: ValidationError")
+
+@enduml

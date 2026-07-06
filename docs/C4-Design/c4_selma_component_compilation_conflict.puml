@@ -1,0 +1,37 @@
+' ============================================================
+' Title:     Selma -- CompilationEngine Conflict Resolution
+' Boundary:  CompilationEngine (Conflict Resolution)
+' Purpose:   Deterministic conflict resolution, snapshot assembly, and provenance recording
+' Milestone: v2.0.0
+' Version:   2.0.0
+' Contract:  8.2.4
+' Source:    docs/Regulation/SPECIFICATION.md 2.6, 2.15, docs/User-Story/User_Stories.md S-05, S-28, AA-05
+' Review:    Enhanced — 2026-07-06
+' ============================================================
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- CompilationEngine Conflict Resolution
+
+Container_Boundary(compilation_conflict, "CompilationEngine — Conflict Resolution") {
+
+    Component(conflict_pair, "ConflictPairGenerator", "Python", "Consumes conflicts_with, generates candidate pairs, records in snapshot metadata (2.8.4, 2.15.1).")
+    Component(specificity_scorer, "ScopeSpecificityScorer", "Python", "scope_specificity_score x 100 + count_bound_fields (2.8.2, 2.15).")
+    Component(conflict_resolver, "ConflictResolver", "Python", "Directive-level: resolves conflicting directive rules during compilation. Precedence chain: explicit conflict_resolution -> compatible_overrides() -> priority_level -> specificity_score -> created_at recency -> ConflictArtifact. DFS cycle detection for defer_to cycles. AA-05 gate: inputs frozen in CG-IR snapshot for deterministic outcomes.")
+    Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6). Dry-run mode: returns snapshot without persisting.")
+    Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
+}
+
+ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects.")
+
+Rel(conflict_pair, conflict_resolver, "candidate pairs")
+Rel(specificity_scorer, conflict_resolver, "specificity scores")
+Rel(conflict_resolver, snapshot_assembler, "resolved nodes (winner per conflict pair) + ConflictArtifact records")
+Rel(provenance_recorder, snapshot_assembler, "frozen env + lineage metadata")
+Rel(snapshot_assembler, cgir_store, "immutable CG-IR snapshot", "Content-addressed")
+
+@enduml

@@ -20,7 +20,7 @@ title Selma -- FindingFsmEngine Component Diagram
 Container_Boundary(fsm, "FindingFsmEngine") {
     Component(capability_checker, "CapabilityChecker", "Python", "Verifies actor holds required capability for requested transition (S-34).")
     Component(sod_enforcer, "SegregationOfDutiesEnforcer", "Python", "finding.waive: actor not in creator_provenance (S-29, S-32). finding.approve_remediation: actor != evidence submitter (S-14a, S-33).")
-    Component(fsm_state_machine, "FsmStateMachine", "Python", "10 states, 11 transitions per SPEC 3.1. Created->Open (auto), Open->Acknowledged, Open->Dismissed, Open->Waived, Acknowledged->Evidence Submitted, Evidence Submitted->Pending Verification (auto), Pending Verification->Verified, Pending Verification->Rejected, Rejected->Open, Verified->Closed (auto), Waived->Closed (auto).")
+    Component(fsm_state_machine, "FsmStateMachine", "Python", "10 states, 11 transitions per SPEC 3.1. Created->Open (auto), Open->Acknowledged, Open->Dismissed, Open->Waived, Acknowledged->Evidence Submitted, Evidence Submitted->Pending Verification (auto), Pending Verification->Verified, Pending Verification->Rejected, Rejected->Open, Verified->Closed (auto), Waived->Closed (auto). Closed and Dismissed are terminal states with no outgoing transitions. Concurrency handled via HLC-ordering: read-before-write race detected post-hoc via HLC tuple ordering; conflicting transitions rejected on append.")
     Component(hlc_clock, "HlcClockManager", "Python", "physical_time -> logical_counter -> node_id -> event_id. Per-node non-decreasing. Absorbs wall clock regression (3.3).")
     Component(event_hasher, "EventHasher", "Python", "SHA-256(event payload). Ensures event integrity. Append-only guarantee.")
     Component(event_appender, "EventAppender", "Python", "Atomic append to Finding Event Stream. HLC total order. No mutation, no deletion.")
@@ -28,9 +28,9 @@ Container_Boundary(fsm, "FindingFsmEngine") {
     Component(denial_handler, "DenialHandler", "Python", "403 CapabilityDenied. No partial state mutation. FSM state unchanged. Audit entry recorded.")
 }
 
-Container(api_gateway_ext, "ApiGateway", "FastAPI", "Dispatches finding transition requests (capability gate #4).")
+Container(api_gateway_ext, "ApiGateway", "FastAPI", "Dispatches finding transition requests (AA-04 Segregation of Duties).")
 ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered finding lifecycle events.")
-ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries: denials, transition attempts, SoD violations (S-32, S-33, S-34). Separate retention policy.")
+ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries: denials, transition attempts, SoD violations (S-32, S-33, S-34). Separate retention policy. [security: SHA-256 hash chain, tamper-evident, append-only]")
 
 Rel(api_gateway_ext, capability_checker, "transition request (actor, capability, finding_id, target_state, comments)", "Internal")
 Rel(capability_checker, sod_enforcer, "capability held")

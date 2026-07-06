@@ -8,7 +8,7 @@
 ' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.13, 3.1-3.4, docs/User-Story/User_Stories.md Core Architecture
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 18 elements -- cross-cutting overview of all subsystems (3 actors + 12 containers/stores + 2 external + 1 system)
+' SIM-01 EXCEPTION: 17 elements -- cross-cutting overview of all subsystems (3 actors + 12 containers/stores + 2 external)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !include ./common/c4_styles.puml
@@ -41,7 +41,7 @@ System_Boundary(selma, "Selma") {
         ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered finding lifecycle events. event_hash chain (3.1, 3.3).")
         ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries: denials, transition attempts, SoD violations (S-32, S-33, S-34). Separate retention.")
         ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots, pipeline traces, system state hashes (2.13).")
-        ContainerDb(frozen_env, "FrozenEnvConfig", "Configuration", "Pinned: engine version, toolchain hash, AI model hashes (2.7). Content-addressed configuration.")
+        Container(frozen_env, "FrozenEnvConfig", "Configuration", "Pinned: engine version, toolchain hash, AI model hashes (2.7). Content-addressed configuration file — not a deployable unit.")
     }
 
     Container_Boundary(runtime, "Runtime Layer") {
@@ -58,14 +58,12 @@ Rel(regulatory_official, api_gateway, "directive.*, finding.*, analytics.*, conf
 Rel(compliance_rep, api_gateway, "inspection.*, finding.acknowledge, evidence.submit, analytics.view", "HTTPS")
 Rel(system_actor, api_gateway, "inspection.submit, finding.view, analytics.view", "HTTPS")
 
-Rel(api_gateway, directive_mgr, "directive mutations", "Internal")
+Rel(api_gateway, directive_mgr, "directive mutations, read queries", "Internal")
 Rel(api_gateway, inspection_pipeline, "inspection.submit", "Internal")
 Rel(api_gateway, finding_fsm, "finding transitions", "Internal")
 Rel(api_gateway, finding_fsm, "finding.explain — causal chain traversal (S-16)", "Internal")
 Rel(api_gateway, analytics_engine, "analytics queries", "Internal")
-Rel(api_gateway, directive_store, "read queries", "SQL")
-Rel(api_gateway, cgir_store, "read queries, verification queries (S-22, S-23, S-24)", "Content-addressed")
-Rel(api_gateway, compilation_engine, "conflict.resolve (AA-05, S-05, S-28)", "Internal")
+Rel(api_gateway, compilation_engine, "conflict.resolve (AA-05, S-05, S-28), verification queries (S-22, S-23, S-24)", "Internal")
 Rel(api_gateway, compilation_engine, "impact-preview / dry-run (S-09), audit requests (S-21, S-27, S-31)", "Internal")
 
 Rel(directive_mgr, directive_store, "persists directive graph", "SQL")
@@ -78,6 +76,7 @@ Rel(compilation_engine, cgir_store, "CG-IR snapshot (immutable)", "Content-addre
 Rel(inspection_pipeline, cgir_store, "reads frozen CG-IR snapshot", "Content-addressed")
 Rel(inspection_pipeline, finding_event_store, "writes findings", "Append-only")
 Rel(inspection_pipeline, execution_artifact_store, "writes inspection snapshots", "Object PUT")
+Rel(api_gateway, execution_artifact_store, "reads inspection snapshots, pipeline traces (S-10, S-16)", "Object GET")
 Rel(finding_event_store, inspection_pipeline, "prior findings for context aggregation", "Read-only")
 
 Rel(finding_fsm, finding_event_store, "appends transition events", "Append-only")
@@ -85,5 +84,7 @@ Rel(finding_fsm, audit_event_store, "appends audit entries (denials, SoD violati
 Rel(finding_event_store, finding_fsm, "current state, creator_provenance, evidence history", "Read-only")
 
 Rel(analytics_engine, finding_event_store, "reads aggregates (pre-computed)", "Read-only")
+
+Rel(ci_pipeline, compilation_engine, "AA-02 gate: static analysis, policy prohibition check on runtime code", "CI/CD")
 
 @enduml

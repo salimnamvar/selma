@@ -1,14 +1,13 @@
 ' ============================================================
-' Title:     Selma -- CompilationEngine Component Diagram
+' Title:     Selma -- CompilationEngine Component Overview
 ' Boundary:  CompilationEngine
-' Purpose:   Three-pass validation, hermetic boundary, compilation core, AA gate enforcement with 27 components
+' Purpose:   High-level view of compilation subsystems — delegates detail to 4 focused diagrams
 ' Milestone: v2.0.0
 ' Version:   2.0.0
 ' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 27 elements -- complete CompilationEngine internals (validators + hermetic + AA gates + conflict resolution + core + error + external)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !include ./common/c4_styles.puml
@@ -16,92 +15,35 @@
 
 LAYOUT_WITH_LEGEND()
 
-title Selma -- CompilationEngine Component Diagram
+title Selma -- CompilationEngine Component Overview
 
 Container_Boundary(compilation, "CompilationEngine") {
 
-    Component(js_validator, "JsonSchemaValidator", "Python", "First-pass filter against Draft-07 schema. Field types, array bounds. if/then secondary filter (2.9).")
+    Boundary(val_pass, "Validation Pass") {
+        Component(js_validator, "JsonSchemaValidator", "Python", "Three-pass validation pipeline with AA-02 gate enforcement. See c4_selma_component_compilation_validation.puml.")
+    }
 
-    Component(ast_discriminator, "AstDiscriminatorWalker", "Python", "evaluator_type + config verification. Recursive oneOf. Cross-type leakage check. Normative gate (2.9, S-27, S-31).")
-    Component(complexity_walker, "EvaluatorComplexityWalker", "Python", "Depth <= 32, nodes <= 256, width <= 64, pattern <= 4096 chars, metadata <= 16 KiB (S-27).")
-    Component(lineage_dag_val, "LineageDagValidator", "Python", "Cycle detection (DFS), depth bound (<= 64), parent existence, operation consistency, temporal ordering, no self-reference (2.2.3).")
-    Component(ref_validator, "ReferenceValidator", "Python", "RE2 canary vectors (9.2.6), UTC-only timestamps, finite numerics (no NaN/infinity), regex flags whitelist {i,m,s}, NFC normalization (S-21, S-31).")
-    Component(policy_ver_checker, "PolicyVersionChecker", "Python", "major(policy_contract_version) == major(policy.version). Cross-file consistency (1.2 Rule 7).")
+    Boundary(core, "Core Compilation") {
+        Component(identity_resolver, "IdentityResolver", "Python", "Hermetic compilation core: identity, transformation, hashing, incremental. See c4_selma_component_compilation_core.puml.")
+    }
 
-    Component(cross_field_val, "CrossFieldValidator", "Python", "scope + priority consistency, depends_on acyclicity, conflicts_with candidate pairs.")
+    Boundary(conflict, "Conflict Resolution") {
+        Component(conflict_resolver, "ConflictResolver", "Python", "Deterministic conflict resolution, snapshot assembly, provenance. See c4_selma_component_compilation_conflict.puml.")
+    }
 
-    Component(frozen_env_mgr, "FrozenEnvManager", "Python", "Pins: engine, toolchain, AI models, OS/runtime. Computes frozen_env_hash (2.7).")
-
-    Component(concurrency_mgr, "ConcurrencyManager", "Python", "Read lock for compilation only. Writer-preference FIFO. DirectiveManager has its own concurrency control (not shown here).")
-    Component(identity_resolver, "IdentityResolver", "Python", "lineage_id assignment, execution_id generation. Merge: lexmin lineage. Fork/Split: inherit lineage (2.2, 2.3).")
-    Component(rule_to_node, "RuleToNodeMapper", "Python", "2.8.1 transform table: message -> description, weight -> severity_default, evaluator_type+config -> evaluator, target -> scope.target_type.")
-    Component(param_merger, "ParameterMerger", "Python", "Shallow merge: parameters -> evaluator.config override (2.8.1).")
-    Component(dep_graph, "DependencyGraphBuilder", "Python", "Topological sort, depends_on -> edges, acyclicity verification.")
-    Component(conflict_pair, "ConflictPairGenerator", "Python", "Consumes conflicts_with, generates candidate pairs, records in snapshot metadata (2.8.4, 2.15.1).")
-    Component(specificity_scorer, "ScopeSpecificityScorer", "Python", "scope_specificity_score x 100 + count_bound_fields (2.8.2, 2.15).")
-    Component(conflict_resolver, "ConflictResolver", "Python", "Precedence chain: explicit conflict_resolution -> compatible_overrides() -> priority_level -> specificity_score -> created_at recency -> ConflictArtifact. DFS cycle detection. defer_to resolution (2.15).")
-    Component(hash_computer, "HashComputer", "Python", "semantic_hash (11 fields), presentation_hash (3 fields), node_hash = compose both. Canonical JSON, sorted keys, SHA-256 (2.6).")
-    Component(edge_hasher, "EdgeHashComputer", "Python", "SHA-256({source, target}). Directional. Node-content independent (2.6).")
-    Component(inc_compilation, "IncrementalCompilationManager", "Python", "Dirty marking by lineage_id, transitive dependent marking, cache lookup by semantic_hash, reuse unchanged node_hashes (2.6).")
-    Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6). In dry-run mode: returns snapshot without persisting to CgIrStore.")
-    Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
-    Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures (Pass 1 + Pass 2). Returns SchemaError to caller. Any FAIL stops pipeline.")
-    Component(policy_blocker, "PolicyAccessBlocker", "Python", "AA-02 gate:Validates NO runtime access to policy_doctrine.yaml. Static analysis hooks for CI/CD (S-30). Boot-time assertions. Authoring-time only validation.")
-    Component(aa_gate_validator, "AAGateValidator", "Python", "Validates all AA-01 through AA-07 gates: AA-01 (Mediated Feedback), AA-02 (Policy Runtime Prohibition), AA-03 (Evaluator Purity), AA-04 (Segregation of Duties), AA-05 (Conflict Resolution Determinism), AA-06 (Discriminator Completeness), AA-07 (Portable Serialization).")
+    Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures. Returns SchemaError. Any FAIL stops pipeline.")
 }
 
 ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects.")
 ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph source of truth.")
 Container(directive_mgr_ext, "DirectiveManager", "Python", "Triggers compilation on directive mutation (Authoring Layer).")
 
-Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
-Rel(directive_store, policy_ver_checker, "authoring-time only", "SQL")
-
-Rel(js_validator, ast_discriminator, "PASS")
-Rel(js_validator, complexity_walker, "PASS")
-Rel(js_validator, lineage_dag_val, "PASS")
-Rel(js_validator, ref_validator, "PASS")
-Rel(js_validator, policy_ver_checker, "PASS")
-Rel(ast_discriminator, cross_field_val, "PASS")
-Rel(complexity_walker, cross_field_val, "PASS")
-Rel(lineage_dag_val, cross_field_val, "PASS")
-Rel(ref_validator, cross_field_val, "PASS")
-Rel(policy_ver_checker, cross_field_val, "PASS")
-
-Rel(cross_field_val, concurrency_mgr, "ALL PASS")
-
-Rel(frozen_env_mgr, provenance_recorder, "pinned config")
-
-Rel(concurrency_mgr, identity_resolver, "read lock acquired")
-Rel(identity_resolver, rule_to_node, "validated rules")
-Rel(rule_to_node, param_merger, "mapped rules")
-Rel(param_merger, dep_graph, "merged parameters")
-Rel(dep_graph, conflict_pair, "DAG structure")
-Rel(dep_graph, specificity_scorer, "all nodes")
-Rel(conflict_pair, conflict_resolver, "candidate pairs")
-Rel(specificity_scorer, conflict_resolver, "specificity scores")
-Rel(conflict_resolver, hash_computer, "resolved nodes (winner per conflict pair)")
-Rel(conflict_resolver, snapshot_assembler, "ConflictArtifact records (if any)")
-Rel(hash_computer, inc_compilation, "node hashes")
-Rel(dep_graph, edge_hasher, "node references")
-Rel(edge_hasher, inc_compilation, "edge hashes")
-Rel(inc_compilation, snapshot_assembler, "assembled node/edge hashes")
-Rel(provenance_recorder, snapshot_assembler, "frozen env + lineage metadata")
-
-Rel(snapshot_assembler, cgir_store, "immutable CG-IR snapshot", "Content-addressed")
-Rel(inc_compilation, cgir_store, "reads previous snapshot for reuse", "Content-addressed")
-Rel(frozen_env_mgr, concurrency_mgr, "hermetic boundary config", "Internal")
-Rel(directive_mgr_ext, concurrency_mgr, "compilation trigger (on mutation or on-demand)", "Internal")
-Rel(policy_blocker, aa_gate_validator, "AA-02 validation", "Internal")
-Rel(aa_gate_validator, js_validator, "all AA gates passed", "Internal")
-Rel(policy_blocker, js_validator, "policy runtime prohibition check", "Internal")
-Rel(js_validator, error_handler, "FAIL: SchemaError")
-Rel(aa_gate_validator, error_handler, "FAIL: AA Gate Violation")
-Rel(ast_discriminator, error_handler, "FAIL: ValidationError")
-Rel(complexity_walker, error_handler, "FAIL: ValidationError")
-Rel(lineage_dag_val, error_handler, "FAIL: ValidationError")
-Rel(ref_validator, error_handler, "FAIL: ValidationError")
-Rel(policy_ver_checker, error_handler, "FAIL: ValidationError")
-Rel(cross_field_val, error_handler, "FAIL: ValidationError")
+Rel(directive_store, val_pass, "directive graph (read lock)", "SQL")
+Rel(directive_mgr_ext, core, "compilation trigger", "Internal")
+Rel(val_pass, core, "validated rules (ALL PASS)")
+Rel(core, conflict, "mapped nodes + dependency graph")
+Rel(conflict, cgir_store, "immutable CG-IR snapshot", "Content-addressed")
+Rel(val_pass, error_handler, "FAIL: validation errors")
+Rel(conflict, cgir_store, "reads previous snapshot (incremental)", "Content-addressed")
 
 @enduml
