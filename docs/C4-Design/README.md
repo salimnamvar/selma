@@ -1,20 +1,20 @@
 # Selma -- C4 Architecture Diagrams
 
-**Version:** 2.2.0
+**Version:** 8.2.4
 **Date:** 2026-07-06
 **Contract Alignment:** 8.2.4
-**Status:** Enhanced Design — audit v2.1.0 remediated
+**Status:** Enhanced Design — audit v2.1.0 remediated with AA gate enforcement
 
 ## Diagram Inventory
 
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| Context | `c4_selma_context.puml` | Context | 6 | System boundary, actors, external dependencies, policy prohibition |
-| Container | `c4_selma_container.puml` | Container | 17 | Deployable units organized by 5 layers |
-| CompilationEngine | `c4_selma_component_compilation.puml` | Component | 24 | Three-pass validation, hermetic boundary, compilation core |
-| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 15 | DAG execution, fault taxonomy, finding aggregation |
-| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 8 | State machine with SoD enforcement, audit trail, and separate audit store |
-| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 9 | Content-addressed storage with deduplication and lineage tracing |
+| Context | `c4_selma_context.puml` | Context | 6 | System boundary, actors, external dependencies, policy prohibition (AA-02) |
+| Container | `c4_selma_container.puml` | Container | 18 | Deployable units organized by 5 layers with AA gate enforcement |
+| CompilationEngine | `c4_selma_component_compilation.puml` | Component | 27 | Three-pass validation, hermetic boundary, compilation core, AA-02, AA-05, AA-06, AA-07 gates |
+| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 15 | DAG execution, fault taxonomy, finding aggregation (AA-03 gate) |
+| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 8 | State machine with SoD enforcement (AA-04 gate), audit trail, and separate audit store |
+| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 9 | Content-addressed storage with deduplication and lineage tracing (AA-06, AA-07) |
 
 ## Component Inventory
 
@@ -46,7 +46,7 @@
 | FindingEventStore | Append-Only Log | Container | HLC-ordered finding lifecycle events |
 | AuditEventStore | Append-Only Log | Container | Security audit entries: denials, transition attempts (S-32, S-33, S-34) |
 | ExecutionArtifactStore | Object Store | Container | Immutable inspection snapshots |
-| FrozenEnvConfig | Configuration | Container | Pinned environment configuration |
+| FrozenEnvConfig | Configuration | Container | Pinned environment configuration (Content-addressed) |
 
 ### External Systems
 
@@ -55,7 +55,7 @@
 | CICDPipeline | System_Ext | Context | Scans runtime source for policy references |
 | PolicyDocument | System_Ext | Context | Governance intent. Authoring-time ONLY |
 
-### Compilation Engine Components (22)
+### Compilation Engine Components (27)
 
 | Name | Container | Pass | Description |
 | :--- | :--- | :--- | :--- |
@@ -81,6 +81,8 @@
 | SnapshotAssembler | CompilationEngine | Core | Snapshot assembly, hash computation, dry-run support |
 | ProvenanceRecorder | CompilationEngine | Core | Frozen env and lineage provenance |
 | ErrorHandler | CompilationEngine | Error | Aggregates validation failures, returns SchemaError |
+| PolicyAccessBlocker | CompilationEngine | AA-02 | Validates NO runtime access to policy_doctrine.yaml. Static analysis hooks for CI/CD (S-30). |
+| AAGateValidator | CompilationEngine | AA-01-07 | Validates all AA-01 through AA-07 gates: Mediated Feedback, Policy Runtime Prohibition, Evaluator Purity, SoD, Conflict Resolution Determinism, Discriminator Completeness, Portable Serialization. |
 
 ### Inspection Pipeline Components (12)
 
@@ -129,24 +131,50 @@
 
 ```
 RegulatoryOfficial / ComplianceRepresentative / System
-    -> ApiGateway (capability checking, segregation of duties)
+    -> ApiGateway (AA-01 Mediated Feedback, capability checking, segregation of duties)
         -> DirectiveManager (CRUD + identity lifecycle)
             -> DirectiveStore (PostgreSQL)
-        -> CompilationEngine (hermetic compilation, sole ConflictResolver)
-            -> FrozenEnvConfig (pinned environment)
-            -> CgIrStore (content-addressed)
-        -> InspectionPipeline (DAG execution, no runtime conflict resolution)
+        -> CompilationEngine (hermetic compilation, AA-02 Policy Runtime Prohibition enforcement)
+            -> FrozenEnvConfig (pinned environment, content-addressed)
+            -> CgIrStore (content-addressed, AA-06 Discriminator Completeness, AA-07 Portable Serialization)
+        -> InspectionPipeline (AA-03 Evaluator Purity, DAG execution, no runtime conflict resolution)
             -> CgIrStore (read)
             -> ExecutionArtifactStore (write)
             -> FindingEventStore (write findings)
-        -> FindingFsmEngine (lifecycle state machine)
+        -> FindingFsmEngine (AA-04 Segregation of Duties, lifecycle state machine)
             -> FindingEventStore (lifecycle events)
             -> AuditEventStore (security audit entries)
         -> AnalyticsEngine (read-only aggregates)
             -> FindingEventStore (read)
-    <- CICDPolicyPipeline (static analysis, prohibition enforcement)
-    x  PolicyDocument (PROHIBITED at runtime)
+    <- CICDPolicyPipeline (static analysis, AA-02 prohibition enforcement)
+    x  PolicyDocument (PROHIBITED at runtime - AA-02 gate enforced)
 ```
+
+## Architectural Audit (AA) Gates
+
+The C4 design now explicitly implements all 7 Architectural Audit gates from User_Stories.md S-30:
+
+| AA Gate | Name | Implementation | Spec Reference |
+|---------|------|----------------|----------------|
+| AA-01 | Mediated Feedback | ApiGateway request/response mediation | §1.2 Rule 6 |
+| AA-02 | Policy Runtime Prohibition | PolicyAccessBlocker component + CI/CD Pipeline enforcement | §1.2 Rule 7 |
+| AA-03 | Evaluator Purity | EvaluatorPool pure functions, no IO, no randomness | §2.9 |
+| AA-04 | Segregation of Duties | SegregationOfDutiesEnforcer component | §3.1-3.4, S-29, S-32, S-33 |
+| AA-05 | Conflict Resolution Determinism | ConflictResolver component + compiled_at exclusion | §2.15 |
+| AA-06 | Discriminator Completeness | AstDiscriminatorWalker component | §2.9, S-27, S-31 |
+| AA-07 | Portable Serialization | Snapshot serialization with excluded compiled_at | §2.6, §2.13 |
+
+## Version Synchronization Matrix
+
+C4-Design.md is now part of the version synchronization matrix per SPECIFICATION.md §1.2:
+
+| Document | Version | Synchronization Status |
+|----------|---------|---------------------|
+| SPECIFICATION.md | 8.2.4 | Canonical |
+| rule_schema.json | 8.2.4 | Synchronized |
+| policy_doctrine.yaml | 8.2.4 | Synchronized |
+| User_Stories.md | 8.2.4 | Synchronized |
+| C4-Design/README.md | 8.2.4 | Synchronized ✅ |
 
 ## Validation
 

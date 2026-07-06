@@ -1,16 +1,17 @@
 ' ============================================================
 ' Title:     Selma -- CompilationEngine Component Diagram
 ' Boundary:  CompilationEngine
-' Purpose:   Three-pass validation, hermetic boundary, and compilation core with 18 components
-' Milestone: v1.0.0
-' Version:   1.2.0
+' Purpose:   Three-pass validation, hermetic boundary, compilation core, AA gate enforcement with 27 components
+' Milestone: v2.0.0
+' Version:   2.0.0
 ' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16
-' Review:    Accepted — 2026-07-06
+' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
+' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 25 elements -- complete CompilationEngine internals (validators + hermetic + conflict resolution + core + error + external)
+' SIM-01 EXCEPTION: 27 elements -- complete CompilationEngine internals (validators + hermetic + AA gates + conflict resolution + core + error + external)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
 !theme plain
 
 LAYOUT_WITH_LEGEND()
@@ -45,6 +46,8 @@ Container_Boundary(compilation, "CompilationEngine") {
     Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6). In dry-run mode: returns snapshot without persisting to CgIrStore.")
     Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
     Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures (Pass 1 + Pass 2). Returns SchemaError to caller. Any FAIL stops pipeline.")
+    Component(policy_blocker, "PolicyAccessBlocker", "Python", "AA-02 gate:Validates NO runtime access to policy_doctrine.yaml. Static analysis hooks for CI/CD (S-30). Boot-time assertions. Authoring-time only validation.")
+    Component(aa_gate_validator, "AAGateValidator", "Python", "Validates all AA-01 through AA-07 gates: AA-01 (Mediated Feedback), AA-02 (Policy Runtime Prohibition), AA-03 (Evaluator Purity), AA-04 (Segregation of Duties), AA-05 (Conflict Resolution Determinism), AA-06 (Discriminator Completeness), AA-07 (Portable Serialization).")
 }
 
 ContainerDb(cgir_store, "CgIrStore", "CAS", "Immutable CG-IR snapshots and shared node objects.")
@@ -53,13 +56,6 @@ Container(directive_mgr_ext, "DirectiveManager", "Python", "Triggers compilation
 
 Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
 Rel(directive_store, policy_ver_checker, "authoring-time only", "SQL")
-
-note right of directive_mgr_ext
-  Sole compilation trigger.
-  Acquires read lock on DirectiveStore,
-  then passes locked graph to engine.
-  On mutation or on-demand (S-09 dry-run).
-end note
 
 Rel(js_validator, ast_discriminator, "PASS")
 Rel(js_validator, complexity_walker, "PASS")
@@ -96,7 +92,11 @@ Rel(snapshot_assembler, cgir_store, "immutable CG-IR snapshot", "Content-address
 Rel(inc_compilation, cgir_store, "reads previous snapshot for reuse", "Content-addressed")
 Rel(frozen_env_mgr, concurrency_mgr, "hermetic boundary config", "Internal")
 Rel(directive_mgr_ext, concurrency_mgr, "compilation trigger (on mutation or on-demand)", "Internal")
+Rel(policy_blocker, aa_gate_validator, "AA-02 validation", "Internal")
+Rel(aa_gate_validator, js_validator, "all AA gates passed", "Internal")
+Rel(policy_blocker, js_validator, "policy runtime prohibition check", "Internal")
 Rel(js_validator, error_handler, "FAIL: SchemaError")
+Rel(aa_gate_validator, error_handler, "FAIL: AA Gate Violation")
 Rel(ast_discriminator, error_handler, "FAIL: ValidationError")
 Rel(complexity_walker, error_handler, "FAIL: ValidationError")
 Rel(lineage_dag_val, error_handler, "FAIL: ValidationError")

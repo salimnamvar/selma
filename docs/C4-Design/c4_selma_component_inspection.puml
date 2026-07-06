@@ -2,15 +2,16 @@
 ' Title:     Selma -- InspectionPipeline Component Diagram
 ' Boundary:  InspectionPipeline
 ' Purpose:   DAG execution with fault taxonomy, finding aggregation, and snapshot serialization
-' Milestone: v1.0.0
-' Version:   1.2.0
+' Milestone: v2.0.0
+' Version:   2.0.0
 ' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7
-' Review:    Accepted — 2026-07-06
+' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7, AA-03 gate
+' Review:    Enhanced — 2026-07-06
 ' ============================================================
 ' SIM-01 EXCEPTION: 15 elements -- complete InspectionPipeline internals (1 external + 2 input + 6 DAG + 4 output + 3 stores)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
 !theme plain
 
 LAYOUT_WITH_LEGEND()
