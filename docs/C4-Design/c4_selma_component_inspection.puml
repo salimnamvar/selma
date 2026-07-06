@@ -6,7 +6,7 @@
 ' Version:   1.2.0
 ' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7
-' Review:    pending
+' Review:    Accepted — 2026-07-06
 ' ============================================================
 ' SIM-01 EXCEPTION: 16 elements -- complete InspectionPipeline internals (1 external + 2 input + 6 DAG + 5 output + 3 stores)
 @startuml

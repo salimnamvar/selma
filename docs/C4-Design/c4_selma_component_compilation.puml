@@ -6,7 +6,7 @@
 ' Version:   1.2.0
 ' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 2.4-2.9, 2.15, 2.16
-' Review:    pending
+' Review:    Accepted — 2026-07-06
 ' ============================================================
 ' SIM-01 EXCEPTION: 25 elements -- complete CompilationEngine internals (validators + hermetic + conflict resolution + core + error + external)
 @startuml
