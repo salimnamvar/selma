@@ -18,7 +18,7 @@ LAYOUT_WITH_LEGEND()
 title Selma -- TraceabilityQueryService Component Diagram
 
 Container_Boundary(traceability_query, "TraceabilityQueryService") {
-    Component(query_capability_gate, "QueryCapabilityGate", "Python", "Stage-local gate. Enforces finding.view, analytics.view, and conflict.resolve before read-side execution. No store reads before authorization (3.2, S-34).")
+    Component(query_capability_gate, "QueryCapabilityGate", "Python", "Stage-local gate. Enforces finding.view and conflict.resolve before read-side execution. No store reads before authorization (3.2, S-34).")
     Component(query_router, "QueryRouter", "Python", "Routes explanation, lineage history, consistency review, and governance audit requests to the correct handler.")
     Component(explanation_query, "ExplanationQueryHandler", "Python", "Builds the causal chain Finding -> Control Node -> Directive -> Revision -> Scope from frozen artifacts and current finding state (S-16).")
     Component(lineage_history_query, "LineageHistoryQueryHandler", "Python", "Returns active directives, revision history, and fork/merge/split provenance by lineage_id (S-04, S-07).")

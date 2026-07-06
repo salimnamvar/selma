@@ -1,0 +1,40 @@
+' ============================================================
+' Title:     Selma -- DirectiveManager Component Diagram
+' Boundary:  DirectiveManager
+' Purpose:   CRUD operations, identity lifecycle, and compilation orchestration
+' Milestone: v2.0.0
+' Version:   2.0.0
+' Contract:  8.2.4
+' Source:    docs/Regulation/SPECIFICATION.md 2.2-2.5, 3.4, docs/User-Story/User_Stories.md S-01, S-02, S-03, S-08, S-19, S-20, S-26
+' Review:    Enhanced — 2026-07-06
+' ============================================================
+@startuml c4_selma_component_directive
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- DirectiveManager Component Diagram
+
+Container_Boundary(directive_mgr, "DirectiveManager") {
+    Component(directive_capability_gate, "DirectiveCapabilityGate", "Python", "Verifies actor holds required capability for directive mutations (S-34). Checks directive.create, directive.update, directive.fork, directive.merge, directive.split, directive.retire, directive.restore.")
+    Component(directive_command_handler, "DirectiveCommandHandler", "Python", "Routes CRUD operations: create, update, fork, merge, split, retire, restore. Enforces identity lifecycle rules per SPECIFICATION.md 2.2-2.5.")
+    Component(identity_lifecycle, "IdentityLifecycleManager", "Python", "lineage_id assignment, execution_id generation, merge: lexmin lineage, fork/split: inherit lineage (2.2, 2.3).")
+    Component(version_manager, "DirectiveVersionManager", "Python", "Tracks directive versions, revision history, and lineage provenance (2.5, 3.4).")
+    Component(compilation_orchestrator, "CompilationOrchestrator", "Python", "Triggers compilation on directive mutation. Manages read-lock coordination with CompilationEngine.")
+}
+
+Container(api_gateway_ext, "ApiGateway", "FastAPI", "Dispatches directive mutation requests.")
+ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph persistence.")
+Container(compilation_engine, "CompilationEngine", "Python", "Triggers compilation on directive mutation.")
+
+Rel(api_gateway_ext, directive_capability_gate, "directive mutation request (actor, capability, directive_id, operation)", "Internal")
+Rel(directive_capability_gate, directive_command_handler, "capability held")
+Rel(directive_command_handler, identity_lifecycle, "CRUD operation with identity rules")
+Rel(identity_lifecycle, version_manager, "versioned directive")
+Rel(version_manager, directive_store, "persists directive graph", "SQL")
+Rel(compilation_orchestrator, compilation_engine, "triggers compilation on mutation", "Internal")
+Rel(directive_store, compilation_orchestrator, "directive graph (read lock)", "SQL")
+
+@enduml

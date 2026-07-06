@@ -1,14 +1,14 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Shows Selma as a black box with its primary actors and operational system boundary
+' Purpose:   Shows Selma as a black box with its primary actors, operational system boundary, and compile-time contracts
 ' Milestone: v2.0.0
 ' Version:   2.1.0
 ' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities, S-30
+' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, 1.2, docs/User-Story/User_Stories.md Actors & Capabilities, S-30
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-@enduml c4_selma_context
+@startuml c4_selma_context
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -24,11 +24,15 @@ Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views 
 
 System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles directives into executable controls, evaluates targets, and manages finding lifecycle.")
 
+System_Ext(rule_schema, "rule_schema.json", "Compile-Time Contract", "Structural validation contract for directives. AA-06, AA-07 subject. NEVER accessed at runtime (1.2).")
+System_Ext(policy_doctrine, "policy_doctrine.yaml", "Compile-Time Contract", "Governance policy contract. AA-02 subject. MUST NOT be read during runtime (1.2).")
 System_Ext(cicd_pipeline, "CI/CD Pipeline", "External system. Runs AA gate certification (S-30), static analysis for AA-02 Policy Runtime Prohibition, and deployment validation.")
 
 Rel(regulatory_official, selma, "Author directives, view findings, waive/dismiss/resolve", "HTTPS")
 Rel(compliance_rep, selma, "Submit targets, acknowledge findings, submit evidence", "HTTPS")
 Rel(system_actor, selma, "Automated inspection, view findings", "HTTPS")
+Rel(rule_schema, selma, "structural validation (compile-time only)", "AA-06, AA-07")
+Rel(policy_doctrine, selma, "governance validation (compile-time only)", "AA-02")
 Rel(cicd_pipeline, selma, "AA gate certification, AA-02 static analysis, deployment validation", "CI/CD")
 
 @enduml

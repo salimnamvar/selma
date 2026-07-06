@@ -8,7 +8,7 @@
 ' Source:    docs/Regulation/SPECIFICATION.md 2.6, 2.2.2, 2.2.3, AA-06, AA-07 gates
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-@startuml
+@startuml c4_selma_component_cgir_store
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !include ./common/c4_styles.puml
 !theme plain

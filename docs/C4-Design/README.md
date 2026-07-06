@@ -3,14 +3,15 @@
 **Version:** 8.2.4
 **Date:** 2026-07-06
 **Contract Alignment:** 8.2.4
-**Status:** Enhanced Design — audit v2.1.0 remediated with PolicyAccessBlocker (AA-02), ArchitecturalAuditEngine, and CI/CD integration
+**Status:** Enhanced Design — audit v2.1.0 fully remediated: PlantUML framing fixed, compile-time contracts modeled, ConflictArtifactStore added, DirectiveManager decomposed, QueryCapabilityGate corrected
 
 ## Diagram Inventory
 
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | Context | `c4_selma_context.puml` | Context | 5 | System boundary, primary actors, and CI/CD pipeline integration |
-| Container | `c4_selma_container.puml` | Container | 18 | Operational runtime units organized by 7 layers (incl. Assurance) |
+| Container | `c4_selma_container.puml` | Container | 21 | Operational runtime units organized by 7 layers (incl. Assurance) |
+| DirectiveManager | `c4_selma_component_directive.puml` | Component | 5 | CRUD operations, identity lifecycle, and compilation orchestration |
 | CompilationEngine Overview | `c4_selma_component_compilation.puml` | Component | 10 | High-level view of compilation subsystems — delegates to 4 focused diagrams |
 | CompilationEngine — Validation | `c4_selma_component_compilation_validation.puml` | Component | 10 | Three-pass validation pipeline with normative compile-time validators |
 | CompilationEngine — Core | `c4_selma_component_compilation_core.puml` | Component | 9 | Hermetic compilation: identity, transformation, hashing, incremental |
@@ -53,13 +54,26 @@
 | FindingEventStore | Append-Only Log | Container | HLC-ordered finding lifecycle events |
 | AuditEventStore | Append-Only Log | Container | Security audit entries: denials, transition attempts (S-32, S-33, S-34) |
 | ExecutionArtifactStore | Object Store | Container | Immutable inspection snapshots |
+| ConflictArtifactStore | Append-Only Log | Container | Escalation records for unresolved conflicts (2.15) |
 
 ### External Systems
 
 | Name | Technology | C4 Level | Description |
 | :--- | :--- | :--- | :--- |
 | FrozenEnvConfig | Configuration File | External Artifact | Pinned environment configuration (Content-addressed). Not a deployable unit — external configuration consumed by CompilationEngine. |
+| rule_schema.json | JSON Schema | Compile-Time Contract | Structural validation contract for directives. AA-06, AA-07 subject. NEVER accessed at runtime (1.2). |
+| policy_doctrine.yaml | YAML | Compile-Time Contract | Governance policy contract. AA-02 subject. MUST NOT be read during runtime (1.2). |
 | CI/CD Pipeline | External System | Context | Runs AA gate certification (S-30), AA-02 Policy Runtime Prohibition static analysis, and deployment validation. |
+
+### DirectiveManager Components (5)
+
+| Name | Container | Description |
+| :--- | :--- | :--- |
+| DirectiveCapabilityGate | DirectiveManager | Verifies actor holds required capability for directive mutations (S-34) |
+| DirectiveCommandHandler | DirectiveManager | Routes CRUD operations: create, update, fork, merge, split, retire, restore |
+| IdentityLifecycleManager | DirectiveManager | lineage_id assignment, execution_id generation, merge: lexmin lineage |
+| DirectiveVersionManager | DirectiveManager | Tracks directive versions, revision history, and lineage provenance |
+| CompilationOrchestrator | DirectiveManager | Triggers compilation on directive mutation. Manages read-lock coordination |
 
 ### Compilation Engine Components (22)
 
@@ -149,12 +163,15 @@
 ```
 RegulatoryOfficial / ComplianceRepresentative / System
     -> ApiGateway (AA-01 Mediated Feedback, capability checking, segregation of duties)
-        -> DirectiveManager (CRUD + identity lifecycle)
+        -> DirectiveManager (CRUD + identity lifecycle, capability gate)
             -> DirectiveStore (PostgreSQL)
         -> CompilationEngine (hermetic compilation, frozen conflict metadata, deterministic snapshot assembly)
             <- FrozenEnvConfig (pinned environment, content-addressed)
+            <- rule_schema.json (structural validation, compile-time only, AA-06, AA-07)
+            <- policy_doctrine.yaml (governance validation, compile-time only, AA-02)
             -> PolicyAccessBlocker (AA-02 Policy Runtime Prohibition enforcement)
             -> CgIrStore (content-addressed, AA-06 Discriminator Completeness, AA-07 Portable Serialization)
+            -> ConflictArtifactStore (escalation records, compile-time only)
         -> InspectionPipeline (AA-03 Evaluator Purity, DAG execution, runtime conflict resolution over frozen inputs)
             -> CgIrStore (read)
             -> ExecutionArtifactStore (write)
@@ -168,6 +185,7 @@ RegulatoryOfficial / ComplianceRepresentative / System
             -> FindingEventStore (read)
             -> AuditEventStore (read)
             -> ExecutionArtifactStore (read)
+            -> ConflictArtifactStore (read)
         -> AnalyticsEngine (read-only aggregates)
             -> FindingEventStore (read)
     -> ArchitecturalAuditEngine (AA-01 through AA-07 certification per S-30)
@@ -228,6 +246,16 @@ C4-Design.md is now part of the version synchronization matrix per SPECIFICATION
 ## Traceability Matrix
 
 Comprehensive mapping from runtime C4 components to SPECIFICATION.md sections, User_Stories.md stories, and AA gates.
+
+### DirectiveManager
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| DirectiveCapabilityGate | directive | §3.2 | S-34 | — |
+| DirectiveCommandHandler | directive | §2.2-2.5 | S-01, S-02, S-03, S-08 | — |
+| IdentityLifecycleManager | directive | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
+| DirectiveVersionManager | directive | §2.5, §3.4 | S-01, S-02, S-03, S-08 | — |
+| CompilationOrchestrator | directive | §2.4 | S-01, S-02 | — |
 
 ### CompilationEngine
 

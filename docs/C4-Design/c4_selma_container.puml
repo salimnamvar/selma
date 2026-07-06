@@ -8,9 +8,9 @@
 ' Source:    docs/Regulation/SPECIFICATION.md 1.2, 2.1-2.15, 3.1-3.7, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 18 elements -- cross-cutting overview of operational subsystems
-' (3 actors + 13 internal units + 1 external configuration + 1 external system)
-@enduml c4_selma_container
+' SIM-01 EXCEPTION: 21 elements -- cross-cutting overview of operational subsystems
+' (3 actors + 14 internal units + 2 external configuration + 2 external systems)
+@startuml c4_selma_container
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -43,6 +43,7 @@ System_Boundary(selma, "Selma") {
         ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered finding lifecycle events. event_hash chain (3.1, 3.3).")
         ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries: denials, transition attempts, SoD violations (S-32, S-33, S-34). Separate retention.")
         ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots, pipeline traces, system state hashes (2.13).")
+        ContainerDb(conflict_artifact_store, "ConflictArtifactStore", "Append-Only Log", "Escalation records for unresolved conflicts. Remains open until human resolution (2.15).")
     }
 
     Container_Boundary(query, "Read-side Query Layer") {
@@ -61,6 +62,8 @@ System_Boundary(selma, "Selma") {
 }
 
 Container_Ext(frozen_env_cfg, "FrozenEnvConfig", "Configuration Artifact", "Pinned environment configuration consumed by CompilationEngine (2.7). Not a deployable runtime unit.")
+Container_Ext(rule_schema, "rule_schema.json", "Compile-Time Contract", "Structural validation contract for directives. AA-06, AA-07 subject. NEVER accessed at runtime (1.2).")
+Container_Ext(policy_doctrine, "policy_doctrine.yaml", "Compile-Time Contract", "Governance policy contract. AA-02 subject. MUST NOT be read during inspection, evaluation, FSM transitions, or conflict resolution at runtime (1.2).")
 System_Ext(cicd_pipeline, "CI/CD Pipeline", "External system. Runs static analysis, AA-02 Policy Access checks, and certification gates per S-30.")
 
 Rel(regulatory_official, api_gateway, "directive.*, finding.*, analytics.*, conflict.resolve", "HTTPS")
@@ -78,9 +81,13 @@ Rel(directive_mgr, directive_store, "persists directive graph", "SQL")
 Rel(directive_mgr, compilation_engine, "triggers compilation on mutation", "Internal")
 Rel(directive_store, compilation_engine, "directive graph (read lock)", "SQL")
 Rel(frozen_env_cfg, compilation_engine, "pinned config", "Configuration")
+Rel(rule_schema, compilation_engine, "structural validation (compile-time only)", "AA-06, AA-07")
+Rel(policy_doctrine, compilation_engine, "governance validation (compile-time only)", "AA-02")
+Rel(policy_doctrine, policy_access_blocker, "prohibition enforcement (compile-time only)", "AA-02")
 
 Rel(compilation_engine, policy_access_blocker, "validates runtime data paths at compile time", "Internal")
 Rel(compilation_engine, cgir_store, "CG-IR snapshot (immutable)", "Content-addressed")
+Rel(compilation_engine, conflict_artifact_store, "writes ConflictArtifact templates (compile-time only)", "Append-only")
 
 Rel(inspection_pipeline, cgir_store, "reads frozen CG-IR snapshot", "Content-addressed")
 Rel(inspection_pipeline, finding_event_store, "writes findings", "Append-only")
@@ -96,6 +103,7 @@ Rel(traceability_query, cgir_store, "reads control nodes, scopes, conflict metad
 Rel(traceability_query, finding_event_store, "reads finding history and current state", "Read-only")
 Rel(traceability_query, audit_event_store, "reads governance audit entries", "Read-only")
 Rel(traceability_query, execution_artifact_store, "reads inspection snapshots and pipeline traces", "Object GET")
+Rel(traceability_query, conflict_artifact_store, "reads conflict artifacts for consistency review and governance audit", "Read-only")
 
 Rel(analytics_engine, finding_event_store, "reads historical findings and aggregate views", "Read-only")
 
