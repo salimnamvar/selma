@@ -1,7 +1,8 @@
 # Selma -- C4 Architecture Diagrams
 
-**Version:** 2.0.0
+**Version:** 2.1.0
 **Date:** 2026-07-06
+**Contract Alignment:** 8.2.4
 **Status:** Enhanced Design
 
 ## Diagram Inventory
@@ -11,9 +12,9 @@
 | Context | `c4_selma_context.puml` | Context | 6 | System boundary, actors, external dependencies, policy prohibition |
 | Container | `c4_selma_container.puml` | Container | 16 | Deployable units organized by 5 layers |
 | CompilationEngine | `c4_selma_component_compilation.puml` | Component | 24 | Three-pass validation, hermetic boundary, compilation core |
-| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 15 | DAG execution, fault taxonomy, finding aggregation |
-| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 9 | State machine with SoD enforcement and audit trail |
-| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 11 | Content-addressed storage with deduplication and lineage tracing |
+| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 16 | DAG execution, fault taxonomy, finding aggregation |
+| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 8 | State machine with SoD enforcement and audit trail |
+| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 9 | Content-addressed storage with deduplication and lineage tracing |
 
 ## Component Inventory
 
@@ -78,7 +79,7 @@
 | SnapshotAssembler | CompilationEngine | Core | Snapshot assembly and hash computation |
 | ProvenanceRecorder | CompilationEngine | Core | Frozen env and lineage provenance |
 
-### Inspection Pipeline Components (12)
+### Inspection Pipeline Components (13)
 
 | Name | Container | Phase | Description |
 | :--- | :--- | :--- | :--- |

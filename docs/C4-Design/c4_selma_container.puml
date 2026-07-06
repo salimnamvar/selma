@@ -4,12 +4,13 @@
 ' Purpose:   Shows deployable units organized by layer: ingress, authoring, compilation, storage, runtime
 ' Milestone: v1.0.0
 ' Version:   1.1.0
+' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.13, 3.1-3.4, docs/User-Story/User_Stories.md Core Architecture
 ' Review:    pending
 ' ============================================================
 ' SIM-01 EXCEPTION: 16 elements -- cross-cutting overview of all subsystems (3 actors + 10 containers/stores + 2 external + 1 system)
 @startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !theme plain
 
 LAYOUT_WITH_LEGEND()
@@ -34,6 +35,13 @@ System_Boundary(selma, "Selma") {
         Container(compilation_engine, "CompilationEngine", "Python", "Hermetic boundary. Schema + custom validators. CG-IR generation. Incremental compilation (2.4, 2.7).")
         Container(frozen_env, "FrozenEnvConfig", "Configuration", "Pinned: engine version, toolchain hash, AI model hashes (2.7).")
     }
+
+    note right of frozen_env
+      FrozenEnvConfig is pinned configuration
+      consumed by FrozenEnvManager inside the
+      hermetic boundary (2.7). Defines the
+      reproducibility contract for compilation.
+    end note
 
     Container_Boundary(storage, "Storage Layer") {
         ContainerDb(cgir_store, "CgIrStore", "Content-Addressed Storage", "Immutable CG-IR snapshots. Node/edge deduplication (2.6).")

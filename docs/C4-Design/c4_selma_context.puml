@@ -4,11 +4,12 @@
 ' Purpose:   Shows Selma as a black box with its human and system actors, external dependencies, and policy prohibition
 ' Milestone: v1.0.0
 ' Version:   1.1.0
+' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities
 ' Review:    pending
 ' ============================================================
 @startuml
-!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.10.0/C4_Context.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
 !theme plain
 
 LAYOUT_LEFT_RIGHT()

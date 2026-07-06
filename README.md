@@ -27,8 +27,8 @@ Selma is **domain-agnostic** — it can be instantiated for regulatory complianc
 | Normative Specification (`SPECIFICATION.md`) | Complete | 8.2.4 |
 | Structural Schema (`rule_schema.json`) | Complete | 8.2.4 |
 | Governance Doctrine (`policy_doctrine.yaml`) | Complete | 8.2.4 |
-| User Stories (32 stories, 7 epics) | Complete | 8.2.4 |
-| C4 Architecture Diagrams | Complete | 1.0.0 |
+| User Stories (35 stories, 7 epics) | Complete | 8.2.4 |
+| C4 Architecture Diagrams | Complete | 2.1.0 |
 | Contract Validators | Complete | — |
 | **Implementation** | **Not started** | — |
 
@@ -84,12 +84,16 @@ selma/
 │   │   ├── policy_doctrine.yaml     # Governance intent (8.2.4)
 │   │   └── README.md                # Cross-layer binding & compatibility matrix
 │   ├── User-Story/
-│   │   └── User_Stories.md          # 32 user stories across 7 epics
+│   │   └── User_Stories.md          # 35 user stories across 7 epics
 │   └── C4-Design/                   # Architecture diagrams (PlantUML)
 │       ├── c4_selma_context.puml
 │       ├── c4_selma_container.puml
-│       ├── c4_selma_component.puml
-│       ├── common/c4_styles.puml
+│       ├── c4_selma_component_compilation.puml
+│       ├── c4_selma_component_inspection.puml
+│       ├── c4_selma_component_finding.puml
+│       ├── c4_selma_component_cgir_store.puml
+│       ├── common/
+│       │   └── c4_styles.puml          # Shared visual styling
 │       └── README.md                # Diagram conventions & rendering guide
 ├── src/selma/                   # Source scaffold (runtime not yet implemented)
 ├── tests/                       # Contract validation tests
@@ -141,7 +145,10 @@ Requires [PlantUML](https://plantuml.com/) and [C4-PlantUML](https://github.com/
 ```bash
 plantuml docs/C4-Design/c4_selma_context.puml
 plantuml docs/C4-Design/c4_selma_container.puml
-plantuml docs/C4-Design/c4_selma_component.puml
+plantuml docs/C4-Design/c4_selma_component_compilation.puml
+plantuml docs/C4-Design/c4_selma_component_inspection.puml
+plantuml docs/C4-Design/c4_selma_component_finding.puml
+plantuml docs/C4-Design/c4_selma_component_cgir_store.puml
 ```
 
 ---
@@ -168,7 +175,7 @@ plantuml docs/C4-Design/c4_selma_component.puml
 | [rule_schema.json](docs/Regulation/rule_schema.json) | Machine-readable JSON Schema projection |
 | [policy_doctrine.yaml](docs/Regulation/policy_doctrine.yaml) | Human authoring guidance (governance intent) |
 | [Regulation README](docs/Regulation/README.md) | Cross-layer binding, version compatibility matrix, audit corpus |
-| [User_Stories.md](docs/User-Story/User_Stories.md) | 32 behavioral user stories with traceability to spec invariants |
+| [User_Stories.md](docs/User-Story/User_Stories.md) | 35 behavioral user stories with traceability to spec invariants |
 | [C4 Design](docs/C4-Design/) | Context, container, and component diagrams (PlantUML) |
 
 ---
