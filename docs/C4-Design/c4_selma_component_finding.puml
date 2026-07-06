@@ -28,7 +28,8 @@ Container_Boundary(fsm, "FindingFsmEngine") {
 }
 
 Container(api_gateway_ext, "ApiGateway", "FastAPI", "Dispatches finding transition requests (capability gate #4).")
-ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream.")
+ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered finding lifecycle events.")
+ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries: denials, transition attempts, SoD violations (S-32, S-33, S-34). Separate retention policy.")
 
 Rel(api_gateway_ext, capability_checker, "transition request (actor, capability, finding_id, target_state, comments)", "Internal")
 Rel(capability_checker, sod_enforcer, "capability held")
@@ -46,7 +47,7 @@ Rel(capability_checker, audit_logger, "transition attempt")
 Rel(sod_enforcer, audit_logger, "SoD check result")
 Rel(denial_handler, audit_logger, "denial recorded")
 Rel(denial_handler, api_gateway_ext, "403 CapabilityDenied", "Internal")
-Rel(audit_logger, finding_event_store, "audit entries", "Append-only")
+Rel(audit_logger, audit_event_store, "audit entries", "Append-only")
 
 Rel(finding_event_store, fsm_state_machine, "reads current finding state", "Read-only")
 Rel(finding_event_store, sod_enforcer, "reads creator_provenance, evidence submitter history", "Read-only")

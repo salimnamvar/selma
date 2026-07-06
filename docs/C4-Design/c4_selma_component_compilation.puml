@@ -19,7 +19,7 @@ title Selma -- CompilationEngine Component Diagram
 
 Container_Boundary(compilation, "CompilationEngine") {
 
-    Component(js_validator, "JsonSchemaValidator", "Draft-07", "First-pass filter. Field types, array bounds. if/then secondary filter (2.9).")
+    Component(js_validator, "JsonSchemaValidator", "Python", "First-pass filter against Draft-07 schema. Field types, array bounds. if/then secondary filter (2.9).")
 
     Component(ast_discriminator, "AstDiscriminatorWalker", "Python", "evaluator_type + config verification. Recursive oneOf. Cross-type leakage check. Normative gate (2.9, S-27, S-31).")
     Component(complexity_walker, "EvaluatorComplexityWalker", "Python", "Depth <= 32, nodes <= 256, width <= 64, pattern <= 4096 chars, metadata <= 16 KiB (S-27).")
@@ -31,7 +31,7 @@ Container_Boundary(compilation, "CompilationEngine") {
 
     Component(frozen_env_mgr, "FrozenEnvManager", "Python", "Pins: engine, toolchain, AI models, OS/runtime. Computes frozen_env_hash (2.7).")
 
-    Component(concurrency_mgr, "ConcurrencyManager", "Python", "Read lock (compile), write lock (modify). Writer-preference FIFO. Deadlock prevention (3.4).")
+    Component(concurrency_mgr, "ConcurrencyManager", "Python", "Read lock for compilation only. Writer-preference FIFO. DirectiveManager has its own concurrency control (not shown here).")
     Component(identity_resolver, "IdentityResolver", "Python", "lineage_id assignment, execution_id generation. Merge: lexmin lineage. Fork/Split: inherit lineage (2.2, 2.3).")
     Component(rule_to_node, "RuleToNodeMapper", "Python", "2.8.1 transform table: message -> description, weight -> severity_default, evaluator_type+config -> evaluator, target -> scope.target_type.")
     Component(param_merger, "ParameterMerger", "Python", "Shallow merge: parameters -> evaluator.config override (2.8.1).")
@@ -42,7 +42,7 @@ Container_Boundary(compilation, "CompilationEngine") {
     Component(hash_computer, "HashComputer", "Python", "semantic_hash (11 fields), presentation_hash (3 fields), node_hash = compose both. Canonical JSON, sorted keys, SHA-256 (2.6).")
     Component(edge_hasher, "EdgeHashComputer", "Python", "SHA-256({source, target}). Directional. Node-content independent (2.6).")
     Component(inc_compilation, "IncrementalCompilationManager", "Python", "Dirty marking by lineage_id, transitive dependent marking, cache lookup by semantic_hash, reuse unchanged node_hashes (2.6).")
-    Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6).")
+    Component(snapshot_assembler, "SnapshotAssembler", "Python", "sorted node_hashes[], sorted edge_hashes[] + provenance -> cg_ir_snapshot_hash. compiled_at EXCLUDED (2.6). In dry-run mode: returns snapshot without persisting to CgIrStore.")
     Component(provenance_recorder, "ProvenanceRecorder", "Python", "engine_version, frozen_env_hash, directive_graph_version, lineage_validation result, creator_provenance mapping (2.6, 3.2).")
     Component(error_handler, "ErrorHandler", "Python", "Aggregates all validation failures (Pass 1 + Pass 2). Returns SchemaError to caller. Any FAIL stops pipeline.")
 }
@@ -53,6 +53,13 @@ Container(directive_mgr_ext, "DirectiveManager", "Python", "Triggers compilation
 
 Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
 Rel(directive_store, policy_ver_checker, "authoring-time only", "SQL")
+
+note right of directive_mgr_ext
+  Sole compilation trigger.
+  Acquires read lock on DirectiveStore,
+  then passes locked graph to engine.
+  On mutation or on-demand (S-09 dry-run).
+end note
 
 Rel(js_validator, ast_discriminator, "PASS")
 Rel(js_validator, complexity_walker, "PASS")

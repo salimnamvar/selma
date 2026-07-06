@@ -8,7 +8,7 @@
 ' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7
 ' Review:    Accepted — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 16 elements -- complete InspectionPipeline internals (1 external + 2 input + 6 DAG + 5 output + 3 stores)
+' SIM-01 EXCEPTION: 15 elements -- complete InspectionPipeline internals (1 external + 2 input + 6 DAG + 4 output + 3 stores)
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !theme plain
@@ -23,12 +23,11 @@ Container_Boundary(pipeline, "InspectionPipeline") {
 
     Component(dag_scheduler, "DagScheduler", "Python", "Topological sort, respects depends_on, parallel independent nodes (2.12).")
     Component(eval_dispatcher, "EvaluatorDispatcher", "Python", "Routes by evaluator type, passes (node, target, context), enforces per-node timeout (default 30s).")
-    Component(eval_pool, "EvaluatorPool", "Python", "Pure functions, no IO: regex, field_check, threshold, composite (2.9).")
+    Component(eval_pool, "EvaluatorPool", "Python", "Pure functions, no IO: regex, field_check, threshold, composite (2.9). Extensible via plugin registration — new evaluator types registered at startup without code changes.")
     Component(fault_classifier, "FaultTaxonomyClassifier", "Python", "Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption (2.12).")
     Component(skipped_tracker, "SkippedNodeTracker", "Python", "Records dependency-failed nodes. No finding generated. Skipped trace entry only. Prevents cascade false positives (2.12).")
 
     Component(finding_aggregator, "FindingAggregator", "Python", "Collects evaluator outcomes. Applies deontic semantics (2.8.3). Severity rules (2.9.1). Confidence threshold cap (confidence_severity_cap_threshold). Permission -> informational.")
-    Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Resolves concurrent finding conflicts during aggregation. Applies precedence chain per 2.15. Produces ConflictArtifact records for deferred human review.")
     Component(pipeline_tracer, "PipelineTraceRecorder", "Python", "Ordered array (2.16.1). Per-node: outcome, timing, fault classification, skipped status.")
     Component(snapshot_serializer, "InspectionSnapshotSerializer", "Python", "target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash (2.13).")
     Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env_hash, engine, target_hash). directive_version + frozen_env_hash from CG-IR snapshot provenance.")
@@ -53,8 +52,6 @@ Rel(eval_pool, fault_classifier, "timeout/error")
 Rel(fault_classifier, finding_aggregator, "NeedsReview finding")
 Rel(dag_scheduler, skipped_tracker, "dep failed")
 Rel(finding_aggregator, snapshot_serializer, "aggregated findings")
-Rel(finding_aggregator, conflict_resolver_rt, "concurrent findings")
-Rel(conflict_resolver_rt, snapshot_serializer, "resolved findings + ConflictArtifacts")
 Rel(finding_aggregator, pipeline_tracer, "outcome per node")
 Rel(skipped_tracker, pipeline_tracer, "skipped trace entries")
 Rel(pipeline_tracer, snapshot_serializer, "pipeline trace entries")
