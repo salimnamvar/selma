@@ -1,14 +1,14 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Shows Selma as a black box with its human and system actors, external dependencies, and policy prohibition
+' Purpose:   Shows Selma as a black box with its primary actors and operational system boundary
 ' Milestone: v2.0.0
 ' Version:   2.0.0
 ' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities, AA-02 gate
+' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, docs/User-Story/User_Stories.md Actors & Capabilities
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-@startuml
+@startuml c4_selma_context
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -24,14 +24,8 @@ Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views 
 
 System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles directives into executable controls, evaluates targets, and manages finding lifecycle.")
 
-System_Ext(ci_pipeline, "CI/CD Pipeline", "Scans runtime source for policy_doctrine.yaml references (1.2). AA-02 gate enforcement.")
-System_Ext(policy_doc, "Policy Document", "policy_doctrine.yaml. Governance intent. Authoring-time ONLY. AA-02: NO runtime connection.")
-
 Rel(regulatory_official, selma, "Author directives, view findings, waive/dismiss/resolve", "HTTPS")
 Rel(compliance_rep, selma, "Submit targets, acknowledge findings, submit evidence", "HTTPS")
 Rel(system_actor, selma, "Automated inspection, view findings", "HTTPS")
-Rel(ci_pipeline, selma, "Static analysis, policy prohibition enforcement check (AA-02)", "CI/CD")
-
-Rel(selma, policy_doc, "PROHIBITED at runtime", "AA-02")
 
 @enduml

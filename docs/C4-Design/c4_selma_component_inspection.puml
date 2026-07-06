@@ -8,8 +8,8 @@
 ' Source:    docs/Regulation/SPECIFICATION.md 2.9-2.13, 3.3, 3.6-3.7, AA-03 gate
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 16 elements -- complete InspectionPipeline internals (4 external + 2 input + 6 DAG + 1 aggregator + 1 conflict resolver + 2 serialization + 3 stores)
-@startuml
+' SIM-01 EXCEPTION: 17 elements -- complete InspectionPipeline internals (1 ingress gate + 2 input + 6 DAG + 1 aggregator + 1 conflict resolver + 2 serialization + 4 external/stores)
+@startuml c4_selma_component_inspection
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -19,8 +19,9 @@ LAYOUT_WITH_LEGEND()
 title Selma -- InspectionPipeline Component Diagram
 
 Container_Boundary(pipeline, "InspectionPipeline") {
+    Component(inspection_capability_gate, "InspectionCapabilityGate", "Python", "Pipeline entry gate. Verifies inspection.submit and inspection.reinspect before target validation. Denials stop before target validation or snapshot creation (3.2, S-34).")
     Component(target_validator, "TargetValidator", "Python", "Validates target conforms to 2.10 schema. target_id, target_type, content_hash, submitted_at.")
-    Component(context_populator, "ContextPopulator", "Python", "Builds read-only context (2.11): target_metadata, domain_constants, finding_aggregates (pre-computed by AnalyticsEngine from prior inspections, read from FindingEventStore view).")
+    Component(context_populator, "ContextPopulator", "Python", "Builds read-only context (2.11): target_metadata, domain_constants, finding_aggregates pre-computed from prior inspections.")
 
     Component(dag_scheduler, "DagScheduler", "Python", "Topological sort, respects depends_on, parallel independent nodes (2.12).")
     Component(eval_dispatcher, "EvaluatorDispatcher", "Python", "Routes by evaluator type, passes (node, target, context), enforces per-node timeout (default 30s).")
@@ -29,7 +30,7 @@ Container_Boundary(pipeline, "InspectionPipeline") {
     Component(skipped_tracker, "SkippedNodeTracker", "Python", "Records dependency-failed nodes. No finding generated. Skipped trace entry only. Prevents cascade false positives (2.12).")
 
     Component(finding_aggregator, "FindingAggregator", "Python", "Collects evaluator outcomes. Applies deontic semantics (2.8.3). Severity rules (2.9.1). Confidence threshold cap (confidence_severity_cap_threshold). Permission -> informational.")
-    Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Resolves concurrent finding conflicts during aggregation. Finding-level: applies precedence chain per 2.15 when multiple rules produce conflicting findings on same target aspect. All inputs frozen in CG-IR snapshot — deterministic per snapshot.")
+    Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Runtime owner of resolve_conflict for same-lineage failing findings and declared conflict pairs recorded in CG-IR snapshot metadata (2.15). Deterministic per frozen snapshot.")
     Component(pipeline_tracer, "PipelineTraceRecorder", "Python", "Ordered array (2.16.1). Per-node: outcome, timing, fault classification, skipped status, conflict resolution outcome.")
     Component(snapshot_serializer, "InspectionSnapshotSerializer", "Python", "target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash (2.13).")
     Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env_hash, engine, target_hash). directive_version + frozen_env_hash from CG-IR snapshot provenance. Event ordering explicitly excluded to avoid circular dependency (events reference this inspection).")
@@ -40,7 +41,8 @@ ContainerDb(cgir_store, "CgIrStore", "CAS", "Frozen CG-IR snapshot.")
 ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "Finding lifecycle events.")
 ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots and pipeline traces.")
 
-Rel(api_gateway_ext, target_validator, "target payload (§2.10 schema)", "Internal")
+Rel(api_gateway_ext, inspection_capability_gate, "inspection.submit / inspection.reinspect", "Internal")
+Rel(inspection_capability_gate, target_validator, "authorized target payload (§2.10 schema)")
 Rel(cgir_store, dag_scheduler, "reads CG-IR snapshot nodes", "Content-addressed")
 Rel(finding_event_store, context_populator, "reads prior findings (aggregates)", "Read-only")
 
@@ -53,8 +55,8 @@ Rel(eval_pool, finding_aggregator, "outcome: Pass/Fail/Partial/NeedsReview")
 Rel(eval_pool, fault_classifier, "timeout/error")
 Rel(fault_classifier, finding_aggregator, "NeedsReview finding")
 Rel(dag_scheduler, skipped_tracker, "dep failed")
-Rel(finding_aggregator, conflict_resolver_rt, "concurrent findings")
-Rel(cgir_store, conflict_resolver_rt, "priority, conflict_resolution, specificity_score from CG-IR nodes", "Content-addressed")
+Rel(finding_aggregator, conflict_resolver_rt, "same-lineage concurrent findings")
+Rel(cgir_store, conflict_resolver_rt, "candidate pairs, priority, conflict_resolution, specificity inputs", "Content-addressed")
 Rel(conflict_resolver_rt, snapshot_serializer, "resolved findings")
 Rel(conflict_resolver_rt, pipeline_tracer, "resolution outcome per conflict")
 Rel(finding_aggregator, snapshot_serializer, "aggregated findings")
@@ -65,7 +67,6 @@ Rel(system_state_hash, snapshot_serializer, "system state hash")
 Rel(cgir_store, system_state_hash, "cg_ir_snapshot_hash, snapshot provenance (directive_version, frozen_env_hash)")
 
 Rel(snapshot_serializer, execution_artifact_store, "writes inspection snapshot", "Object PUT")
-Rel(api_gateway_ext, execution_artifact_store, "reads inspection snapshots, pipeline traces (S-10, S-16)", "Object GET")
 Rel(finding_aggregator, finding_event_store, "writes findings", "Append-only")
 
 @enduml
