@@ -28,7 +28,7 @@ Selma is **domain-agnostic** — it can be instantiated for regulatory complianc
 | Structural Schema (`rule_schema.json`) | Complete | 8.2.4 |
 | Governance Doctrine (`policy_doctrine.yaml`) | Complete | 8.2.4 |
 | User Stories (35 stories, 7 epics) | Complete | 8.2.4 |
-| C4 Architecture Diagrams | Complete | 2.1.0 |
+| C4 Architecture Diagrams | Complete | 2.2.0 |
 | Contract Validators | Complete | — |
 | **Implementation** | **Not started** | — |
 
