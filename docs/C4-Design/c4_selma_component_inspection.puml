@@ -31,7 +31,7 @@ Container_Boundary(pipeline, "InspectionPipeline") {
     Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Resolves concurrent finding conflicts during aggregation. Applies precedence chain per 2.15. Produces ConflictArtifact records for deferred human review.")
     Component(pipeline_tracer, "PipelineTraceRecorder", "Python", "Ordered array (2.16.1). Per-node: outcome, timing, fault classification, skipped status.")
     Component(snapshot_serializer, "InspectionSnapshotSerializer", "Python", "target_hash, ruleset_version, frozen_env_hash, engine_version, pipeline_trace, skipped_nodes, system_state_hash (2.13).")
-    Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env_hash, engine, target_hash). directive_version + frozen_env_hash from CG-IR snapshot provenance. Event ordering EXCLUDED (2.6 note).")
+    Component(system_state_hash, "SystemStateHasher", "Python", "f(directive_version, cg_ir_snapshot_hash, frozen_env_hash, engine, target_hash). directive_version + frozen_env_hash from CG-IR snapshot provenance.")
 }
 
 Container(api_gateway_ext, "ApiGateway", "FastAPI", "Submits inspection target to pipeline (capability gate #3).")

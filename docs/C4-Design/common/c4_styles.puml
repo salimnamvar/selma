@@ -55,12 +55,6 @@ skinparam Boundary {
   BorderColor #CCCCCC
 }
 
-skinparam note {
-  BackgroundColor #FFFFCC
-  FontColor #333333
-  BorderColor #AAAAAA
-}
-
 skinparam legend {
   BackgroundColor #FFFFFF
   FontColor #333333

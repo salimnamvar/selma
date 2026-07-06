@@ -31,11 +31,4 @@ Rel(compliance_rep, selma, "Submit targets, acknowledge findings, submit evidenc
 Rel(system_actor, selma, "Automated inspection, view findings", "HTTPS")
 Rel(ci_pipeline, selma, "Static analysis, policy prohibition enforcement check", "CI/CD")
 
-note right of policy_doc
-  **PROHIBITED** at runtime
-  Never read during inspection,
-  evaluation, FSM transitions,
-  or conflict resolution (1.2 Rule 7)
-end note
-
 @enduml

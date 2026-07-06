@@ -36,13 +36,6 @@ System_Boundary(selma, "Selma") {
         Container(frozen_env, "FrozenEnvConfig", "Configuration", "Pinned: engine version, toolchain hash, AI model hashes (2.7).")
     }
 
-    note right of frozen_env
-      FrozenEnvConfig is pinned configuration
-      consumed by FrozenEnvManager inside the
-      hermetic boundary (2.7). Defines the
-      reproducibility contract for compilation.
-    end note
-
     Container_Boundary(storage, "Storage Layer") {
         ContainerDb(cgir_store, "CgIrStore", "Content-Addressed Storage", "Immutable CG-IR snapshots. Node/edge deduplication (2.6).")
         ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered event stream. event_hash chain (3.1, 3.3).")
@@ -72,11 +65,6 @@ Rel(api_gateway, cgir_store, "read queries, verification queries (S-22, S-23, S-
 Rel(api_gateway, compilation_engine, "conflict.resolve (capability gate #5, S-05, S-28)", "Internal")
 Rel(api_gateway, compilation_engine, "impact-preview / dry-run (S-09), audit requests (S-21, S-27, S-31)", "Internal")
 
-note right of api_gateway
-  S-04 (directive.list): coordinated read from directive_store + cgir_store,
-  returning active directives and current CG-IR snapshot together.
-end note
-
 Rel(directive_mgr, directive_store, "persists directive graph", "SQL")
 Rel(directive_mgr, compilation_engine, "triggers compilation on mutation", "Internal")
 Rel(directive_store, compilation_engine, "directive graph (read lock)", "SQL")
@@ -93,12 +81,5 @@ Rel(finding_fsm, finding_event_store, "appends transition events", "Append-only"
 Rel(finding_event_store, finding_fsm, "current state, creator_provenance, evidence history", "Read-only")
 
 Rel(analytics_engine, finding_event_store, "reads aggregates (pre-computed)", "Read-only")
-
-note right of policy_doc
-  **PROHIBITED** at runtime
-  Never read during inspection,
-  evaluation, FSM transitions,
-  or conflict resolution (1.2 Rule 7)
-end note
 
 @enduml
