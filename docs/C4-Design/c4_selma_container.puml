@@ -1,15 +1,16 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Shows operational runtime units organized by layer: ingress, authoring, compilation, storage, query, runtime
+' Purpose:   Shows operational runtime units organized by layer: ingress, authoring, compilation, storage, query, runtime, assurance
 ' Milestone: v2.0.0
-' Version:   2.0.0
+' Version:   2.1.0
 ' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 2.1-2.15, 3.1-3.7, docs/User-Story/User_Stories.md Core Architecture
+' Source:    docs/Regulation/SPECIFICATION.md 1.2, 2.1-2.15, 3.1-3.7, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
 ' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 16 elements -- cross-cutting overview of operational subsystems (3 actors + 12 internal units + 1 external configuration artifact)
-@startuml c4_selma_container
+' SIM-01 EXCEPTION: 18 elements -- cross-cutting overview of operational subsystems
+' (3 actors + 13 internal units + 1 external configuration + 1 external system)
+@enduml c4_selma_container
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -24,7 +25,7 @@ Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views 
 
 System_Boundary(selma, "Selma") {
     Container_Boundary(ingress, "Request Ingress") {
-        Container(api_gateway, "ApiGateway", "FastAPI", "AA-01 gate (Mediated Feedback). Request routing, 403 CapabilityDenied (S-34).")
+        Container(api_gateway, "ApiGateway", "FastAPI", "AA-01 Mediated Feedback gate. Request routing, 403 CapabilityDenied (S-34). TLS 1.3, JWT, rate limiting.")
     }
 
     Container_Boundary(authoring, "Authoring Layer") {
@@ -34,6 +35,7 @@ System_Boundary(selma, "Selma") {
 
     Container_Boundary(compilation, "Compilation Layer") {
         Container(compilation_engine, "CompilationEngine", "Python", "Hermetic boundary (AA-02). Schema + custom validators (AA-06, AA-07). CG-IR generation. Incremental compilation (2.4, 2.7). AA-05 Conflict Resolution Determinism.")
+        Container(policy_access_blocker, "PolicyAccessBlocker", "Python", "AA-02 Policy Runtime Prohibition enforcement. Validates policy_doctrine.yaml is absent from runtime data paths. Boot-time assertions. CI/CD static analysis hooks (S-30 AA-02).")
     }
 
     Container_Boundary(storage, "Storage Layer") {
@@ -52,9 +54,14 @@ System_Boundary(selma, "Selma") {
         Container(finding_fsm, "FindingFsmEngine", "Python", "State machine transitions. SoD enforcement (AA-04). Capability gate. HLC event generation (3.1, 3.2).")
         Container(analytics_engine, "AnalyticsEngine", "Python", "Read-only trend and aggregate queries over prior findings. NO CG-IR write path (S-17, AA-01).")
     }
+
+    Container_Boundary(assurance, "Assurance Layer") {
+        Container(arch_audit_engine, "ArchitecturalAuditEngine", "Python", "AA gate validation orchestrator. Validates AA-01 through AA-07 compliance. Reports pass/fail with gate-ID traceability per S-30.")
+    }
 }
 
 Container_Ext(frozen_env_cfg, "FrozenEnvConfig", "Configuration Artifact", "Pinned environment configuration consumed by CompilationEngine (2.7). Not a deployable runtime unit.")
+System_Ext(cicd_pipeline, "CI/CD Pipeline", "External system. Runs static analysis, AA-02 Policy Access checks, and certification gates per S-30.")
 
 Rel(regulatory_official, api_gateway, "directive.*, finding.*, analytics.*, conflict.resolve", "HTTPS")
 Rel(compliance_rep, api_gateway, "inspection.*, finding.acknowledge, evidence.submit, analytics.view", "HTTPS")
@@ -72,6 +79,7 @@ Rel(directive_mgr, compilation_engine, "triggers compilation on mutation", "Inte
 Rel(directive_store, compilation_engine, "directive graph (read lock)", "SQL")
 Rel(frozen_env_cfg, compilation_engine, "pinned config", "Configuration")
 
+Rel(compilation_engine, policy_access_blocker, "validates runtime data paths at compile time", "Internal")
 Rel(compilation_engine, cgir_store, "CG-IR snapshot (immutable)", "Content-addressed")
 
 Rel(inspection_pipeline, cgir_store, "reads frozen CG-IR snapshot", "Content-addressed")
@@ -90,5 +98,14 @@ Rel(traceability_query, audit_event_store, "reads governance audit entries", "Re
 Rel(traceability_query, execution_artifact_store, "reads inspection snapshots and pipeline traces", "Object GET")
 
 Rel(analytics_engine, finding_event_store, "reads historical findings and aggregate views", "Read-only")
+
+Rel(arch_audit_engine, compilation_engine, "validates AA-02, AA-05, AA-06, AA-07", "Internal")
+Rel(arch_audit_engine, inspection_pipeline, "validates AA-03", "Internal")
+Rel(arch_audit_engine, finding_fsm, "validates AA-04", "Internal")
+Rel(arch_audit_engine, analytics_engine, "validates AA-01", "Internal")
+Rel(arch_audit_engine, api_gateway, "validates AA-01 gate mediation", "Internal")
+
+Rel(cicd_pipeline, policy_access_blocker, "AA-02 static analysis hooks", "CI/CD")
+Rel(cicd_pipeline, arch_audit_engine, "triggers AA gate certification", "CI/CD")
 
 @enduml

@@ -3,14 +3,14 @@
 **Version:** 8.2.4
 **Date:** 2026-07-06
 **Contract Alignment:** 8.2.4
-**Status:** Enhanced Design — audit v2.1.0 remediated with runtime and assurance concerns separated
+**Status:** Enhanced Design — audit v2.1.0 remediated with PolicyAccessBlocker (AA-02), ArchitecturalAuditEngine, and CI/CD integration
 
 ## Diagram Inventory
 
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| Context | `c4_selma_context.puml` | Context | 4 | System boundary and primary actors |
-| Container | `c4_selma_container.puml` | Container | 16 | Operational runtime units organized by 6 layers |
+| Context | `c4_selma_context.puml` | Context | 5 | System boundary, primary actors, and CI/CD pipeline integration |
+| Container | `c4_selma_container.puml` | Container | 18 | Operational runtime units organized by 7 layers (incl. Assurance) |
 | CompilationEngine Overview | `c4_selma_component_compilation.puml` | Component | 10 | High-level view of compilation subsystems — delegates to 4 focused diagrams |
 | CompilationEngine — Validation | `c4_selma_component_compilation_validation.puml` | Component | 10 | Three-pass validation pipeline with normative compile-time validators |
 | CompilationEngine — Core | `c4_selma_component_compilation_core.puml` | Component | 9 | Hermetic compilation: identity, transformation, hashing, incremental |
@@ -34,13 +34,15 @@
 
 | Name | Technology | C4 Level | Description |
 | :--- | :--- | :--- | :--- |
-| ApiGateway | FastAPI | Container | Request ingress, capability checking, segregation of duties |
+| ApiGateway | FastAPI | Container | AA-01 Mediated Feedback gate. Request ingress, capability checking, segregation of duties |
 | DirectiveManager | Python | Container | CRUD and identity lifecycle (fork/merge/split/retire) |
 | CompilationEngine | Python | Container | Hermetic compilation, CG-IR generation |
+| PolicyAccessBlocker | Python | Container | AA-02 Policy Runtime Prohibition enforcement (compile-time, boot-time, CI/CD hooks) |
 | InspectionPipeline | Python | Container | DAG execution, target evaluation |
 | FindingFsmEngine | Python | Container | Finding lifecycle state machine |
 | TraceabilityQueryService | Python | Container | Read-only explanation, lineage history, consistency review, and governance audit queries |
 | AnalyticsEngine | Python | Container | Read-only aggregate analytics |
+| ArchitecturalAuditEngine | Python | Container | AA gate validation orchestrator (AA-01 through AA-07 certification per S-30) |
 
 ### Stores
 
@@ -52,11 +54,12 @@
 | AuditEventStore | Append-Only Log | Container | Security audit entries: denials, transition attempts (S-32, S-33, S-34) |
 | ExecutionArtifactStore | Object Store | Container | Immutable inspection snapshots |
 
-### External Configuration Artifact
+### External Systems
 
 | Name | Technology | C4 Level | Description |
 | :--- | :--- | :--- | :--- |
 | FrozenEnvConfig | Configuration File | External Artifact | Pinned environment configuration (Content-addressed). Not a deployable unit — external configuration consumed by CompilationEngine. |
+| CI/CD Pipeline | External System | Context | Runs AA gate certification (S-30), AA-02 Policy Runtime Prohibition static analysis, and deployment validation. |
 
 ### Compilation Engine Components (22)
 
@@ -150,6 +153,7 @@ RegulatoryOfficial / ComplianceRepresentative / System
             -> DirectiveStore (PostgreSQL)
         -> CompilationEngine (hermetic compilation, frozen conflict metadata, deterministic snapshot assembly)
             <- FrozenEnvConfig (pinned environment, content-addressed)
+            -> PolicyAccessBlocker (AA-02 Policy Runtime Prohibition enforcement)
             -> CgIrStore (content-addressed, AA-06 Discriminator Completeness, AA-07 Portable Serialization)
         -> InspectionPipeline (AA-03 Evaluator Purity, DAG execution, runtime conflict resolution over frozen inputs)
             -> CgIrStore (read)
@@ -166,23 +170,48 @@ RegulatoryOfficial / ComplianceRepresentative / System
             -> ExecutionArtifactStore (read)
         -> AnalyticsEngine (read-only aggregates)
             -> FindingEventStore (read)
+    -> ArchitecturalAuditEngine (AA-01 through AA-07 certification per S-30)
+        -> ApiGateway (validates AA-01 gate mediation)
+        -> CompilationEngine (validates AA-02, AA-05, AA-06, AA-07)
+        -> InspectionPipeline (validates AA-03)
+        -> FindingFsmEngine (validates AA-04)
+        -> AnalyticsEngine (validates AA-01)
+
+CI/CD Pipeline
+    -> PolicyAccessBlocker (AA-02 static analysis hooks)
+    -> ArchitecturalAuditEngine (triggers AA gate certification)
 ```
 
-AA-01 through AA-07 remain certification requirements from the contract, but the operational C4 views now model only executable runtime structure. Out-of-band assurance checks such as CI static analysis and certification gates are intentionally excluded from the runtime diagrams.
+AA-01 through AA-07 are certification requirements from the contract. The operational C4 views model executable runtime structure plus the ArchitecturalAuditEngine for certification. The CI/CD Pipeline is an external system that triggers AA gate certification and runs AA-02 static analysis.
 
 ## Architectural Audit (AA) Gates
 
-The C4 design now explicitly implements all 7 Architectural Audit gates from User_Stories.md S-30:
+The C4 design explicitly implements all 7 Architectural Audit gates from User_Stories.md S-30, with dedicated enforcement and certification components:
 
-| AA Gate | Name | Implementation | Spec Reference |
-|---------|------|----------------|----------------|
-| AA-01 | Mediated Feedback | ApiGateway mediation with read-only AnalyticsEngine and TraceabilityQueryService boundaries | §1.2 Rule 6 |
-| AA-02 | Policy Runtime Prohibition | Architectural runtime boundary plus out-of-band static analysis and boot-time checks | §1.2 Rule 7 |
-| AA-03 | Evaluator Purity | EvaluatorPool pure functions, no IO, no randomness | §2.9 |
-| AA-04 | Segregation of Duties | SegregationOfDutiesEnforcer component | §3.1-3.4, S-29, S-32, S-33 |
-| AA-05 | ConflictMetadataAssembler + ConflictResolverRuntime over frozen snapshot inputs | §2.15 |
-| AA-06 | Discriminator Completeness | AstDiscriminatorWalker component | §2.9, S-27, S-31 |
-| AA-07 | Portable serialization validators plus snapshot hashing with excluded compiled_at | §2.6, §2.13 |
+| AA Gate | Name | Enforcement Component | Certification Component | Spec Reference |
+|---------|------|----------------------|------------------------|----------------|
+| AA-01 | Mediated Feedback | ApiGateway | ArchitecturalAuditEngine | §1.2 Rule 6 |
+| AA-02 | Policy Runtime Prohibition | PolicyAccessBlocker | ArchitecturalAuditEngine + CI/CD Pipeline | §1.2 Rule 7 |
+| AA-03 | Evaluator Purity | EvaluatorPool | ArchitecturalAuditEngine | §2.9 |
+| AA-04 | Segregation of Duties | SegregationOfDutiesEnforcer | ArchitecturalAuditEngine | §3.1-3.4, S-29, S-32, S-33 |
+| AA-05 | Conflict Resolution Determinism | ConflictResolverRuntime | ArchitecturalAuditEngine | §2.15 |
+| AA-06 | Discriminator Completeness | AstDiscriminatorWalker | ArchitecturalAuditEngine | §2.9, S-27, S-31 |
+| AA-07 | Portable Serialization | ReferenceValidator + SnapshotAssembler | ArchitecturalAuditEngine | §2.6, §2.13 |
+
+### AA-02 Policy Runtime Prohibition (CF-001 Remediation)
+
+PolicyAccessBlocker enforces SPECIFICATION.md §1.2 Rule 7 at three levels:
+1. **Compile-time**: Validates policy_doctrine.yaml is not in runtime data paths
+2. **Boot-time**: Assertions verify policy file absence from runtime modules
+3. **CI/CD**: Static analysis hooks for external pipeline verification (S-30)
+
+### ArchitecturalAuditEngine (MF-003 Remediation)
+
+The ArchitecturalAuditEngine is a dedicated assurance container that validates AA-01 through AA-07 compliance:
+- Validates each gate against its enforcement component
+- Reports pass/fail with gate-ID traceability per S-30
+- Triggered by CI/CD Pipeline for certification
+- Connected to all enforcement components for runtime validation
 
 ## Version Synchronization Matrix
 
@@ -209,9 +238,10 @@ Comprehensive mapping from runtime C4 components to SPECIFICATION.md sections, U
 | EvaluatorComplexityWalker | validation | §2.9 | S-27 | — |
 | LineageDagValidator | validation | §2.2.3 | S-19, S-20, S-26 | — |
 | ReferenceValidator | validation | §9.2.6, §9.2.15 | S-21, S-31 | AA-07 |
-| PolicyVersionChecker | validation | §1.2 Rule 7 | — | — |
+| PolicyVersionChecker | validation | §1.2 Rule 7 | — | AA-02 |
 | CrossFieldValidator | validation | §2.15 | S-05, S-28 | — |
 | ErrorHandler | validation | — | — | — |
+| PolicyAccessBlocker | container | §1.2 Rule 7 | S-30 | AA-02 |
 | FrozenEnvManager | core | §2.7 | S-01, S-02, S-10, S-23 | — |
 | ConcurrencyManager | core | §3.4 | S-01, S-02 | — |
 | IdentityResolver | core | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
@@ -223,9 +253,22 @@ Comprehensive mapping from runtime C4 components to SPECIFICATION.md sections, U
 | IncrementalCompilationManager | core | §2.6 | S-02, S-03, S-19, S-20, S-26 | — |
 | ConflictPairGenerator | conflict | §2.8.4, §2.15.1 | S-05, S-28 | — |
 | ScopeSpecificityScorer | conflict | §2.8.2, §2.15 | S-05, S-28 | — |
-| ConflictMetadataAssembler | conflict | §2.15.1 | S-05, S-28 | — |
-| SnapshotAssembler | conflict | §2.6 | S-09, S-23 | — |
+| ConflictMetadataAssembler | conflict | §2.15.1 | S-05, S-28 | AA-05 |
+| SnapshotAssembler | conflict | §2.6 | S-09, S-23 | AA-07 |
 | ProvenanceRecorder | conflict | §2.6, §3.2 | S-01, S-02, S-22 | — |
+
+### ArchitecturalAuditEngine
+
+| Component | Diagram | Spec Section | User Story | AA Gate |
+| :--- | :--- | :--- | :--- | :--- |
+| ArchitecturalAuditEngine | container | §1.2, S-30 | S-30 | AA-01 through AA-07 |
+| ApiGateway validation | container | §1.2 Rule 6 | S-30 | AA-01 |
+| PolicyAccessBlocker validation | container | §1.2 Rule 7 | S-30 | AA-02 |
+| EvaluatorPool validation | container | §2.9 | S-30 | AA-03 |
+| SegregationOfDutiesEnforcer validation | container | §3.1-3.4 | S-30 | AA-04 |
+| ConflictResolverRuntime validation | container | §2.15 | S-30 | AA-05 |
+| AstDiscriminatorWalker validation | container | §2.9 | S-30 | AA-06 |
+| ReferenceValidator + SnapshotAssembler validation | container | §2.6, §2.13 | S-30 | AA-07 |
 
 ### InspectionPipeline
 
@@ -304,22 +347,26 @@ Target performance characteristics for key components:
 | :--- | :--- | :--- | :--- |
 | ApiGateway | 1000 req/s | <10ms routing | Rate limiting: 100 req/min per actor |
 | CompilationEngine | 50 compilations/s | <2s full, <200ms incremental | Per frozen_env_hash cache hit |
+| PolicyAccessBlocker | — | <1ms per validation | Compile-time check; negligible overhead |
 | CgIrStore | — | read: <50ms, write: <100ms | Content-addressed; dedup reduces write volume |
 | FindingEventStore | 1000 events/s | append: <20ms | HLC-ordered; append-only |
 | AuditEventStore | 500 entries/s | append: <10ms | Separate retention policy |
 | EvaluatorPool | 1000 evaluators/s/node | <5ms/evaluator | Pure functions; parallelizable by DAG |
 | SnapshotAssembler | 20 snapshots/s | <500ms | Depends on node/edge count |
+| ArchitecturalAuditEngine | — | <10s full audit | Runs on CI/CD trigger; not latency-critical |
 
 ## Security Annotations
 
 | Component | Security Properties |
 | :--- | :--- |
-| ApiGateway | TLS 1.3 inbound, JWT validation, rate limiting, capability gate enforcement |
+| ApiGateway | TLS 1.3 inbound, JWT validation, rate limiting: 100 req/min, capability gate enforcement |
 | Stores (all) | Encryption: AES-256 at rest, TLS 1.3 in transit |
 | FindingEventStore | Integrity: SHA-256 event_hash chain, append-only guarantee |
 | AuditEventStore | Integrity: SHA-256 hash chain, separate retention, tamper-evident |
 | CgIrStore | Immutability: content-addressed, no mutation of existing objects |
 | CompilationEngine validation boundary | AA-02 and portability enforcement through compile-time validators, boot-time assertions, and out-of-band static analysis |
+| PolicyAccessBlocker | AA-02 enforcement: compile-time path validation, boot-time assertions, CI/CD static analysis hooks |
+| ArchitecturalAuditEngine | AA gate certification: validates all 7 gates, reports with gate-ID traceability |
 | SegregationOfDutiesEnforcer | SoD: creator_provenance check, evidence submitter check |
 
 ## Design Principle Recommendations
