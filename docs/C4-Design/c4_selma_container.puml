@@ -62,33 +62,33 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
     Container(api_gateway, "API Gateway", "FastAPI / REST", "Single entry point for all actor types and target submissions. TLS 1.3, JWT/OIDC validation, capability enforcement at request ingress (S-34). Hard-deny on missing capabilities -- no partial state mutation. Routes: directive.* to DirectiveStore + CompilationEngine; inspection.* to InspectionPipeline; finding.* and evidence.* to FindingFsmEngine; conflict.resolve to ConflictEngine; read queries to AnalyticsEngine.")
 
     ' ── Directive Lifecycle ───────────────────────────────────
-    ContainerDb(directive_store, "Directive Store", "PostgreSQL", "Mutable, versioned source-of-truth for human-authored directives. Stores lineage_id <-> Machine ID bijection, dual identity (lineage_id, execution_id), full revision history, and fork/merge/split provenance (§2.2, §2.3, S-01..S-03, S-07, S-08, S-19, S-20, S-26). Read-locked during compilation; write-locked during mutations (§3.4).")
+    ContainerDb(directive_store, "Directive Store", "PostgreSQL", "Mutable, versioned source-of-truth for human-authored directives. Stores lineage_id <-> Machine ID bijection, dual identity (lineage_id, execution_id), full revision history, and fork/merge/split provenance (Sec.2.2, Sec.2.3, S-01..S-03, S-07, S-08, S-19, S-20, S-26). Read-locked during compilation; write-locked during mutations (Sec.3.4).")
 
     ' ── Hermetic Compilation Boundary ────────────────────────
     Container_Boundary(hermetic_boundary, "Hermetic Compilation Boundary") {
-        Container(compilation_engine, "Compilation Engine", "Python", "Hermetic compile boundary (AA-02, §1.2). Reads Directive Graph under read-lock (§3.4). Validates JSON Schema, AST-walking discriminator and complexity limits (§2.9, S-27, S-31), lineage DAG invariants (§2.2.3), RE2 canary checks (S-21, S-31), cross-layer version compatibility. Dual-hash model: semantic_hash + presentation_hash = node_hash (§2.6, S-23, S-24). Incremental compilation via semantic_hash subgraph reuse. Generates content-addressed CG-IR snapshots. policy_doctrine.yaml MUST NOT be read at runtime.")
+        Container(compilation_engine, "Compilation Engine", "Python", "Hermetic compile boundary (AA-02, Sec.1.2). Reads Directive Graph under read-lock (Sec.3.4). Validates JSON Schema, AST-walking discriminator and complexity limits (Sec.2.9, S-27, S-31), lineage DAG invariants (Sec.2.2.3), RE2 canary checks (S-21, S-31), cross-layer version compatibility. Dual-hash model: semantic_hash + presentation_hash = node_hash (Sec.2.6, S-23, S-24). Incremental compilation via semantic_hash subgraph reuse. Generates content-addressed CG-IR snapshots. policy_doctrine.yaml MUST NOT be read at runtime.")
     }
 
     ' ── Content-Addressed CG-IR ──────────────────────────────
-    ContainerDb(cgir_store, "CG-IR Store", "Content-Addressed Storage", "Immutable CG-IR snapshots keyed by SHA-256 snapshot_hash (§2.6, S-23, S-24). Node deduplication by node_hash; edge deduplication by edge_hash. Incremental reuse via semantic_hash. Never mutated after publication; indefinite retention. Loaded as frozen snapshot for all evaluation and conflict resolution.")
+    ContainerDb(cgir_store, "CG-IR Store", "Content-Addressed Storage", "Immutable CG-IR snapshots keyed by SHA-256 snapshot_hash (Sec.2.6, S-23, S-24). Node deduplication by node_hash; edge deduplication by edge_hash. Incremental reuse via semantic_hash. Never mutated after publication; indefinite retention. Loaded as frozen snapshot for all evaluation and conflict resolution.")
 
     ' ── Pure-Evaluator DAG Execution ─────────────────────────
-    Container(inspection_pipeline, "Inspection Pipeline", "Python", "Pure-evaluator DAG execution (AA-03, S-10). Six-stage pipeline: normalize -> classify -> select_controls -> evaluate -> aggregate -> report. Topological sort respecting depends_on; per-node timeout default 30 s. Evaluator types: regex (RE2 only), field_check, threshold, composite (depth <= 32, width <= 64); no IO, no randomness (§2.9). 8-class fault taxonomy. Produces immutable point-in-time inspection snapshots.")
+    Container(inspection_pipeline, "Inspection Pipeline", "Python", "Pure-evaluator DAG execution (AA-03, S-10). Six-stage pipeline: normalize -> classify -> select_controls -> evaluate -> aggregate -> report. Topological sort respecting depends_on; per-node timeout default 30 s. Evaluator types: regex (RE2 only), field_check, threshold, composite (depth <= 32, width <= 64); no IO, no randomness (Sec.2.9). 8-class fault taxonomy. Produces immutable point-in-time inspection snapshots.")
 
     ' ── Deterministic Conflict Resolution ────────────────────
-    Container(conflict_engine, "Conflict Resolution Engine", "Python", "Deterministic resolve_conflict per §2.15 (AA-05, S-05, S-28). Precedence chain: explicit override -> compatible_overrides (symmetric pairs) -> priority -> specificity (§2.8.2) -> recency (created_at) -> Conflict Artifact. Detects defer_to cycles via DFS (S-28). Cross-lineage advisories are non-binding (§2.15.2). Operates exclusively on frozen CG-IR fields. Escalates unresolvable conflicts as Conflict Artifacts for human resolution.")
+    Container(conflict_engine, "Conflict Resolution Engine", "Python", "Deterministic resolve_conflict per Sec.2.15 (AA-05, S-05, S-28). Precedence chain: explicit override -> compatible_overrides (symmetric pairs) -> priority -> specificity (Sec.2.8.2) -> recency (created_at) -> Conflict Artifact. Detects defer_to cycles via DFS (S-28). Cross-lineage advisories are non-binding (Sec.2.15.2). Operates exclusively on frozen CG-IR fields. Escalates unresolvable conflicts as Conflict Artifacts for human resolution.")
 
     ' ── Finding Lifecycle State Machine ──────────────────────
-    Container(finding_fsm, "Finding FSM Engine", "Python", "Strict 10-state finding lifecycle machine per §3.1 (S-12, S-13, S-14a/b/c, S-25, S-29). Validates capability at every FSM transition gate (S-34). Segregation-of-duties: creator_provenance blocks finding.waive (S-29, S-32); evidence submitter blocked from finding.approve_remediation (S-14a, S-33). Auto-transitions: Evidence Submitted -> Pending Verification, Verified -> Closed, Waived -> Closed. Generates HLC-ordered events (§3.3).")
+    Container(finding_fsm, "Finding FSM Engine", "Python", "Strict 10-state finding lifecycle machine per Sec.3.1 (S-12, S-13, S-14a/b/c, S-25, S-29). Validates capability at every FSM transition gate (S-34). Segregation-of-duties: creator_provenance blocks finding.waive (S-29, S-32); evidence submitter blocked from finding.approve_remediation (S-14a, S-33). Auto-transitions: Evidence Submitted -> Pending Verification, Verified -> Closed, Waived -> Closed. Generates HLC-ordered events (Sec.3.3).")
 
     ' ── Append-Only Finding Event Stream ─────────────────────
-    ContainerDb(finding_event_store, "Finding Event Store", "Append-Only Log", "Immutable, HLC-ordered Finding Event Stream (§3.1, §3.3, S-14a). FindingCreated, DispositionChanged, FindingClosed events with SHA-256 event_hash integrity chain. Terminal states: Closed, Dismissed. Never mutated after append. Source of truth for finding state and disposition history.")
+    ContainerDb(finding_event_store, "Finding Event Store", "Append-Only Log", "Immutable, HLC-ordered Finding Event Stream (Sec.3.1, Sec.3.3, S-14a). FindingCreated, DispositionChanged, FindingClosed events with SHA-256 event_hash integrity chain. Terminal states: Closed, Dismissed. Never mutated after append. Source of truth for finding state and disposition history.")
 
     ' ── Read-Only Analytics and Query ────────────────────────
-    Container(analytics_engine, "Analytics Engine", "Python", "Read-only aggregates and trend analysis over the Finding Event Stream (S-17). Serves active directive views (S-04), findings view (S-11), causal explanation queries (S-16), and governance audit queries (S-06, S-21..S-24, S-27). Computes finding_aggregates for inspection context object pre-invocation (§2.11). Mediated feedback only -- zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
+    Container(analytics_engine, "Analytics Engine", "Python", "Read-only aggregates and trend analysis over the Finding Event Stream (S-17). Serves active directive views (S-04), findings view (S-11), causal explanation queries (S-16), and governance audit queries (S-06, S-21..S-24, S-27). Computes finding_aggregates for inspection context object pre-invocation (Sec.2.11). Mediated feedback only -- zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
 
     ' ── Immutable Execution Artifacts ────────────────────────
-    ContainerDb(artifact_store, "Execution Artifact Store", "Object Store", "Immutable inspection snapshots, pipeline traces, system_state_hashes (§2.13, S-10, S-23), and Conflict Artifacts pending human resolution (§2.15). Reproducibility: same CG-IR + target + frozen_env = same snapshot hash. Append-only after creation.")
+    ContainerDb(artifact_store, "Execution Artifact Store", "Object Store", "Immutable inspection snapshots, pipeline traces, system_state_hashes (Sec.2.13, S-10, S-23), and Conflict Artifacts pending human resolution (Sec.2.15). Reproducibility: same CG-IR + target + frozen_env = same snapshot hash. Append-only after creation.")
 
 }
 
@@ -128,10 +128,10 @@ Rel(api_gateway, analytics_engine, "routes read queries: analytics (S-17), direc
 '  RELATIONSHIPS -- Compilation Engine
 ' ============================================================
 
-Rel(compilation_engine, governance_contracts, "reads Directive Graph under hermetic read-lock; policy_doctrine.yaml compile-time only (§1.2)", "compile-time only", $tags="compile_only")
-Rel(compilation_engine, directive_store, "reads directive revisions and lineage state under read-lock (§3.4)", "SQL", $tags="compile_only")
-Rel(compilation_engine, conflict_engine, "applies conflict resolution mapping at compile time (§2.4 Step 3, §2.15)", "Internal", $tags="compile_only")
-Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (§2.6)", "CAS Write", $tags="compile_only")
+Rel(compilation_engine, governance_contracts, "reads Directive Graph under hermetic read-lock; policy_doctrine.yaml compile-time only (Sec.1.2)", "compile-time only", $tags="compile_only")
+Rel(compilation_engine, directive_store, "reads directive revisions and lineage state under read-lock (Sec.3.4)", "SQL", $tags="compile_only")
+Rel(compilation_engine, conflict_engine, "applies conflict resolution mapping at compile time (Sec.2.4 Step 3, Sec.2.15)", "Internal", $tags="compile_only")
+Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (Sec.2.6)", "CAS Write", $tags="compile_only")
 
 
 ' ============================================================
@@ -139,17 +139,17 @@ Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR
 ' ============================================================
 
 Rel(inspection_pipeline, cgir_store, "loads frozen CG-IR snapshot by hash for pure DAG evaluation", "CAS Read")
-Rel(inspection_pipeline, analytics_engine, "fetches pre-inspection finding_aggregates for context object (§2.11)", "Internal")
-Rel(inspection_pipeline, conflict_engine, "applies pre-computed deterministic resolution when multiple nodes fire against same target (§2.15)", "Internal")
+Rel(inspection_pipeline, analytics_engine, "fetches pre-inspection finding_aggregates for context object (Sec.2.11)", "Internal")
+Rel(inspection_pipeline, conflict_engine, "applies pre-computed deterministic resolution when multiple nodes fire against same target (Sec.2.15)", "Internal")
 Rel(inspection_pipeline, finding_fsm, "emits findings (Created -> Open) after DAG evaluation completes (S-10)", "Internal")
-Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline trace, and system_state_hash (§2.13)", "Object Write", $tags="immutable")
+Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline trace, and system_state_hash (Sec.2.13)", "Object Write")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Finding FSM Engine
 ' ============================================================
 
-Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (§3.1, §3.3)", "Append-Only", $tags="immutable")
+Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (Sec.3.1, Sec.3.3)", "Append-Only", $tags="immutable")
 Rel(finding_fsm, cgir_store, "reads creator_provenance from snapshot node provenance for SoD enforcement (S-29, S-32, S-33)", "CAS Read-Only")
 Rel(finding_fsm, remediation_systems, "emits mediated finding state changes to operational workflows", "webhook / events", $tags="mediated")
 
@@ -166,8 +166,8 @@ Rel(analytics_engine, cgir_store, "reads CG-IR nodes for active directive views 
 '  RELATIONSHIPS -- Conflict Resolution Engine
 ' ============================================================
 
-Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (§2.15, §2.8.2)", "CAS Read-Only")
-Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (§2.15)", "Object Write", $tags="compile_only")
+Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (Sec.2.15, Sec.2.8.2)", "CAS Read-Only")
+Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (Sec.2.15)", "Object Write", $tags="compile_only")
 
 
 ' ============================================================
@@ -175,6 +175,6 @@ Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human re
 ' ============================================================
 
 Rel(finding_event_store, audit_platform, "replicates immutable Finding Event Stream for long-term retention", "append-only / HLC-ordered", $tags="immutable")
-Rel(artifact_store, audit_platform, "replicates inspection snapshots, pipeline traces, and system state hashes", "append-only", $tags="immutable")
+Rel(artifact_store, audit_platform, "replicates inspection snapshots, pipeline traces, and system state hashes", "append-only")
 
 @enduml
