@@ -1,25 +1,19 @@
 # Selma -- C4 Architecture Diagrams
 
 **Version:** 8.2.4
-**Date:** 2026-07-06
+**Date:** 2026-07-07
 **Contract Alignment:** 8.2.4
-**Status:** Enhanced Design — audit v2.1.0 fully remediated: PlantUML framing fixed, compile-time contracts modeled, ConflictArtifactStore added, DirectiveManager decomposed, QueryCapabilityGate corrected
+**Status:** Unified C4 — three diagrams (Context, Container, Component) with aligned layer boundaries and naming
 
 ## Diagram Inventory
 
 | Diagram | File | Level | Elements | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| Context | `c4_selma_context.puml` | Context | 5 | System boundary, primary actors, and CI/CD pipeline integration |
+| Context | `c4_selma_context.puml` | Context | 8 | System boundary, primary actors, compile-time contracts, and CI/CD pipeline integration |
 | Container | `c4_selma_container.puml` | Container | 21 | Operational runtime units organized by 7 layers (incl. Assurance) |
-| DirectiveManager | `c4_selma_component_directive.puml` | Component | 5 | CRUD operations, identity lifecycle, and compilation orchestration |
-| CompilationEngine Overview | `c4_selma_component_compilation.puml` | Component | 10 | High-level view of compilation subsystems — delegates to 4 focused diagrams |
-| CompilationEngine — Validation | `c4_selma_component_compilation_validation.puml` | Component | 10 | Three-pass validation pipeline with normative compile-time validators |
-| CompilationEngine — Core | `c4_selma_component_compilation_core.puml` | Component | 9 | Hermetic compilation: identity, transformation, hashing, incremental |
-| CompilationEngine — Conflict | `c4_selma_component_compilation_conflict.puml` | Component | 5 | Candidate conflict preparation, snapshot assembly, provenance |
-| InspectionPipeline | `c4_selma_component_inspection.puml` | Component | 17 | DAG execution, fault taxonomy, finding aggregation, runtime conflict resolution (AA-03 gate) |
-| FindingFsmEngine | `c4_selma_component_finding.puml` | Component | 8 | State machine with SoD enforcement (AA-04 gate), audit trail, and separate audit store |
-| TraceabilityQueryService | `c4_selma_component_traceability_query.puml` | Component | 12 | Read-only explanation, lineage history, consistency review, and governance audit queries |
-| CgIrStore | `c4_selma_component_cgir_store.puml` | Component | 9 | Content-addressed storage with deduplication and lineage tracing (AA-06, AA-07) |
+| Component | `c4_selma_component.puml` | Component | 73 | Unified internal structure across all containers — mirrors container layer boundaries |
+
+All three diagrams share the same boundary taxonomy: Request Ingress, Authoring Layer, Compilation Layer, Storage Layer, Read-side Query Layer, Runtime Layer, and Assurance Layer. The component diagram uses section comments to mark each layer and container group, keeping names and relationships aligned with the container diagram.
 
 ## Component Inventory
 
@@ -251,39 +245,39 @@ Comprehensive mapping from runtime C4 components to SPECIFICATION.md sections, U
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| DirectiveCapabilityGate | directive | §3.2 | S-34 | — |
-| DirectiveCommandHandler | directive | §2.2-2.5 | S-01, S-02, S-03, S-08 | — |
-| IdentityLifecycleManager | directive | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
-| DirectiveVersionManager | directive | §2.5, §3.4 | S-01, S-02, S-03, S-08 | — |
-| CompilationOrchestrator | directive | §2.4 | S-01, S-02 | — |
+| DirectiveCapabilityGate | component | §3.2 | S-34 | — |
+| DirectiveCommandHandler | component | §2.2-2.5 | S-01, S-02, S-03, S-08 | — |
+| IdentityLifecycleManager | component | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
+| DirectiveVersionManager | component | §2.5, §3.4 | S-01, S-02, S-03, S-08 | — |
+| CompilationOrchestrator | component | §2.4 | S-01, S-02 | — |
 
 ### CompilationEngine
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| JsonSchemaValidator | validation | §2.9 | S-27 | — |
-| AstDiscriminatorWalker | validation | §2.9 | S-27, S-31 | AA-06 |
-| EvaluatorComplexityWalker | validation | §2.9 | S-27 | — |
-| LineageDagValidator | validation | §2.2.3 | S-19, S-20, S-26 | — |
-| ReferenceValidator | validation | §9.2.6, §9.2.15 | S-21, S-31 | AA-07 |
-| PolicyVersionChecker | validation | §1.2 Rule 7 | — | AA-02 |
-| CrossFieldValidator | validation | §2.15 | S-05, S-28 | — |
-| ErrorHandler | validation | — | — | — |
+| JsonSchemaValidator | component | §2.9 | S-27 | — |
+| AstDiscriminatorWalker | component | §2.9 | S-27, S-31 | AA-06 |
+| EvaluatorComplexityWalker | component | §2.9 | S-27 | — |
+| LineageDagValidator | component | §2.2.3 | S-19, S-20, S-26 | — |
+| ReferenceValidator | component | §9.2.6, §9.2.15 | S-21, S-31 | AA-07 |
+| PolicyVersionChecker | component | §1.2 Rule 7 | — | AA-02 |
+| CrossFieldValidator | component | §2.15 | S-05, S-28 | — |
+| ErrorHandler | component | — | — | — |
 | PolicyAccessBlocker | container | §1.2 Rule 7 | S-30 | AA-02 |
-| FrozenEnvManager | core | §2.7 | S-01, S-02, S-10, S-23 | — |
-| ConcurrencyManager | core | §3.4 | S-01, S-02 | — |
-| IdentityResolver | core | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
-| RuleToNodeMapper | core | §2.8.1 | S-01, S-02 | — |
-| ParameterMerger | core | §2.8.1 | S-01, S-02 | — |
-| DependencyGraphBuilder | core | §2.8.4 | S-01, S-02 | — |
-| HashComputer | core | §2.6 | S-22, S-23, S-24 | — |
-| EdgeHashComputer | core | §2.6 | S-24 | — |
-| IncrementalCompilationManager | core | §2.6 | S-02, S-03, S-19, S-20, S-26 | — |
-| ConflictPairGenerator | conflict | §2.8.4, §2.15.1 | S-05, S-28 | — |
-| ScopeSpecificityScorer | conflict | §2.8.2, §2.15 | S-05, S-28 | — |
-| ConflictMetadataAssembler | conflict | §2.15.1 | S-05, S-28 | AA-05 |
-| SnapshotAssembler | conflict | §2.6 | S-09, S-23 | AA-07 |
-| ProvenanceRecorder | conflict | §2.6, §3.2 | S-01, S-02, S-22 | — |
+| FrozenEnvManager | component | §2.7 | S-01, S-02, S-10, S-23 | — |
+| ConcurrencyManager | component | §3.4 | S-01, S-02 | — |
+| IdentityResolver | component | §2.2, §2.3 | S-01, S-02, S-19, S-20, S-26 | — |
+| RuleToNodeMapper | component | §2.8.1 | S-01, S-02 | — |
+| ParameterMerger | component | §2.8.1 | S-01, S-02 | — |
+| DependencyGraphBuilder | component | §2.8.4 | S-01, S-02 | — |
+| HashComputer | component | §2.6 | S-22, S-23, S-24 | — |
+| EdgeHashComputer | component | §2.6 | S-24 | — |
+| IncrementalCompilationManager | component | §2.6 | S-02, S-03, S-19, S-20, S-26 | — |
+| ConflictPairGenerator | component | §2.8.4, §2.15.1 | S-05, S-28 | — |
+| ScopeSpecificityScorer | component | §2.8.2, §2.15 | S-05, S-28 | — |
+| ConflictMetadataAssembler | component | §2.15.1 | S-05, S-28 | AA-05 |
+| SnapshotAssembler | component | §2.6 | S-09, S-23 | AA-07 |
+| ProvenanceRecorder | component | §2.6, §3.2 | S-01, S-02, S-22 | — |
 
 ### ArchitecturalAuditEngine
 
@@ -302,57 +296,57 @@ Comprehensive mapping from runtime C4 components to SPECIFICATION.md sections, U
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| InspectionCapabilityGate | inspection | §3.2 | S-10, S-15, S-34 | — |
-| TargetValidator | inspection | §2.10 | S-10 | — |
-| ContextPopulator | inspection | §2.11 | S-10 | — |
-| DagScheduler | inspection | §2.12 | S-10 | — |
-| EvaluatorDispatcher | inspection | §2.12 | S-10 | — |
-| EvaluatorPool | inspection | §2.9 | S-10, S-21 | AA-03 |
-| FaultTaxonomyClassifier | inspection | §2.12, §3.3 | S-10 | — |
-| SkippedNodeTracker | inspection | §2.12 | S-10 | — |
-| FindingAggregator | inspection | §2.8.3, §2.9.1 | S-10 | — |
-| ConflictResolverRuntime | inspection | §2.15, §2.15.2 | S-05, S-28 | AA-05 |
-| PipelineTraceRecorder | inspection | §2.16.1, §3.7 | S-10, S-16 | — |
-| InspectionSnapshotSerializer | inspection | §2.13, §3.6 | S-10, S-16, S-23 | — |
-| SystemStateHasher | inspection | §2.13 | S-10, S-23 | — |
+| InspectionCapabilityGate | component | §3.2 | S-10, S-15, S-34 | — |
+| TargetValidator | component | §2.10 | S-10 | — |
+| ContextPopulator | component | §2.11 | S-10 | — |
+| DagScheduler | component | §2.12 | S-10 | — |
+| EvaluatorDispatcher | component | §2.12 | S-10 | — |
+| EvaluatorPool | component | §2.9 | S-10, S-21 | AA-03 |
+| FaultTaxonomyClassifier | component | §2.12, §3.3 | S-10 | — |
+| SkippedNodeTracker | component | §2.12 | S-10 | — |
+| FindingAggregator | component | §2.8.3, §2.9.1 | S-10 | — |
+| ConflictResolverRuntime | component | §2.15, §2.15.2 | S-05, S-28 | AA-05 |
+| PipelineTraceRecorder | component | §2.16.1, §3.7 | S-10, S-16 | — |
+| InspectionSnapshotSerializer | component | §2.13, §3.6 | S-10, S-16, S-23 | — |
+| SystemStateHasher | component | §2.13 | S-10, S-23 | — |
 
 ### TraceabilityQueryService
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| QueryCapabilityGate | traceability_query | §3.2 | S-04, S-05, S-06, S-07, S-16, S-22, S-23, S-24, S-34 | — |
-| QueryRouter | traceability_query | — | S-04, S-05, S-06, S-07, S-16, S-22, S-23, S-24 | — |
-| ExplanationQueryHandler | traceability_query | §2.13, §3.6 | S-16 | — |
-| LineageHistoryQueryHandler | traceability_query | §2.2, §2.3 | S-04, S-07 | — |
-| ConsistencyReviewQueryHandler | traceability_query | §2.15, §2.15.2 | S-05, S-28 | AA-05 |
-| GovernanceAuditQueryHandler | traceability_query | §2.6, §9.9 | S-06, S-22, S-23, S-24, S-30 | — |
+| QueryCapabilityGate | component | §3.2 | S-04, S-05, S-06, S-07, S-16, S-22, S-23, S-24, S-34 | — |
+| QueryRouter | component | — | S-04, S-05, S-06, S-07, S-16, S-22, S-23, S-24 | — |
+| ExplanationQueryHandler | component | §2.13, §3.6 | S-16 | — |
+| LineageHistoryQueryHandler | component | §2.2, §2.3 | S-04, S-07 | — |
+| ConsistencyReviewQueryHandler | component | §2.15, §2.15.2 | S-05, S-28 | AA-05 |
+| GovernanceAuditQueryHandler | component | §2.6, §9.9 | S-06, S-22, S-23, S-24, S-30 | — |
 
 ### FindingFsmEngine
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| CapabilityChecker | finding | §3.1–§3.4 | S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29, S-34 | — |
-| SegregationOfDutiesEnforcer | finding | §3.1–§3.4 | S-14a, S-29, S-32, S-33 | AA-04 |
-| FsmStateMachine | finding | §3.1 | S-11, S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29 | — |
-| HlcClockManager | finding | §3.3 | S-14a, S-14b, S-14c | — |
-| EventHasher | finding | §2.14, §3.1 | S-14a, S-14b, S-14c | — |
-| EventAppender | finding | §2.14, §3.1 | S-14a, S-14b, S-14c | — |
-| AuditLogger | finding | §3.1, §3.2 | S-32, S-33, S-34 | — |
-| DenialHandler | finding | §3.2 | S-32, S-33, S-34 | — |
+| CapabilityChecker | component | §3.1–§3.4 | S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29, S-34 | — |
+| SegregationOfDutiesEnforcer | component | §3.1–§3.4 | S-14a, S-29, S-32, S-33 | AA-04 |
+| FsmStateMachine | component | §3.1 | S-11, S-12, S-13, S-14a, S-14b, S-14c, S-25, S-29 | — |
+| HlcClockManager | component | §3.3 | S-14a, S-14b, S-14c | — |
+| EventHasher | component | §2.14, §3.1 | S-14a, S-14b, S-14c | — |
+| EventAppender | component | §2.14, §3.1 | S-14a, S-14b, S-14c | — |
+| AuditLogger | component | §3.1, §3.2 | S-32, S-33, S-34 | — |
+| DenialHandler | component | §3.2 | S-32, S-33, S-34 | — |
 
 ### CgIrStore
 
 | Component | Diagram | Spec Section | User Story | AA Gate |
 | :--- | :--- | :--- | :--- | :--- |
-| NodeDeduplicator | cgir_store | §2.6 | S-02, S-23 | — |
-| EdgeDeduplicator | cgir_store | §2.6 | S-24 | — |
-| NodeStore | cgir_store | §2.6 | S-02, S-23 | — |
-| EdgeStore | cgir_store | §2.6 | S-24 | — |
-| SnapshotManifestStore | cgir_store | §2.6 | S-23 | — |
-| NodeLookup | cgir_store | §2.6 | S-04, S-16 | — |
-| EdgeLookup | cgir_store | §2.6 | S-05, S-24 | — |
-| SnapshotLookup | cgir_store | §2.6 | S-04, S-05, S-23 | — |
-| LineageTracer | cgir_store | §2.2.2, §2.2.3 | S-07, S-19, S-20, S-26 | — |
+| NodeDeduplicator | component | §2.6 | S-02, S-23 | — |
+| EdgeDeduplicator | component | §2.6 | S-24 | — |
+| NodeStore | component | §2.6 | S-02, S-23 | — |
+| EdgeStore | component | §2.6 | S-24 | — |
+| SnapshotManifestStore | component | §2.6 | S-23 | — |
+| NodeLookup | component | §2.6 | S-04, S-16 | — |
+| EdgeLookup | component | §2.6 | S-05, S-24 | — |
+| SnapshotLookup | component | §2.6 | S-04, S-05, S-23 | — |
+| LineageTracer | component | §2.2.2, §2.2.3 | S-07, S-19, S-20, S-26 | — |
 
 ### Cross-Component User Story Coverage
 

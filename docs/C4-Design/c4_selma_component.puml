@@ -1,0 +1,249 @@
+' ============================================================
+' Title:     Selma -- Component Diagram
+' Boundary:  Selma Rule Regularity Platform
+' Purpose:   Unified internal structure across all containers, aligned with context and container layer boundaries
+' Milestone: 2.0.0
+' Version:   2.2.0
+' Contract:  8.2.4
+' Source:    docs/Regulation/SPECIFICATION.md 1.2, 2.1-2.16, 3.1-3.7, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
+' Review:    Unified component view — 2026-07-07
+' ============================================================
+@startuml c4_selma_component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
+!include ./common/c4_styles.puml
+!theme plain
+
+LAYOUT_WITH_LEGEND()
+
+title Selma -- Component Diagram
+
+Person(regulatory_official, "Regulatory Official", "Rule Author and Governance Owner")
+Person(compliance_rep, "Compliance Representative", "Compliance Seeker and Remediation Owner")
+Person_Ext(system_actor, "System", "Automated Actor. Submits inspections, views findings.")
+
+Container_Boundary(selma, "Selma") {
+
+    ' -- Request Ingress
+    Component(api_gateway, "ApiGateway", "FastAPI", "AA-01 Mediated Feedback gate. Request routing, JWT, rate limiting, 403 CapabilityDenied (S-34).")
+
+    ' -- Authoring Layer / DirectiveManager
+    Component(directive_capability_gate, "DirectiveCapabilityGate", "Python", "Verifies actor capability for directive mutations (S-34).")
+    Component(directive_command_handler, "DirectiveCommandHandler", "Python", "Routes CRUD: create, update, fork, merge, split, retire, restore (2.2-2.5).")
+    Component(identity_lifecycle, "IdentityLifecycleManager", "Python", "lineage_id assignment, execution_id generation, merge/fork/split rules (2.2, 2.3).")
+    Component(version_manager, "DirectiveVersionManager", "Python", "Directive versions, revision history, lineage provenance (2.5, 3.4).")
+    Component(compilation_orchestrator, "CompilationOrchestrator", "Python", "Triggers compilation on mutation. Read-lock coordination.")
+    ContainerDb(directive_store, "DirectiveStore", "PostgreSQL", "Directive graph persistence, version history, lineage tracking (2.5, 3.4).")
+
+    ' -- Compilation Layer / CompilationEngine - Validation
+    Component(js_validator, "JsonSchemaValidator", "Python", "Pass 1 structural filter (Draft-07) (2.9).")
+    Component(ast_discriminator, "AstDiscriminatorWalker", "Python", "Pass 2 evaluator_type + config verification (2.9, AA-06).")
+    Component(complexity_walker, "EvaluatorComplexityWalker", "Python", "Pass 2 complexity limits (S-27).")
+    Component(lineage_dag_val, "LineageDagValidator", "Python", "Pass 2 cycle detection, depth bound, temporal ordering (2.2.3).")
+    Component(ref_validator, "ReferenceValidator", "Python", "Pass 2 RE2, UTC timestamps, portable serialization (AA-07).")
+    Component(policy_ver_checker, "PolicyVersionChecker", "Python", "Pass 2 cross-file policy version consistency (AA-02).")
+    Component(cross_field_val, "CrossFieldValidator", "Python", "Pass 3 scope/priority consistency, acyclicity (2.15).")
+    Component(error_handler, "ErrorHandler", "Python", "Aggregates validation failures. Returns SchemaError.")
+
+    ' -- Compilation Layer / CompilationEngine - Core
+    Component(frozen_env_mgr, "FrozenEnvManager", "Python", "Pins environment, computes frozen_env_hash (2.7).")
+    Component(concurrency_mgr, "ConcurrencyManager", "Python", "Read lock for compilation. Writer-preference FIFO (3.4).")
+    Component(identity_resolver, "IdentityResolver", "Python", "lineage_id/execution_id assignment (2.2, 2.3).")
+    Component(rule_to_node, "RuleToNodeMapper", "Python", "Directive-to-CG-IR node transformation (2.8.1).")
+    Component(param_merger, "ParameterMerger", "Python", "Shallow merge of evaluator configs (2.8.1).")
+    Component(dep_graph, "DependencyGraphBuilder", "Python", "DAG construction, acyclicity validation (2.8.4).")
+    Component(hash_computer, "HashComputer", "Python", "semantic_hash + presentation_hash (2.6).")
+    Component(edge_hasher, "EdgeHashComputer", "Python", "Directional edge hash computation (2.6).")
+    Component(inc_compilation, "IncrementalCompilationManager", "Python", "Semantic hash subgraph reuse (2.6).")
+
+    ' -- Compilation Layer / CompilationEngine - Conflict Metadata
+    Component(conflict_pair, "ConflictPairGenerator", "Python", "Candidate pair generation from conflicts_with (2.15.1).")
+    Component(specificity_scorer, "ScopeSpecificityScorer", "Python", "Specificity scoring for conflict resolution (2.8.2, 2.15).")
+    Component(conflict_metadata, "ConflictMetadataAssembler", "Python", "Frozen conflict metadata assembly (AA-05).")
+    Component(snapshot_assembler, "SnapshotAssembler", "Python", "Snapshot assembly, dry-run support (AA-07).")
+    Component(provenance_recorder, "ProvenanceRecorder", "Python", "Frozen env and lineage provenance (2.6, 3.2).")
+    Component(policy_access_blocker, "PolicyAccessBlocker", "Python", "AA-02 Policy Runtime Prohibition. Compile-time, boot-time, CI/CD enforcement (S-30).")
+
+    ' -- Storage Layer / CgIrStore
+    Component(node_dedup, "NodeDeduplicator", "Python", "Node deduplication by hash (2.6).")
+    Component(edge_dedup, "EdgeDeduplicator", "Python", "Edge deduplication by hash (2.6).")
+    Component(node_store, "NodeStore", "Python", "Content-addressed node storage (2.6).")
+    Component(edge_store, "EdgeStore", "Python", "Content-addressed edge storage (2.6).")
+    Component(snapshot_manifest, "SnapshotManifestStore", "Python", "Snapshot manifest persistence (2.6).")
+    Component(node_lookup, "NodeLookup", "Python", "Multi-index node query.")
+    Component(edge_lookup, "EdgeLookup", "Python", "Multi-index edge query.")
+    Component(snapshot_lookup, "SnapshotLookup", "Python", "Snapshot query and retrieval.")
+    Component(lineage_tracer, "LineageTracer", "Python", "Lineage traversal and parent queries (2.2.2).")
+    ContainerDb(finding_event_store, "FindingEventStore", "Append-Only Log", "HLC-ordered finding lifecycle events (3.1, 3.3).")
+    ContainerDb(audit_event_store, "AuditEventStore", "Append-Only Log", "Security audit entries (S-32, S-33, S-34).")
+    ContainerDb(execution_artifact_store, "ExecutionArtifactStore", "Object Store", "Inspection snapshots and pipeline traces (2.13).")
+    ContainerDb(conflict_artifact_store, "ConflictArtifactStore", "Append-Only Log", "Escalation records for unresolved conflicts (2.15).")
+
+    ' -- Read-side Query Layer / TraceabilityQueryService
+    Component(query_capability_gate, "QueryCapabilityGate", "Python", "Stage-local gate for read-side queries (S-34).")
+    Component(query_router, "QueryRouter", "Python", "Dispatches explanation, history, consistency, audit queries.")
+    Component(explanation_query, "ExplanationQueryHandler", "Python", "Causal chain traversal for finding.explain (S-16).")
+    Component(lineage_history_query, "LineageHistoryQueryHandler", "Python", "Active directive and lineage history (S-04, S-07).")
+    Component(consistency_review_query, "ConsistencyReviewQueryHandler", "Python", "Read-only consistency review (S-05, S-28).")
+    Component(governance_audit_query, "GovernanceAuditQueryHandler", "Python", "Governance audit and verification (S-06, S-22 to S-24).")
+
+    ' -- Runtime Layer / InspectionPipeline
+    Component(inspection_capability_gate, "InspectionCapabilityGate", "Python", "Gate for inspection.submit and inspection.reinspect (S-34).")
+    Component(target_validator, "TargetValidator", "Python", "Target schema validation (2.10).")
+    Component(context_populator, "ContextPopulator", "Python", "Read-only context construction (2.11).")
+    Component(dag_scheduler, "DagScheduler", "Python", "Topological sort, parallel execution (2.12).")
+    Component(eval_dispatcher, "EvaluatorDispatcher", "Python", "Routes by evaluator type, enforces timeout (2.12).")
+    Component(eval_pool, "EvaluatorPool", "Python", "Pure evaluator functions (2.9, AA-03).")
+    Component(fault_classifier, "FaultTaxonomyClassifier", "Python", "8-class fault classification (2.12).")
+    Component(skipped_tracker, "SkippedNodeTracker", "Python", "Dependency-failed node tracking (2.12).")
+    Component(finding_aggregator, "FindingAggregator", "Python", "Finding collection and severity application (2.8.3, 2.9.1).")
+    Component(conflict_resolver_rt, "ConflictResolverRuntime", "Python", "Runtime conflict resolution (2.15, AA-05).")
+    Component(pipeline_tracer, "PipelineTraceRecorder", "Python", "Ordered pipeline trace (2.16.1).")
+    Component(snapshot_serializer, "InspectionSnapshotSerializer", "Python", "Inspection snapshot serialization (2.13).")
+    Component(system_state_hash, "SystemStateHasher", "Python", "System state hash computation (2.13).")
+
+    ' -- Runtime Layer / FindingFsmEngine
+    Component(capability_checker, "CapabilityChecker", "Python", "Capability matrix enforcement (S-34).")
+    Component(sod_enforcer, "SegregationOfDutiesEnforcer", "Python", "SoD constraint enforcement (AA-04).")
+    Component(fsm_state_machine, "FsmStateMachine", "Python", "10 states, 11 transitions (3.1).")
+    Component(hlc_clock, "HlcClockManager", "Python", "Hybrid Logical Clock management (3.3).")
+    Component(event_hasher, "EventHasher", "Python", "Event integrity hashing (2.14).")
+    Component(event_appender, "EventAppender", "Python", "Atomic append to FindingEventStore (3.1).")
+    Component(audit_logger, "AuditLogger", "Python", "Transition audit logging (S-32, S-33).")
+    Component(denial_handler, "DenialHandler", "Python", "403 CapabilityDenied handling (S-34).")
+    Component(analytics_engine, "AnalyticsEngine", "Python", "Read-only trend and aggregate queries (S-17, AA-01).")
+
+    ' -- Assurance Layer
+    Component(arch_audit_engine, "ArchitecturalAuditEngine", "Python", "AA-01 through AA-07 gate validation orchestrator (S-30).")
+
+}
+
+Container_Ext(frozen_env_cfg, "FrozenEnvConfig", "Configuration Artifact", "Pinned environment configuration consumed at compile time (2.7).")
+Container_Ext(rule_schema, "rule_schema.json", "Compile-Time Contract", "Structural validation contract (AA-06, AA-07). NEVER at runtime (1.2).")
+Container_Ext(policy_doctrine, "policy_doctrine.yaml", "Compile-Time Contract", "Governance policy contract (AA-02). MUST NOT be read at runtime (1.2).")
+System_Ext(cicd_pipeline, "CI/CD Pipeline", "External system. AA gate certification and AA-02 static analysis (S-30).")
+
+Rel(regulatory_official, api_gateway, "directive.*, finding.*, analytics.*, conflict.resolve", "HTTPS")
+Rel(compliance_rep, api_gateway, "inspection.*, finding.acknowledge, evidence.submit, analytics.view", "HTTPS")
+Rel(system_actor, api_gateway, "inspection.submit, finding.view, analytics.view", "HTTPS")
+
+Rel(api_gateway, directive_capability_gate, "directive mutations", "Internal")
+Rel(api_gateway, inspection_capability_gate, "inspection.submit, inspection.reinspect", "Internal")
+Rel(api_gateway, capability_checker, "finding transitions", "Internal")
+Rel(api_gateway, query_capability_gate, "traceability and audit queries", "Internal")
+Rel(api_gateway, analytics_engine, "analytics queries", "Internal")
+Rel(api_gateway, snapshot_assembler, "impact-preview / dry-run (S-09, S-21, S-27, S-31)", "Internal")
+
+Rel(directive_capability_gate, directive_command_handler, "capability held")
+Rel(directive_command_handler, identity_lifecycle, "CRUD with identity rules")
+Rel(identity_lifecycle, version_manager, "versioned directive")
+Rel(version_manager, directive_store, "persists directive graph", "SQL")
+Rel(compilation_orchestrator, concurrency_mgr, "triggers compilation on mutation", "Internal")
+Rel(directive_store, js_validator, "directive graph (read lock)", "SQL")
+
+Rel(js_validator, ast_discriminator, "PASS")
+Rel(js_validator, complexity_walker, "PASS")
+Rel(js_validator, lineage_dag_val, "PASS")
+Rel(js_validator, ref_validator, "PASS")
+Rel(js_validator, policy_ver_checker, "PASS")
+Rel(ast_discriminator, cross_field_val, "PASS")
+Rel(complexity_walker, cross_field_val, "PASS")
+Rel(lineage_dag_val, cross_field_val, "PASS")
+Rel(ref_validator, cross_field_val, "PASS")
+Rel(policy_ver_checker, cross_field_val, "PASS")
+Rel(js_validator, error_handler, "FAIL")
+Rel(cross_field_val, error_handler, "FAIL")
+Rel(cross_field_val, identity_resolver, "validated rules (ALL PASS)")
+
+Rel(frozen_env_cfg, frozen_env_mgr, "pinned config", "Configuration")
+Rel(rule_schema, js_validator, "structural validation (compile-time only)", "AA-06, AA-07")
+Rel(policy_doctrine, policy_ver_checker, "governance validation (compile-time only)", "AA-02")
+Rel(policy_doctrine, policy_access_blocker, "prohibition enforcement (compile-time only)", "AA-02")
+
+Rel(frozen_env_mgr, concurrency_mgr, "hermetic boundary config")
+Rel(concurrency_mgr, identity_resolver, "read lock acquired")
+Rel(identity_resolver, rule_to_node, "validated rules")
+Rel(rule_to_node, param_merger, "mapped rules")
+Rel(param_merger, dep_graph, "merged parameters")
+Rel(dep_graph, hash_computer, "all nodes")
+Rel(dep_graph, edge_hasher, "node references")
+Rel(hash_computer, inc_compilation, "node hashes")
+Rel(edge_hasher, inc_compilation, "edge hashes")
+Rel(inc_compilation, conflict_pair, "mapped nodes + dependency graph")
+Rel(conflict_pair, conflict_metadata, "candidate pairs")
+Rel(specificity_scorer, conflict_metadata, "specificity scores")
+Rel(conflict_metadata, snapshot_assembler, "frozen conflict metadata")
+Rel(provenance_recorder, snapshot_assembler, "provenance metadata")
+Rel(snapshot_assembler, policy_access_blocker, "validates runtime data paths at compile time", "Internal")
+Rel(snapshot_assembler, node_dedup, "new nodes", "Internal")
+Rel(snapshot_assembler, edge_dedup, "new edges", "Internal")
+Rel(snapshot_assembler, snapshot_manifest, "snapshot manifest", "Internal")
+Rel(snapshot_assembler, conflict_artifact_store, "ConflictArtifact templates (compile-time only)", "Append-only")
+
+Rel(node_dedup, node_store, "unique nodes")
+Rel(edge_dedup, edge_store, "unique edges")
+Rel(node_store, node_lookup, "indexed")
+Rel(edge_store, edge_lookup, "indexed")
+Rel(snapshot_manifest, snapshot_lookup, "indexed")
+Rel(node_store, lineage_tracer, "lineage index")
+
+Rel(inspection_capability_gate, target_validator, "authorized target payload")
+Rel(target_validator, context_populator, "validated target")
+Rel(context_populator, dag_scheduler, "read-only context")
+Rel(snapshot_lookup, dag_scheduler, "reads frozen CG-IR snapshot", "Content-addressed")
+Rel(finding_event_store, context_populator, "prior findings (aggregates)", "Read-only")
+Rel(dag_scheduler, eval_dispatcher, "topological node order")
+Rel(eval_dispatcher, eval_pool, "node + target + context")
+Rel(eval_pool, finding_aggregator, "evaluator outcomes")
+Rel(eval_pool, fault_classifier, "timeout/error")
+Rel(fault_classifier, finding_aggregator, "NeedsReview finding")
+Rel(dag_scheduler, skipped_tracker, "dependency failed")
+Rel(finding_aggregator, conflict_resolver_rt, "same-lineage concurrent findings")
+Rel(snapshot_lookup, conflict_resolver_rt, "conflict metadata", "Content-addressed")
+Rel(conflict_resolver_rt, snapshot_serializer, "resolved findings")
+Rel(finding_aggregator, snapshot_serializer, "aggregated findings")
+Rel(pipeline_tracer, snapshot_serializer, "pipeline trace")
+Rel(system_state_hash, snapshot_serializer, "system state hash")
+Rel(snapshot_serializer, execution_artifact_store, "writes inspection snapshot", "Object PUT")
+Rel(finding_aggregator, finding_event_store, "writes findings", "Append-only")
+
+Rel(capability_checker, sod_enforcer, "capability held")
+Rel(sod_enforcer, fsm_state_machine, "SoD check passed")
+Rel(fsm_state_machine, hlc_clock, "valid transition")
+Rel(hlc_clock, event_hasher, "HLC tuple")
+Rel(event_hasher, event_appender, "hashed event")
+Rel(event_appender, finding_event_store, "appends transition events", "Append-only")
+Rel(audit_logger, audit_event_store, "audit entries", "Append-only")
+Rel(finding_event_store, fsm_state_machine, "current state", "Read-only")
+Rel(finding_event_store, sod_enforcer, "creator_provenance, evidence history", "Read-only")
+
+Rel(query_capability_gate, query_router, "authorized query")
+Rel(query_router, explanation_query, "finding.explain")
+Rel(query_router, lineage_history_query, "lineage history")
+Rel(query_router, consistency_review_query, "consistency review")
+Rel(query_router, governance_audit_query, "governance audit")
+Rel(explanation_query, finding_event_store, "reads finding history", "Read-only")
+Rel(explanation_query, node_lookup, "reads control nodes", "Content-addressed")
+Rel(explanation_query, directive_store, "reads directive revisions", "SQL")
+Rel(explanation_query, execution_artifact_store, "reads inspection snapshots", "Object GET")
+Rel(lineage_history_query, directive_store, "reads active directives", "SQL")
+Rel(consistency_review_query, snapshot_lookup, "reads conflict metadata", "Content-addressed")
+Rel(governance_audit_query, snapshot_lookup, "reads snapshot manifests", "Content-addressed")
+Rel(governance_audit_query, audit_event_store, "reads governance audit entries", "Read-only")
+Rel(consistency_review_query, conflict_artifact_store, "reads conflict artifacts", "Read-only")
+
+Rel(analytics_engine, finding_event_store, "reads historical findings", "Read-only")
+
+Rel(arch_audit_engine, api_gateway, "validates AA-01 gate mediation", "Internal")
+Rel(arch_audit_engine, policy_access_blocker, "validates AA-02", "Internal")
+Rel(arch_audit_engine, eval_pool, "validates AA-03", "Internal")
+Rel(arch_audit_engine, sod_enforcer, "validates AA-04", "Internal")
+Rel(arch_audit_engine, conflict_resolver_rt, "validates AA-05", "Internal")
+Rel(arch_audit_engine, ast_discriminator, "validates AA-06", "Internal")
+Rel(arch_audit_engine, ref_validator, "validates AA-07 (portability)", "Internal")
+Rel(arch_audit_engine, snapshot_assembler, "validates AA-07 (serialization)", "Internal")
+Rel(arch_audit_engine, analytics_engine, "validates AA-01 read path", "Internal")
+
+Rel(cicd_pipeline, policy_access_blocker, "AA-02 static analysis hooks", "CI/CD")
+Rel(cicd_pipeline, arch_audit_engine, "triggers AA gate certification", "CI/CD")
+
+@enduml

@@ -2,7 +2,7 @@
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
 ' Purpose:   Shows Selma as a black box with its primary actors, operational system boundary, and compile-time contracts
-' Milestone: v2.0.0
+' Milestone: 2.0.0
 ' Version:   2.1.0
 ' Contract:  8.2.4
 ' Source:    docs/Regulation/SPECIFICATION.md 1.1-1.4, 1.2, docs/User-Story/User_Stories.md Actors & Capabilities, S-30
