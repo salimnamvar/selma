@@ -7,23 +7,6 @@
 '            content-addressed CG-IR store, append-only Finding Event
 '            Stream, and capability-gated mutation paths.
 ' Version:   6.0.0
-'
-' LEGEND -- Key Architectural Flows
-' -- Directive Authoring --
-' Regulatory Official -> API Gateway -> Directive Store
-'   -> Compilation Engine -> CG-IR Store
-'
-' -- Inspection --
-' Compliance Rep -> API Gateway -> Inspection Pipeline
-'   -> CG-IR Store (read) -> Finding FSM -> Event Store
-'
-' -- Conflict Resolution --
-' Inspection Pipeline -> Conflict Resolution Engine
-'   -> CG-IR Store (read) -> Artifact Store (write)
-'
-' -- Mediated Feedback --
-' Analytics Engine -> Event Store (read) -> Audit Platform (publish)
-'   NO write path to CG-IR/FSM (AA-01)
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram
@@ -56,10 +39,6 @@ Person_Ext(system_actor, "Automated Service Account", "Programmatic. Narrowest c
 '  EXTERNAL SYSTEMS (carried forward from Context Diagram)
 ' ============================================================
 
-' NOTE: governance_contracts contains the Audit Corpus:
-' policy_doctrine.yaml (governance intent, runtime-prohibited)
-' rule_schema.json (structural projection of spec invariants)
-' directive tables (Machine ID lineage)
 System_Ext(governance_contracts, "Governance Contracts (Audit Corpus)", "policy_doctrine.yaml (governance intent, runtime-prohibited), rule_schema.json (structural validation contract), directive tables (Machine ID lineage). Consumed exclusively at the hermetic compile boundary.")
 
 System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types. Provides identity tokens and capability assertions validated at every mutation gate (S-34).")
