@@ -5,13 +5,8 @@
 '            automated service account, and the six external
 '            systems Selma compiles against, enforces capability
 '            through, and streams findings into.
-' Milestone: v4.0.0
 ' Version:   4.0.0
 ' Contract:  8.2.4
-' Source:    SPECIFICATION.md §1.1–1.4, §2.1, §2.7, §3.2;
-'            User_Stories.md Epics 1–7
-' Review:    Redesigned 2026-07-07
-' Elements:  3 actors + 1 system + 6 external = 10
 ' ============================================================
 @startuml c4_selma_context
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml

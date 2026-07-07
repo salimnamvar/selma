@@ -2,14 +2,8 @@
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma Rule Regularity Platform
 ' Purpose:   Shows operational runtime units organized by layer: ingress, authoring, compilation, storage, query, runtime, assurance
-' Milestone: 2.0.0
 ' Version:   2.1.0
-' Contract:  8.2.4
-' Source:    docs/Regulation/SPECIFICATION.md 1.2, 2.1-2.15, 3.1-3.7, docs/User-Story/User_Stories.md S-30 AA-01-AA-07
-' Review:    Enhanced — 2026-07-06
 ' ============================================================
-' SIM-01 EXCEPTION: 21 elements -- cross-cutting overview of operational subsystems
-' (3 actors + 14 internal units + 2 external configuration + 2 external systems)
 @startuml c4_selma_container
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !include ./common/c4_styles.puml
