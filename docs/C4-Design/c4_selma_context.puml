@@ -11,6 +11,8 @@
 '       render with default C4-PlantUML styling in isolation.
 ' ============================================================
 @startuml c4_selma_context
+title Selma -- Context Diagram
+
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
 !include ./common/c4_styles.puml
 !theme plain
@@ -22,7 +24,7 @@ AddRelTag("compile_only", $legendText="compile-time only -- runtime access is pr
 AddRelTag("immutable",    $legendText="append-only, HLC-ordered -- never mutated")
 AddRelTag("mediated",     $legendText="mediated output -- Selma never mutates external state")
 
-title Selma -- Context Diagram
+
 
 Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities (directive.*), Conflict Artifact resolution, and finding disposition. Segregation-of-duties: directive creator cannot waive findings on own directives.")
 
