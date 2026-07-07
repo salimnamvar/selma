@@ -131,7 +131,7 @@ Rel(api_gateway, analytics_engine, "routes read queries: analytics (S-17), direc
 Rel(compilation_engine, governance_contracts, "reads Directive Graph under hermetic read-lock; policy_doctrine.yaml compile-time only (§1.2)", "compile-time only", $tags="compile_only")
 Rel(compilation_engine, directive_store, "reads directive revisions and lineage state under read-lock (§3.4)", "SQL", $tags="compile_only")
 Rel(compilation_engine, conflict_engine, "applies conflict resolution mapping at compile time (§2.4 Step 3, §2.15)", "Internal", $tags="compile_only")
-Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (§2.6)", "CAS Write", $tags="immutable")
+Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (§2.6)", "CAS Write", $tags="compile_only")
 
 
 ' ============================================================
@@ -140,7 +140,7 @@ Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR
 
 Rel(inspection_pipeline, cgir_store, "loads frozen CG-IR snapshot by hash for pure DAG evaluation", "CAS Read")
 Rel(inspection_pipeline, analytics_engine, "fetches pre-inspection finding_aggregates for context object (§2.11)", "Internal")
-Rel(inspection_pipeline, conflict_engine, "resolves per-target runtime conflicts over frozen CG-IR fields (AA-05, §2.15)", "Internal")
+Rel(inspection_pipeline, conflict_engine, "applies pre-computed deterministic resolution when multiple nodes fire against same target (§2.15)", "Internal")
 Rel(inspection_pipeline, finding_fsm, "emits findings (Created -> Open) after DAG evaluation completes (S-10)", "Internal")
 Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline trace, and system_state_hash (§2.13)", "Object Write", $tags="immutable")
 
@@ -150,6 +150,7 @@ Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline t
 ' ============================================================
 
 Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (§3.1, §3.3)", "Append-Only", $tags="immutable")
+Rel(finding_fsm, cgir_store, "reads creator_provenance from snapshot node provenance for SoD enforcement (S-29, S-32, S-33)", "CAS Read-Only")
 Rel(finding_fsm, remediation_systems, "emits mediated finding state changes to operational workflows", "webhook / events", $tags="mediated")
 
 
@@ -166,7 +167,7 @@ Rel(analytics_engine, cgir_store, "reads CG-IR nodes for active directive views 
 ' ============================================================
 
 Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (§2.15, §2.8.2)", "CAS Read-Only")
-Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (§2.15)", "Object Write", $tags="immutable")
+Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (§2.15)", "Object Write", $tags="compile_only")
 
 
 ' ============================================================
