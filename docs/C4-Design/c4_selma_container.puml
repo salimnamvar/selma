@@ -7,17 +7,7 @@
 '            content-addressed CG-IR store, append-only Finding Event
 '            Stream, and capability-gated mutation paths.
 ' Version:   6.0.0
-' Normative: SPECIFICATION.md 8.2.4, User_Stories.md 8.2.4
-' NOTE: Requires ./common/c4_styles.puml from the selma project.
-'       Remove this include and the !theme plain directive to
-'       render with default C4-PlantUML styling in isolation.
 ' ============================================================
-' SIM-01 EXCEPTION: 19 elements -- domain-agnostic rule regularity
-'   platform requires 3 actors + 6 external systems + 10 runtime
-'   units to faithfully model the §2.1 three-primitive architecture
-'   (Directive Graph, CG-IR, Finding Event Stream, Execution
-'   Artifacts) and all AA-01..AA-07 gate invariants without omitting
-'   any normative architectural boundary.
 @startuml c4_selma_container
 title Selma -- Container Diagram
 
