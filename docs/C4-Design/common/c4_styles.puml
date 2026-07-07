@@ -7,60 +7,6 @@
 
 !define ICONS false
 
-skinparam Actor {
-  BackgroundColor #438DD5
-  FontColor #FFFFFF
-  BorderColor #2E6295
-}
-
-skinparam Person {
-  BackgroundColor #438DD5
-  FontColor #FFFFFF
-  BorderColor #2E6295
-}
-
-skinparam Person_Ext {
-  BackgroundColor #85BBF0
-  FontColor #FFFFFF
-  BorderColor #438DD5
-}
-
-skinparam System {
-  BackgroundColor #1168BD
-  FontColor #FFFFFF
-  BorderColor #0D47A1
-}
-
-skinparam System_Ext {
-  BackgroundColor #999999
-  FontColor #FFFFFF
-  BorderColor #666666
-}
-
-skinparam Container {
-  BackgroundColor #438DD5
-  FontColor #FFFFFF
-  BorderColor #2E6295
-}
-
-skinparam ContainerDb {
-  BackgroundColor #E08E79
-  FontColor #FFFFFF
-  BorderColor #BF5B3E
-}
-
-skinparam Boundary {
-  BackgroundColor #F5F5F5
-  FontColor #333333
-  BorderColor #CCCCCC
-}
-
-skinparam legend {
-  BackgroundColor #FFFFFF
-  FontColor #333333
-  BorderColor #CCCCCC
-}
-
 skinparam defaultFontName "Arial"
 skinparam defaultFontSize 12
 skinparam shadowing false
