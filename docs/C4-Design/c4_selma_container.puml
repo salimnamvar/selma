@@ -7,6 +7,23 @@
 '            content-addressed CG-IR store, append-only Finding Event
 '            Stream, and capability-gated mutation paths.
 ' Version:   6.0.0
+'
+' LEGEND -- Key Architectural Flows
+' -- Directive Authoring --
+' Regulatory Official -> API Gateway -> Directive Store
+'   -> Compilation Engine -> CG-IR Store
+'
+' -- Inspection --
+' Compliance Rep -> API Gateway -> Inspection Pipeline
+'   -> CG-IR Store (read) -> Finding FSM -> Event Store
+'
+' -- Conflict Resolution --
+' Inspection Pipeline -> Conflict Resolution Engine
+'   -> CG-IR Store (read) -> Artifact Store (write)
+'
+' -- Mediated Feedback --
+' Analytics Engine -> Event Store (read) -> Audit Platform (publish)
+'   NO write path to CG-IR/FSM (AA-01)
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram
@@ -39,7 +56,11 @@ Person_Ext(system_actor, "Automated Service Account", "Programmatic. Narrowest c
 '  EXTERNAL SYSTEMS (carried forward from Context Diagram)
 ' ============================================================
 
-System_Ext(governance_contracts, "Governance Contracts", "policy_doctrine.yaml (governance intent, runtime-prohibited), rule_schema.json (structural validation contract), directive tables (Machine ID lineage). Consumed exclusively at the hermetic compile boundary.")
+' NOTE: governance_contracts contains the Audit Corpus:
+' policy_doctrine.yaml (governance intent, runtime-prohibited)
+' rule_schema.json (structural projection of spec invariants)
+' directive tables (Machine ID lineage)
+System_Ext(governance_contracts, "Governance Contracts (Audit Corpus)", "policy_doctrine.yaml (governance intent, runtime-prohibited), rule_schema.json (structural validation contract), directive tables (Machine ID lineage). Consumed exclusively at the hermetic compile boundary.")
 
 System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types. Provides identity tokens and capability assertions validated at every mutation gate (S-34).")
 
@@ -106,7 +127,7 @@ Rel(system_actor, api_gateway, "inspection.submit, finding.view, analytics.view"
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(api_gateway, iam, "validates identity tokens and capability assertions at request ingress gate", "OAuth 2.0 / OIDC")
+Rel(api_gateway, iam, "validates identity tokens and capability assertions at request ingress gate (S-34)", "OAuth 2.0 / OIDC")
 Rel(regulated_systems, api_gateway, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(api_gateway, regulated_systems, "returns inspection results and causal explanations (S-16)", "HTTPS / API", $tags="mediated")
 Rel(cicd, compilation_engine, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis (S-30)", "CI/CD", $tags="compile_only")
@@ -116,10 +137,10 @@ Rel(cicd, compilation_engine, "runs AA-01..AA-07 certification suite; enforces p
 '  RELATIONSHIPS -- API Gateway -> Internal Containers
 ' ============================================================
 
-Rel(api_gateway, directive_store, "reads and writes directives, lineage records, and revision history (directive.*, S-07)", "SQL")
+Rel(api_gateway, directive_store, "reads and writes directives, lineage records, and revision history (directive.*, S-01, S-02, S-07, S-08, S-19, S-20, S-26)", "SQL")
 Rel(api_gateway, compilation_engine, "triggers hermetic compilation on directive mutation; dry-run impact preview (S-09)", "Internal", $tags="compile_only")
-Rel(api_gateway, inspection_pipeline, "routes inspection submissions with target payload (inspection.submit/reinspect)", "Internal", $tags="capability_enforced")
-Rel(api_gateway, finding_fsm, "routes finding lifecycle transitions (finding.*, evidence.submit)", "Internal", $tags="capability_enforced")
+Rel(api_gateway, inspection_pipeline, "routes inspection submissions with target payload (S-10, S-15)", "Internal", $tags="capability_enforced")
+Rel(api_gateway, finding_fsm, "routes finding lifecycle transitions (finding.*, evidence.submit, S-12, S-13, S-14a/b/c, S-25, S-29)", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_engine, "routes conflict.resolve requests on open Conflict Artifacts; consistency review (S-05)", "Internal", $tags="capability_enforced")
 Rel(api_gateway, analytics_engine, "routes read queries: analytics (S-17), directive views (S-04), findings (S-11), explanations (S-16), governance audits (S-06, S-21..S-24, S-27)", "Internal")
 
@@ -128,37 +149,37 @@ Rel(api_gateway, analytics_engine, "routes read queries: analytics (S-17), direc
 '  RELATIONSHIPS -- Compilation Engine
 ' ============================================================
 
-Rel(compilation_engine, governance_contracts, "reads Directive Graph under hermetic read-lock; policy_doctrine.yaml compile-time only (Sec.1.2)", "compile-time only", $tags="compile_only")
+Rel(compilation_engine, governance_contracts, "reads Directive Graph under hermetic read-lock; policy_doctrine.yaml compile-time only (Sec.1.2, Sec.9.7)", "compile-time only", $tags="compile_only")
 Rel(compilation_engine, directive_store, "reads directive revisions and lineage state under read-lock (Sec.3.4)", "SQL", $tags="compile_only")
 Rel(compilation_engine, conflict_engine, "applies conflict resolution mapping at compile time (Sec.2.4 Step 3, Sec.2.15)", "Internal", $tags="compile_only")
-Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (Sec.2.6)", "CAS Write", $tags="compile_only")
+Rel(compilation_engine, cgir_store, "publishes immutable content-addressed CG-IR snapshot (Sec.2.6, S-23, S-24)", "CAS Write", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Inspection Pipeline
 ' ============================================================
 
-Rel(inspection_pipeline, cgir_store, "loads frozen CG-IR snapshot by hash for pure DAG evaluation", "CAS Read")
+Rel(inspection_pipeline, cgir_store, "loads frozen CG-IR snapshot by hash for pure DAG evaluation (S-10)", "CAS Read")
 Rel(inspection_pipeline, analytics_engine, "fetches pre-inspection finding_aggregates for context object (Sec.2.11)", "Internal")
-Rel(inspection_pipeline, conflict_engine, "applies pre-computed deterministic resolution when multiple nodes fire against same target (Sec.2.15)", "Internal")
-Rel(inspection_pipeline, finding_fsm, "emits findings (Created -> Open) after DAG evaluation completes (S-10)", "Internal")
-Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline trace, and system_state_hash (Sec.2.13)", "Object Write")
+Rel(inspection_pipeline, conflict_engine, "applies pre-computed deterministic resolution when multiple nodes fire against same target (Sec.2.15, S-28)", "Internal")
+Rel(inspection_pipeline, finding_fsm, "emits findings (Created -> Open) after DAG evaluation completes (S-10, Sec.2.12)", "Internal")
+Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline trace, and system_state_hash (Sec.2.13, Sec.3.6)", "Object Write")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Finding FSM Engine
 ' ============================================================
 
-Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (Sec.3.1, Sec.3.3)", "Append-Only", $tags="immutable")
+Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (Sec.3.1, Sec.3.3, S-14a)", "Append-Only", $tags="immutable")
 Rel(finding_fsm, cgir_store, "reads creator_provenance from snapshot node provenance for SoD enforcement (S-29, S-32, S-33)", "CAS Read-Only")
-Rel(finding_fsm, remediation_systems, "emits mediated finding state changes to operational workflows", "webhook / events", $tags="mediated")
+Rel(finding_fsm, remediation_systems, "emits mediated finding state changes to operational workflows (S-14a, S-29)", "webhook / events", $tags="mediated")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Analytics Engine
 ' ============================================================
 
-Rel(analytics_engine, finding_event_store, "reads events for aggregates, trends, and findings view (AA-01: read-only)", "SQL / Read-Only")
+Rel(analytics_engine, finding_event_store, "reads events for aggregates, trends, and findings view (AA-01: read-only, S-17)", "SQL / Read-Only")
 Rel(analytics_engine, cgir_store, "reads CG-IR nodes for active directive views and causal chain traversal (S-04, S-16)", "CAS Read-Only")
 
 
@@ -166,15 +187,15 @@ Rel(analytics_engine, cgir_store, "reads CG-IR nodes for active directive views 
 '  RELATIONSHIPS -- Conflict Resolution Engine
 ' ============================================================
 
-Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (Sec.2.15, Sec.2.8.2)", "CAS Read-Only")
-Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (Sec.2.15)", "Object Write", $tags="compile_only")
+Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (Sec.2.15, Sec.2.8.2, S-05)", "CAS Read-Only")
+Rel(conflict_engine, artifact_store, "stores Conflict Artifacts pending human resolution (Sec.2.15, S-05)", "Object Write", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(finding_event_store, audit_platform, "replicates immutable Finding Event Stream for long-term retention", "append-only / HLC-ordered", $tags="immutable")
-Rel(artifact_store, audit_platform, "replicates inspection snapshots, pipeline traces, and system state hashes", "append-only")
+Rel(finding_event_store, audit_platform, "replicates immutable Finding Event Stream for long-term retention (Sec.2.14)", "append-only / HLC-ordered", $tags="immutable")
+Rel(artifact_store, audit_platform, "replicates inspection snapshots, pipeline traces, and system state hashes (Sec.3.5, Sec.3.6)", "append-only")
 
 @enduml
