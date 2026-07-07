@@ -1,5 +1,5 @@
 ' ============================================================
-' Title:     Selma — Context Diagram
+' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
 ' Purpose:   Black-box view of the two governance actors, the
 '            automated service account, and the six external
@@ -18,11 +18,11 @@
 LAYOUT_LEFT_RIGHT()
 LAYOUT_WITH_LEGEND()
 
-AddRelTag("compile_only", $legendText="compile-time only — runtime access is prohibited")
-AddRelTag("immutable",    $legendText="append-only, HLC-ordered — never mutated")
-AddRelTag("mediated",     $legendText="mediated output — Selma never mutates external state")
+AddRelTag("compile_only", $legendText="compile-time only -- runtime access is prohibited")
+AddRelTag("immutable",    $legendText="append-only, HLC-ordered -- never mutated")
+AddRelTag("mediated",     $legendText="mediated output -- Selma never mutates external state")
 
-title Selma — Context Diagram
+title Selma -- Context Diagram
 
 Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities (directive.*), Conflict Artifact resolution, and finding disposition. Segregation-of-duties: directive creator cannot waive findings on own directives.")
 
