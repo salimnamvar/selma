@@ -6,7 +6,9 @@
 '            systems Selma compiles against, enforces capability
 '            through, and streams findings into.
 ' Version:   4.0.0
-' Contract:  8.2.4
+' NOTE: Requires ./common/c4_styles.puml from the selma project.
+'       Remove this include and the !theme plain directive to
+'       render with default C4-PlantUML styling in isolation.
 ' ============================================================
 @startuml c4_selma_context
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
@@ -30,11 +32,11 @@ Person_Ext(system_actor, "Automated Service Account", "Programmatic service acco
 
 System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles the Directive Graph into a hermetic, content-addressed CG-IR snapshot under a read-lock boundary. Executes pure-evaluator inspections against submitted targets. Maintains an append-only, HLC-ordered Finding Event Stream under a strict FSM with terminal states. Enforces capability-based permissions and segregation-of-duties at every mutation gate.")
 
-System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed exclusively at the hermetic compile-time boundary: policy_doctrine.yaml (governance intent only — no executable logic, runtime-prohibited), rule_schema.json (structural validation contract and dual identity model), and directive tables carrying lineage IDs.")
+System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed exclusively at the hermetic compile-time boundary: policy_doctrine.yaml (governance intent only -- no executable logic, runtime-prohibited), rule_schema.json (structural validation contract and dual identity model), and directive tables carrying lineage IDs.")
 
-System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types: human officials, compliance representatives, AI agents, and automated accounts. Provides the identity tokens and capability assertions Selma validates at every mutation gate — request ingress, compilation, pipeline entry, FSM transitions, and conflict resolution.")
+System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types: human officials, compliance representatives, AI agents, and automated accounts. Provides the identity tokens and capability assertions Selma validates at every mutation gate -- request ingress, compilation, pipeline entry, FSM transitions, and conflict resolution.")
 
-System_Ext(cicd, "CI/CD Pipeline", "Automated architectural certification. Runs the AA-01 through AA-07 gate suite per SPECIFICATION.md §9.9. Performs static analysis to verify policy_doctrine.yaml is absent from all runtime source paths. Validates cross-layer version compatibility of the three governance document layers.")
+System_Ext(cicd, "CI/CD Pipeline", "Automated architectural certification. Runs the AA-01 through AA-07 gate suite per SPECIFICATION.md Sec.9.9. Performs static analysis to verify policy_doctrine.yaml is absent from all runtime source paths. Validates cross-layer version compatibility of the three governance document layers.")
 
 System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-specific external systems and automated pipelines supplying inspection targets conforming to the target schema. Domain-agnostic: financial ledgers, software repositories, document stores, environmental monitoring platforms, or any other subject domain.")
 
@@ -51,6 +53,7 @@ Rel(selma, iam, "validates actor identity and capability context at all mutation
 Rel(cicd, selma, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis", "CI/CD")
 
 Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
+Rel(selma, regulated_systems, "returns inspection results and causal explanations per S-16", "HTTPS / API", $tags="mediated")
 
 Rel(selma, audit_platform, "streams Finding Event Stream, inspection snapshots, and pipeline traces", "append-only / HLC-ordered", $tags="immutable")
 Rel(selma, remediation_systems, "emits finding events and status changes", "mediated", $tags="mediated")
