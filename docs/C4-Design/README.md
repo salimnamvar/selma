@@ -11,7 +11,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | Context | `c4_selma_context.puml` | Context | 8 | System boundary, primary actors, compile-time contracts, and CI/CD pipeline integration |
 | Container | `c4_selma_container.puml` | Container | 21 | Operational runtime units organized by 7 layers (incl. Assurance) |
-| Component | `c4_selma_component.puml` | Component | 73 | Unified internal structure across all containers — mirrors container layer boundaries |
+| Component | `c4_selma_component.puml` | Component | 38 components (+ actors/ext) | White-box decomposition of all 10 containers from Container Diagram v6.0.0 |
 
 All three diagrams share the same boundary taxonomy: Request Ingress, Authoring Layer, Compilation Layer, Storage Layer, Read-side Query Layer, Runtime Layer, and Assurance Layer. The component diagram uses section comments to mark each layer and container group, keeping names and relationships aligned with the container diagram.
 
