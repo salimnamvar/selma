@@ -10,7 +10,7 @@
 '            Finding FSM (Sec.3.1), HLC-ordered append-only event stream
 '            (Sec.3.3), and read-only analytics with zero-write-path
 '            invariant (AA-01).
-' Version:   3.3.0
+' Version:   8.2.4
 '
 ' LEGEND -- Key Architectural Flows
 ' -- Directive Authoring --
