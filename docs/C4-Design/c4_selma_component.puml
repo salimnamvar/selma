@@ -7,15 +7,18 @@
 '            execution, deterministic conflict resolution, strict
 '            10-state Finding FSM, append-only HLC event stream,
 '            capability-gated mutation paths, and read-only analytics.
-' Version:   1.0.0
-' Sources:   SPECIFICATION.md 8.2.4, User_Stories.md,
+' Version:   2.0.0
+' Sources:   SPECIFICATION.md 8.2.4, User_Stories.md 8.2.4,
 '            Container Diagram v6.0.0, Context Diagram v4.0.0
+'            Scored archive designs under docs/C4-Design/archive/
+' Note:      Unified multi-container C3 view (intentional). C4-C3-001
+'            "exactly one container" is waived for platform-wide maps.
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
-!include ../common/c4_styles.puml
+!include ./common/c4_styles.puml
 !theme plain
 
 LAYOUT_LEFT_RIGHT()
@@ -62,104 +65,112 @@ System_Ext(remediation_systems, "Remediation & Case Management", "Operational wo
 System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     ' ── 1. API GATEWAY ──────────────────────────────────────────
-    Container_Boundary(api_gateway_boundary, "API Gateway") {
-        Component(tls_handler, "TLS Termination Handler", "Reverse proxy / TLS 1.3", "Terminates TLS 1.3 connections. No plaintext ingress. Forwards validated connections to authentication layer.")
-        Component(auth_handler, "JWT / OIDC Authenticator", "AuthN middleware", "Validates bearer tokens against IAM. Extracts actor identity and capability set. Rejects expired or unauthenticated requests with 401.")
-        Component(capability_enforcer, "Capability Enforcer", "AuthZ middleware", "Hard-deny (403) on missing capabilities per capability matrix -- no partial state mutation (S-34). Validates required capabilities per route: directive.*, inspection.submit/reinspect, finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation, evidence.submit, conflict.resolve, analytics.view.")
-        Component(request_router, "Request Router", "FastAPI router", "Routes validated requests to domain containers by capability domain: directive.* -> Directive Store + Compilation Engine; inspection.* -> Inspection Pipeline; finding.* and evidence.* -> Finding FSM Engine; conflict.resolve -> Conflict Resolution Engine; read queries -> Analytics Engine.")
+Container_Boundary(api_gateway_boundary, "API Gateway") {
+        Component(tls_handler, "TLS Termination Handler", "Reverse proxy / TLS 1.3", "Terminates TLS 1.3. No plaintext ingress. Forwards validated connections to authentication.")
+        Component(auth_handler, "JWT / OIDC Authenticator", "AuthN middleware", "Validates bearer tokens against IAM. Extracts actor identity and capability set. Rejects unauthenticated requests with 401.")
+        Component(capability_enforcer, "Capability Enforcer", "AuthZ middleware", "Hard-deny (403) on missing capabilities -- no partial state mutation (S-34). Capability matrix per Sec.3.2.1. Audit-logs all denials.")
+        Component(request_router, "Request Router", "FastAPI router", "Routes authorized requests by capability domain: directive.* -> Directive Store + Compilation Engine; inspection.* -> Inspection Pipeline; finding.* / evidence.* -> Finding FSM Engine; conflict.resolve -> Conflict Resolution Engine; read queries -> Analytics Engine.")
     }
 
     ' ── 2. DIRECTIVE STORE ──────────────────────────────────────
-    Container_Boundary(directive_store_boundary, "Directive Store") {
-        Component(directive_repo, "Directive Repository", "PostgreSQL / SQL", "CRUD for directives, lineage records, revision history. Stores lineage_id <-> Machine ID bijection, dual identity (lineage_id, execution_id), full revision history, fork/merge/split provenance (S-01..S-03, S-07, S-08, S-19, S-20, S-26).")
-        Component(lineage_manager, "Lineage Manager", "Python / Graph", "Manages dual identity lifecycle: lineage_id (immutable root) and execution_id (mutable via fork/merge/split). Enforces lineage DAG invariants: acyclicity, depth <= 64, parent existence, operation consistency (fork=1 parent, merge=2, split=1), no self-reference, temporal ordering (Sec.2.2).")
-        Component(lock_manager, "Lock Manager", "PostgreSQL", "Read-lock during compilation; write-lock during directive mutations (Sec.3.4). Writer-preference FIFO queue: pending write requests block new read lock grants to prevent write starvation. No lock-type inversion.")
-        Component(revision_tracker, "Revision Tracker", "PostgreSQL", "Immutable log of all directive revisions with timestamps, authors, and diffs. Supports restore to previous revision (S-07, S-08).")
+Container_Boundary(directive_store_boundary, "Directive Store") {
+        Component(directive_repo, "Directive Repository", "PostgreSQL / SQL", "CRUD for directives conforming to rule_schema.json. Stores dual identity (lineage_id, execution_id), Machine ID bijection, full rule body (S-01..S-03, S-07, S-08, S-19, S-20, S-26).")
+        Component(lineage_manager, "Lineage Manager", "Python / Graph", "Dual-identity lifecycle: lineage_id immutable root; execution_id mutates on fork/merge/split. Deterministic merge: lineage_id = lexmin(parents); execution_id = lineage_id + '-M' + SHA-256 slice (Sec.2.2.2, S-20). Enforces operation cardinality (fork/split=1 parent, merge=2).")
+        Component(lock_manager, "Lock Manager", "PostgreSQL", "Read-lock during compilation; write-lock during mutations (Sec.3.4). Writer-preference FIFO queue prevents write starvation. No lock-type inversion.")
+        Component(revision_tracker, "Revision Tracker", "PostgreSQL", "Immutable revision log with timestamps, authors, and diffs. Supports restore to previous revision (S-07, S-08) by creating a new revision that copies the target.")
     }
 
     ' ── 3. HERMETIC COMPILATION BOUNDARY ────────────────────────
-    Container_Boundary(hermetic_boundary, "Hermetic Compilation Boundary (AA-02)") {
-        Container_Boundary(compilation_engine_boundary, "Compilation Engine") {
+Container_Boundary(hermetic_boundary, "Hermetic Compilation Boundary (AA-02)") {
+Container_Boundary(compilation_engine_boundary, "Compilation Engine") {
 
-            ' ── Validation Pipeline (ordered: passes execute sequentially) ──
-            Component(schema_validator, "Schema Validator", "JSON Schema Draft-07", "First-pass structural validation against rule_schema.json. Validates required fields, type discriminators, array bounds. Necessary but insufficient -- delegates to AST discriminator for semantic checks (Sec.2.9, Sec.9.7).")
-            Component(ast_discriminator, "AST Discriminator Validator", "Python / AST Walker", "Normative compile-time gate per Sec.2.9. Walks evaluator_type <-> evaluator_config AST recursively. Validates oneOf branch consistency, sub_evaluator recursion, rejects cross-type key leakage. Engines relying on JSON Schema alone are non-conformant (S-27, S-31).")
+            ' ── Orchestration ───────────────────────────────────
+            Component(compile_orchestrator, "Compile Orchestrator", "Python", "Receives compile triggers from Request Router (directive mutation, dry-run S-09) or CI/CD (S-30). Acquires read-lock via Lock Manager. Sequences validation -> mapping -> hashing -> publish. Halts on any failure -- no partial CG-IR (Sec.2.4, Sec.3.4).")
+            Component(policy_runtime_guard, "Policy Runtime Guard", "Python", "AA-02 enforcement at compile boundary: asserts policy_doctrine.yaml is compile-time-only and absent from runtime data paths. Cooperates with CI/CD static analysis (Sec.1.2, Sec.9.7, S-30).")
+            Component(frozen_env_manager, "Frozen Environment Manager", "Python", "Pins frozen environment per Sec.2.7: engine_version, toolchain, AI component hashes, confidence_severity_cap_threshold. Computes frozen_env_hash = SHA-256(env minus frozen_env_hash).")
+
+            ' ── Validation Pipeline (ordered; reject = no CG-IR) ─
+            Component(schema_validator, "Schema Validator", "JSON Schema Draft-07", "First-pass structural filter against rule_schema.json. Validates required fields, type discriminators, array bounds. Necessary but insufficient -- delegates to AST discriminator (Sec.2.9, Sec.9.7).")
+            Component(ast_discriminator, "AST Discriminator Validator", "Python / AST Walker", "Normative compile-time gate per Sec.2.9 (AA-06). Walks evaluator_type <-> evaluator_config AST recursively. Validates oneOf branch consistency, sub_evaluator recursion, rejects cross-type key leakage. Engines relying on JSON Schema alone are non-conformant (S-27, S-31).")
             Component(complexity_validator, "Complexity Validator", "Python", "Enforces compile-time limits: composite depth <= 32, total nodes <= 256, composite width <= 64, regex pattern <= 4096 chars, metadata <= 16384 bytes (Sec.2.9, S-27).")
-            Component(lineage_dag_validator, "Lineage DAG Validator", "Python", "Mechanical validation per Sec.2.2.3: DFS cycle detection, ancestry depth <= 64, parent existence verification, operation-cardinality consistency, temporal ordering (timestamp >= max parent timestamps), no self-reference. Emits lineage_validation artifact to snapshot provenance.")
-            Component(re2_linter, "RE2 Portability Linter", "Python", "Runs RE2 canary test vectors C01-C07 (Sec.9.2.6). Rejects backreferences, atomic groups, possessive quantifiers. Validates regex pattern length <= 4096 (S-21, S-31).")
-            Component(version_checker, "Cross-Layer Version Checker", "Python", "Enforces MAJOR version consistency across spec, schema, and policy. formal rule: dataset(S) accepts policy(P) iff floor(S) == floor(P). JSON Schema cannot enforce cross-file version consistency (Sec.5, x-cross-layer-binding).")
+            Component(lineage_dag_validator, "Lineage DAG Validator", "Python", "Mechanical validation per Sec.2.2.3: DFS cycle detection, ancestry depth <= 64, parent existence, operation-cardinality, temporal ordering, no self-reference. Emits lineage_validation artifact to snapshot provenance.")
+            Component(portability_validator, "Portability Validator", "Python", "Reference validator per Sec.9.2.15 / Sec.9.2.6 (AA-07, S-21, S-31): RE2 canary vectors C01-C07; reject backreferences/atomic groups/possessive quantifiers; flags whitelist [i,m,s]; UTC-only timestamps (reject +/-HH:MM); NaN/Infinity rejection; NFC string checks.")
+            Component(version_checker, "Cross-Layer Version Checker", "Python", "Enforces MAJOR version consistency: dataset(S) accepts policy(P) iff floor(S) == floor(P). JSON Schema cannot enforce cross-file version consistency (Sec.5, x-cross-layer-binding).")
 
-            ' ── Hashing & Compilation ─────────────────────────────────────
-            Component(conflict_mapper, "Conflict Resolution Mapper", "Python", "Compile-time subset of resolve_conflict per Sec.2.4 Step 3 and Sec.2.15. Generates candidate conflict pairs from conflicts_with arrays. Pre-computes precedence chain outcomes. Delegates to Conflict Resolution Engine for deterministic resolution.")
-            Component(dual_hash_engine, "Dual-Hash Engine", "Python", "Implements dual-hash model per Sec.2.6: semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (description, directive_revision, control_version) = node_hash. edge_hash = SHA-256({source, target}). snapshot_hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). compiled_at excluded (S-23, S-24).")
-            Component(incremental_compiler, "Incremental Compiler", "Python", "Diffs current vs prior directive graph. Reuses unchanged semantic_hash subgraphs across compilations. Marks changed nodes and transitive dependents as dirty. Only recomputes dirty nodes and affected edges (Sec.2.6, S-02, S-03, S-19, S-20, S-26).")
-            Component(snapshot_publisher, "Snapshot Publisher", "Python", "Composes and atomically publishes immutable content-addressed CG-IR snapshot. CAS write: no-op on duplicate snapshot_hash. Indefinite retention. Snapshot is immutable after publication (Sec.2.6).")
+            ' ── Mapping, Hashing, Publication ───────────────────
+            Component(rule_to_node_mapper, "Rule-to-Node Mapper", "Python", "Transforms validated rules to CG-IR nodes per Sec.2.8.1: id -> directive_id, type -> deontic_type, evaluator_type+config -> evaluator object, weight -> severity_default, parameters shallow-merged into evaluator.config, authored_by -> creator_provenance (excluded from node_body hash).")
+            Component(conflict_mapper, "Conflict Resolution Mapper", "Python", "Compile-time subset of resolve_conflict (Sec.2.4 Step 3, Sec.2.15.1). Generates candidate conflict pairs from conflicts_with arrays. Pre-computes precedence outcomes via Conflict Resolution Engine. Records pairs in snapshot metadata.")
+            Component(dual_hash_engine, "Dual-Hash Engine", "Python", "Dual-hash model per Sec.2.6 (S-23, S-24): semantic_hash (evaluator, scope, depends_on, priority, conflict_resolution, status, created_at, deontic_type, severity_default) + presentation_hash (description, directive_revision, control_version) = node_hash. edge_hash = SHA-256(source, target). snapshot_hash = SHA-256(sorted node_hashes + sorted edge_hashes + provenance). compiled_at excluded.")
+            Component(incremental_compiler, "Incremental Compiler", "Python", "Diffs current vs prior directive graph. Reuses unchanged semantic_hash subgraphs. Marks changed nodes and transitive dependents dirty. Only recomputes dirty nodes and affected edges (Sec.2.6, S-02, S-03, S-19, S-20, S-26).")
+            Component(snapshot_publisher, "Snapshot Publisher", "Python", "Composes and atomically publishes immutable content-addressed CG-IR snapshot with provenance (frozen_env_hash, lineage_validation, engine_version). CAS write is no-op on duplicate snapshot_hash. Supports dry-run impact preview without publish (S-09).")
         }
     }
 
     ' ── 4. CG-IR STORE ─────────────────────────────────────────
-    Container_Boundary(cgir_store_boundary, "CG-IR Store") {
-        Component(snapshot_mgr, "Snapshot Reader", "CAS / Read", "Loads frozen CG-IR snapshot by snapshot_hash for evaluation, conflict resolution, SoD enforcement, and analytics. Read-only -- never mutated. All runtime consumers operate on frozen snapshots (Sec.2.6, S-10).")
-        ComponentDb(node_store, "Node / Edge Dedup Store", "CAS / Dedup", "Content-addressed nodes keyed by node_hash. Content-addressed directional edges keyed by edge_hash = SHA-256({source, target}). Deduplicated across snapshots for storage efficiency (Sec.2.6, S-23, S-24).")
+Container_Boundary(cgir_store_boundary, "CG-IR Store") {
+        Component(snapshot_reader, "Snapshot Reader", "CAS / Read", "Loads frozen CG-IR snapshot by snapshot_hash for evaluation, conflict resolution, SoD enforcement, and analytics. Read-only -- never mutated (Sec.2.6, S-10).")
+        Component(node_edge_store, "Node / Edge Dedup Store", "CAS / Dedup", "Content-addressed nodes keyed by node_hash; directional edges keyed by edge_hash. Deduplicated across snapshots for incremental reuse (Sec.2.6, S-23, S-24).")
+        Component(lineage_tracer, "Lineage Tracer", "CAS / Query", "Traverses lineage ancestry across snapshots for history queries and merge provenance surfacing (S-07, S-19, S-20, S-26).")
     }
 
     ' ── 5. INSPECTION PIPELINE ──────────────────────────────────
-    Container_Boundary(inspection_boundary, "Inspection Pipeline") {
-        Component(target_normalizer, "Target Normalizer", "Python", "Stage 1: normalize. Validates target against schema. Applies deterministic preprocessing: NFC string normalization, UTC timestamp validation, IEEE 754 finite numeric check. Produces canonical target form (Sec.2.10).")
+Container_Boundary(inspection_boundary, "Inspection Pipeline") {
+        Component(target_normalizer, "Target Normalizer", "Python", "Stage 1: normalize. Validates target against schema (Sec.2.10). Deterministic preprocessing: NFC strings, UTC timestamps, IEEE 754 finite numerics. Produces canonical target form and target_hash.")
         Component(target_classifier, "Target Classifier", "Python", "Stage 2: classify. Classifies target by domain, jurisdiction, and target_type (text/structured/binary/any). Produces classification metadata for control selection (Sec.2.8.2).")
-        Component(control_selector, "Control Selector", "Python", "Stage 3: select_controls. Loads frozen CG-IR snapshot. Filters nodes by scope applicability (domain, jurisdiction, filters). Respects depends_on ordering (Sec.2.8.2).")
-        Component(dag_scheduler, "Topological DAG Scheduler", "Python", "Orders selected nodes by depends_on edges. Parallel execution of independent nodes. Per-node timeout default 30s. Enforces acyclicity (Sec.2.12).")
-        Component(evaluator_runtime, "Evaluator Runtime Sandbox", "Python / Sandbox", "Stage 4: evaluate. Pure functional execution: regex (RE2 only), field_check (eq/neq/gt/gte/lt/lte/contains/matches), threshold (gt/gte/lt/lte on finite IEEE 754 doubles), composite (and/or/not, depth <= 32, width <= 64). No IO, no randomness (AA-03, Sec.2.9).")
-        Component(fault_handler, "Fault Handler", "Python", "Implements 8-class execution fault taxonomy: Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption. Timeout: configurable retry (max 3). Deterministic failures: no retry (Sec.3.3).")
-        Component(context_builder, "Context Builder", "Python", "Fetches pre-inspection finding_aggregates from Analytics Engine. Populates read-only Context object for evaluators. Context is immutable during evaluation (Sec.2.11).")
-        Component(aggregator, "Outcome Aggregator", "Python", "Stage 5: aggregate. Maps evaluator outcomes (Pass/Fail/Partial/NeedsReview) to finding severities. Applies confidence capping. Produces deontic verdicts: obligation Fail = violation, prohibition Fail = violation, permission Fail = non-applicable (Sec.2.9.1).")
-        Component(snapshot_finalizer, "Snapshot Finalizer", "Python", "Stage 6: report. Produces immutable point-in-time inspection snapshot: per-control results, pipeline trace, skipped_nodes, system_state_hash (CG-IR hash + target hash + frozen_env hash). Emits findings to FSM (Created -> Open auto-transition, Sec.2.12). Stores to Artifact Store (Sec.2.13, Sec.3.6).")
+        Component(control_selector, "Control Selector", "Python", "Stage 3: select_controls. Loads frozen CG-IR snapshot. Filters active nodes by scope applicability (domain, jurisdiction, filters). Respects depends_on (Sec.2.8.2, Sec.2.12).")
+        Component(dag_scheduler, "Topological DAG Scheduler", "Python", "Orders selected nodes by depends_on edges. Parallel execution of independent nodes. Per-node timeout default 30s. Enforces evaluation-order acyclicity (Sec.2.12).")
+        Component(evaluator_runtime, "Evaluator Runtime Sandbox", "Python / Sandbox", "Stage 4: evaluate. Pure functional execution (AA-03, Sec.2.9): regex (RE2 only), field_check, threshold, composite (and/or/not, depth <= 32, width <= 64). No IO, no randomness, no environment reads. Outcomes: Pass | Fail | Partial | NeedsReview.")
+        Component(fault_handler, "Fault Handler", "Python", "8-class execution fault taxonomy: Deterministic, Partial, Ambiguous, Dependency, Timeout, Resource, Schema, Corruption. Timeout: configurable retry (max 3). Deterministic failures: no retry. Dependency-failed nodes produce Skipped trace only -- no finding (Sec.2.12, Sec.3.3).")
+        Component(context_builder, "Context Builder", "Python", "Fetches pre-inspection finding_aggregates from Analytics Engine. Populates immutable Context object (Sec.2.11). Evaluators MUST NOT mutate context. Aggregates reflect prior inspections only.")
+        Component(outcome_aggregator, "Outcome Aggregator", "Python", "Stage 5: aggregate. Maps evaluator outcomes to findings per Sec.2.9.1 and deontic semantics (Sec.2.8.3): obligation/prohibition Fail = violation; permission Fail = informational. Confidence capping via frozen_env threshold.")
+        Component(snapshot_finalizer, "Snapshot Finalizer", "Python", "Stage 6: report. Produces immutable inspection snapshot: per-control results, pipeline_trace, skipped_nodes, system_state_hash (CG-IR hash + target_hash + frozen_env_hash + engine_version). Emits findings to FSM (Created -> Open). Stores artifacts (Sec.2.13, Sec.2.17, S-10, S-23).")
     }
 
     ' ── 6. CONFLICT RESOLUTION ENGINE ───────────────────────────
-    Container_Boundary(conflict_boundary, "Conflict Resolution Engine") {
-        Component(override_resolver, "Explicit Override Resolver", "Python", "Step 1: checks conflict_resolution field (always_wins/never_wins/defer_to). Highest-precedence. Validates defer_to target existence via defer_to_reference_resolution (Sec.2.15).")
-        Component(compatible_resolver, "Compatible Overrides Resolver", "Python", "Step 2: resolves symmetric pairs {always_wins, never_wins} and identical defer_to targets deterministically via compatible_overrides(). Incompatible dual overrides escalate to Conflict Artifact (Sec.2.15, S-28).")
-        Component(priority_comparator, "Priority Comparator", "Python", "Step 3: compares priority_level integers: constitutional=1, statutory=2, regulatory=3, operational=4, advisory=5. Higher-priority wins. Ties fall through to specificity (Sec.2.15).")
-        Component(specificity_scorer, "Specificity Scorer", "Python", "Step 4: computes specificity_score = scope_specificity_score * 100 + count_bound_fields per Sec.2.8.2. More specific scope wins (Sec.2.15, S-05, S-28).")
-        Component(recency_comparator, "Recency Comparator", "Python", "Step 5: compares created_at timestamps (ISO 8601 UTC, frozen in node_body). More recent wins. Last computed factor before escalation (Sec.2.15).")
-        Component(cycle_detector, "defer_to Cycle Detector", "Python / DFS", "Detects directed cycles in defer_to subgraph via DFS (S-28). Cycles cause ALL defer_to overrides in affected subgraph to be ignored -- fall through to computed resolution (priority -> specificity -> recency). Also detects missing/ambiguous post-fork targets.")
-        Component(cross_lineage_advisor, "Cross-Lineage Advisor", "Python", "Produces non-binding advisory Conflict Artifacts for cross-lineage pairs per Sec.2.15.2. binding_status=advisory, requires_human_action=true. Does not auto-modify findings or CG-IR.")
-        Component(artifact_emitter, "Conflict Artifact Generator", "Python", "Escalates unresolvable within-lineage conflicts as Conflict Artifacts pending human resolution via conflict.resolve capability. Stores to Artifact Store (Sec.2.15, S-05).")
+Container_Boundary(conflict_boundary, "Conflict Resolution Engine") {
+        Component(override_resolver, "Explicit Override Resolver", "Python", "Step 1: checks conflict_resolution field (always_wins / never_wins / defer_to). Highest precedence. Resolves defer_to via defer_to_reference_resolution; missing/ambiguous targets fall through (Sec.2.15).")
+        Component(compatible_resolver, "Compatible Overrides Resolver", "Python", "Step 1b: resolves symmetric pairs [always_wins, never_wins] and identical defer_to targets via compatible_overrides(). Incompatible dual overrides escalate to Conflict Artifact (Sec.2.15, S-28).")
+        Component(cycle_detector, "defer_to Cycle Detector", "Python / DFS", "Detects directed cycles in defer_to subgraph via DFS before applying defer_to overrides (S-28). On cycle: ALL defer_to overrides in affected subgraph ignored -- fall through to computed resolution.")
+        Component(priority_comparator, "Priority Comparator", "Python", "Step 2: compares priority_level integers: constitutional=1, statutory=2, regulatory=3, operational=4, advisory=5. Lower number wins. Ties fall through (Sec.2.15).")
+        Component(specificity_scorer, "Specificity Scorer", "Python", "Step 3: specificity_score = scope_specificity_score * 100 + count_bound_fields (Sec.2.8.2, Sec.2.15, S-05, S-28). Higher score wins.")
+        Component(recency_comparator, "Recency Comparator", "Python", "Step 4: compares created_at timestamps frozen in node_body (ISO 8601 UTC). More recent wins. Last computed factor before escalation (Sec.2.15).")
+        Component(cross_lineage_advisor, "Cross-Lineage Advisor", "Python", "Produces non-binding advisory Conflict Artifacts for cross-lineage pairs (Sec.2.15.2, S-05). binding_status=advisory, requires_human_action=true. Does not auto-modify findings or CG-IR.")
+        Component(artifact_emitter, "Conflict Artifact Generator", "Python", "Escalates unresolvable within-lineage conflicts as Conflict Artifacts pending human resolution via conflict.resolve (Sec.2.15, S-05). Stores to Execution Artifact Store.")
     }
 
     ' ── 7. FINDING FSM ENGINE ───────────────────────────────────
-    Container_Boundary(fsm_boundary, "Finding FSM Engine") {
-        Component(fsm_core, "FSM State Machine", "Python", "Strict 10-state lifecycle: Created -> Open -> Acknowledged -> Evidence Submitted -> Pending Verification -> Verified -> Closed. Non-linear paths: Dismissed (Open->), Waived (Open->), Rejected (Pending Verification->), Reopened (Rejected->Open). Terminal states: Closed, Dismissed (Sec.3.1, S-12..S-14, S-25, S-29).")
-        Component(transition_validator, "Transition Gate Validator", "Python", "Validates allowed transitions per Sec.3.1 transition table. Rejects invalid transitions with 400. Maps triggers to required capabilities for gate check.")
-        Component(capability_gate, "FSM Capability Gate", "Python", "Validates actor capability at every FSM transition (S-34). Capability matrix per Sec.3.2.1. Hard-deny (403) on missing capability. Audit-logged.")
-        Component(sod_enforcer, "Segregation-of-Duties Enforcer", "Python", "Reads creator_provenance from CG-IR snapshot nodes. Enforces: finding.waive blocked if actor in creator_provenance (S-29, S-32). finding.approve_remediation blocked if actor is evidence submitter (S-14a, S-33). creator_provenance inherited through fork/merge/split.")
-        Component(auto_transition_handler, "Auto-Transition Handler", "Python", "System auto-transitions (no user trigger): Created -> Open (on finding creation), Evidence Submitted -> Pending Verification, Verified -> Closed, Waived -> Closed. No capability check needed -- unconditional (Sec.3.1).")
+Container_Boundary(fsm_boundary, "Finding FSM Engine") {
+        Component(fsm_capability_gate, "FSM Capability Gate", "Python", "Validates actor capability at every human-triggered FSM transition (S-34). Capability matrix per Sec.3.2.1. Hard-deny (403) + audit log on missing capability. No partial state mutation.")
+        Component(sod_enforcer, "Segregation-of-Duties Enforcer", "Python", "AA-04. Reads creator_provenance from CG-IR snapshot nodes. Blocks finding.waive if actor in creator_provenance (S-29, S-32). Blocks finding.approve_remediation if actor is evidence submitter (S-14a, S-33). creator_provenance inherited through fork/merge/split.")
+        Component(transition_validator, "Transition Gate Validator", "Python", "Validates allowed transitions per Sec.3.1 transition table. Rejects invalid transitions with 400. Maps triggers to required capabilities.")
+        Component(fsm_core, "FSM State Machine", "Python", "Strict 10-state lifecycle: Created, Open, Acknowledged, Evidence Submitted, Pending Verification, Verified, Rejected, Dismissed, Waived, Closed. Terminal states: Closed, Dismissed (Sec.3.1, S-12..S-14, S-25, S-29).")
+        Component(auto_transition_handler, "Auto-Transition Handler", "Python", "System auto-transitions (no user capability check): Created -> Open, Evidence Submitted -> Pending Verification, Verified -> Closed, Waived -> Closed (Sec.3.1).")
         Component(hlc_generator, "HLC Generator", "Python", "Advances Hybrid Logical Clock per event. Produces (physical_time, logical_counter, node_id) tuples. Strictly lexicographically non-decreasing per node_id (Sec.2.14, Sec.3.3).")
-        Component(event_serializer, "Event Serializer", "Python", "Builds immutable FindingEvent records: FindingCreated, DispositionChanged, FindingClosed. Computes SHA-256 event_hash = SHA-256(event minus event_hash). Appends to Finding Event Store (Sec.3.3, S-14a).")
+        Component(event_serializer, "Event Serializer", "Python", "Builds immutable FindingEvent records: FindingCreated, DispositionChanged, FindingClosed. Computes event_hash = SHA-256(event minus event_hash). Appends to Finding Event Store (Sec.3.3, S-14a).")
     }
 
     ' ── 8. FINDING EVENT STORE ─────────────────────────────────
-    Container_Boundary(fes_boundary, "Finding Event Store") {
-        ComponentDb(event_appender, "Event Appender", "Append-Only Log", "Accepts HLC-ordered finding events. Appends immutably -- never overwrites or deletes. Enforces append-only semantics. Maintains HLC total order (Sec.3.1, Sec.3.3, S-14a).")
-        Component(event_reader, "Event Reader", "Read-Only Query", "Serves read-only queries for Analytics Engine: aggregates, trends, findings view, terminal state filtering (Closed, Dismissed). No write path (AA-01).")
-        ComponentDb(hash_verifier, "Hash Chain Verifier", "SHA-256 Integrity Log", "Maintains SHA-256 event_hash integrity chain across all events. Each event's hash incorporates previous event's hash. Tamper-evident chain for forensic audit (Sec.3.3).")
+Container_Boundary(fes_boundary, "Finding Event Store") {
+        Component(event_appender, "Event Appender", "Append-Only Log", "Accepts HLC-ordered finding events. Appends immutably -- never overwrites or deletes. Enforces append-only semantics and HLC total order (Sec.3.1, Sec.3.3, S-14a).")
+        Component(event_reader, "Event Reader", "Read-Only Query", "Serves read-only queries for Analytics Engine: aggregates, trends, findings view, terminal-state filtering. No write path (AA-01).")
+        Component(hash_verifier, "Hash Chain Verifier", "SHA-256 Integrity Log", "Maintains SHA-256 event_hash integrity chain. Tamper-evident forensic audit trail (Sec.3.3).")
     }
 
     ' ── 9. ANALYTICS ENGINE ─────────────────────────────────────
-    Container_Boundary(analytics_boundary, "Analytics Engine") {
-        Component(aggregate_builder, "Aggregate Builder", "Python", "Computes finding_aggregates: historical counts by status, severity distributions, trend metrics. Pre-inspection context for Evaluator Runtime (Sec.2.11). Serves analytics queries (S-17). Zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
-        Component(query_processor, "Query Processor", "Python", "Serves read-only queries: active directive views from CG-IR nodes (S-04), findings view from Event Stream (S-11), governance audit queries (S-06, S-21..S-24, S-27).")
-        Component(causal_explainer, "Causal Explainer", "Python", "Traverses Finding -> Control Node -> Directive -> Revision -> Scope chains for causal explanation queries (S-16). Reads CG-IR nodes for dependency chain traversal.")
+Container_Boundary(analytics_boundary, "Analytics Engine") {
+        Component(aggregate_builder, "Aggregate Builder", "Python", "Computes finding_aggregates for pre-inspection context (Sec.2.11): total_open_findings, findings_by_severity, findings_by_directive_id, last_inspection_date, recurrence_count. Serves analytics queries (S-17). Zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
+        Component(query_processor, "Query Processor", "Python", "Serves read-only queries: active directive views from CG-IR (S-04), findings view from Event Stream (S-11), consistency review over frozen conflict metadata (S-05).")
+        Component(causal_explainer, "Causal Explainer", "Python", "Traverses Finding -> Control Node -> Directive -> Revision -> Scope for causal explanation queries (S-16). Reads CG-IR nodes for dependency chain traversal.")
+        Component(governance_auditor, "Governance Audit Provider", "Python", "Serves governance audits (S-06, S-21..S-24, S-27, S-30 query-side): portability, provenance canonicalization, snapshot determinism, edge-hash correctness, complexity limits, AA gate status.")
     }
 
     ' ── 10. EXECUTION ARTIFACT STORE ──────────────────────────
-    Container_Boundary(artifact_boundary, "Execution Artifact Store") {
-        ComponentDb(snapshot_archiver, "Inspection Snapshot Archiver", "Object Store", "Immutable inspection snapshots. Reproducibility invariant: same CG-IR + target + frozen_env = same snapshot hash. Contains per-control results, aggregate findings (Sec.2.13, S-10, S-23).")
-        ComponentDb(trace_archiver, "Pipeline Trace Archiver", "Object Store", "Pipeline execution traces: per-stage timing, evaluator invocations, topological sort order, node skip records, fault taxonomy classification (Sec.3.6). Append-only.")
-        ComponentDb(state_hash_store, "System State Hash Store", "Object Store", "system_state_hashes: hash of CG-IR snapshot hash + target hash + frozen_env hash + engine version. Excludes event ordering (circular dependency avoidance). Cryptographic anchor for reproducibility verification (Sec.2.13, S-23).")
-        ComponentDb(conflict_artifact_store, "Conflict Artifact Store", "Object Store", "Conflict Artifacts pending human resolution via conflict.resolve capability (Sec.2.15, S-05). Contains: conflicting rule IDs, snapshot hash, computed resolution factors, reason for escalation, cross-lineage advisory status. Append-only -- immutable once created.")
-        Component(artifact_replicator, "Artifact Replicator", "Object Store", "Replicates artifacts to Audit Platform for long-term retention (Sec.3.5, Sec.3.6). Append-only stream.")
+Container_Boundary(artifact_boundary, "Execution Artifact Store") {
+        Component(snapshot_archiver, "Inspection Snapshot Archiver", "Object Store", "Immutable inspection snapshots. Reproducibility: same CG-IR + target + frozen_env = same snapshot hash. Contains per-control results and aggregate findings (Sec.2.13, S-10, S-23).")
+        Component(trace_archiver, "Pipeline Trace Archiver", "Object Store", "Pipeline execution traces: per-stage timing, evaluator invocations, topological order, skipped_nodes, fault taxonomy (Sec.2.12, Sec.3.6). Append-only.")
+        Component(state_hash_store, "System State Hash Store", "Object Store", "system_state_hash: SHA-256(directive_graph_version, cg_ir_hash, frozen_env_hash, engine_version, target_hash). Excludes event ordering (circular dependency avoidance) (Sec.2.17, S-23).")
+        Component(conflict_artifact_store, "Conflict Artifact Store", "Object Store", "Conflict Artifacts pending human resolution via conflict.resolve (Sec.2.15, S-05). Includes conflicting rule IDs, snapshot_hash, resolution factors, cross-lineage advisory status. Append-only.")
+        Component(artifact_replicator, "Artifact Replicator", "Object Store", "Replicates inspection snapshots, traces, and state hashes to Audit Platform for long-term retention (Sec.3.5, Sec.3.6).")
     }
 
 }
@@ -190,83 +201,90 @@ Rel(capability_enforcer, request_router, "passes authorized request with capabil
 
 Rel(regulated_systems, tls_handler, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(request_router, regulated_systems, "returns inspection results and causal explanations (S-16)", "HTTPS / API", $tags="mediated")
-Rel(cicd, schema_validator, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis (S-30)", "CI/CD", $tags="compile_only")
+Rel(cicd, compile_orchestrator, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis (S-30)", "CI/CD", $tags="compile_only")
+Rel(cicd, policy_runtime_guard, "static analysis: policy_doctrine.yaml absent from runtime paths (AA-02)", "CI/CD", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- API Gateway -> Internal Containers
 ' ============================================================
 
-Rel(request_router, directive_repo, "reads and writes directives, lineage records, revision history (directive.*, S-01, S-02, S-07, S-08, S-19, S-20, S-26)", "SQL", $tags="capability_enforced")
+Rel(request_router, directive_repo, "reads/writes directives, lineage, revision history (directive.*, S-01, S-02, S-07, S-08, S-19, S-20, S-26)", "SQL", $tags="capability_enforced")
 Rel(request_router, lineage_manager, "fork, merge, split, retire lifecycle operations (Sec.2.2)", "SQL", $tags="capability_enforced")
 Rel(request_router, lock_manager, "acquires write-lock for directive mutations (Sec.3.4)", "Internal")
-Rel(request_router, schema_validator, "triggers hermetic compilation on directive mutation; dry-run impact preview (S-09)", "Internal", $tags="compile_only")
+Rel(request_router, compile_orchestrator, "triggers hermetic compilation on directive mutation; dry-run impact preview (S-09)", "Internal", $tags="compile_only")
 Rel(request_router, target_normalizer, "routes inspection submissions with target payload (S-10, S-15)", "Internal", $tags="capability_enforced")
-Rel(request_router, capability_gate, "routes finding lifecycle transitions (finding.*, evidence.submit, S-12..S-14, S-25, S-29)", "Internal", $tags="capability_enforced")
-Rel(request_router, override_resolver, "routes conflict.resolve requests on open Conflict Artifacts; consistency review (S-05)", "Internal", $tags="capability_enforced")
-Rel(request_router, aggregate_builder, "routes read queries: analytics (S-17), findings view (S-11)", "Internal")
+Rel(request_router, fsm_capability_gate, "routes finding lifecycle transitions (finding.*, evidence.submit, S-12..S-14, S-25, S-29)", "Internal", $tags="capability_enforced")
+Rel(request_router, override_resolver, "routes conflict.resolve on open Conflict Artifacts; consistency review (S-05)", "Internal", $tags="capability_enforced")
+Rel(request_router, aggregate_builder, "routes analytics queries (S-17)", "Internal")
+Rel(request_router, query_processor, "routes directive views (S-04), findings view (S-11), consistency review (S-05)", "Internal")
 Rel(request_router, causal_explainer, "routes causal explanation queries (S-16)", "Internal")
-Rel(request_router, query_processor, "routes governance audit queries (S-06, S-21..S-24, S-27)", "Internal")
+Rel(request_router, governance_auditor, "routes governance audit queries (S-06, S-21..S-24, S-27, S-30)", "Internal")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Compilation Engine Internal (Validation Pipeline)
+'  RELATIONSHIPS -- Compilation Engine Internal
 ' ============================================================
 
-Rel(schema_validator, governance_contracts, "reads rule_schema.json, directive tables (compile-time only; NEVER at runtime -- AA-02)", "File/HTTP", $tags="compile_only")
-Rel(schema_validator, ast_discriminator, "passes structurally valid rules for normative evaluator_type <-> evaluator_config gate (Sec.2.9)", "Internal", $tags="compile_only")
-Rel(ast_discriminator, complexity_validator, "passes type-safe rules for recursive AST complexity limits (S-27)", "Internal", $tags="compile_only")
-Rel(complexity_validator, lineage_dag_validator, "passes complexity-valid rules for lineage DAG invariant checks (Sec.2.2.3)", "Internal", $tags="compile_only")
-Rel(lineage_dag_validator, re2_linter, "passes DAG-valid rules for RE2 portability checks (S-21, S-31)", "Internal", $tags="compile_only")
-Rel(re2_linter, version_checker, "passes portable rules for cross-layer version compatibility (Sec.5)", "Internal", $tags="compile_only")
-Rel(version_checker, conflict_mapper, "all validation gates pass -> compile-time conflict mapping (Sec.2.4 Step 3, Sec.2.15)", "Internal", $tags="compile_only")
-Rel(conflict_mapper, dual_hash_engine, "conflict pairs resolved -> dual-hash computation (Sec.2.6)", "Internal", $tags="compile_only")
-Rel(dual_hash_engine, incremental_compiler, "compares semantic_hash across runs for subgraph reuse (S-23, S-24)", "Internal", $tags="compile_only")
-Rel(incremental_compiler, snapshot_publisher, "dirty nodes recomputed -> snapshot composition and publication", "Internal", $tags="compile_only")
+Rel(compile_orchestrator, lock_manager, "acquires read-lock on Directive Graph (Sec.3.4)", "Internal", $tags="compile_only")
+Rel(compile_orchestrator, policy_runtime_guard, "asserts policy runtime prohibition before compile (AA-02)", "Internal", $tags="compile_only")
+Rel(compile_orchestrator, frozen_env_manager, "pins frozen environment, computes frozen_env_hash (Sec.2.7)", "Internal", $tags="compile_only")
+Rel(compile_orchestrator, schema_validator, "starts ordered validation pipeline", "Internal", $tags="compile_only")
 
-
-' ============================================================
-'  RELATIONSHIPS -- Compilation Engine -> External / Storage
-' ============================================================
-
+Rel(schema_validator, governance_contracts, "reads rule_schema.json, directive tables (NEVER policy prose as executable logic -- AA-02)", "File/HTTP", $tags="compile_only")
 Rel(schema_validator, directive_repo, "reads directive graph under read-lock (Sec.3.4)", "SQL", $tags="compile_only")
 Rel(schema_validator, revision_tracker, "reads revision history under read-lock", "SQL", $tags="compile_only")
-Rel(conflict_mapper, override_resolver, "delegates deterministic resolve_conflict for candidate conflict pairs (Sec.2.15, S-05, S-28)", "Internal", $tags="compile_only")
-Rel(snapshot_publisher, node_store, "publishes immutable content-addressed nodes and edges (Sec.2.6, S-23, S-24)", "CAS Write", $tags="compile_only")
+Rel(schema_validator, ast_discriminator, "passes structurally valid rules for normative evaluator_type <-> config gate (Sec.2.9)", "Internal", $tags="compile_only")
+Rel(ast_discriminator, complexity_validator, "passes type-safe rules for recursive AST complexity limits (S-27)", "Internal", $tags="compile_only")
+Rel(complexity_validator, lineage_dag_validator, "passes complexity-valid rules for lineage DAG invariants (Sec.2.2.3)", "Internal", $tags="compile_only")
+Rel(lineage_dag_validator, portability_validator, "passes DAG-valid rules for RE2 / UTC / NaN / flags checks (S-21, S-31)", "Internal", $tags="compile_only")
+Rel(portability_validator, version_checker, "passes portable rules for cross-layer MAJOR version check (Sec.5)", "Internal", $tags="compile_only")
+Rel(version_checker, governance_contracts, "reads policy version field only for MAJOR consistency (compile-time)", "File", $tags="compile_only")
+Rel(version_checker, rule_to_node_mapper, "all validation gates pass -> CG-IR node mapping (Sec.2.8.1)", "Internal", $tags="compile_only")
+Rel(rule_to_node_mapper, conflict_mapper, "mapped nodes -> compile-time conflict pair generation (Sec.2.15.1)", "Internal", $tags="compile_only")
+Rel(conflict_mapper, override_resolver, "delegates deterministic resolve_conflict for candidate pairs (Sec.2.15, S-05, S-28)", "Internal", $tags="compile_only")
+Rel(conflict_mapper, dual_hash_engine, "conflict metadata attached -> dual-hash computation (Sec.2.6)", "Internal", $tags="compile_only")
+Rel(dual_hash_engine, incremental_compiler, "compares semantic_hash across runs for subgraph reuse (S-23, S-24)", "Internal", $tags="compile_only")
+Rel(incremental_compiler, snapshot_reader, "reads prior snapshot for incremental hash comparison", "CAS Read", $tags="compile_only")
+Rel(incremental_compiler, snapshot_publisher, "dirty nodes recomputed -> snapshot composition", "Internal", $tags="compile_only")
+Rel(frozen_env_manager, snapshot_publisher, "supplies frozen_env_hash for provenance", "Internal", $tags="compile_only")
+Rel(snapshot_publisher, node_edge_store, "publishes immutable content-addressed nodes and edges (Sec.2.6, S-23, S-24)", "CAS Write", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Inspection Pipeline Internal
 ' ============================================================
 
-Rel(target_normalizer, target_classifier, "canonical target form -> classification (domain, jurisdiction, target_type)", "Internal")
+Rel(target_normalizer, target_classifier, "canonical target form -> classification", "Internal")
 Rel(target_classifier, control_selector, "classification metadata -> scope filtering", "Internal")
-Rel(control_selector, snapshot_mgr, "loads frozen CG-IR snapshot by hash (S-10)", "CAS Read")
+Rel(control_selector, snapshot_reader, "loads frozen CG-IR snapshot by hash (S-10)", "CAS Read")
 Rel(control_selector, dag_scheduler, "selected controls -> dependency ordering", "Internal")
 Rel(dag_scheduler, evaluator_runtime, "topologically sorted nodes -> pure evaluation", "Internal")
-Rel(evaluator_runtime, fault_handler, "execution outcomes / faults (8-class taxonomy, Sec.3.3)", "Internal")
-Rel(evaluator_runtime, context_builder, "fetches pre-inspection finding_aggregates (Sec.2.11)", "Internal")
-Rel(fault_handler, aggregator, "outcomes + fault labels -> severity mapping (Sec.2.9.1)", "Internal")
-Rel(aggregator, snapshot_finalizer, "findings + deontic verdicts -> inspection report", "Internal")
+Rel(evaluator_runtime, context_builder, "requests immutable Context object (Sec.2.11)", "Internal")
+Rel(context_builder, aggregate_builder, "fetches pre-inspection finding_aggregates (Sec.2.11)", "Internal")
+Rel(evaluator_runtime, fault_handler, "execution outcomes / faults (8-class taxonomy)", "Internal")
+Rel(fault_handler, outcome_aggregator, "outcomes + fault labels + skipped_nodes -> severity mapping (Sec.2.9.1)", "Internal")
+Rel(outcome_aggregator, override_resolver, "applies pre-computed / runtime resolve_conflict when multiple nodes fire (Sec.2.15, S-28)", "Internal")
+Rel(outcome_aggregator, snapshot_finalizer, "findings + deontic verdicts -> inspection report", "Internal")
 Rel(snapshot_finalizer, snapshot_archiver, "stores immutable inspection snapshot (Sec.2.13)", "Object Write", $tags="immutable")
 Rel(snapshot_finalizer, trace_archiver, "stores pipeline execution trace (Sec.3.6)", "Object Write")
-Rel(snapshot_finalizer, state_hash_store, "stores system_state_hash for reproducibility anchor (Sec.2.13, S-23)", "Object Write")
-Rel(snapshot_finalizer, fsm_core, "emits finding candidates (Created -> Open auto-transition, Sec.2.12)", "Internal")
+Rel(snapshot_finalizer, state_hash_store, "stores system_state_hash for reproducibility (Sec.2.17, S-23)", "Object Write")
+Rel(snapshot_finalizer, auto_transition_handler, "emits finding candidates (Created -> Open, Sec.2.12)", "Internal")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Conflict Resolution Engine Internal
 ' ============================================================
 
-Rel(override_resolver, compatible_resolver, "no single explicit override -> check compatible pairs", "Internal")
+Rel(override_resolver, cycle_detector, "before applying defer_to: DFS cycle check on defer_to subgraph (S-28)", "Internal")
+Rel(override_resolver, compatible_resolver, "no single-sided override -> check dual/compatible pairs", "Internal")
 Rel(compatible_resolver, priority_comparator, "no compatible pair -> compare priority levels", "Internal")
 Rel(priority_comparator, specificity_scorer, "same priority -> compute specificity score (Sec.2.8.2)", "Internal")
-Rel(specificity_scorer, recency_comparator, "same specificity -> compare recency", "Internal")
-Rel(recency_comparator, cycle_detector, "check defer_to subgraph for cycles via DFS (S-28)", "Internal")
-Rel(recency_comparator, cross_lineage_advisor, "cross-lineage pairs -> advisory artifacts (Sec.2.15.2)", "Internal")
-Rel(cycle_detector, artifact_emitter, "cycle detected or fully tied -> Conflict Artifact", "Internal")
-Rel(cross_lineage_advisor, artifact_emitter, "advisory -> stored as Conflict Artifact", "Internal")
-Rel(specificity_scorer, node_store, "reads frozen node metadata for scope scoring (Sec.2.15, Sec.2.8.2, S-05)", "CAS Read-Only")
+Rel(specificity_scorer, recency_comparator, "same specificity -> compare recency (created_at frozen)", "Internal")
+Rel(recency_comparator, artifact_emitter, "full tie -> Conflict Artifact for human resolution", "Internal")
+Rel(cycle_detector, priority_comparator, "cycle detected -> ignore defer_to, fall through to computed resolution", "Internal")
+Rel(cross_lineage_advisor, artifact_emitter, "advisory Conflict Artifact (Sec.2.15.2)", "Internal")
+Rel(specificity_scorer, snapshot_reader, "reads frozen node metadata for scope scoring (Sec.2.15, Sec.2.8.2, S-05)", "CAS Read-Only")
 Rel(artifact_emitter, conflict_artifact_store, "stores Conflict Artifacts pending human resolution (Sec.2.15, S-05)", "Object Write", $tags="immutable")
 
 
@@ -274,22 +292,22 @@ Rel(artifact_emitter, conflict_artifact_store, "stores Conflict Artifacts pendin
 '  RELATIONSHIPS -- Finding FSM Engine Internal
 ' ============================================================
 
-Rel(capability_gate, transition_validator, "capability check passed -> validate transition (Sec.3.1)", "Internal")
+Rel(fsm_capability_gate, sod_enforcer, "capability check passed -> verify segregation of duties (S-29, S-32, S-33)", "Internal")
+Rel(sod_enforcer, transition_validator, "SoD passed -> validate transition is allowed (Sec.3.1)", "Internal")
 Rel(transition_validator, fsm_core, "valid transition -> apply state change", "Internal")
-Rel(fsm_core, sod_enforcer, "state change -> verify segregation of duties (S-29, S-32, S-33)", "Internal")
-Rel(sod_enforcer, auto_transition_handler, "SoD passed -> handle auto-transitions", "Internal")
-Rel(auto_transition_handler, hlc_generator, "transition committed -> generate HLC timestamp (Sec.2.14)", "Internal")
+Rel(auto_transition_handler, fsm_core, "executes unconditional system auto-transitions", "Internal")
+Rel(fsm_core, hlc_generator, "transition committed -> generate HLC timestamp (Sec.2.14)", "Internal")
 Rel(hlc_generator, event_serializer, "HLC tuple + event payload -> serialize finding event (Sec.3.3)", "Internal")
 Rel(event_serializer, event_appender, "appends HLC-ordered FindingEvent with SHA-256 event_hash (S-14a)", "Append-Only", $tags="immutable")
-Rel(event_serializer, remediation_systems, "emits mediated finding state changes to operational workflows (S-14a, S-29)", "webhook / events", $tags="mediated")
-Rel(sod_enforcer, node_store, "reads creator_provenance from CG-IR node provenance (S-29, S-32, S-33)", "CAS Read-Only")
+Rel(event_serializer, remediation_systems, "emits mediated finding state changes (S-14a, S-29)", "webhook / events", $tags="mediated")
+Rel(sod_enforcer, snapshot_reader, "reads creator_provenance from CG-IR node provenance (S-29, S-32, S-33)", "CAS Read-Only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Finding Event Store Internal
 ' ============================================================
 
-Rel(event_appender, hash_verifier, "maintains SHA-256 integrity chain (each event incorporates previous hash)", "Internal", $tags="immutable")
+Rel(event_appender, hash_verifier, "maintains SHA-256 integrity chain", "Internal", $tags="immutable")
 Rel(event_appender, audit_platform, "replicates immutable event stream for long-term retention (Sec.2.14)", "append-only / HLC-ordered", $tags="immutable")
 Rel(event_reader, event_appender, "read-only queries over appended events", "SQL / Read-Only")
 
@@ -299,8 +317,12 @@ Rel(event_reader, event_appender, "read-only queries over appended events", "SQL
 ' ============================================================
 
 Rel(aggregate_builder, event_reader, "reads events for aggregates, trends, finding_aggregates (AA-01, S-17)", "SQL / Read-Only")
-Rel(query_processor, node_store, "reads CG-IR nodes for active directive views (S-04)", "CAS Read-Only")
-Rel(causal_explainer, node_store, "reads CG-IR nodes for causal chain traversal (S-16)", "CAS Read-Only")
+Rel(query_processor, event_reader, "reads events for findings view (S-11)", "SQL / Read-Only")
+Rel(query_processor, snapshot_reader, "reads CG-IR nodes for active directive views (S-04)", "CAS Read-Only")
+Rel(causal_explainer, snapshot_reader, "reads CG-IR nodes for causal chain traversal (S-16)", "CAS Read-Only")
+Rel(causal_explainer, lineage_tracer, "traverses lineage ancestry for explanation chain", "CAS Read-Only")
+Rel(governance_auditor, snapshot_reader, "reads CG-IR for hash / lineage / provenance audits (S-06, S-21..S-24, S-27)", "CAS Read-Only")
+Rel(governance_auditor, event_reader, "reads events for governance audit completeness", "SQL / Read-Only")
 
 
 ' ============================================================
@@ -308,5 +330,8 @@ Rel(causal_explainer, node_store, "reads CG-IR nodes for causal chain traversal 
 ' ============================================================
 
 Rel(artifact_replicator, audit_platform, "replicates inspection snapshots, pipeline traces, system state hashes (Sec.3.5, Sec.3.6)", "append-only")
+Rel(snapshot_archiver, artifact_replicator, "queues inspection snapshots for replication", "Internal")
+Rel(trace_archiver, artifact_replicator, "queues pipeline traces for replication", "Internal")
+Rel(state_hash_store, artifact_replicator, "queues system state hashes for replication", "Internal")
 
 @enduml
