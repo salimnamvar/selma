@@ -98,7 +98,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
     Container_Boundary(dir_store_b, "Directive Store") {
         ComponentDb(directive_repository, "Directive Repository", "PostgreSQL", "CRUD for directives conforming to rule_schema.json. Stores lineage_id <-> Machine ID bijection, execution_id, full revision history, fork / merge / split provenance (Sec.2.2, Sec.2.3, S-01..S-03, S-07, S-08, S-19, S-20, S-26).")
         ComponentDb(lineage_manager, "Lineage Manager", "PostgreSQL", "Dual-identity lifecycle: lineage_id immutable root; execution_id mutates on fork / merge / split. Deterministic merge: lineage_id = lexmin(parents), execution_id += '-M' + SHA-256 slice (Sec.2.2.2, S-20). Validates operation cardinality: fork/split = 1 parent, merge = 2 parents.")
-        Component(lock_manager, "Lock Manager", "PostgreSQL", "Read-lock during compilation; write-lock during directive mutations (Sec.3.4, S-01, S-02). Writer-preference FIFO queue prevents write starvation. No lock-type inversion (read-then-write on same request path prohibited).")
+        Component(lock_manager, "Lock Manager", "PostgreSQL", "Database-level advisory locks: read-lock during compilation; write-lock during directive mutations (Sec.3.4, S-01, S-02). All SQL connections to directive_repository are mediated by PostgreSQL transaction isolation; lock_manager enforces the protocol. Writer-preference FIFO queue prevents write starvation. No lock-type inversion (read-then-write on same request path prohibited).")
     }
 
     ' -- 3. HERMETIC COMPILATION BOUNDARY --------------------------
@@ -139,7 +139,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     ' -- 7. FINDING FSM ENGINE ------------------------------------
     Container_Boundary(fsm_b, "Finding FSM Engine") {
-        Component(fsm_capability_gate, "FSM Capability Gate", "Python", "Validates actor capability at every human-triggered FSM transition gate (Sec.3.2.1, S-34, AA-04). 403 + audit log on missing capability. Reads creator_provenance from CG-IR snapshot for SoD: blocks finding.waive when actor in creator_provenance (S-29, S-32); blocks finding.approve_remediation when actor = evidence_submitter (S-14a, S-33).")
+        Component(fsm_capability_gate, "FSM Capability Gate", "Python", "Validates actor capability at every human-triggered FSM transition gate (Sec.3.2.1, S-34, AA-04). System auto-transitions (Created->Open, Evidence Submitted->Pending Verification, Verified->Closed, Waived->Closed) bypass capability checks and route directly to FSM State Machine. 403 + audit log on missing capability for human-triggered transitions. Reads creator_provenance from CG-IR snapshot for SoD: blocks finding.waive when actor in creator_provenance (S-29, S-32); blocks finding.approve_remediation when actor = evidence_submitter (S-14a, S-33).")
         Component(fsm_core, "FSM State Machine", "Python", "Strict 10-state lifecycle: Created, Open, Acknowledged, Evidence Submitted, Pending Verification, Verified, Rejected, Dismissed, Waived, Closed. Terminal states: Closed, Dismissed. Auto-transitions (system, no capability check): Created->Open, Evidence Submitted->Pending Verification, Verified->Closed, Waived->Closed (Sec.3.1, S-12, S-13, S-14a/b/c, S-25, S-29).")
         Component(hlc_event_writer, "HLC Event Writer", "Python", "Advances Hybrid Logical Clock per event: (physical_time, logical_counter, node_id) strictly lexicographically non-decreasing. Builds immutable FindingEvent records: FindingCreated, DispositionChanged, FindingClosed. Computes event_hash = SHA-256(event minus event_hash). Appends immutably (Sec.2.14, Sec.3.3, S-14a).")
     }
@@ -207,7 +207,7 @@ Rel(request_router, causal_explainer, "routes causal explanation queries (S-16)"
 '  RELATIONSHIPS -- CI/CD Certification
 ' ============================================================
 
-Rel(cicd, ast_discriminator_validator, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis (S-30)", "CI/CD", $tags="compile_only")
+Rel(cicd, schema_validator, "runs AA-01..AA-07 certification suite via full compilation pipeline; enforces policy runtime prohibition via static analysis (S-30)", "CI/CD", $tags="compile_only")
 
 
 ' ============================================================
@@ -232,9 +232,9 @@ Rel(cross_layer_version_checker, ast_discriminator_validator, "version-compatibl
 Rel(ast_discriminator_validator, portability_validator, "passes type-safe, complexity-valid rules for cross-runtime portability and RE2 canary checks (Sec.9.2.6, Sec.9.2.15)", "Internal", $tags="compile_only")
 Rel(portability_validator, lineage_dag_validator, "passes portable rules for lineage ancestry DAG validation (Sec.2.2.3)", "Internal", $tags="compile_only")
 Rel(lineage_dag_validator, dual_hash_computer, "passes DAG-valid rule set for dual-hash computation and incremental reuse (Sec.2.6)", "Internal", $tags="compile_only")
-Rel(dual_hash_computer, conflict_mapper, "passes node_hash / edge_hash values for compile-time conflict pair generation (Sec.2.15.1)", "Internal", $tags="compile_only")
+Rel(dual_hash_computer, conflict_mapper, "hashing complete; conflict mapper operates on validated rule metadata (including raw conflict_resolution field) for compile-time resolution pre-computation (Sec.2.4 Step 3, Sec.2.15.1)", "Internal", $tags="compile_only")
 Rel(conflict_mapper, override_resolver, "delegates deterministic resolve_conflict for candidate conflict pairs at compile time (Sec.2.15, Sec.2.4 Step 3, S-05, S-28, AA-05)", "Internal", $tags="compile_only")
-Rel(conflict_mapper, cgir_snapshot_generator, "conflict resolution outcomes attached -> CG-IR node mapping and snapshot publish", "Internal", $tags="compile_only")
+Rel(conflict_mapper, cgir_snapshot_generator, "attaches pre-computed conflict resolution outcomes to CG-IR node metadata (Sec.2.4 Step 3); snapshot generator incorporates into immutable CG-IR", "Internal", $tags="compile_only")
 Rel(cgir_snapshot_generator, snapshot_store, "publishes immutable content-addressed CG-IR snapshot; dedup no-op on identical snapshot_hash (Sec.2.6, S-23, S-24)", "CAS Write", $tags="compile_only")
 Rel(cgir_snapshot_generator, node_edge_deduplicator, "writes content-addressed nodes by node_hash and directional edges by edge_hash (Sec.2.6)", "CAS Write", $tags="compile_only")
 
