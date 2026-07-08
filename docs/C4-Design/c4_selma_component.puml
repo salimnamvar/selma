@@ -9,19 +9,8 @@
 '            strict 10-state Finding FSM with SoD enforcement (§3.1),
 '            HLC-ordered append-only event stream (§3.3), and
 '            read-only analytics with zero-write-path invariant (AA-01).
-' Milestone: v1.0
 ' Version:   3.0.0
-' Source:    SPECIFICATION.md 8.2.4; rule_schema.json 8.2.4;
-'            Container Diagram v6.0.0; Context Diagram v4.0.0;
-'            Archive designs scored under docs/C4-Design/archive/
-' Review:    docs/C4-Design/archive/ (11 agent designs scored)
 ' ============================================================
-' SIM-01 EXCEPTION: ~80 elements across 3 actors, 6 external systems,
-'                   and 10 container boundaries -- consolidated single-diagram
-'                   overview of all 10 containers. Per-container splits would
-'                   break cross-container flow traceability required by the
-'                   hermetic compilation pipeline, pure-evaluator DAG execution,
-'                   FSM lifecycle, and analytics read path.
 @startuml c4_selma_component
 title Selma -- Component Diagram
 
