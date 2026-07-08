@@ -126,7 +126,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
         Component(dag_executor, "DAG Executor", "Python", "Topological sort respecting depends_on execution IDs. Parallel independent nodes. Per-node timeout default 30s. Pre-loads read-only Context object with finding_aggregates from Analytics Engine (Sec.2.11, Sec.2.12).")
         Component(pure_evaluator_runtime, "Pure Evaluator Runtime", "Python", "Stage 4: evaluate. Executes: regex (RE2 only), field_check (eq/neq/gt/gte/lt/lte/contains/matches), threshold (IEEE 754 finite), composite (and/or/not, depth <= 32, width <= 64). Strictly no IO, no randomness, no environment reads. 8-class fault taxonomy (Sec.2.9, AA-03).")
         Component(finding_aggregator, "Finding Aggregator", "Python", "Stage 5: aggregate. Maps outcomes per Sec.2.9.1 and deontic semantics: obligation/prohibition Fail = violation; permission Fail = informational. Confidence capping on Partial. Invokes Conflict Resolution Engine when multiple nodes fire (Sec.2.15, S-28, AA-05).")
-        Component(snapshot_finalizer, "Snapshot Finalizer", "Python", "Stage 6: report. Produces immutable inspection snapshot: per-control results, pipeline_trace, skipped_nodes, system_state_hash = SHA-256(cg_ir_hash + target_hash + frozen_env_hash + engine_version). Emits findings (Created -> Open auto-transition) to Finding FSM (Sec.2.13, Sec.2.17, Sec.3.6, S-10, S-23).")
+        Component(snapshot_finalizer, "Snapshot Finalizer", "Python", "Stage 6: report. Produces immutable inspection snapshot: per-control results, pipeline_trace, skipped_nodes, system_state_hash = SHA-256(directive_graph_version + cg_ir_hash + target_hash + frozen_env_hash + engine_version). Emits findings (Created -> Open auto-transition) to Finding FSM (Sec.2.13, Sec.2.17, Sec.3.6, S-10, S-23).")
     }
 
     ' -- 6. CONFLICT RESOLUTION ENGINE ----------------------------
@@ -147,12 +147,12 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
     ' -- 8. FINDING EVENT STORE -----------------------------------
     Container_Boundary(fes_b, "Finding Event Store") {
         ComponentDb(event_appender, "Event Appender", "Append-Only Log", "Immutable HLC-ordered append-only event stream. Never overwrites or deletes. Terminal states: Closed, Dismissed. Source of truth for finding state and disposition history (Sec.3.1, Sec.3.3, S-14a).")
-        ComponentDb(hash_chain_verifier, "Hash Chain Verifier", "Append-Only Log", "Maintains SHA-256 event_hash integrity chain across all appended events. Tamper-evident forensic audit trail for regulatory compliance and e-discovery (Sec.3.3). Verifies chain continuity on append and on governance audit reads.")
+        ComponentDb(hash_chain_verifier, "Hash Chain Verifier", "Append-Only Log", "Verifies individual SHA-256 event_hash integrity for all appended events to ensure tamper-evident immutability (Sec.2.14). Each event_hash = SHA-256(event minus event_hash field). Tamper-evident forensic audit trail for regulatory compliance and e-discovery. Verifies chain continuity on append and on governance audit reads.")
     }
 
     ' -- 9. ANALYTICS ENGINE --------------------------------------
     Container_Boundary(ana_b, "Analytics Engine") {
-        Component(aggregate_computer, "Aggregate Computer", "Python", "Pre-computes finding_aggregates for inspection Context object (Sec.2.11): total_open_findings, findings_by_severity, findings_by_directive_id, recurrence_count. Serves analytics queries (S-17). Zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
+        Component(aggregate_computer, "Aggregate Computer", "Python", "Pre-computes finding_aggregates from PREVIOUS inspections' event streams for the read-only Context object (Sec.2.11): total_open_findings, findings_by_severity, findings_by_directive_id, recurrence_count. Ensures no shared mutable state during current DAG execution. Serves analytics queries (S-17). Zero write path to CG-IR, FSM, or Directive Store (AA-01, S-18).")
         Component(causal_explainer, "Causal Explainer", "Python", "Traverses Finding -> Control Node -> Directive -> Revision -> Scope dependency chains for human-readable causal explanations (S-16). Reads CG-IR nodes for depends_on chain traversal.")
         Component(query_processor, "Query Processor", "Python", "Read-only queries: active directive views from CG-IR (S-04); findings view from Event Stream (S-11); governance audits over lineage, hashes, provenance canonicalization (S-22), and version compatibility (S-06, S-21..S-24, S-27). Mediated feedback only -- zero write path (AA-01).")
     }
@@ -162,7 +162,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
         ComponentDb(inspection_snapshot_store, "Inspection Snapshot Store", "Object Store", "Immutable point-in-time inspection snapshots. Reproducibility invariant: same CG-IR + target + frozen_env = same snapshot_hash. Contains per-control results and aggregate findings. Append-only after creation (Sec.2.13, S-10, S-23).")
         ComponentDb(trace_store, "Pipeline Trace Store", "Object Store", "Execution traces: per-stage timing, evaluator invocations, topological sort order, skipped_nodes with cascade. 8-class fault taxonomy labels per node (Sec.3.6).")
         ComponentDb(conflict_artifact_store, "Conflict Artifact Store", "Object Store", "Conflict Artifacts pending human resolution via conflict.resolve (Sec.2.15, S-05). Contains: conflicting rule IDs, snapshot_hash, resolution factors, cross-lineage advisory status. Append-only; immutable after creation.")
-        ComponentDb(system_state_hash_store, "System State Hash Store", "Object Store", "Cryptographic reproducibility anchors per inspection: SHA-256(cg_ir_snapshot_hash + target_hash + frozen_env_hash + engine_version). Excludes event ordering. Enables determinism verification (Sec.2.17, S-23).")
+        ComponentDb(system_state_hash_store, "System State Hash Store", "Object Store", "Cryptographic reproducibility anchors per inspection: SHA-256(directive_graph_version + cg_ir_snapshot_hash + target_hash + frozen_env_hash + engine_version). Excludes event ordering. Enables determinism verification (Sec.2.17, S-23).")
     }
 
 }
