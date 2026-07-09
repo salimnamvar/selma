@@ -32,19 +32,19 @@ Person(compliance_rep, "Compliance Representative", "Human or system acting for 
 
 Person_Ext(system_actor, "Automated Service Account", "Programmatic service account with the narrowest capability set: inspection.submit, finding.view, and analytics.view only. Used by pipelines integrating compliance checks without governance rights.")
 
-System(selma, "Selma", "Domain-agnostic rule regularity platform. Three runtime primitives plus execution artifacts (Sec.2.1): Directive Graph, CG-IR, Finding Event Stream, and Execution Artifacts. Hermetic compile under read-lock; pure-evaluator inspections; append-only HLC-ordered finding lifecycle under a strict FSM. Enforces capability-based permissions at five mutation gates (ingress, directive mutation, pipeline entry, FSM transition, conflict resolution) and segregation-of-duties. Runs AA-01 through AA-07 architectural audit certification with gate-ID traceability (S-30, Sec.9.9). Maintains platform-owned append-only security denial audit records (S-32..S-34).")
+System(selma, "Selma", "Domain-agnostic rule regularity platform. Enforces regulatory directives against inspection targets through hermetic compilation, pure-evaluator DAG inspection, deterministic conflict resolution, and a strict finding lifecycle FSM. Provides audit trail, capability-based access control, and segregation-of-duties across all governance operations.")
 
-System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed exclusively at the hermetic compile-time boundary: policy_doctrine.yaml (governance intent only -- no executable logic, runtime-prohibited), rule_schema.json (structural validation contract and dual identity model), and directive tables carrying lineage IDs.")
+System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed at compile-time only: policy_doctrine.yaml (governance intent), rule_schema.json (structural validation contract), and directive tables with lineage IDs. Runtime access is prohibited.")
 
-System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types: human officials, compliance representatives, AI agents, and automated accounts. Provides the identity tokens and capability assertions Selma validates at every mutation gate -- request ingress, directive mutation, pipeline entry, FSM transitions, and conflict resolution.")
+System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types. Provides identity tokens and capability assertions Selma validates at every mutation gate.")
 
-System_Ext(cicd, "CI/CD Pipeline", "External trigger for architectural certification. Invokes Selma Architectural Audit Engine to run AA-01 through AA-07 per SPECIFICATION.md Sec.9.9 and S-30. Performs static analysis to verify policy_doctrine.yaml is absent from all runtime source paths. Validates cross-layer version compatibility of the three governance document layers.")
+System_Ext(cicd, "CI/CD Pipeline", "External trigger for architectural certification. Invokes Selma Architectural Audit Engine to run AA-01 through AA-07. Performs static analysis to verify policy runtime prohibition.")
 
-System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-specific external systems and automated pipelines supplying inspection targets conforming to the target schema. Domain-agnostic: financial ledgers, software repositories, document stores, environmental monitoring platforms, or any other subject domain.")
+System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other.")
 
-System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives the append-only, HLC-ordered Finding Event Stream, security denial Audit Event Stream, inspection snapshots, system state hashes, pipeline traces, and AA certification artifacts. Supports external auditors, e-discovery, and read-only compliance reporting dashboards.")
+System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives Finding Event Stream, security denials, inspection snapshots, system_state_hashes, pipeline traces, and AA certification artifacts. Supports external auditors and compliance reporting.")
 
-System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows receiving finding notifications: ticketing systems, RPA platforms, and regulatory portals. Human actors drive actual remediation work in these systems. Selma emits events in mediated fashion only -- no direct mutation of external remediation state, per AA-01 gate.")
+System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows receiving finding notifications: ticketing systems, RPA platforms, and regulatory portals. Human actors drive actual remediation work. Selma emits events in mediated fashion only -- no direct mutation of external remediation state.")
 
 Rel(regulatory_official, selma, "authors and governs directives; resolves Conflict Artifacts; disposes findings; views analytics", "HTTPS")
 Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; submits remediation evidence", "HTTPS")
@@ -57,7 +57,7 @@ Rel(cicd, selma, "triggers AA-01..AA-07 certification suite; enforces policy run
 Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(selma, regulated_systems, "returns inspection results and causal explanations per S-16", "HTTPS / API", $tags="mediated")
 
-Rel(selma, audit_platform, "streams Finding Event Stream, security denials, inspection snapshots, and certification artifacts", "append-only / HLC-ordered", $tags="immutable,async")
+Rel(selma, audit_platform, "streams Finding Event Stream, security denials, inspection snapshots, system_state_hashes, and certification artifacts", "append-only / HLC-ordered", $tags="immutable,async")
 Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
 
 @enduml

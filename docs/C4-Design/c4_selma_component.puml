@@ -56,7 +56,7 @@ System_Ext(cicd, "CI/CD Pipeline", "External trigger for architectural certifica
 
 System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems and automated pipelines supplying inspection targets conforming to the target schema (S-10).")
 
-System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention. Receives Finding Event Stream, security denial Audit Event Stream, inspection snapshots, system state hashes, pipeline traces, and AA certification artifacts.")
+System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention. Receives Finding Event Stream, security denial Audit Event Stream, inspection snapshots, system_state_hashes, pipeline traces, and AA certification artifacts. Supports external auditors, e-discovery, and read-only compliance dashboards.")
 
 System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows. Selma emits mediated finding events only -- never mutates external remediation state (AA-01).")
 
