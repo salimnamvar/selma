@@ -6,9 +6,6 @@
 '            systems Selma compiles against, enforces capability
 '            through, and streams findings into.
 ' Version:   4.0.0
-' NOTE: Requires ./common/c4_styles.puml from the selma project.
-'       Remove this include and the !theme plain directive to
-'       render with default C4-PlantUML styling in isolation.
 ' ============================================================
 @startuml c4_selma_context
 title Selma -- Context Diagram
