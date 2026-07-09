@@ -4,8 +4,10 @@
 ' Purpose:   Black-box view of the two governance actors, the
 '            automated service account, and the six external
 '            systems Selma compiles against, enforces capability
-'            through, and streams findings into.
-' Version:   4.0.0
+'            through, certifies via AA-01..AA-07, and streams
+'            findings and security audit records into.
+' Contract:  8.2.4
+' Diagram:   8.2.4 (Phase B AIP alignment)
 ' ============================================================
 @startuml c4_selma_context
 title Selma -- Context Diagram
@@ -20,6 +22,7 @@ LAYOUT_WITH_LEGEND()
 AddRelTag("compile_only", $legendText="compile-time only -- runtime access is prohibited")
 AddRelTag("immutable",    $legendText="append-only, HLC-ordered -- never mutated")
 AddRelTag("mediated",     $legendText="mediated output -- Selma never mutates external state")
+AddRelTag("async",        $legendText="asynchronous / eventually consistent delivery")
 
 
 
@@ -29,17 +32,17 @@ Person(compliance_rep, "Compliance Representative", "Human or system acting for 
 
 Person_Ext(system_actor, "Automated Service Account", "Programmatic service account with the narrowest capability set: inspection.submit, finding.view, and analytics.view only. Used by pipelines integrating compliance checks without governance rights.")
 
-System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles the Directive Graph into a hermetic, content-addressed CG-IR snapshot under a read-lock boundary. Executes pure-evaluator inspections against submitted targets. Maintains an append-only, HLC-ordered Finding Event Stream under a strict FSM with terminal states. Enforces capability-based permissions and segregation-of-duties at every mutation gate.")
+System(selma, "Selma", "Domain-agnostic rule regularity platform. Three runtime primitives plus execution artifacts (Sec.2.1): Directive Graph, CG-IR, Finding Event Stream, and Execution Artifacts. Hermetic compile under read-lock; pure-evaluator inspections; append-only HLC-ordered finding lifecycle under a strict FSM. Enforces capability-based permissions at five mutation gates (ingress, directive mutation, pipeline entry, FSM transition, conflict resolution) and segregation-of-duties. Runs AA-01 through AA-07 architectural audit certification with gate-ID traceability (S-30, Sec.9.9). Maintains platform-owned append-only security denial audit records (S-32..S-34).")
 
 System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed exclusively at the hermetic compile-time boundary: policy_doctrine.yaml (governance intent only -- no executable logic, runtime-prohibited), rule_schema.json (structural validation contract and dual identity model), and directive tables carrying lineage IDs.")
 
-System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types: human officials, compliance representatives, AI agents, and automated accounts. Provides the identity tokens and capability assertions Selma validates at every mutation gate -- request ingress, compilation, pipeline entry, FSM transitions, and conflict resolution.")
+System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types: human officials, compliance representatives, AI agents, and automated accounts. Provides the identity tokens and capability assertions Selma validates at every mutation gate -- request ingress, directive mutation, pipeline entry, FSM transitions, and conflict resolution.")
 
-System_Ext(cicd, "CI/CD Pipeline", "Automated architectural certification. Runs the AA-01 through AA-07 gate suite per SPECIFICATION.md Sec.9.9. Performs static analysis to verify policy_doctrine.yaml is absent from all runtime source paths. Validates cross-layer version compatibility of the three governance document layers.")
+System_Ext(cicd, "CI/CD Pipeline", "External trigger for architectural certification. Invokes Selma Architectural Audit Engine to run AA-01 through AA-07 per SPECIFICATION.md Sec.9.9 and S-30. Performs static analysis to verify policy_doctrine.yaml is absent from all runtime source paths. Validates cross-layer version compatibility of the three governance document layers.")
 
 System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-specific external systems and automated pipelines supplying inspection targets conforming to the target schema. Domain-agnostic: financial ledgers, software repositories, document stores, environmental monitoring platforms, or any other subject domain.")
 
-System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives the append-only, HLC-ordered Finding Event Stream, inspection snapshots, system state hashes, and pipeline traces. Supports external auditors, e-discovery, and read-only compliance reporting dashboards.")
+System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives the append-only, HLC-ordered Finding Event Stream, security denial Audit Event Stream, inspection snapshots, system state hashes, pipeline traces, and AA certification artifacts. Supports external auditors, e-discovery, and read-only compliance reporting dashboards.")
 
 System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows receiving finding notifications: ticketing systems, RPA platforms, and regulatory portals. Human actors drive actual remediation work in these systems. Selma emits events in mediated fashion only -- no direct mutation of external remediation state, per AA-01 gate.")
 
@@ -49,12 +52,12 @@ Rel(system_actor, selma, "submits inspections programmatically; views findings a
 
 Rel(selma, governance_contracts, "reads Directive Graph under hermetic read-lock boundary", "compile-time only", $tags="compile_only")
 Rel(selma, iam, "validates actor identity and capability context at all mutation gates", "OAuth 2.0 / OIDC")
-Rel(cicd, selma, "runs AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis", "CI/CD")
+Rel(cicd, selma, "triggers AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis", "CI/CD")
 
 Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(selma, regulated_systems, "returns inspection results and causal explanations per S-16", "HTTPS / API", $tags="mediated")
 
-Rel(selma, audit_platform, "streams Finding Event Stream, inspection snapshots, and pipeline traces", "append-only / HLC-ordered", $tags="immutable")
-Rel(selma, remediation_systems, "emits finding events and status changes", "mediated", $tags="mediated")
+Rel(selma, audit_platform, "streams Finding Event Stream, security denials, inspection snapshots, and certification artifacts", "append-only / HLC-ordered", $tags="immutable,async")
+Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
 
 @enduml
