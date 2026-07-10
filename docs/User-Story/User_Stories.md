@@ -12,7 +12,7 @@
 
 ## Executive Architectural Overview
 
-SELMA is a domain-agnostic rule regularity platform. This document defines the behavioral contract for Selma 8.2.4 as 35 user stories across 7 epics.
+SELMA is a domain-agnostic rule regularity platform. This document defines the behavioral contract for Selma 8.2.4 as 36 user stories across 7 epics.
 
 ### Architecture Reference
 See SPECIFICATION.md §2 for the normative architecture.
@@ -356,13 +356,13 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 | Epic | P0 | P1 | P2 | Total |
 | :--- | :--- | :--- | :--- | :--- |
 | Directive Lifecycle | 2 | 4 | 0 | **6** |
-| Directive Governance | 1 | 9 | 1 | **11** |
+| Directive Governance | 1 | 9 | 2 | **12** |
 | Inspection | 1 | 4 | 0 | **5** |
 | Finding Management | 1 | 7 | 0 | **8** |
 | Analytics & Mediated Feedback | 0 | 1 | 1 | **2** |
 | Segregation of Duties | 2 | 0 | 0 | **2** |
 | Capability Validation | 0 | 1 | 0 | **1** |
-| **Total** | **7** | **26** | **2** | **35** |
+| **Total** | **7** | **26** | **3** | **36** |
 
 ---
 

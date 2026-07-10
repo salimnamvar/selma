@@ -60,12 +60,14 @@ All twelve containers are **valid, independently deployable runtime units** (C4 
 
 ### API Gateway (4)
 
-| Component           | Role                                    |
-| :------------------ | :-------------------------------------- |
-| Auth Middleware     | JWT/OIDC validation                     |
-| Capability Enforcer | S-34 gate 1 — ingress hard-deny         |
-| Denial Handler      | Serializes denials to Audit Event Store |
-| Request Router      | Capability-domain routing               |
+| Component           | Role                                                                 |
+| :------------------ | :------------------------------------------------------------------- |
+| Auth Middleware     | JWT/OIDC validation                                                  |
+| Capability Enforcer | S-34 gate 1 — ingress hard-deny                                      |
+| Denial Handler      | Gate-1 denial serialization → Audit Event Store (record-shape owner) |
+| Request Router      | Capability-domain routing                                            |
+
+**Denial topology (container-aligned):** Gate 1 uses Denial Handler. Gates 2–5 (Directive Store, Inspection Pipeline, Finding FSM, Conflict Engine) append denials **directly** to Audit Event Store with the same record shape — no reverse call into API Gateway.
 
 ### Directive Store (6)
 
@@ -80,10 +82,10 @@ All twelve containers are **valid, independently deployable runtime units** (C4 
 
 ### Hermetic Compilation Boundary (10)
 
-| Component                   | Role                                     |
-| :-------------------------- | :--------------------------------------- |
-| Policy Boot Assertion       | AA-02 boot-time policy absence           |
-| Schema Validator            | JSON Schema Draft-07 first pass          |
+| Component                   | Role                                                              |
+| :-------------------------- | :---------------------------------------------------------------- |
+| Policy Boot Assertion       | AA-02 **startup-once** policy absence (not per-compile pipeline)  |
+| Schema Validator            | JSON Schema Draft-07 first pass (per-compile pipeline head)       |
 | Cross-Layer Version Checker | MAJOR / policy_contract_version          |
 | AST Discriminator Validator | AA-06                                    |
 | Portability Validator       | AA-07 / RE2 canaries                     |
@@ -149,8 +151,10 @@ All twelve containers are **valid, independently deployable runtime units** (C4 
 | Component          | Role                                     |
 | :----------------- | :--------------------------------------- |
 | Aggregate Computer | finding_aggregates + S-17 (AA-01)        |
-| Causal Explainer   | S-16 explanations                        |
-| Query Processor    | S-04, S-06, S-07, S-11, S-21..S-24, S-27 |
+| Causal Explainer   | S-16 explanations (AA-01 zero-write)     |
+| Query Processor    | S-04, S-06, S-07, S-11, S-21..S-24, S-27 (AA-01 zero-write) |
+
+AA-01 Mediated Feedback Validator inspects **all three** Analytics components for zero-write certification.
 
 ### Execution Artifact Store (5)
 
@@ -298,7 +302,7 @@ Cross-container edges that are not mediated solely by stores (CAS / append-only 
 | **IEC-05** | API Gateway → Conflict Resolution Engine | Capability-checked route | conflict.resolve S-05, S-34 gate 5 | Human disposition of Conflict Artifacts |
 | **IEC-06** | Inspection Pipeline → Analytics Engine | Read-only query | `finding_aggregates` Sec.2.11 | Pre-inspection context; **no write-back** (AA-01) |
 | **IEC-07** | Finding FSM → Finding Event Store | Append-only write | HLC + `event_hash` chain Sec.3.3 | Store-mediated; source of truth for lifecycle |
-| **IEC-08** | Any gate denial → Audit Event Store | Append-only write | Denial record Sec.3.2, S-32..S-34 | Separate stream from findings |
+| **IEC-08** | Any gate denial → Audit Event Store | Append-only write | Denial record Sec.3.2, S-32..S-34 | Gate 1 via Denial Handler; gates 2–5 direct append from each container |
 
 ### IEC-01 — Inspection ↔ Conflict (critical)
 

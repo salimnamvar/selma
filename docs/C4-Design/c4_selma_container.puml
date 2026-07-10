@@ -134,7 +134,15 @@ Rel(api_gateway, inspection_pipeline, "routes inspection submissions with target
 Rel(api_gateway, finding_fsm, "routes finding lifecycle transitions (finding.*, evidence.submit, S-12, S-13, S-14a/b/c, S-25, S-29)", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_engine, "routes conflict.resolve requests on open Conflict Artifacts; consistency review (S-05)", "Internal", $tags="capability_enforced")
 Rel(api_gateway, analytics_engine, "routes read queries: analytics (S-17), directive views (S-04), findings (S-11), explanations (S-16), governance audits (S-06, S-21..S-24, S-27)", "Internal", $tags="capability_enforced")
-Rel(api_gateway, audit_event_store, "appends capability and SoD denial audit records (S-32, S-33, S-34)", "Append-Only", $tags="immutable")
+Rel(api_gateway, audit_event_store, "appends ingress capability denial audit records via Denial Handler (S-34 gate 1)", "Append-Only", $tags="immutable")
+
+
+' ============================================================
+'  RELATIONSHIPS -- Stage-local denial appends
+' ============================================================
+
+Rel(directive_store, audit_event_store, "appends directive.* capability denials from gate 2 (S-34)", "Append-Only", $tags="immutable")
+Rel(inspection_pipeline, audit_event_store, "appends inspection.submit/reinspect capability denials from gate 3 (S-34)", "Append-Only", $tags="immutable")
 
 
 ' ============================================================
@@ -164,7 +172,7 @@ Rel(inspection_pipeline, artifact_store, "stores inspection snapshot, pipeline t
 
 Rel(finding_fsm, finding_event_store, "appends HLC-ordered finding lifecycle events (Sec.3.1, Sec.3.3, S-14a)", "Append-Only", $tags="immutable")
 Rel(finding_fsm, cgir_store, "reads creator_provenance from snapshot node provenance for SoD enforcement (S-29, S-32, S-33)", "CAS Read-Only")
-Rel(finding_fsm, audit_event_store, "appends SoD and capability denial records on blocked transitions (S-32, S-33, S-34)", "Append-Only", $tags="immutable")
+Rel(finding_fsm, audit_event_store, "appends SoD and capability denial records from gate 4 on blocked transitions (S-32, S-33, S-34)", "Append-Only", $tags="immutable")
 Rel(finding_fsm, remediation_systems, "emits mediated finding state changes to operational workflows (S-14a, S-29)", "webhook / events", $tags="mediated,async")
 
 
@@ -182,11 +190,11 @@ Rel(analytics_engine, cgir_store, "reads CG-IR nodes for active directive views 
 
 Rel(conflict_engine, cgir_store, "reads frozen node metadata for specificity scoring and priority comparison (Sec.2.15, Sec.2.8.2, S-05)", "CAS Read-Only")
 Rel(conflict_engine, artifact_store, "stores and reads Conflict Artifacts; compile-time write and runtime human-resolve disposition (Sec.2.15, S-05)", "Object Read/Append", $tags="immutable")
-Rel(conflict_engine, audit_event_store, "appends conflict.resolve capability denials (S-34)", "Append-Only", $tags="immutable")
+Rel(conflict_engine, audit_event_store, "appends conflict.resolve capability denials from gate 5 (S-34)", "Append-Only", $tags="immutable")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Architectural Audit Engine (validation only)
+'  RELATIONSHIPS -- Architectural Audit Engine
 ' ============================================================
 
 Rel(architectural_audit_engine, api_gateway, "validates AA-01 mediated feedback ingress and denial audit path", "Internal", $tags="validation_only")
