@@ -37,6 +37,10 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+dependencies = [
+  "pydantic>=2.0",
+]
+
 [project.optional-dependencies]
 dev = [
   "pytest>=9.1.0",
@@ -64,7 +68,15 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
-ignore = ["E501", "B008"]
+# Project coding rules require typing.Dict/List/Tuple/Optional (not builtins / X | None).
+ignore = [
+  "E501",
+  "B008",
+  "UP006",  # keep typing.Dict/List/Tuple
+  "UP007",  # keep Union[X, Y] instead of X | Y
+  "UP035",  # keep typing imports used by project style
+  "UP045",  # keep Optional[X] instead of X | None
+]
 
 [tool.isort]
 profile = "google"
