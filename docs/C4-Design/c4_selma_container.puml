@@ -9,7 +9,7 @@
 '            capability topology (S-34), and Architectural Audit Engine
 '            (S-30 / AA-01..AA-07).
 ' Contract:  8.2.4
-' Diagram:   8.2.4 (Phase B AIP alignment)
+' Diagram:   8.2.4 (Phase B AIP alignment + deployability notes)
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram
@@ -71,7 +71,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     ' ── Hermetic Compilation Boundary ────────────────────────
     Container_Boundary(hermetic_boundary, "Hermetic Compilation Boundary") {
-        Container(compilation_engine, "Compilation Engine", "Python", "Hermetic compile boundary (AA-02, Sec.1.2). Reads Directive Graph under read-lock (Sec.3.4). Validates JSON Schema, AST discriminator and complexity limits (Sec.2.9, S-27, S-31), lineage DAG invariants (Sec.2.2.3), RE2 canary checks (S-21, S-31), cross-layer version compatibility, frozen_env_hash pin (Sec.2.7). Dual-hash model (Sec.2.6, S-23, S-24). Boot-time policy absence assertion (AA-02). policy_doctrine.yaml MUST NOT be read at runtime. Publishes content-addressed CG-IR snapshots.")
+        Container(compilation_engine, "Compilation Engine", "Python", "Hermetic compile boundary (AA-02, Sec.1.2). Deployment: on-demand Job/worker preferred (mutation- or CI-triggered), not a persistent always-on replica set; hermetic boundary is security isolation, not always-on grouping. Reads Directive Graph under read-lock (Sec.3.4). Validates JSON Schema, AST discriminator and complexity limits (Sec.2.9, S-27, S-31), lineage DAG invariants (Sec.2.2.3), RE2 canary checks (S-21, S-31), cross-layer version compatibility, frozen_env_hash pin (Sec.2.7). Dual-hash model (Sec.2.6, S-23, S-24). Boot-time policy absence assertion (AA-02). policy_doctrine.yaml MUST NOT be read at runtime. Publishes content-addressed CG-IR snapshots.")
     }
 
     ' ── Content-Addressed CG-IR ──────────────────────────────
@@ -99,7 +99,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
     ContainerDb(artifact_store, "Execution Artifact Store", "Object Store", "Immutable inspection snapshots, pipeline traces, system_state_hashes (Sec.2.13, S-10, S-23), Conflict Artifacts pending human resolution (Sec.2.15, S-05; nested store), and AA certification artifacts (gate-ID PASS/FAIL evidence). Reproducibility: same CG-IR + target + frozen_env = same snapshot hash. Append-only after creation.")
 
     ' ── Assurance / Architectural Certification ──────────────
-    Container(architectural_audit_engine, "Architectural Audit Engine", "Python", "In-boundary orchestrator for AA-01 through AA-07 certification (Sec.9.9, S-30). Triggered by CI/CD. Validates each gate against enforcement components; reports pass/fail with explicit gate-ID traceability. Emits certification artifacts. Validation/read only -- no mutation authority over Directive Store, CG-IR, Finding FSM, or Finding Event Store.")
+    Container(architectural_audit_engine, "Architectural Audit Engine", "Python", "In-boundary orchestrator for AA-01 through AA-07 certification (Sec.9.9, S-30). Deployment: CI-invoked Job/sidecar only -- not part of the always-running user-facing request path. Triggered by cicd. Validates each gate against enforcement components; reports pass/fail with explicit gate-ID traceability. Writes only certification artifacts to Execution Artifact Store. Validation/read only -- no mutation authority over Directive Store, CG-IR, Finding FSM, or Finding Event Store.")
 
 }
 
