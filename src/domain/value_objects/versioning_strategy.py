@@ -1,17 +1,30 @@
-"""Versioning strategy value object."""
+"""Versioning strategy value objects."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from __future__ import annotations
+
+from pydantic import Field
+
+from domain.base import DomainValueObject
+from domain.identifiers import GovernanceText
 
 
-class VersioningStrategy(BaseModel):
-    """Describes versioning intent for doctrine, schema, and specification documents."""
+class VersionIntent(DomainValueObject):
+    """When to increment each semantic version component."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    major: GovernanceText = Field(description="When to increment MAJOR version")
+    minor: GovernanceText = Field(description="When to increment MINOR version")
+    patch: GovernanceText = Field(description="When to increment PATCH version")
 
-    description: str = Field(description="Versioning strategy overview")
-    format: str = Field(description="Version format pattern (e.g. MAJOR.MINOR.PATCH)")
-    major_increment_criteria: str = Field(description="When to increment MAJOR version")
-    minor_increment_criteria: str = Field(description="When to increment MINOR version")
-    patch_increment_criteria: str = Field(description="When to increment PATCH version")
-    migration_intent: str = Field(description="Migration rules when crossing MAJOR version boundaries")
-    synchronization_intent: str = Field(description="How versions synchronize across documents")
+
+class VersioningStrategy(DomainValueObject):
+    """Versioning intent for doctrine, schema, and specification documents.
+
+    Structure matches ``versioning_strategy`` in the doctrine document,
+    including nested ``intent`` for major/minor/patch criteria.
+    """
+
+    description: GovernanceText = Field(description="Versioning strategy overview")
+    format: GovernanceText = Field(description="Version format pattern (e.g. MAJOR.MINOR.PATCH)")
+    intent: VersionIntent = Field(description="Version increment intent per component")
+    migration_intent: GovernanceText = Field(description="Migration rules when crossing MAJOR version boundaries")
+    synchronization_intent: GovernanceText = Field(description="How versions synchronize across documents")

@@ -46,6 +46,7 @@ dev = [
   "pyright",
   "pre-commit",
   "httpx",
+  "PyYAML",
 ]
 
 [project.urls]
@@ -88,6 +89,7 @@ ignore = [
   "UP035",  # keep typing imports used by project style
   "UP045",  # keep Optional[X] instead of X | None per project coding rules
   "TRY003", # too strict for domain exceptions with meaningful messages
+  "D105",   # magic methods are self-describing; avoid noise on __str__/__iter__/etc.
 ]
 
 [tool.ruff.lint.per-file-ignores]

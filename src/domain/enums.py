@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 
 class ContentType(StrEnum):
@@ -26,13 +26,21 @@ class IdentityOperation(StrEnum):
 
 
 class PriorityCategory(StrEnum):
-    """Authority levels in the governance priority hierarchy."""
+    """Authority levels in the governance priority hierarchy.
+
+    Declaration order matches ascending rank (1 = highest authority).
+    """
 
     CONSTITUTIONAL = "constitutional"
     STATUTORY = "statutory"
     REGULATORY = "regulatory"
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
+
+    @property
+    def rank(self) -> int:
+        """1-based authority rank derived from declaration order (1 = highest)."""
+        return list(PriorityCategory).index(self) + 1
 
 
 class ProhibitedField(StrEnum):
@@ -52,3 +60,24 @@ class ProhibitedField(StrEnum):
     REMEDIATION = "remediation"
     TARGET = "target"
     LINEAGE = "lineage"
+
+
+class ResolutionStrategy(StrEnum):
+    """Conflict resolution strategies in canonical precedence order."""
+
+    EXPLICIT_OVERRIDE = "explicit_override"
+    COMPATIBLE_OVERRIDES = "compatible_overrides"
+    PRIORITY = "priority"
+    SPECIFICITY = "specificity"
+    RECENCY = "recency"
+    CONFLICT_ARTIFACT = "conflict_artifact"
+
+
+class PriorityRank(IntEnum):
+    """Numeric authority ranks matching PriorityCategory declaration order."""
+
+    CONSTITUTIONAL = 1
+    STATUTORY = 2
+    REGULATORY = 3
+    OPERATIONAL = 4
+    ADVISORY = 5
