@@ -10,6 +10,17 @@ class ContentType(StrEnum):
     MIXED = "mixed"
 
 
+class IdentityOperation(StrEnum):
+    """Lifecycle operations for rule lineage identity."""
+
+    REVISION = "revision"
+    FORK = "fork"
+    MERGE = "merge"
+    SPLIT = "split"
+    RENAME = "rename"
+    RETIRE = "retire"
+
+
 class PriorityCategory(StrEnum):
     """Authority levels in the governance priority hierarchy."""
 
@@ -20,8 +31,8 @@ class PriorityCategory(StrEnum):
     ADVISORY = "advisory"
 
 
-class ProhibitedField(StrEnum):
-    """Schema fields that must never appear in policy prose."""
+class MachineField(StrEnum):
+    """Schema fields carrying executable semantics. Must not appear in policy prose."""
 
     PARAMETERS = "parameters"
     CONDITIONS = "conditions"
@@ -37,3 +48,14 @@ class ProhibitedField(StrEnum):
     REMEDIATION = "remediation"
     TARGET = "target"
     LINEAGE = "lineage"
+
+
+class ResolutionStrategy(StrEnum):
+    """Conflict resolution strategies in canonical precedence order."""
+
+    EXPLICIT_OVERRIDE = "explicit_override"
+    COMPATIBLE_OVERRIDES = "compatible_overrides"
+    PRIORITY = "priority"
+    SPECIFICITY = "specificity"
+    RECENCY = "recency"
+    CONFLICT_ARTIFACT = "conflict_artifact"
