@@ -9,11 +9,7 @@ from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, IndexedLookupMixin, NameableMixin, require_unique
 from domain.enums import PriorityCategory
-from domain.identifiers import (
-    GovernanceDescription,
-    GovernanceGuidance,
-    GovernancePurpose,
-)
+from domain.identifiers import GovernanceText
 
 
 class PriorityLevel(DomainValueObject, NameableMixin):
@@ -21,9 +17,9 @@ class PriorityLevel(DomainValueObject, NameableMixin):
 
     category: PriorityCategory = Field(description="Unique rank identifier")
     rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
-    title: GovernanceGuidance = Field(description="Human-readable rank name")
-    description: GovernanceDescription = Field(description="Scope and authority of this rank")
-    examples: tuple[GovernanceGuidance, ...] = Field(
+    title: GovernanceText = Field(description="Human-readable rank name")
+    description: GovernanceText = Field(description="Scope and authority of this rank")
+    examples: tuple[GovernanceText, ...] = Field(
         default=(),
         description="Typical rules at this authority rank",
     )
@@ -41,14 +37,14 @@ class PriorityLevel(DomainValueObject, NameableMixin):
 class CrossLayerPrecedence(DomainValueObject):
     """Declarative precedence intent across layers (not an algorithm)."""
 
-    precedence_algorithm: GovernanceDescription = Field(
+    precedence_algorithm: GovernanceText = Field(
         description="Where the normative resolution algorithm is defined (reference only)"
     )
-    structural_override: GovernanceDescription = Field(
+    structural_override: GovernanceText = Field(
         description="Schema-level override mechanism for conflict resolution"
     )
-    policy_role: GovernancePurpose = Field(description="Policy layer's role in precedence")
-    order: GovernanceDescription = Field(
+    policy_role: GovernanceText = Field(description="Policy layer's role in precedence")
+    order: GovernanceText = Field(
         description="Precedence chain order as governance prose (not executable)"
     )
 
@@ -62,12 +58,12 @@ class AuthorityHierarchy(
     Lookup: ``get`` / ``require`` / ``has`` by :class:`PriorityCategory`.
     """
 
-    description: GovernanceDescription = Field(description="How priority hierarchy works")
+    description: GovernanceText = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(
         min_length=1,
         description="Ordered authority levels",
     )
-    conflict_resolution: GovernanceDescription = Field(
+    conflict_resolution: GovernanceText = Field(
         description="Governance intent for how priority affects conflict resolution"
     )
     cross_layer_precedence: CrossLayerPrecedence = Field(

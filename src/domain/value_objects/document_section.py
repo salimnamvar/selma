@@ -11,7 +11,7 @@ from pydantic import BeforeValidator, Field, model_validator
 from domain.base import DomainValueObject, NameableMixin, TreeNodeMixin, none_as_empty, require_unique
 from domain.collections import IdentifiedCollection
 from domain.enums import ContentType
-from domain.identifiers import GovernanceGuidance, SectionId
+from domain.identifiers import GovernanceText, SectionId
 
 
 class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
@@ -32,17 +32,17 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     )
 
     id: SectionId = Field(description="Unique section identifier")
-    title: GovernanceGuidance = Field(description="Human-readable section title")
+    title: GovernanceText = Field(description="Human-readable section title")
     required: bool = Field(
         default=True,
         description="Whether this section must be present in a complete document",
     )
     content_type: ContentType = Field(description="Expected content format")
-    guidance: GovernanceGuidance | None = Field(
+    guidance: GovernanceText | None = Field(
         default=None,
         description="Authoring guidance for this section (optional on nested sections)",
     )
-    columns: Annotated[tuple[GovernanceGuidance, ...], BeforeValidator(none_as_empty)] = Field(
+    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
         description="Table column headers (empty when not tabular)",
     )
@@ -50,7 +50,7 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
         default=(),
         description="Subsections",
     )
-    schema_encoding: GovernanceGuidance | None = Field(
+    schema_encoding: GovernanceText | None = Field(
         default=None,
         description=(
             "Authoring guidance for how this section maps to the rule schema. "

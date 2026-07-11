@@ -10,8 +10,7 @@ from pydantic import Field, model_validator
 from domain.base import DomainValueObject
 from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
-    DomainText,
-    GovernanceDescription,
+    GovernanceText,
     RuleContractId,
     SemanticVersion,
 )
@@ -30,7 +29,7 @@ class DoctrineMetadata(DomainValueObject):
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
-    description: GovernanceDescription = Field(description="Human-readable purpose statement")
+    description: GovernanceText = Field(description="Human-readable purpose statement")
     spec_version: SemanticVersion = Field(description="Compatible specification version")
     schema_version: SemanticVersion = Field(description="Compatible rule schema version")
     schema_id: RuleContractId = Field(description="Identifier of the compatible rule schema")
@@ -88,7 +87,7 @@ class PolicyDoctrine(DomainValueObject):
         return self.metadata.version
 
     @property
-    def description(self) -> DomainText:
+    def description(self) -> str:
         """Doctrine purpose statement."""
         return self.metadata.description
 

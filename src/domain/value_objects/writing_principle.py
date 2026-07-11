@@ -8,15 +8,15 @@ from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, NameableMixin
 from domain.collections import IdentifiedCollection
-from domain.identifiers import GovernanceDescription, GovernanceGuidance, WritingPrincipleId
+from domain.identifiers import GovernanceText, WritingPrincipleId
 
 
 class WritingPrinciple(DomainValueObject, NameableMixin):
     """A governance principle that guides rule authors."""
 
     id: WritingPrincipleId = Field(description="Unique principle identifier")
-    title: GovernanceGuidance = Field(description="Short principle name")
-    description: GovernanceDescription = Field(
+    title: GovernanceText = Field(description="Short principle name")
+    description: GovernanceText = Field(
         description="Detailed guidance for applying this principle"
     )
 

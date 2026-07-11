@@ -9,19 +9,17 @@ from pydantic import Field, model_validator
 from domain.base import DomainValueObject
 from domain.identifiers import (
     FieldPath,
-    GovernanceConstraint,
-    GovernanceDescription,
-    GovernanceGuidance,
+    GovernanceText,
 )
 
 
 class MachineIdSemantics(DomainValueObject):
     """Defines the semantics of the Machine ID concept."""
 
-    definition: GovernanceDescription = Field(description="What Machine ID represents")
-    exclusions: tuple[GovernanceGuidance, ...] = Field(description="What Machine ID is not")
-    assignment: GovernanceGuidance = Field(description="How Machine ID is assigned")
-    governance_intent: GovernanceDescription = Field(
+    definition: GovernanceText = Field(description="What Machine ID represents")
+    exclusions: tuple[GovernanceText, ...] = Field(description="What Machine ID is not")
+    assignment: GovernanceText = Field(description="How Machine ID is assigned")
+    governance_intent: GovernanceText = Field(
         description="Why Machine ID matters for governance"
     )
 
@@ -33,16 +31,16 @@ class IdentityResolution(DomainValueObject):
     is assigned at schema compilation time and is not represented in policy tables.
     """
 
-    canonical_field: GovernanceGuidance = Field(description="The canonical identity field name")
+    canonical_field: GovernanceText = Field(description="The canonical identity field name")
     policy_location: FieldPath = Field(description="Where identity appears in policy")
     schema_lineage_location: FieldPath = Field(description="Where lineage ID appears in schema")
     schema_execution_location: FieldPath = Field(description="Where execution ID appears in schema")
     spec_lineage_location: FieldPath = Field(description="Where lineage ID appears in spec")
     spec_execution_location: FieldPath = Field(description="Where execution ID appears in spec")
-    identity_mapping: GovernanceDescription = Field(description="Identity mapping rule")
+    identity_mapping: GovernanceText = Field(description="Identity mapping rule")
     machine_id_semantics: MachineIdSemantics = Field(description="Detailed semantics of Machine ID")
-    uniqueness: GovernanceConstraint = Field(description="Uniqueness constraint for lineage IDs")
-    lifecycle_reference: GovernanceDescription = Field(
+    uniqueness: GovernanceText = Field(description="Uniqueness constraint for lineage IDs")
+    lifecycle_reference: GovernanceText = Field(
         description="Reference to identity lifecycle operations"
     )
 

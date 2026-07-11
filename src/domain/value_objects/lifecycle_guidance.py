@@ -9,14 +9,14 @@ from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, IndexedLookupMixin
 from domain.enums import IdentityOperation
-from domain.identifiers import GovernanceGuidance
+from domain.identifiers import GovernanceText
 
 
 class LifecycleOperationGuidance(DomainValueObject):
     """Governance intent for a single identity lifecycle operation."""
 
     operation: IdentityOperation = Field(description="Lifecycle operation")
-    guidance: GovernanceGuidance = Field(description="When and how to use this operation")
+    guidance: GovernanceText = Field(description="When and how to use this operation")
 
     @property
     def id(self) -> IdentityOperation:
@@ -39,7 +39,7 @@ class LifecycleGuidance(
         min_length=1,
         description="Guidance entries keyed by operation",
     )
-    dag_intent: GovernanceGuidance = Field(
+    dag_intent: GovernanceText = Field(
         description="Constraint on lineage ancestry graph structure"
     )
 
@@ -61,7 +61,7 @@ class LifecycleGuidance(
 
     def get_guidance(self, key: IdentityOperation) -> str:
         """Return guidance text for the given operation."""
-        return str(self.require(key).guidance)
+        return self.require(key).guidance
 
     @classmethod
     def from_flat_dict(cls, data: dict[str, Any]) -> LifecycleGuidance:

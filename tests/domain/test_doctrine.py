@@ -49,7 +49,7 @@ class TestPolicyDoctrineYamlContract:
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.name == "universal-policy-doctrine"
         assert str(doctrine.version) == "8.2.4"
-        assert str(doctrine.schema_id) == "universal-rule-schema"
+        assert doctrine.schema_id == "universal-rule-schema"
         assert doctrine.metadata.name == doctrine.name
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:

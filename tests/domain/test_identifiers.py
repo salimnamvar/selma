@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from domain import FieldPath, MachineId, SemanticVersion
 
@@ -11,7 +11,7 @@ from domain import FieldPath, MachineId, SemanticVersion
 @pytest.mark.unit
 @pytest.mark.domain
 class TestSemanticVersion:
-    """SemanticVersion parsing, compatibility, and ordering."""
+    """SemanticVersion parsing (packaging-backed), compatibility, and ordering."""
 
     @pytest.mark.parametrize(
         ("raw", "major", "minor", "patch"),
@@ -42,7 +42,7 @@ class TestSemanticVersion:
         ids=["two-parts", "one-part", "non-numeric", "four-parts", "empty"],
     )
     def test_invalid_format_rejected(self, invalid: str) -> None:
-        with pytest.raises(ValidationError):
+        with pytest.raises((ValidationError, ValueError, TypeError)):
             SemanticVersion.model_validate(invalid)
 
     def test_major_compatibility(self) -> None:
@@ -62,7 +62,7 @@ class TestSemanticVersion:
 @pytest.mark.unit
 @pytest.mark.domain
 class TestMachineId:
-    """MachineId value-object validation and behavior."""
+    """MachineId constrained-string validation (syntax only, no class behavior)."""
 
     @pytest.mark.parametrize(
         "valid",
@@ -70,11 +70,8 @@ class TestMachineId:
         ids=["auth", "pay", "short-prefix"],
     )
     def test_accepts_valid_ids(self, valid: str) -> None:
-        machine_id = MachineId.model_validate(valid)
-        assert str(machine_id) == valid
-        assert machine_id == valid
-        assert machine_id.prefix == valid.split("-", maxsplit=1)[0]
-        assert machine_id.number == valid.split("-", maxsplit=1)[1]
+        adapter: TypeAdapter[MachineId] = TypeAdapter(MachineId)
+        assert adapter.validate_python(valid) == valid
 
     @pytest.mark.parametrize(
         "invalid",
@@ -82,8 +79,9 @@ class TestMachineId:
         ids=["lowercase", "no-number-sep", "prefix-only", "reversed"],
     )
     def test_rejects_invalid_ids(self, invalid: str) -> None:
+        adapter: TypeAdapter[MachineId] = TypeAdapter(MachineId)
         with pytest.raises(ValidationError):
-            MachineId.model_validate(invalid)
+            adapter.validate_python(invalid)
 
 
 @pytest.mark.unit

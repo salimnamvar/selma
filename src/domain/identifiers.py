@@ -1,178 +1,195 @@
 """Domain identifiers and scalar value types.
 
-Scalar identities and domain text are real value objects (not bare Annotated
-strings): they coerce from strings, validate, and can grow behavior.
+Mechanics use Pydantic constraints and ``packaging.Version``. Domain behavior
+(``is_compatible``, FieldPath structure) stays explicit on value objects.
 """
 
 from __future__ import annotations
 
 from functools import total_ordering
-from re import fullmatch
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any, cast
 
-from pydantic import ConfigDict, Field, RootModel, field_validator
+from packaging.version import InvalidVersion, Version
+from pydantic import Field, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 from domain.base import StringCoercibleVO
 
+# ── syntax-only constrained strings (no behavior beyond validation) ─────
 
-class DomainText(RootModel[str]):
-    """Non-empty governance prose (immutable scalar value object)."""
+GovernanceText = Annotated[
+    str,
+    Field(min_length=1, description="Non-empty governance guidance, description, or intent"),
+]
 
-    model_config = ConfigDict(frozen=True)
+MachineId = Annotated[
+    str,
+    Field(
+        pattern=r"^[A-Z][A-Z0-9]+-[0-9]+$",
+        description="Immutable lineage identifier assigned at directive authoring time",
+    ),
+]
 
-    root: Annotated[str, Field(min_length=1)]
+WritingPrincipleId = Annotated[
+    str,
+    Field(pattern=r"^WP-\d{3}$", description="Unique writing principle identifier"),
+]
 
-    def __str__(self) -> str:
-        return self.root
+SectionId = Annotated[
+    str,
+    Field(pattern=r"^[a-z][a-z0-9_]*$", description="Unique document section identifier"),
+]
 
-    def __eq__(self, other: object) -> bool:
-        result: Any = NotImplemented
-        if isinstance(other, DomainText):
-            result = self.root == other.root
-        elif isinstance(other, str):
-            result = self.root == other
-        return result
+RuleContractId = Annotated[
+    str,
+    Field(
+        pattern=r"^[a-z][a-z0-9-]*$",
+        min_length=1,
+        description="Identifier of the compatible rule schema",
+    ),
+]
 
-    def __hash__(self) -> int:
-        return hash(("DomainText", self.root))
-
-    def __contains__(self, item: object) -> bool:
-        return str(item) in self.root
-
-    def lower(self) -> str:
-        """Return lower-cased text content."""
-        return self.root.lower()
-
-
-# Semantic roles — same constraints, distinct types for precision.
-class GovernancePurpose(DomainText):
-    """Purpose / role description for a governance layer or artifact."""
-
-
-class GovernanceGuidance(DomainText):
-    """Authoring or operational guidance text."""
-
-
-class GovernanceConstraint(DomainText):
-    """Constraint or prohibition statement."""
-
-
-class GovernanceDescription(DomainText):
-    """General descriptive prose."""
+# Backward-compatible aliases (previously distinct RootModel subclasses).
+DomainText = GovernanceText
+GovernancePurpose = GovernanceText
+GovernanceGuidance = GovernanceText
+GovernanceConstraint = GovernanceText
+GovernanceDescription = GovernanceText
 
 
-# Backward-compatible alias used across the model where role is generic.
-GovernanceText = DomainText
-
-
-class _PatternId(RootModel[str]):
-    """Base for pattern-constrained identifier value objects."""
-
-    model_config = ConfigDict(frozen=True)
-    _PATTERN: ClassVar[str] = r".+"
-    _LABEL: ClassVar[str] = "identifier"
-
-    root: Annotated[str, Field(min_length=1)]
-
-    @field_validator("root")
-    @classmethod
-    def _validate_pattern(cls, value: str) -> str:
-        if fullmatch(cls._PATTERN, value) is None:
-            raise ValueError(f"Invalid {cls._LABEL}: {value!r} (expected /{cls._PATTERN}/)")
-        return value
-
-    def __str__(self) -> str:
-        return self.root
-
-    def __eq__(self, other: object) -> bool:
-        result: Any = NotImplemented
-        if isinstance(other, _PatternId):
-            result = type(self) is type(other) and self.root == other.root
-        elif isinstance(other, str):
-            result = self.root == other
-        return result
-
-    def __hash__(self) -> int:
-        return hash((type(self).__name__, self.root))
-
-
-class MachineId(_PatternId):
-    """Immutable lineage identifier assigned at directive authoring time.
-
-    Pattern: ``^[A-Z][A-Z0-9]+-[0-9]+$`` (e.g. AUTH-001, PAY-800).
-    Maps exclusively to lineage_id — never an execution id.
-    """
-
-    _PATTERN: ClassVar[str] = r"^[A-Z][A-Z0-9]+-[0-9]+$"
-    _LABEL: ClassVar[str] = "Machine ID"
-
-    @property
-    def prefix(self) -> str:
-        """Namespace prefix before the hyphen."""
-        return self.root.split("-", maxsplit=1)[0]
-
-    @property
-    def number(self) -> str:
-        """Numeric suffix after the hyphen."""
-        return self.root.split("-", maxsplit=1)[1]
-
-
-class WritingPrincipleId(_PatternId):
-    """Writing principle identifier (``WP-NNN``)."""
-
-    _PATTERN: ClassVar[str] = r"^WP-\d{3}$"
-    _LABEL: ClassVar[str] = "writing principle id"
-
-
-class SectionId(_PatternId):
-    """Document section identifier (snake_case token)."""
-
-    _PATTERN: ClassVar[str] = r"^[a-z][a-z0-9_]*$"
-    _LABEL: ClassVar[str] = "section id"
-
-
-class RuleContractId(_PatternId):
-    """Compatible rule schema identifier."""
-
-    _PATTERN: ClassVar[str] = r"^[a-z][a-z0-9-]*$"
-    _LABEL: ClassVar[str] = "rule contract id"
+def _parse_strict_semver(value: str) -> Version:
+    """Parse MAJOR.MINOR.PATCH only (doctrine uses strict three-part versions)."""
+    parts = value.split(".")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
+    try:
+        return Version(value)
+    except InvalidVersion as exc:
+        raise ValueError(f"Invalid semantic version {value!r}") from exc
 
 
 @total_ordering
-class SemanticVersion(StringCoercibleVO):
-    """Semantic version with structured components and MAJOR compatibility."""
+class SemanticVersion:
+    """Semantic version with MAJOR compatibility for doctrine artifacts.
 
-    major: int = Field(ge=0, description="Breaking changes that require migration")
-    minor: int = Field(ge=0, description="New backward-compatible features")
-    patch: int = Field(ge=0, description="Bug fixes and clarifications")
+    Parsing and comparison are delegated to :class:`packaging.version.Version`.
+    Domain rule ``is_compatible`` (same MAJOR) stays explicit here.
+    """
+
+    __slots__ = ("_version",)
+
+    def __init__(self, value: str | Version | SemanticVersion) -> None:
+        """Build from a three-part version string, packaging Version, or peer."""
+        if isinstance(value, SemanticVersion):
+            self._version = value._version
+        elif isinstance(value, Version):
+            # Re-validate strict three-part form via public string.
+            self._version = _parse_strict_semver(
+                f"{value.major}.{value.minor}.{value.micro}"
+            )
+        else:
+            self._version = _parse_strict_semver(value)
 
     @classmethod
-    def _parse_string(cls, value: str) -> dict[str, Any]:
-        parts = value.split(".")
-        if len(parts) != 3 or not all(part.isdigit() for part in parts):
-            raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
-        return {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
+    def model_validate(cls, value: Any) -> SemanticVersion:
+        """Pydantic-style entry point used by tests and call sites."""
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, dict):
+            data = cast(dict[str, Any], value)
+            major = data.get("major")
+            minor = data.get("minor")
+            patch = data.get("patch", data.get("micro"))
+            if major is None or minor is None or patch is None:
+                raise ValueError(f"Invalid semantic version components: {value!r}")
+            return cls(f"{major}.{minor}.{patch}")
+        if isinstance(value, (str, Version)):
+            return cls(value)
+        raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
 
-    def __str__(self) -> str:
-        return f"{self.major}.{self.minor}.{self.patch}"
+    @property
+    def major(self) -> int:
+        """MAJOR version component."""
+        return int(self._version.major)
+
+    @property
+    def minor(self) -> int:
+        """MINOR version component."""
+        return int(self._version.minor)
+
+    @property
+    def patch(self) -> int:
+        """PATCH version component (packaging ``micro``)."""
+        return int(self._version.micro)
 
     def is_compatible(self, other: SemanticVersion) -> bool:
         """Return True when both versions share the same MAJOR component."""
         return self.major == other.major
 
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+    def __repr__(self) -> str:
+        return f"SemanticVersion({str(self)!r})"
+
+    def __eq__(self, other: object) -> bool:
+        result: Any = NotImplemented
+        if isinstance(other, SemanticVersion):
+            result = self._version == other._version
+        elif isinstance(other, str):
+            try:
+                result = self._version == _parse_strict_semver(other)
+            except ValueError:
+                result = False
+        return result
+
+    def __hash__(self) -> int:
+        return hash(self._version)
+
     def __lt__(self, other: object) -> bool:
         result: Any = NotImplemented
         if isinstance(other, SemanticVersion):
-            result = (self.major, self.minor, self.patch) < (
-                other.major,
-                other.minor,
-                other.patch,
-            )
+            result = self._version < other._version
         return result
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source: type[Any],
+        _handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        def validate(value: Any) -> SemanticVersion:
+            return cls.model_validate(value)
+
+        from_str = core_schema.no_info_plain_validator_function(validate)
+        return core_schema.json_or_python_schema(
+            json_schema=from_str,
+            python_schema=core_schema.union_schema(
+                [
+                    core_schema.is_instance_schema(cls),
+                    from_str,
+                ]
+            ),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda instance: str(instance),
+                when_used="always",
+            ),
+        )
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        _core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> dict[str, Any]:
+        return handler(core_schema.str_schema())
 
 
 class FieldPath(StringCoercibleVO):
-    """Structured location of an identity field across layers."""
+    """Structured location of an identity field across layers.
+
+    Has behavior (``is_field``, structured components) beyond bare string syntax.
+    """
 
     collection: str = Field(min_length=1, description="Collection or container name")
     field: str = Field(min_length=1, description="Field name within the collection")
