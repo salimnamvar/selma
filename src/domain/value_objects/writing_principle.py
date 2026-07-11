@@ -36,11 +36,6 @@ class WritingPrinciples(IdentifiedCollection[WritingPrincipleId, WritingPrincipl
     constructor; no custom factory is required.
     """
 
-    def item_id(self, a_item: WritingPrinciple) -> WritingPrincipleId:
-        """Return the principle identifier used for indexing."""
-        result: WritingPrincipleId = a_item.id
-        return result
-
     @property
     def principles(self) -> Tuple[WritingPrinciple, ...]:
         """Return principles in declaration order.

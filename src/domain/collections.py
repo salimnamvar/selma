@@ -9,19 +9,31 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Iterator
 from functools import cached_property
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Protocol, Tuple, TypeVar, runtime_checkable
 
 from pydantic import ConfigDict, Field, RootModel, model_validator
 
 from domain.base import require_unique
 
+TId = TypeVar("TId", bound=Hashable)
+
+
+@runtime_checkable
+class IdentifiedItem(Protocol[TId]):
+    """Protocol for items with a stable identifier property."""
+
+    @property
+    def id(self) -> TId:
+        """Unique identifier for this item."""
+        ...
+
 
 class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
     """Immutable RootModel collection with O(1) lookup by item identifier.
 
-    Subclasses implement :meth:`item_id`. The default uniqueness check applies
-    to top-level items only; override :meth:`check_unique_ids` when nested
-    identity rules apply (e.g. document section trees).
+    Items should expose an ``.id`` property (see :class:`IdentifiedItem`).
+    The default uniqueness check applies to top-level items only; override
+    :meth:`check_unique_ids` when nested identity rules apply.
 
     Iteration, length, and membership operate on the collection items (not on
     Pydantic model fields).
@@ -31,8 +43,8 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
 
     root: Tuple[TItem, ...] = Field(min_length=1)
 
-    def item_id(self, a_item: TItem) -> TId:
-        """Return the unique identifier for a collection item.
+    def _item_id(self, a_item: TItem) -> TId:
+        """Extract the identifier from a collection item.
 
         Args:
             a_item: Item stored in this collection.
@@ -40,20 +52,20 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
         Returns:
             Stable hashable identifier for indexing and uniqueness checks.
         """
-        raise NotImplementedError
+        return a_item.id
 
     @model_validator(mode="after")
     def check_unique_ids(self) -> IdentifiedCollection[TId, TItem]:
         """Reject collections that contain duplicate top-level identifiers."""
         require_unique(
-            [self.item_id(item) for item in self.root],
+            [self._item_id(item) for item in self.root],
             a_label="IDs",
         )
         return self
 
     @cached_property
     def _index(self) -> Dict[TId, TItem]:
-        result: Dict[TId, TItem] = {self.item_id(item): item for item in self.root}
+        result: Dict[TId, TItem] = {self._item_id(item): item for item in self.root}
         return result
 
     def get(self, a_id: TId) -> Optional[TItem]:

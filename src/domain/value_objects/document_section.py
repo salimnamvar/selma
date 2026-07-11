@@ -146,11 +146,6 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
         }
     )
 
-    def item_id(self, a_item: DocumentSection) -> SectionId:
-        """Return the top-level section identifier."""
-        result: SectionId = a_item.id
-        return result
-
     @model_validator(mode="after")
     def check_unique_ids(self) -> DocumentStructure:
         """Enforce required sections, unique nested IDs, and directives children.

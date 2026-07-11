@@ -6,6 +6,7 @@ Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
 from __future__ import annotations
 
 from domain.base import DomainValueObject
+from domain.collections import IdentifiedItem
 from domain.doctrine import PolicyDoctrine
 from domain.enums import (
     ContentType,
@@ -54,6 +55,7 @@ __all__ = [
     "FieldLegality",
     "FieldPath",
     "GovernanceText",
+    "IdentifiedItem",
     "IdentityLifecycleIntent",
     "IdentityOperation",
     "IdentityResolution",

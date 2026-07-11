@@ -109,16 +109,17 @@ class PriorityHierarchy(DomainValueObject):
         return result
 
     @cached_property
-    def _index(self) -> Dict[PriorityCategory, PriorityLevel]:
+    def _levels_index(self) -> Dict[PriorityCategory, PriorityLevel]:
+        """Index priority levels by category for O(1) lookup."""
         result: Dict[PriorityCategory, PriorityLevel] = {level.id: level for level in self.levels}
         return result
 
     def get(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
         """Return the priority level for a category."""
-        result: Optional[PriorityLevel] = self._index.get(a_category)
+        result: Optional[PriorityLevel] = self._levels_index.get(a_category)
         return result
 
     def outranks(self, a_left: PriorityCategory, a_right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right."""
-        result: bool = self._index[a_left].level < self._index[a_right].level
+        result: bool = self._levels_index[a_left].level < self._levels_index[a_right].level
         return result
