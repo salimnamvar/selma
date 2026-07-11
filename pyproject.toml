@@ -7,7 +7,7 @@ name = "selma"
 version = "0.1.0"
 description = "A universal governance steward that maintains a perfect, bidirectional bond between human-readable policies and machine-executable rules"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13,<3.14"
 license = { text = "Apache-2.0" }
 authors = [
   { name = "Salim Namvar", email = "salim.namvar@gmail.com" }
@@ -30,26 +30,22 @@ classifiers = [
   "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Libraries :: Application Frameworks",
   "Typing :: Typed",
 ]
-
 dependencies = [
-  "pydantic>=2.0",
+  "pydantic>=2.13",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=9.1.0",
   "pytest-cov>=7.1.0",
-  "black>=26.5.1",
   "ruff>=0.15.17",
-  "isort>=8.0.1",
   "pyright>=1.1.400",
   "pre-commit>=3.7.0",
+  "httpx>=0.27",
 ]
 
 [project.urls]
@@ -58,49 +54,95 @@ Repository = "https://github.com/salimnamvar/selma"
 Issues = "https://github.com/salimnamvar/selma/issues"
 Documentation = "https://github.com/salimnamvar/selma/tree/main/docs"
 
-[tool.black]
-line-length = 120
-target-version = ["py311", "py312", "py313"]
-
-[tool.ruff]
-line-length = 120
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
-# Project coding rules require typing.Dict/List/Tuple/Optional (not builtins / X | None).
-ignore = [
-  "E501",
-  "B008",
-  "UP006",  # keep typing.Dict/List/Tuple
-  "UP007",  # keep Union[X, Y] instead of X | Y
-  "UP035",  # keep typing imports used by project style
-  "UP045",  # keep Optional[X] instead of X | None
-]
-
-[tool.isort]
-profile = "google"
-line_length = 120
-
-[tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "-q --tb=short"
-pythonpath = [
-    "src",
-]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["src", "tests"]
+show-fixes = true
+
+[tool.ruff.lint]
+select = [
+  "E",      # pycodestyle errors
+  "F",      # pyflakes
+  "I",      # import sorting
+  "N",      # naming conventions
+  "UP",     # pyupgrade
+  "B",      # bugbear
+  "SIM",    # simplify
+  "C4",     # comprehensions
+  "RET",    # return statement improvements
+  "ARG",    # unused function arguments
+  "PTH",    # pathlib over os.path
+  "TRY",    # exception handling
+  "RUF",    # Ruff-specific rules
+  "D",      # pydocstyle / Google-style docstrings
+]
+ignore = [
+  "E501",   # line-too-long — Google allows long URLs/examples in docs
+  "B008",   # do not perform function calls in argument defaults
+  "UP006",  # keep typing.Dict/List/Tuple per project coding rules
+  "UP007",  # keep Union[X, Y] instead of X | Y per project coding rules
+  "UP035",  # keep typing imports used by project style
+  "UP045",  # keep Optional[X] instead of X | None per project coding rules
+  "TRY003", # too strict for domain exceptions with meaningful messages
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ARG001",
+    "ARG002",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D106",
+    "D107",
+    "D415",
+]
+"**/__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["domain"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--strict-markers -v"
+markers = [
+  "unit: Fast, isolated unit tests (no database)",
+  "integration: Integration tests using real in-memory SQLite",
+  "slow: Slow-running tests",
+  "domain: Domain layer tests (entities, policies, business logic)",
+  "repository: Repository layer tests",
+  "api: API layer tests",
+  "service: Service layer tests",
+]
+
 [tool.pyright]
 typeCheckingMode = "strict"
-pythonVersion = "3.11"
+pythonVersion = "3.13"
 pythonPlatform = "Linux"
-extraPaths = [
-    "src",
-]
+extraPaths = ["src", "tests"]
+reportMissingTypeStubs = false

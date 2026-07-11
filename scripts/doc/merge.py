@@ -42,7 +42,7 @@ class DocumentMerger:
     def merge(self) -> None:
         """Write merged content to the output file."""
         self._output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._output_file, "w", encoding="utf-8") as out:
+        with self._output_file.open("w", encoding="utf-8") as out:
             self._walk(self._input_dir, out)
 
     def _walk(self, a_directory: Path, a_out: "Path | None") -> None:

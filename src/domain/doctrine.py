@@ -1,18 +1,19 @@
-from typing import List, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from domain.entities.document_section import DocumentSection
-from domain.entities.priority_level import PriorityLevel
-from domain.entities.writing_principle import WritingPrinciple
 from domain.enums import PriorityCategory
+from domain.identifiers import SectionId, SemanticVersion, WritingPrincipleId
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
-from domain.value_objects.doctrine_metadata import DoctrineMetadata
+from domain.value_objects.document_section import DocumentSection
 from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
 from domain.value_objects.identity_resolution import IdentityResolution
-from domain.value_objects.priority_hierarchy import PriorityHierarchy
+from domain.value_objects.priority_hierarchy import PriorityHierarchy, PriorityLevel
 from domain.value_objects.versioning_strategy import VersioningStrategy
+from domain.value_objects.writing_principle import WritingPrinciple
+
+MAX_SECTION_DEPTH = 3
 
 REQUIRED_SECTION_IDS = frozenset(
     {
@@ -33,21 +34,29 @@ class PolicyDoctrine(BaseModel):
     priority hierarchy, document structure, and versioning strategy.
     """
 
-    metadata: DoctrineMetadata = Field(description="Doctrine identifying information")
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(description="Unique doctrine identifier")
+    version: SemanticVersion = Field(description="Doctrine version")
+    description: str = Field(description="Human-readable purpose statement")
+    spec_version: SemanticVersion = Field(description="Compatible specification version")
+    rule_contract_version: SemanticVersion = Field(description="Compatible rule schema version")
+    rule_contract_id: str = Field(description="Identifier of the compatible rule schema")
+
     cross_layer_binding: CrossLayerBinding = Field(description="Layer relationship constraints")
     identity_resolution: IdentityResolution = Field(description="Identity mapping policy")
     identity_lifecycle: IdentityLifecycleIntent = Field(description="Lifecycle operation governance")
     contamination_guard: ContaminationGuard = Field(description="Policy-layer field constraints")
-    writing_principles: List[WritingPrinciple] = Field(description="Authoring principles for rule documents")
+    writing_principles: tuple[WritingPrinciple, ...] = Field(description="Authoring principles")
     priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict resolution")
-    versioning_strategy: VersioningStrategy = Field(description="Versioning intent across documents")
-    sections: List[DocumentSection] = Field(description="Universal document section definitions")
+    versioning_strategy: VersioningStrategy = Field(description="Versioning intent")
+    sections: tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
     def check_no_duplicate_sections(self) -> "PolicyDoctrine":
         ids = [s.id for s in self.sections]
         if len(ids) != len(set(ids)):
-            duplicates = {id for id in ids if ids.count(id) > 1}
+            duplicates = {sid for sid in ids if ids.count(sid) > 1}
             raise ValueError(f"Duplicate section IDs: {duplicates}")
         return self
 
@@ -67,14 +76,28 @@ class PolicyDoctrine(BaseModel):
                 raise ValueError(f"Priority level {level.id} has level={level.level}, expected {i}")
         return self
 
-    def get_section(self, section_id: str) -> Optional[DocumentSection]:
+    @model_validator(mode="after")
+    def check_section_depth(self) -> "PolicyDoctrine":
+
+        def _max_depth(section: DocumentSection, current: int = 1) -> int:
+            if not section.children:
+                return current
+            return max(_max_depth(child, current + 1) for child in section.children)
+
+        for section in self.sections:
+            depth = _max_depth(section)
+            if depth > MAX_SECTION_DEPTH:
+                raise ValueError(f"Section '{section.id}' has depth {depth}, exceeds maximum {MAX_SECTION_DEPTH}")
+        return self
+
+    def get_section(self, section_id: SectionId) -> Optional[DocumentSection]:
         """Retrieve a document section by its identifier."""
         for section in self.sections:
             if section.id == section_id:
                 return section
         return None
 
-    def get_writing_principle(self, principle_id: str) -> Optional[WritingPrinciple]:
+    def get_writing_principle(self, principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
         """Retrieve a writing principle by its identifier."""
         for principle in self.writing_principles:
             if principle.id == principle_id:
