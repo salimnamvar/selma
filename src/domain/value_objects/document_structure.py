@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Generator
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -6,12 +7,26 @@ from domain.value_objects.section_definition import SectionDefinition
 
 
 class DocumentStructure(BaseModel):
-    """The complete document section tree with depth constraint."""
+    """The complete document section tree with depth constraint and validation."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     sections: tuple[SectionDefinition, ...] = Field(description="Root-level sections")
     max_depth: int = Field(default=3, ge=1, description="Maximum allowed nesting depth")
+
+    def validate_no_duplicate_ids(self) -> None:
+        """Raise ValueError if any section IDs are duplicated."""
+        ids = list(self.all_ids())
+        duplicates = [sid for sid, count in Counter(ids).items() if count > 1]
+        if duplicates:
+            raise ValueError(f"Duplicate section IDs: {duplicates}")
+
+    def validate_required_sections(self, required_ids: frozenset[str]) -> None:
+        """Raise ValueError if required sections are missing."""
+        present = {s.id for s in self.sections}
+        missing = required_ids - present
+        if missing:
+            raise ValueError(f"Missing required sections: {missing}")
 
     def validate_depth(self) -> None:
         """Raise ValueError if any section exceeds max_depth."""

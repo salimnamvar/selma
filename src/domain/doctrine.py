@@ -1,9 +1,7 @@
-from typing import Optional
-
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import WritingPrincipleId
+from domain.identifiers import SectionId, WritingPrincipleId
 from domain.value_objects.doctrine_metadata import DoctrineMetadata
 from domain.value_objects.document_structure import DocumentStructure
 from domain.value_objects.governance_constraints import GovernanceConstraints
@@ -50,25 +48,10 @@ class PolicyDoctrine(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_no_duplicate_sections(self) -> "PolicyDoctrine":
-        ids = list(self.document_structure.all_ids())
-        from collections import Counter
-
-        duplicates = [sid for sid, count in Counter(ids).items() if count > 1]
-        if duplicates:
-            raise ValueError(f"Duplicate section IDs: {duplicates}")
-        return self
-
-    @model_validator(mode="after")
-    def check_required_sections_present(self) -> "PolicyDoctrine":
-        present = {s.id for s in self.document_structure.sections}
-        missing = REQUIRED_SECTION_IDS - present
-        if missing:
-            raise ValueError(f"Missing required sections: {missing}")
-        return self
-
-    @model_validator(mode="after")
-    def check_section_depth(self) -> "PolicyDoctrine":
+    def validate_document_structure(self) -> "PolicyDoctrine":
+        """Delegate structural validation to DocumentStructure."""
+        self.document_structure.validate_no_duplicate_ids()
+        self.document_structure.validate_required_sections(REQUIRED_SECTION_IDS)
         self.document_structure.validate_depth()
         return self
 
@@ -88,11 +71,32 @@ class PolicyDoctrine(BaseModel):
             raise ValueError(f"Priority level mismatch: {'; '.join(parts)}")
         return self
 
-    def get_section(self, section_id: str) -> Optional[SectionDefinition]:
-        return next((s for s in self.document_structure.sections if s.id == section_id), None)
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def sections(self) -> tuple[SectionDefinition, ...]:
+        """Direct access to document sections."""
+        return self.document_structure.sections
 
-    def get_writing_principle(self, principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
-        return self.writing_principles.get(principle_id)
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def sections_by_id(self) -> dict[SectionId, SectionDefinition]:
+        """O(1) lookup mapping from section id to section."""
+        return {s.id: s for s in self.document_structure.sections}
 
-    def get_priority_level(self, category: PriorityCategory) -> Optional[PriorityLevel]:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def writing_principles_by_id(self) -> dict[WritingPrincipleId, WritingPrinciple]:
+        """O(1) lookup mapping from principle id to principle."""
+        return {p.id: p for p in self.writing_principles}
+
+    def get_section(self, section_id: SectionId) -> SectionDefinition | None:
+        """Retrieve a document section by its identifier."""
+        return self.sections_by_id.get(section_id)
+
+    def get_writing_principle(self, principle_id: WritingPrincipleId) -> WritingPrinciple | None:
+        """Retrieve a writing principle by its identifier."""
+        return self.writing_principles_by_id.get(principle_id)
+
+    def get_priority_level(self, category: PriorityCategory) -> PriorityLevel | None:
+        """Retrieve a priority level by its category."""
         return self.priority_system.get_level(category)

@@ -5,7 +5,9 @@ from domain.value_objects.document_structure import DocumentStructure
 from domain.value_objects.governance_constraints import GovernanceConstraints
 from domain.value_objects.identity_policy import IdentityPolicy, MachineIdSemantics
 from domain.value_objects.priority_system import PriorityLevel, PrioritySystem
+from domain.value_objects.prohibited_field_set import ProhibitedFieldSet
 from domain.value_objects.section_definition import SectionDefinition, TableSchema
+from domain.value_objects.table_column import TableColumn
 from domain.value_objects.versioning_policy import VersionComponentIntent, VersioningPolicy
 from domain.value_objects.writing_principle import WritingPrinciple
 from domain.value_objects.writing_principle_set import WritingPrincipleSet
@@ -21,8 +23,10 @@ __all__ = [
     "MachineIdSemantics",
     "PriorityLevel",
     "PrioritySystem",
+    "ProhibitedFieldSet",
     "RuleContractReference",
     "SectionDefinition",
+    "TableColumn",
     "TableSchema",
     "VersionComponentIntent",
     "VersioningPolicy",

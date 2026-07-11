@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from domain.enums import ContentType
 from domain.identifiers import Prose, SectionId
+from domain.value_objects.table_column import TableColumn
 
 
 class TableSchema(BaseModel):
@@ -11,7 +12,7 @@ class TableSchema(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    columns: tuple[str, ...] = Field(description="Ordered column headers")
+    columns: tuple[TableColumn, ...] = Field(description="Ordered column definitions")
 
 
 class SectionDefinition(BaseModel):
