@@ -31,8 +31,8 @@ class PriorityCategory(StrEnum):
     ADVISORY = "advisory"
 
 
-class MachineField(StrEnum):
-    """Schema fields carrying executable semantics. Must not appear in policy prose."""
+class ProhibitedField(StrEnum):
+    """Schema fields that must never appear in policy prose."""
 
     PARAMETERS = "parameters"
     CONDITIONS = "conditions"
@@ -48,14 +48,3 @@ class MachineField(StrEnum):
     REMEDIATION = "remediation"
     TARGET = "target"
     LINEAGE = "lineage"
-
-
-class ResolutionStrategy(StrEnum):
-    """Conflict resolution strategies in canonical precedence order."""
-
-    EXPLICIT_OVERRIDE = "explicit_override"
-    COMPATIBLE_OVERRIDES = "compatible_overrides"
-    PRIORITY = "priority"
-    SPECIFICITY = "specificity"
-    RECENCY = "recency"
-    CONFLICT_ARTIFACT = "conflict_artifact"
