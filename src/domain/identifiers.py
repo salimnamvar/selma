@@ -10,15 +10,6 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
-from domain.base import VO_CONFIG
-
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-
-type GovernanceText = Annotated[
-    str,
-    Field(min_length=1, description="Non-empty governance guidance, description, or intent"),
-]
-
 type MachineId = Annotated[
     str,
     Field(
@@ -52,16 +43,14 @@ class SemanticVersion(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _parse_string(cls, value: Any) -> Any:
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, dict):
-            return value
         if isinstance(value, str):
-            if not SEMVER_PATTERN.match(value):
+            if not re.match(r"^\d+\.\d+\.\d+$", value):
                 raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
             major, minor, patch = value.split(".")
-            return {"major": int(major), "minor": int(minor), "patch": int(patch)}
-        raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
+            value = {"major": int(major), "minor": int(minor), "patch": int(patch)}
+        elif not isinstance(value, (cls, dict)):
+            raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
+        return value
 
     def is_compatible(self, other: SemanticVersion) -> bool:
         """Return True when both versions share the same MAJOR component."""

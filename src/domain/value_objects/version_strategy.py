@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from domain.identifiers import GovernanceText
-
 
 class Intent(BaseModel):
     """When to increment each semantic version component."""
@@ -17,9 +15,9 @@ class Intent(BaseModel):
         extra="forbid",
     )
 
-    major: GovernanceText = Field(description="When to increment MAJOR version")
-    minor: GovernanceText = Field(description="When to increment MINOR version")
-    patch: GovernanceText = Field(description="When to increment PATCH version")
+    major: str = Field(min_length=1, description="When to increment MAJOR version")
+    minor: str = Field(min_length=1, description="When to increment MINOR version")
+    patch: str = Field(min_length=1, description="When to increment PATCH version")
 
 
 class VersionStrategy(BaseModel):
@@ -30,8 +28,8 @@ class VersionStrategy(BaseModel):
         extra="forbid",
     )
 
-    description: GovernanceText = Field(description="Versioning strategy overview")
-    version_format: GovernanceText = Field(description="Version format pattern")
+    description: str = Field(min_length=1, description="Versioning strategy overview")
+    version_format: str = Field(min_length=1, description="Version format pattern")
     intent: Intent = Field(description="Version increment intent per component")
-    migration_intent: GovernanceText = Field(description="Migration rules when crossing MAJOR version boundaries")
-    synchronization_intent: GovernanceText = Field(description="How versions synchronize across documents")
+    migration_intent: str = Field(min_length=1, description="Migration rules when crossing MAJOR version boundaries")
+    synchronization_intent: str = Field(min_length=1, description="How versions synchronize across documents")

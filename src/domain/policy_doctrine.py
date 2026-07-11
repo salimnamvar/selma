@@ -13,7 +13,6 @@ from domain.base import require_unique
 from domain.enums import IdentityOperation
 from domain.enums import PriorityCategory
 from domain.enums import ProhibitedField
-from domain.identifiers import GovernanceText
 from domain.identifiers import SchemaId
 from domain.identifiers import SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
@@ -40,7 +39,7 @@ class PolicyDoctrine(BaseModel):
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
-    description: GovernanceText = Field(description="Human-readable purpose statement")
+    description: str = Field(min_length=1, description="Human-readable purpose statement")
     spec_version: SemanticVersion = Field(description="Compatible specification version")
     schema_version: SemanticVersion = Field(description="Compatible rule schema version")
     schema_id: SchemaId = Field(description="Identifier of the compatible rule schema")
@@ -97,11 +96,13 @@ class PolicyDoctrine(BaseModel):
 
     def is_field_allowed(self, field: str | ProhibitedField) -> bool:
         """Return True when ``field`` may appear in policy-layer prose."""
+        result = True
         try:
             prohibited_field = field if isinstance(field, ProhibitedField) else ProhibitedField(field)
+            result = prohibited_field not in self.contamination_guard.prohibited_fields
         except ValueError:
-            return True
-        return prohibited_field not in self.contamination_guard.prohibited_fields
+            pass
+        return result
 
     def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True when ``left`` has higher authority than ``right``."""
@@ -109,11 +110,10 @@ class PolicyDoctrine(BaseModel):
 
     def get_sections(self, id: str) -> Section | None:
         """Return a ``sections`` entry by ``id`` (tree-wide), or None."""
-        for section in self.sections:
-            for node in section.traverse():
-                if str(node.id) == id:
-                    return node
-        return None
+        return next(
+            (node for section in self.sections for node in section.traverse() if str(node.id) == id),
+            None,
+        )
 
     def require_sections(self, id: str) -> Section:
         """Return a ``sections`` entry by ``id``, or raise KeyError."""
@@ -124,10 +124,10 @@ class PolicyDoctrine(BaseModel):
 
     def get_writing_principles(self, id: str) -> WritingPrinciple | None:
         """Return a ``writing_principles`` entry by ``id``, or None."""
-        for principle in self.writing_principles:
-            if str(principle.id) == id:
-                return principle
-        return None
+        return next(
+            (principle for principle in self.writing_principles if str(principle.id) == id),
+            None,
+        )
 
     def get_lifecycle_definition(self, operation: IdentityOperation) -> str:
         """Return the ``lifecycle_definition`` text for an identity operation."""

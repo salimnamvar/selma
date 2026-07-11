@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
-from pydantic import Field
-
 from pydantic import ConfigDict
-from domain.identifiers import GovernanceText
+from pydantic import Field
 
 
 class ConflictResolutionBinding(BaseModel):
@@ -17,10 +15,10 @@ class ConflictResolutionBinding(BaseModel):
         extra="forbid",
     )
 
-    policy_layer: GovernanceText = Field(description="Policy layer's role in conflict resolution")
-    schema_layer: GovernanceText = Field(description="Schema layer's role in conflict resolution")
-    spec_layer: GovernanceText = Field(description="Specification layer's role in conflict resolution")
-    precedence: GovernanceText = Field(description="Declared precedence chain as governance prose (not executable)")
+    policy_layer: str = Field(min_length=1, description="Policy layer's role in conflict resolution")
+    schema_layer: str = Field(min_length=1, description="Schema layer's role in conflict resolution")
+    spec_layer: str = Field(min_length=1, description="Specification layer's role in conflict resolution")
+    precedence: str = Field(min_length=1, description="Declared precedence chain as governance prose (not executable)")
 
 
 class FieldLegality(BaseModel):
@@ -31,9 +29,9 @@ class FieldLegality(BaseModel):
         extra="forbid",
     )
 
-    policy_layer: GovernanceText = Field(description="What the policy layer may contain")
-    schema_layer: GovernanceText = Field(description="What the schema layer may contain")
-    spec_layer: GovernanceText = Field(description="What the specification layer may contain")
+    policy_layer: str = Field(min_length=1, description="What the policy layer may contain")
+    schema_layer: str = Field(min_length=1, description="What the schema layer may contain")
+    spec_layer: str = Field(min_length=1, description="What the specification layer may contain")
 
 
 class CrossLayerBinding(BaseModel):
@@ -44,12 +42,12 @@ class CrossLayerBinding(BaseModel):
         extra="forbid",
     )
 
-    normative_source: GovernanceText = Field(description="The authoritative behavioral source")
-    policy_purpose: GovernanceText = Field(description="Purpose of the policy (this) layer")
-    schema_purpose: GovernanceText = Field(description="Purpose of the schema layer")
-    enforcement: GovernanceText = Field(description="How governance intent is enforced")
+    normative_source: str = Field(min_length=1, description="The authoritative behavioral source")
+    policy_purpose: str = Field(min_length=1, description="Purpose of the policy (this) layer")
+    schema_purpose: str = Field(min_length=1, description="Purpose of the schema layer")
+    enforcement: str = Field(min_length=1, description="How governance intent is enforced")
     conflict_resolution_binding: ConflictResolutionBinding = Field(
         description="How each layer contributes to conflict resolution"
     )
-    runtime_prohibition: GovernanceText = Field(description="What this file must not do at runtime")
+    runtime_prohibition: str = Field(min_length=1, description="What this file must not do at runtime")
     field_legality: FieldLegality = Field(description="What each layer may contain")

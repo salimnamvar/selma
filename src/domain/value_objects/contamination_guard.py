@@ -7,7 +7,6 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 from domain.enums import ProhibitedField
-from domain.identifiers import GovernanceText
 
 
 class ContaminationGuard(BaseModel):
@@ -22,10 +21,11 @@ class ContaminationGuard(BaseModel):
         min_length=1,
         description="Schema fields that must not appear in policy prose",
     )
-    allowed_machine_references: tuple[GovernanceText, ...] = Field(
+    allowed_machine_references: tuple[str, ...] = Field(
         min_length=1,
         description="How Machine IDs may appear in policy",
     )
-    metadata_constraints: GovernanceText = Field(
+    metadata_constraints: str = Field(
+        min_length=1,
         description="Constraints on schema metadata in policy",
     )

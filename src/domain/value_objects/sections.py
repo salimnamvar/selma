@@ -13,7 +13,6 @@ from pydantic import model_validator
 
 from domain.base import none_as_empty
 from domain.enums import ContentType
-from domain.identifiers import GovernanceText
 
 REQUIRED_SECTION_IDS: frozenset[str] = frozenset(
     {
@@ -54,20 +53,22 @@ class Section(BaseModel):
         pattern=r"^[a-z][a-z0-9_]*$",
         description="Unique section identifier",
     )
-    title: GovernanceText = Field(description="Human-readable section title")
+    title: str = Field(min_length=1, description="Human-readable section title")
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
-    guidance: GovernanceText | None = Field(default=None, description="Authoring guidance")
-    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)] = Field(
+    guidance: str | None = Field(default=None, min_length=1, description="Authoring guidance")
+    columns: Annotated[tuple[str, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
+        min_length=1,
         description="Table column headers",
     )
     children: Annotated[tuple[Section, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
         description="Subsections",
     )
-    schema_encoding: GovernanceText | None = Field(
+    schema_encoding: str | None = Field(
         default=None,
+        min_length=1,
         description="Authoring guidance for schema mapping (descriptive only)",
     )
 

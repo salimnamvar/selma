@@ -8,7 +8,6 @@ from __future__ import annotations
 from domain.base import VO_CONFIG, require_unique
 from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
-    GovernanceText,
     MachineId,
     SchemaId,
     SemanticVersion,
@@ -43,7 +42,6 @@ __all__ = [
     "CrossLayerBinding",
     "CrossLayerPrecedence",
     "FieldLegality",
-    "GovernanceText",
     "IdentityOperation",
     "IdentityResolution",
     "Intent",

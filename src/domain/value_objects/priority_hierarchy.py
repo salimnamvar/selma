@@ -10,7 +10,6 @@ from pydantic import Field
 from pydantic import model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import GovernanceText
 
 
 class Level(BaseModel):
@@ -23,9 +22,9 @@ class Level(BaseModel):
 
     category: PriorityCategory = Field(description="Unique rank identifier")
     rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
-    title: GovernanceText = Field(description="Human-readable rank name")
-    description: GovernanceText = Field(description="Scope and authority of this rank")
-    examples: tuple[GovernanceText, ...] = Field(default=(), description="Typical rules")
+    title: str = Field(min_length=1, description="Human-readable rank name")
+    description: str = Field(min_length=1, description="Scope and authority of this rank")
+    examples: tuple[str, ...] = Field(default=(), description="Typical rules")
 
 
 class CrossLayerPrecedence(BaseModel):
@@ -36,12 +35,13 @@ class CrossLayerPrecedence(BaseModel):
         extra="forbid",
     )
 
-    precedence_algorithm: GovernanceText = Field(
-        description="Where the normative resolution algorithm is defined (reference only)"
+    precedence_algorithm: str = Field(
+        min_length=1,
+        description="Where the normative resolution algorithm is defined (reference only)",
     )
-    structural_override: GovernanceText = Field(description="Schema-level override mechanism for conflict resolution")
-    policy_role: GovernanceText = Field(description="Policy layer's role in precedence")
-    order: GovernanceText = Field(description="Precedence chain order as governance prose (not executable)")
+    structural_override: str = Field(min_length=1, description="Schema-level override mechanism for conflict resolution")
+    policy_role: str = Field(min_length=1, description="Policy layer's role in precedence")
+    order: str = Field(min_length=1, description="Precedence chain order as governance prose (not executable)")
 
 
 class PriorityHierarchy(BaseModel):
@@ -52,10 +52,11 @@ class PriorityHierarchy(BaseModel):
         extra="forbid",
     )
 
-    description: GovernanceText = Field(description="How priority hierarchy works")
+    description: str = Field(min_length=1, description="How priority hierarchy works")
     levels: tuple[Level, ...] = Field(min_length=1, description="Ordered authority levels")
-    conflict_resolution: GovernanceText = Field(
-        description="Governance intent for how priority affects conflict resolution"
+    conflict_resolution: str = Field(
+        min_length=1,
+        description="Governance intent for how priority affects conflict resolution",
     )
     cross_layer_precedence: CrossLayerPrecedence = Field(
         description="How precedence maps across policy/schema/spec layers"

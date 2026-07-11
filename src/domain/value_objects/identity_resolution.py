@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from domain.identifiers import GovernanceText
-
 
 class MachineIdSemantics(BaseModel):
     """Defines the semantics of the Machine ID concept."""
@@ -17,10 +15,10 @@ class MachineIdSemantics(BaseModel):
         extra="forbid",
     )
 
-    definition: GovernanceText = Field(description="What Machine ID represents")
-    exclusions: tuple[GovernanceText, ...] = Field(description="What Machine ID is not")
-    assignment: GovernanceText = Field(description="How Machine ID is assigned")
-    governance_intent: GovernanceText = Field(description="Why Machine ID matters for governance")
+    definition: str = Field(min_length=1, description="What Machine ID represents")
+    exclusions: tuple[str, ...] = Field(min_length=1, description="What Machine ID is not")
+    assignment: str = Field(min_length=1, description="How Machine ID is assigned")
+    governance_intent: str = Field(min_length=1, description="Why Machine ID matters for governance")
 
 
 class IdentityResolution(BaseModel):
@@ -31,13 +29,13 @@ class IdentityResolution(BaseModel):
         extra="forbid",
     )
 
-    canonical_field: GovernanceText = Field(description="The canonical identity field name")
-    policy_location: GovernanceText = Field(description="Where identity appears in policy")
-    schema_lineage_location: GovernanceText = Field(description="Where lineage ID appears in schema")
-    schema_execution_location: GovernanceText = Field(description="Where execution ID appears in schema")
-    spec_lineage_location: GovernanceText = Field(description="Where lineage ID appears in spec")
-    spec_execution_location: GovernanceText = Field(description="Where execution ID appears in spec")
-    identity_mapping: GovernanceText = Field(description="Identity mapping rule")
+    canonical_field: str = Field(min_length=1, description="The canonical identity field name")
+    policy_location: str = Field(min_length=1, description="Where identity appears in policy")
+    schema_lineage_location: str = Field(min_length=1, description="Where lineage ID appears in schema")
+    schema_execution_location: str = Field(min_length=1, description="Where execution ID appears in schema")
+    spec_lineage_location: str = Field(min_length=1, description="Where lineage ID appears in spec")
+    spec_execution_location: str = Field(min_length=1, description="Where execution ID appears in spec")
+    identity_mapping: str = Field(min_length=1, description="Identity mapping rule")
     machine_id_semantics: MachineIdSemantics = Field(description="Detailed semantics of Machine ID")
-    uniqueness: GovernanceText = Field(description="Uniqueness constraint for lineage IDs")
-    lifecycle_reference: GovernanceText = Field(description="Reference to identity lifecycle operations")
+    uniqueness: str = Field(min_length=1, description="Uniqueness constraint for lineage IDs")
+    lifecycle_reference: str = Field(min_length=1, description="Reference to identity lifecycle operations")

@@ -7,7 +7,6 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 from domain.enums import IdentityOperation
-from domain.identifiers import GovernanceText
 
 
 class LifecycleDefinition(BaseModel):
@@ -18,13 +17,13 @@ class LifecycleDefinition(BaseModel):
         extra="forbid",
     )
 
-    revision: GovernanceText = Field(description="When to use revision")
-    fork: GovernanceText = Field(description="When to use fork")
-    merge: GovernanceText = Field(description="When to use merge")
-    split: GovernanceText = Field(description="When to use split")
-    rename: GovernanceText = Field(description="When to use rename")
-    retire: GovernanceText = Field(description="When to use retire")
-    dag_intent: GovernanceText = Field(description="Constraint on lineage ancestry graph structure")
+    revision: str = Field(min_length=1, description="When to use revision")
+    fork: str = Field(min_length=1, description="When to use fork")
+    merge: str = Field(min_length=1, description="When to use merge")
+    split: str = Field(min_length=1, description="When to use split")
+    rename: str = Field(min_length=1, description="When to use rename")
+    retire: str = Field(min_length=1, description="When to use retire")
+    dag_intent: str = Field(min_length=1, description="Constraint on lineage ancestry graph structure")
 
     def get_lifecycle_definition(self, operation: IdentityOperation) -> str:
         """Return lifecycle text for ``operation``.
