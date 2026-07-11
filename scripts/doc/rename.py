@@ -551,11 +551,7 @@ class RenameEngine:
             Tuple[str, int]: (updated_content, replacement_count).
         """
         result: Tuple[str, int]
-        if (
-            a_suffix == ".py"
-            and self._config._preserve_import_module_paths
-            and a_rule._mode == _MATCH_WORD
-        ):
+        if a_suffix == ".py" and self._config._preserve_import_module_paths and a_rule._mode == _MATCH_WORD:
             result = self._apply_rule_python(a_content, a_rule)
         else:
             result = a_rule.apply(a_content)
@@ -629,10 +625,7 @@ class RenameEngine:
                 )
                 continue
 
-            print(
-                f"{'[DRY] ' if a_dry_run else ''}"
-                f"path: {path_rule._original} -> {path_rule._destination}"
-            )
+            print(f"{'[DRY] ' if a_dry_run else ''}path: {path_rule._original} -> {path_rule._destination}")
             if not a_dry_run:
                 path_rule._target.parent.mkdir(parents=True, exist_ok=True)
                 path_rule._source.rename(path_rule._target)

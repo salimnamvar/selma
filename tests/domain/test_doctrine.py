@@ -101,9 +101,7 @@ class TestPolicyDoctrineInvariants:
         doctrine_document_copy: dict[str, Any],
     ) -> None:
         doctrine_document_copy["sections"] = [
-            section
-            for section in doctrine_document_copy["sections"]
-            if section["id"] != "preamble"
+            section for section in doctrine_document_copy["sections"] if section["id"] != "preamble"
         ]
 
         with pytest.raises(ValidationError, match="Missing required sections"):

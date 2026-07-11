@@ -64,7 +64,7 @@ class PolicyDoctrine(BaseModel):
         if not self.version.is_compatible(self.spec_version):
             raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
         if not self.version.is_compatible(self.schema_version):
-            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} " f"vs schema={self.schema_version}")
+            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs schema={self.schema_version}")
 
         require_unique(
             [str(principle.id) for principle in self.writing_principles],

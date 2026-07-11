@@ -39,7 +39,9 @@ class CrossLayerPrecedence(BaseModel):
         min_length=1,
         description="Where the normative resolution algorithm is defined (reference only)",
     )
-    structural_override: str = Field(min_length=1, description="Schema-level override mechanism for conflict resolution")
+    structural_override: str = Field(
+        min_length=1, description="Schema-level override mechanism for conflict resolution"
+    )
     policy_role: str = Field(min_length=1, description="Policy layer's role in precedence")
     order: str = Field(min_length=1, description="Precedence chain order as governance prose (not executable)")
 

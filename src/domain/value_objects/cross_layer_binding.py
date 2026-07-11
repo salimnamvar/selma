@@ -10,10 +10,7 @@ from pydantic import Field
 class ConflictResolutionBinding(BaseModel):
     """How each layer contributes to conflict resolution (declarative intent)."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     policy_layer: str = Field(min_length=1, description="Policy layer's role in conflict resolution")
     schema_layer: str = Field(min_length=1, description="Schema layer's role in conflict resolution")
