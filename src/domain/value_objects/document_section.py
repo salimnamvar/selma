@@ -1,25 +1,23 @@
-from typing import Iterator, Optional
+from typing import Iterator
 
 from pydantic import Field
 
-from domain.enums import ContentType
-from domain.identifiers import Guidance, SectionId
 from domain.value_objects.base import DomainValueObject
 
 
 class DocumentSection(DomainValueObject):
     """A structural section defining the composition of a governance document."""
 
-    id: SectionId = Field(description="Unique section identifier")
+    id: str = Field(description="Unique section identifier")
     title: str = Field(description="Human-readable section title")
     required: bool = Field(description="Whether this section must be present")
-    content_type: ContentType = Field(description="Expected content format")
-    guidance: Guidance = Field(description="Authoring guidance for this section")
-    columns: Optional[tuple[str, ...]] = Field(default=None, description="Table column headers")
+    content_type: str = Field(description="Expected content format")
+    guidance: str = Field(description="Authoring guidance for this section")
+    columns: tuple[str, ...] | None = Field(default=None, description="Table column headers")
     children: tuple["DocumentSection", ...] = Field(default_factory=tuple, description="Subsections")
-    schema_encoding: Optional[str] = Field(default=None, description="Schema encoding instructions")
+    schema_encoding: str | None = Field(default=None, description="Schema encoding instructions")
 
-    def all_ids(self) -> Iterator[SectionId]:
+    def all_ids(self) -> Iterator[str]:
         """Yield this section's id and all descendant ids."""
         yield self.id
         for child in self.children:

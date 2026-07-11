@@ -1,7 +1,6 @@
 from pydantic import Field
 
 from domain.enums import ProhibitedField
-from domain.identifiers import Guidance
 from domain.value_objects.base import DomainValueObject
 
 
@@ -11,5 +10,5 @@ class ContaminationGuard(DomainValueObject):
     prohibited_fields: frozenset[ProhibitedField] = Field(
         description="Schema fields that must not appear in policy prose"
     )
-    allowed_machine_references: tuple[Guidance, ...] = Field(description="How Machine IDs may appear in policy")
-    metadata_note: Guidance = Field(description="Constraints on schema metadata in policy")
+    allowed_machine_references: tuple[str, ...] = Field(description="How Machine IDs may appear in policy")
+    metadata_note: str = Field(description="Constraints on schema metadata in policy")

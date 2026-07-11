@@ -1,7 +1,6 @@
 from pydantic import Field
 
 from domain.enums import IdentityOperation
-from domain.identifiers import Guidance
 from domain.value_objects.base import DomainValueObject
 
 
@@ -17,28 +16,28 @@ class IdentityPolicy(DomainValueObject):
     policy_location: str = Field(description="Where identity appears in policy")
     schema_lineage_location: str = Field(description="Where lineage ID appears in schema")
     schema_execution_location: str = Field(description="Where execution ID appears in schema")
-    rule: Guidance = Field(description="Identity mapping rule")
-    uniqueness: Guidance = Field(description="Uniqueness constraint for lineage IDs")
+    rule: str = Field(description="Identity mapping rule")
+    uniqueness: str = Field(description="Uniqueness constraint for lineage IDs")
 
-    machine_id_definition: Guidance = Field(description="What Machine ID represents")
-    machine_id_exclusions: tuple[Guidance, ...] = Field(description="What Machine ID is not")
-    machine_id_assignment: Guidance = Field(description="How Machine ID is assigned")
-    machine_id_governance_intent: Guidance = Field(description="Why Machine ID matters for governance")
+    machine_id_definition: str = Field(description="What Machine ID represents")
+    machine_id_exclusions: tuple[str, ...] = Field(description="What Machine ID is not")
+    machine_id_assignment: str = Field(description="How Machine ID is assigned")
+    machine_id_governance_intent: str = Field(description="Why Machine ID matters for governance")
 
-    revision: Guidance = Field(description="When to use revision")
-    fork: Guidance = Field(description="When to use fork")
-    merge: Guidance = Field(description="When to use merge")
-    split: Guidance = Field(description="When to use split")
-    rename: Guidance = Field(description="When to use rename")
-    retire: Guidance = Field(description="When to use retire")
-    dag_intent: Guidance = Field(description="Constraint on lineage ancestry graph structure")
+    revision: str = Field(description="When to use revision")
+    fork: str = Field(description="When to use fork")
+    merge: str = Field(description="When to use merge")
+    split: str = Field(description="When to use split")
+    rename: str = Field(description="When to use rename")
+    retire: str = Field(description="When to use retire")
+    dag_intent: str = Field(description="Constraint on lineage ancestry graph structure")
 
     supported_operations: frozenset[IdentityOperation] = Field(
         default_factory=lambda: frozenset(IdentityOperation),
         description="Set of supported identity lifecycle operations",
     )
 
-    def describe_operation(self, op: IdentityOperation) -> Guidance:
+    def describe_operation(self, op: IdentityOperation) -> str:
         """Return the governance guidance for a specific lifecycle operation."""
         operation_map = {
             IdentityOperation.REVISION: self.revision,

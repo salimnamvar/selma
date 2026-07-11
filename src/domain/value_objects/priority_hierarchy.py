@@ -3,7 +3,6 @@ from typing import Optional
 from pydantic import Field, model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import Description, Guidance
 from domain.value_objects.base import DomainValueObject
 
 
@@ -11,10 +10,10 @@ class PriorityLevel(DomainValueObject):
     """An authority level in the governance priority hierarchy."""
 
     id: PriorityCategory = Field(description="Unique level identifier")
-    level: int = Field(description="Numeric authority rank (1 = highest)")
+    level: int = Field(ge=1, le=5, description="Numeric authority rank (1 = highest)")
     title: str = Field(description="Human-readable level name")
-    description: Description = Field(description="Scope and authority of this level")
-    examples: tuple[Description, ...] = Field(description="Typical rules at this authority level")
+    description: str = Field(description="Scope and authority of this level")
+    examples: tuple[str, ...] = Field(description="Typical rules at this authority level")
 
 
 class CrossLayerPrecedence(DomainValueObject):
@@ -22,8 +21,8 @@ class CrossLayerPrecedence(DomainValueObject):
 
     normative_algorithm: str = Field(description="Where the algorithm lives")
     structural_override: str = Field(description="Schema-level override mechanism")
-    policy_role: Guidance = Field(description="Policy layer's role")
-    order: Guidance = Field(description="Precedence chain order")
+    policy_role: str = Field(description="Policy layer's role")
+    order: str = Field(description="Precedence chain order")
 
 
 class PriorityHierarchy(DomainValueObject):
@@ -32,9 +31,9 @@ class PriorityHierarchy(DomainValueObject):
     Enforces that levels are declared in strict ascending order by authority rank.
     """
 
-    description: Guidance = Field(description="How priority hierarchy works")
+    description: str = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(description="Ordered authority levels")
-    conflict_resolution_intent: Guidance = Field(description="Governance intent for conflict resolution")
+    conflict_resolution_intent: str = Field(description="Governance intent for conflict resolution")
     cross_layer_precedence: CrossLayerPrecedence = Field(description="How precedence maps across layers")
 
     @model_validator(mode="after")

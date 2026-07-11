@@ -16,6 +16,8 @@ from domain.value_objects.versioning_strategy import VersioningStrategy
 from domain.value_objects.writing_principle import WritingPrinciple
 from domain.value_objects.writing_principles import WritingPrinciples
 
+MAX_SECTION_DEPTH = 3
+
 REQUIRED_SECTION_IDS = frozenset(
     {
         "preamble",
@@ -51,6 +53,17 @@ class PolicyDoctrine(DomainValueObject):
     sections: tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
+    def check_version_compatibility(self) -> "PolicyDoctrine":
+        """Enforce MAJOR version compatibility across doctrine, spec, and rule contract."""
+        if not self.version.is_compatible_with(self.spec_version):
+            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
+        if not self.version.is_compatible_with(self.rule_contract_version):
+            raise ValueError(
+                f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
+            )
+        return self
+
+    @model_validator(mode="after")
     def check_no_duplicate_sections(self) -> "PolicyDoctrine":
         ids = list(self._iter_section_ids())
         duplicates = [sid for sid, count in Counter(ids).items() if count > 1]
@@ -69,6 +82,29 @@ class PolicyDoctrine(DomainValueObject):
         missing = REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {missing}")
+        return self
+
+    @model_validator(mode="after")
+    def check_priority_level_completeness(self) -> "PolicyDoctrine":
+        """Ensure all PriorityCategory enum values are represented."""
+        levels = self.priority_hierarchy.levels
+        present_ids = {level.id for level in levels}
+        expected_ids = set(PriorityCategory)
+        if present_ids != expected_ids:
+            missing = expected_ids - present_ids
+            extra = present_ids - expected_ids
+            parts: list[str] = []
+            if missing:
+                parts.append(f"Missing: {missing}")
+            if extra:
+                parts.append(f"Extra: {extra}")
+            raise ValueError(f"Priority level mismatch: {'; '.join(parts)}")
+        return self
+
+    @model_validator(mode="after")
+    def check_section_depth(self) -> "PolicyDoctrine":
+        for section in self.sections:
+            section.validate_max_depth(MAX_SECTION_DEPTH)
         return self
 
     @computed_field  # type: ignore[prop-decorator]
