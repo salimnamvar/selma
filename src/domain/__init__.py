@@ -1,12 +1,30 @@
 """Policy Doctrine Domain Model.
 
 Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
+
+Standardized naming conventions:
+    - Value Objects: from_dict(), from_json(), to_dict(), to_json(), validate()
+    - Collections: get(), find(), get_all(), find_all(), has(), filter(), map()
+    - Trees: traverse(), find(), find_by_id(), depth()
 """
 
 from __future__ import annotations
 
-from domain.base import DomainValueObject
-from domain.collections import IdentifiedItem
+from domain.base import (
+    DomainValueObject,
+    Identifiable,
+    Nameable,
+    NameableMixin,
+    SerializableMixin,
+    TreeNodeMixin,
+    ensure_non_empty,
+    none_as_empty,
+    require_unique,
+    validate_enum_coverage,
+    validate_required_fields,
+    validate_unique_field_values,
+)
+from domain.collections import IdentifiedCollection, IdentifiedItem
 from domain.doctrine import PolicyDoctrine
 from domain.enums import (
     ContentType,

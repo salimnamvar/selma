@@ -1,11 +1,16 @@
 """Policy Doctrine Value Objects.
 
 Public value-object surface for the governance domain.
+
+Standardized naming conventions:
+    - Value Objects: from_dict(), from_json(), to_dict(), to_json(), validate()
+    - Collections: get(), find(), get_all(), find_all(), has(), filter(), map()
+    - Trees: traverse(), find(), find_by_id(), depth()
 """
 
 from __future__ import annotations
 
-from domain.base import DomainValueObject
+from domain.base import DomainValueObject, SerializableMixin
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import (
     ConflictResolutionBinding,
@@ -37,6 +42,7 @@ __all__ = [
     "MachineIdSemantics",
     "PriorityHierarchy",
     "PriorityLevel",
+    "SerializableMixin",
     "VersionIntent",
     "VersioningStrategy",
     "WritingPrinciple",
