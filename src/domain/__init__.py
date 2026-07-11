@@ -2,9 +2,9 @@
 
 Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
 
-Standardized naming conventions:
-    - Value Objects: from_dict(), from_json(), to_dict(), to_json(), validate()
-    - Collections: get(), find(), get_all(), find_all(), has(), filter(), map()
+Conventions:
+    - Value objects: model_validate / model_dump (Pydantic v2)
+    - Collections: get(), find(), get_by(), find_by(), filter(), map()
     - Trees: traverse(), find(), find_by_id(), depth()
 """
 
@@ -15,14 +15,9 @@ from domain.base import (
     Identifiable,
     Nameable,
     NameableMixin,
-    SerializableMixin,
     TreeNodeMixin,
-    ensure_non_empty,
     none_as_empty,
     require_unique,
-    validate_enum_coverage,
-    validate_required_fields,
-    validate_unique_field_values,
 )
 from domain.collections import IdentifiedCollection, IdentifiedItem
 from domain.doctrine import PolicyDoctrine
@@ -73,12 +68,16 @@ __all__ = [
     "FieldLegality",
     "FieldPath",
     "GovernanceText",
+    "Identifiable",
+    "IdentifiedCollection",
     "IdentifiedItem",
     "IdentityLifecycleIntent",
     "IdentityOperation",
     "IdentityResolution",
     "MachineId",
     "MachineIdSemantics",
+    "Nameable",
+    "NameableMixin",
     "PolicyDoctrine",
     "PriorityCategory",
     "PriorityHierarchy",
@@ -88,9 +87,12 @@ __all__ = [
     "RuleContractId",
     "SectionId",
     "SemanticVersion",
+    "TreeNodeMixin",
     "VersionIntent",
     "VersioningStrategy",
     "WritingPrinciple",
     "WritingPrincipleId",
     "WritingPrinciples",
+    "none_as_empty",
+    "require_unique",
 ]

@@ -6,42 +6,31 @@ Structural sections and validated document structure for governance documents.
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Annotated, Any, ClassVar, Callable, Dict, FrozenSet, Hashable, Iterator, List, Optional, Set, Tuple
+from typing import Annotated, ClassVar, Dict, FrozenSet, Iterator, List, Optional, Set, Tuple
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from domain.base import DomainValueObject, NameableMixin, none_as_empty
+from domain.base import DomainValueObject, NameableMixin, TreeNodeMixin, none_as_empty
 from domain.collections import IdentifiedCollection
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
-
 
 _OptionalTuple = Annotated[Tuple[GovernanceText, ...], BeforeValidator(none_as_empty)]
 _OptionalChildren = Annotated[Tuple["DocumentSection", ...], BeforeValidator(none_as_empty)]
 
 
-class DocumentSection(DomainValueObject, NameableMixin):
+class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     """A structural section defining governance document composition.
 
-    Provides standardized tree traversal and search methods.
-
     Attributes:
-        id (SectionId): Unique section identifier.
-        title (GovernanceText): Human-readable section title.
-        required (bool): Whether this section must be present.
-        content_type (ContentType): Expected content format.
-        guidance (Optional[GovernanceText]): Authoring guidance.
-        columns (Tuple[GovernanceText, ...]): Table column headers.
-        children (Tuple[DocumentSection, ...]): Subsections.
-        schema_encoding (Optional[GovernanceText]): Schema mapping guidance.
-    
-    Standardized tree methods:
-        - traverse() -> Iterator[DocumentSection]: Pre-order traversal
-        - find(predicate) -> Optional[DocumentSection]: Find by predicate
-        - find_by_id(id) -> Optional[DocumentSection]: Find by ID
-        - find_by_title(title) -> Optional[DocumentSection]: Find by title
-        - depth() -> int: Calculate subtree depth
-        - name -> str: Human-readable name (alias for title, from NameableMixin)
+        id: Unique section identifier.
+        title: Human-readable section title.
+        required: Whether this section must be present.
+        content_type: Expected content format.
+        guidance: Authoring guidance.
+        columns: Table column headers.
+        children: Subsections.
+        schema_encoding: Schema mapping guidance (descriptive only).
     """
 
     MAX_DEPTH: ClassVar[int] = 3
@@ -93,11 +82,10 @@ class DocumentSection(DomainValueObject, NameableMixin):
         return self
 
     def max_depth(self, a_current: int = 1) -> int:
-        """Return the maximum nesting depth from this section."""
-        result: int = a_current
-        if self.children:
-            result = max(child.max_depth(a_current + 1) for child in self.children)
-        return result
+        """Return the maximum nesting depth from this section (leaf = 1)."""
+        if not self.children:
+            return a_current
+        return max(child.max_depth(a_current + 1) for child in self.children)
 
     def all_ids(self) -> Iterator[SectionId]:
         """Yield this section ID and all descendant IDs."""
@@ -105,132 +93,25 @@ class DocumentSection(DomainValueObject, NameableMixin):
         for child in self.children:
             yield from child.all_ids()
 
-    # Tree traversal and search methods
-    def traverse(self) -> Iterator[DocumentSection]:
-        """Yield this section and all descendants in pre-order."""
-        yield self
-        for child in self.children:
-            yield from child.traverse()
-
-    def find(self, a_predicate: Callable[[DocumentSection], bool]) -> Optional[DocumentSection]:
-        """Find first section in tree matching predicate.
-
-        Args:
-            a_predicate: Callable that returns True for matching sections.
-
-        Returns:
-            First section in pre-order traversal that matches the predicate,
-            or None if no match is found.
-        """
-        if a_predicate(self):
-            return self
-        for child in self.children:
-            found = child.find(a_predicate)
-            if found is not None:
-                return found
-        return None
-
-    def find_by_id(self, a_id: Hashable) -> Optional[DocumentSection]:
-        """Find section by ID in tree.
-
-        Args:
-            a_id: Identifier to search for.
-
-        Returns:
-            Section with matching ID, or None if not found.
-        """
-        return self.find(lambda section: section.id == a_id)
-
-    def find_by_title(self, a_title: str) -> Optional[DocumentSection]:
-        """Find a section by title within this subtree.
-
-        Args:
-            a_title: Section title to search for.
-
-        Returns:
-            Section with matching title, or None if not found.
-        """
-        return self.find(lambda section: section.title == a_title)
-
     def find_required(self) -> List[DocumentSection]:
-        """Return all required sections in this subtree.
-
-        Returns:
-            List of sections where required=True.
-        """
-        result: List[DocumentSection] = []
-        if self.required:
-            result.append(self)
+        """Return all required sections in this subtree."""
+        result: List[DocumentSection] = [self] if self.required else []
         for child in self.children:
             result.extend(child.find_required())
-        return result
-
-    def depth(self, a_current: int = 0) -> int:
-        """Calculate maximum depth of the subtree rooted at this node.
-
-        Args:
-            a_current: Current depth (used for recursion).
-
-        Returns:
-            Maximum depth from this node to any leaf.
-        """
-        if not self.children:
-            return a_current
-        return max(child.depth(a_current + 1) for child in self.children)
-
-    def get(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Find a section by ID within this subtree.
-
-        Args:
-            a_section_id: Section identifier to search for.
-
-        Returns:
-            Section with matching ID, or None if not found.
-        """
-        result: Optional[DocumentSection] = None
-        if self.id == a_section_id:
-            result = self
-        else:
-            for child in self.children:
-                found: Optional[DocumentSection] = child.get(a_section_id)
-                if found is not None:
-                    result = found
-                    break
         return result
 
     @property
     def is_tabular(self) -> bool:
         """Return True when this section may carry table columns."""
-        result: bool = self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
-        return result
-
-    @property
-    def has_children(self) -> bool:
-        """Return True if this section has child sections."""
-        return len(self.children) > 0
-
-    @property
-    def level_count(self) -> int:
-        """Return the number of nesting levels in this subtree."""
-        return self.max_depth()
+        return self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
 
 
 class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     """Validated tree of universal document sections as a YAML list root.
 
     RootModel accepts the bare ``sections:`` list from the doctrine document.
-    Construct via ``DocumentStructure.model_validate([...])`` or the RootModel
-    constructor. Nested uniqueness and required-section rules are domain
-    validators beyond the base collection index.
-    
-    Standardized methods inherited from IdentifiedCollection:
-        - get(id) -> Optional[DocumentSection]: Safe lookup
-        - find(id) -> DocumentSection: Strict lookup (raises KeyError)
-        - get_all(ids) -> list[DocumentSection]: Batch safe lookup
-        - find_all(ids) -> list[DocumentSection]: Batch strict lookup
-        - has(id) -> bool: Check if ID exists
-        - filter(predicate) -> list[DocumentSection]: Filter by predicate
-        - map(func) -> list[Any]: Apply function to all items
+    Nested uniqueness and required-section rules are domain validators beyond
+    the base collection index. ``get`` / ``find`` resolve any node in the tree.
     """
 
     REQUIRED_SECTION_IDS: ClassVar[FrozenSet[SectionId]] = frozenset(
@@ -252,10 +133,7 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
 
     @model_validator(mode="after")
     def check_unique_ids(self) -> DocumentStructure:
-        """Enforce required sections, unique nested IDs, and directives children.
-
-        Overrides the base top-level uniqueness check with full-tree rules.
-        """
+        """Enforce required sections, unique nested IDs, and directives children."""
         present: Set[SectionId] = {section.id for section in self.root}
         missing: FrozenSet[SectionId] = self.REQUIRED_SECTION_IDS - present
         if missing:
@@ -283,11 +161,11 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     @property
     def sections(self) -> Tuple[DocumentSection, ...]:
         """Return top-level document sections."""
-        result: Tuple[DocumentSection, ...] = self.root
-        return result
+        return self.root
 
     @cached_property
     def _index(self) -> Dict[SectionId, DocumentSection]:
+        """Index every section in the tree for O(1) lookup."""
         mapping: Dict[SectionId, DocumentSection] = {}
         for root_section in self.root:
             for section in root_section.traverse():
@@ -296,33 +174,4 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
 
     def all_ids(self) -> FrozenSet[SectionId]:
         """Return every section ID in the tree."""
-        result: FrozenSet[SectionId] = frozenset(self._index)
-        return result
-
-    def get_tree(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Find a section by ID in the entire document structure.
-
-        Args:
-            a_section_id: Section identifier to search for.
-
-        Returns:
-            Section with matching ID, or None if not found.
-        """
-        return self._index.get(a_section_id)
-
-    def find_tree(self, a_section_id: SectionId) -> DocumentSection:
-        """Find a section by ID in the entire document structure, raising if not found.
-
-        Args:
-            a_section_id: Section identifier to search for.
-
-        Returns:
-            Section with matching ID.
-
-        Raises:
-            KeyError: If the section ID is not found.
-        """
-        result = self._index.get(a_section_id)
-        if result is None:
-            raise KeyError(f"Section with id '{a_section_id}' not found in document structure")
-        return result
+        return frozenset(self._index)
