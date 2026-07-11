@@ -1,0 +1,329 @@
+{
+  "project_root": "../..",
+  "scan_dirs": ["src", "tests", "docs"],
+  "scan_files": ["README.md"],
+  "skip_files": [
+    "rule_schema.json",
+    "renames.json",
+    "Refactoring-Plan.md"
+  ],
+  "skip_dirs": [
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    "node_modules",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "*.egg-info",
+    "selma.egg-info"
+  ],
+  "extensions": [
+    ".py",
+    ".yaml",
+    ".yml",
+    ".md",
+    ".rst",
+    ".toml",
+    ".cfg",
+    ".txt",
+    ".json",
+    ".sh"
+  ],
+  "dangerous_patterns": [
+    "format",
+    "level",
+    "rule",
+    "lifecycle",
+    "not",
+    "schema",
+    "spec",
+    "policy",
+    "id"
+  ],
+  "preserve_import_module_paths": false,
+  "fields": [
+    {
+      "current": ["rule_contract_version"],
+      "target": "schema_version"
+    },
+    {
+      "current": ["rule_contract_id"],
+      "target": "schema_id"
+    },
+    {
+      "current": ["identity_lifecycle_intent", "identity_lifecycle"],
+      "target": "lifecycle_definition"
+    },
+    {
+      "current": ["this_layer_purpose", "policy_layer_purpose"],
+      "target": "policy_purpose"
+    },
+    {
+      "current": ["schema_layer_purpose"],
+      "target": "schema_purpose"
+    },
+    {
+      "current": ["normative_algorithm"],
+      "target": "precedence_algorithm"
+    },
+    {
+      "current": ["metadata_note"],
+      "target": "metadata_constraints"
+    },
+    {
+      "current": ["conflict_resolution_intent"],
+      "target": "conflict_resolution"
+    },
+    {
+      "current": ["versioning_strategy"],
+      "target": "version_strategy"
+    },
+
+    {
+      "current": ["rule"],
+      "target": "identity_mapping",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/identity_resolution.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["rule"],
+      "target": "identity_mapping",
+      "mode": "word",
+      "scope": [
+        "src/domain/value_objects/identity_resolution.py"
+      ]
+    },
+
+    {
+      "current": ["lifecycle"],
+      "target": "lifecycle_reference",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/identity_resolution.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["lifecycle"],
+      "target": "lifecycle_reference",
+      "mode": "word",
+      "scope": [
+        "src/domain/value_objects/identity_resolution.py"
+      ]
+    },
+
+    {
+      "current": ["format"],
+      "target": "version_format",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/versioning_strategy.py",
+        "src/domain/value_objects/version_strategy.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["format"],
+      "target": "version_format",
+      "mode": "word",
+      "scope": [
+        "src/domain/value_objects/versioning_strategy.py",
+        "src/domain/value_objects/version_strategy.py"
+      ]
+    },
+
+    {
+      "current": ["level"],
+      "target": "rank",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/priority_hierarchy.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["level"],
+      "target": "rank",
+      "mode": "word",
+      "scope": [
+        "src/domain/value_objects/priority_hierarchy.py",
+        "tests/domain/value_objects/test_priority_hierarchy.py",
+        "tests/domain/test_doctrine.py",
+        "tests/domain/conftest.py"
+      ]
+    },
+    {
+      "current": ["level"],
+      "target": "rank",
+      "mode": "regex",
+      "pattern": "([\"'])level([\"'])",
+      "replacement": "\\1rank\\2",
+      "scope": [
+        "tests/domain/conftest.py",
+        "tests/domain/test_doctrine.py",
+        "tests/domain/value_objects/test_priority_hierarchy.py"
+      ]
+    },
+
+    {
+      "current": ["schema"],
+      "target": "schema_layer",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/cross_layer_binding.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["schema"],
+      "target": "schema_layer",
+      "mode": "regex",
+      "pattern": "(alias\\s*=\\s*[\"'])schema([\"'])",
+      "replacement": "\\1schema_layer\\2",
+      "scope": [
+        "src/domain/value_objects/cross_layer_binding.py"
+      ]
+    },
+    {
+      "current": ["schema"],
+      "target": "schema_layer",
+      "mode": "regex",
+      "pattern": "([\"'])schema([\"'])",
+      "replacement": "\\1schema_layer\\2",
+      "scope": [
+        "tests/"
+      ]
+    },
+
+    {
+      "current": ["spec"],
+      "target": "spec_layer",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/cross_layer_binding.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["spec"],
+      "target": "spec_layer",
+      "mode": "regex",
+      "pattern": "([\"'])spec([\"'])",
+      "replacement": "\\1spec_layer\\2",
+      "scope": [
+        "tests/"
+      ]
+    },
+
+    {
+      "current": ["policy"],
+      "target": "policy_layer",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/cross_layer_binding.py",
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["policy"],
+      "target": "policy_layer",
+      "mode": "regex",
+      "pattern": "([\"'])policy([\"'])",
+      "replacement": "\\1policy_layer\\2",
+      "scope": [
+        "tests/"
+      ]
+    },
+
+    {
+      "current": ["not"],
+      "target": "exclusions",
+      "mode": "key",
+      "scope": [
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["not"],
+      "target": "exclusions",
+      "mode": "regex",
+      "pattern": "(alias\\s*=\\s*[\"'])not([\"'])",
+      "replacement": "\\1exclusions\\2",
+      "scope": [
+        "src/domain/value_objects/identity_resolution.py"
+      ]
+    },
+
+    {
+      "current": ["id"],
+      "target": "category",
+      "mode": "key",
+      "scope": [
+        "src/domain/value_objects/priority_hierarchy.py"
+      ]
+    },
+    {
+      "current": ["id"],
+      "target": "category",
+      "mode": "word",
+      "scope": [
+        "src/domain/value_objects/priority_hierarchy.py"
+      ]
+    },
+    {
+      "current": ["id"],
+      "target": "category",
+      "mode": "regex",
+      "pattern": "(?m)^([ \\t]*-\\s*)id(\\s*:\\s*(?:constitutional|statutory|regulatory|operational|advisory)\\b)",
+      "replacement": "\\1category\\2",
+      "scope": [
+        "docs/Regulation/policy_doctrine.yaml"
+      ]
+    },
+    {
+      "current": ["id"],
+      "target": "category",
+      "mode": "regex",
+      "pattern": "([\"'])id([\"']\\s*:\\s*category\\.value)",
+      "replacement": "\\1category\\2",
+      "scope": [
+        "tests/domain/conftest.py"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "current": ["IdentityLifecycleIntent"],
+      "target": "LifecycleDefinition"
+    },
+    {
+      "current": ["VersioningStrategy"],
+      "target": "VersionStrategy"
+    }
+  ],
+  "sections": [
+    {
+      "current": ["identity_lifecycle_intent"],
+      "target": "lifecycle_definition"
+    },
+    {
+      "current": ["versioning_strategy"],
+      "target": "version_strategy"
+    }
+  ],
+  "paths": [
+    {
+      "current": ["src/domain/value_objects/identity_lifecycle.py"],
+      "target": "src/domain/value_objects/lifecycle_definition.py"
+    },
+    {
+      "current": ["src/domain/value_objects/versioning_strategy.py"],
+      "target": "src/domain/value_objects/version_strategy.py"
+    }
+  ]
+}
