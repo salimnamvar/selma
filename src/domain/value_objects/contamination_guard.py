@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Self
 
 from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
 from domain.enums import ProhibitedField
-from domain.identifiers import GovernanceText
+from domain.identifiers import GovernanceConstraint, GovernanceGuidance
 
 
 class ContaminationGuard(DomainValueObject):
@@ -21,11 +22,11 @@ class ContaminationGuard(DomainValueObject):
         min_length=1,
         description="Schema fields that must not appear in policy prose",
     )
-    allowed_machine_references: tuple[GovernanceText, ...] = Field(
+    allowed_machine_references: tuple[GovernanceGuidance, ...] = Field(
         min_length=1,
         description="How Machine IDs may appear in policy",
     )
-    metadata_constraints: GovernanceText = Field(
+    metadata_constraints: GovernanceConstraint = Field(
         description="Constraints on schema metadata in policy"
     )
 
@@ -50,3 +51,21 @@ class ContaminationGuard(DomainValueObject):
             except ValueError:
                 result = False
         return result
+
+    def is_allowed(self, key: str | ProhibitedField) -> bool:
+        """Return True if field may appear in policy prose."""
+        return not self.is_prohibited(key)
+
+    def collect_violations(self, fields: Iterable[str | ProhibitedField]) -> tuple[str, ...]:
+        """Return prohibited field names present in ``fields`` (declaration order)."""
+        violations: list[str] = []
+        for field in fields:
+            if self.is_prohibited(field):
+                violations.append(field.value if isinstance(field, ProhibitedField) else str(field))
+        return tuple(violations)
+
+    def validate_fields(self, fields: Iterable[str | ProhibitedField]) -> None:
+        """Raise ValueError when any field is prohibited in policy prose."""
+        violations = self.collect_violations(fields)
+        if violations:
+            raise ValueError(f"Prohibited policy fields: {list(violations)}")

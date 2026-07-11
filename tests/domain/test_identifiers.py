@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import TypeAdapter, ValidationError
+from pydantic import ValidationError
 
 from domain import FieldPath, MachineId, SemanticVersion
 
@@ -62,7 +62,7 @@ class TestSemanticVersion:
 @pytest.mark.unit
 @pytest.mark.domain
 class TestMachineId:
-    """MachineId Annotated constraint validation."""
+    """MachineId value-object validation and behavior."""
 
     @pytest.mark.parametrize(
         "valid",
@@ -70,8 +70,11 @@ class TestMachineId:
         ids=["auth", "pay", "short-prefix"],
     )
     def test_accepts_valid_ids(self, valid: str) -> None:
-        adapter: TypeAdapter[MachineId] = TypeAdapter(MachineId)
-        assert adapter.validate_python(valid) == valid
+        machine_id = MachineId.model_validate(valid)
+        assert str(machine_id) == valid
+        assert machine_id == valid
+        assert machine_id.prefix == valid.split("-", maxsplit=1)[0]
+        assert machine_id.number == valid.split("-", maxsplit=1)[1]
 
     @pytest.mark.parametrize(
         "invalid",
@@ -79,9 +82,8 @@ class TestMachineId:
         ids=["lowercase", "no-number-sep", "prefix-only", "reversed"],
     )
     def test_rejects_invalid_ids(self, invalid: str) -> None:
-        adapter: TypeAdapter[MachineId] = TypeAdapter(MachineId)
         with pytest.raises(ValidationError):
-            adapter.validate_python(invalid)
+            MachineId.model_validate(invalid)
 
 
 @pytest.mark.unit
@@ -110,6 +112,7 @@ class TestFieldPath:
         assert path.collection == collection
         assert path.field == field
         assert str(path) == raw
+        assert path.is_field(field)
 
     def test_empty_path_rejected(self) -> None:
         with pytest.raises(ValidationError):

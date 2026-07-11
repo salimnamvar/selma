@@ -7,7 +7,7 @@ from typing import Callable
 import pytest
 from pydantic import ValidationError
 
-from domain import ContentType, DocumentSection, DocumentStructure
+from domain import ContentType, DocumentSection, DocumentTemplate
 
 
 @pytest.mark.unit
@@ -105,7 +105,7 @@ class TestDocumentStructure:
     ) -> None:
         incomplete = [section for section in minimal_sections if section.id != "preamble"]
         with pytest.raises(ValidationError, match="Missing required sections"):
-            DocumentStructure(tuple(incomplete))
+            DocumentTemplate(tuple(incomplete))
 
     def test_duplicate_ids(
         self,
@@ -115,12 +115,12 @@ class TestDocumentStructure:
         sections = list(minimal_sections)
         sections.append(make_prose_section(id="preamble", title="Dup"))
         with pytest.raises(ValidationError, match="Duplicate section ID"):
-            DocumentStructure(tuple(sections))
+            DocumentTemplate(tuple(sections))
 
     def test_lookup(self, minimal_sections: tuple[DocumentSection, ...]) -> None:
-        structure = DocumentStructure(minimal_sections)
+        structure = DocumentTemplate(minimal_sections)
 
         assert structure.get("flexible_standards") is not None
         assert structure.get("nope") is None
-        assert frozenset(structure.ids) >= DocumentStructure.REQUIRED_SECTION_IDS
+        assert frozenset(structure.ids) >= DocumentTemplate.REQUIRED_SECTION_IDS
         assert len(structure) == len(minimal_sections)

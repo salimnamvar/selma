@@ -1,15 +1,19 @@
-"""Priority hierarchy value objects — authority ranks and conflict intent."""
+"""Authority hierarchy — priority ranks and conflict-resolution *intent*."""
 
 from __future__ import annotations
 
 from functools import cached_property
-from typing import ClassVar, Self
+from typing import Self
 
 from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, IndexedLookupMixin, NameableMixin, require_unique
-from domain.enums import PriorityCategory, ResolutionStrategy
-from domain.identifiers import GovernanceText
+from domain.enums import PriorityCategory
+from domain.identifiers import (
+    GovernanceDescription,
+    GovernanceGuidance,
+    GovernancePurpose,
+)
 
 
 class PriorityLevel(DomainValueObject, NameableMixin):
@@ -17,9 +21,9 @@ class PriorityLevel(DomainValueObject, NameableMixin):
 
     category: PriorityCategory = Field(description="Unique rank identifier")
     rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
-    title: GovernanceText = Field(description="Human-readable rank name")
-    description: GovernanceText = Field(description="Scope and authority of this rank")
-    examples: tuple[GovernanceText, ...] = Field(
+    title: GovernanceGuidance = Field(description="Human-readable rank name")
+    description: GovernanceDescription = Field(description="Scope and authority of this rank")
+    examples: tuple[GovernanceGuidance, ...] = Field(
         default=(),
         description="Typical rules at this authority rank",
     )
@@ -35,44 +39,35 @@ class PriorityLevel(DomainValueObject, NameableMixin):
 
 
 class CrossLayerPrecedence(DomainValueObject):
-    """How conflict-resolution precedence maps across layers.
+    """Declarative precedence intent across layers (not an algorithm)."""
 
-    Prose fields mirror policy_doctrine.yaml; ``strategies`` exposes the
-    closed vocabulary from :class:`ResolutionStrategy`.
-    """
-
-    precedence_algorithm: GovernanceText = Field(
-        description="Where the normative resolution algorithm is defined"
+    precedence_algorithm: GovernanceDescription = Field(
+        description="Where the normative resolution algorithm is defined (reference only)"
     )
-    structural_override: GovernanceText = Field(
+    structural_override: GovernanceDescription = Field(
         description="Schema-level override mechanism for conflict resolution"
     )
-    policy_role: GovernanceText = Field(description="Policy layer's role in precedence")
-    order: GovernanceText = Field(description="Precedence chain order (declarative prose)")
-
-    @property
-    def strategies(self) -> tuple[ResolutionStrategy, ...]:
-        """Canonical resolution chain (domain vocabulary for the prose order)."""
-        return ResolutionStrategy.chain()
+    policy_role: GovernancePurpose = Field(description="Policy layer's role in precedence")
+    order: GovernanceDescription = Field(
+        description="Precedence chain order as governance prose (not executable)"
+    )
 
 
-class PriorityHierarchy(
+class AuthorityHierarchy(
     DomainValueObject,
     IndexedLookupMixin[PriorityCategory, PriorityLevel],
 ):
     """Declares authority levels and conflict-resolution intent.
 
-    Lookup style matches collections: ``get`` / ``require`` / ``has`` by category.
+    Lookup: ``get`` / ``require`` / ``has`` by :class:`PriorityCategory`.
     """
 
-    CANONICAL_STRATEGIES: ClassVar[tuple[ResolutionStrategy, ...]] = ResolutionStrategy.chain()
-
-    description: GovernanceText = Field(description="How priority hierarchy works")
+    description: GovernanceDescription = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(
         min_length=1,
         description="Ordered authority levels",
     )
-    conflict_resolution: GovernanceText = Field(
+    conflict_resolution: GovernanceDescription = Field(
         description="Governance intent for how priority affects conflict resolution"
     )
     cross_layer_precedence: CrossLayerPrecedence = Field(
@@ -112,3 +107,7 @@ class PriorityHierarchy(
     def get_lowest(self) -> PriorityLevel:
         """Return the lowest authority rank."""
         return self.levels[-1]
+
+
+# YAML section key remains priority_hierarchy; type name reflects authority intent.
+PriorityHierarchy = AuthorityHierarchy

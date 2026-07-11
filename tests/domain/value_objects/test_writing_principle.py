@@ -36,7 +36,10 @@ class TestWritingPrinciples:
 
         assert collection.get("WP-001") is not None
         assert collection.get("WP-099") is None
+        assert collection.has("WP-002")
+        assert not collection.has("WP-099")
         assert "WP-002" in collection
         assert "WP-099" not in collection
         assert len(collection) == 2
         assert len(collection.principles) == 2
+

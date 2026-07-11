@@ -9,12 +9,11 @@ from pydantic import ValidationError
 
 from domain import (
     DocumentSection,
-    DocumentStructure,
+    DocumentTemplate,
     IdentityOperation,
     PolicyDoctrine,
     PriorityCategory,
     ProhibitedField,
-    ResolutionStrategy,
 )
 
 
@@ -45,18 +44,16 @@ class TestPolicyDoctrineInvariants:
 @pytest.mark.integration
 @pytest.mark.domain
 class TestPolicyDoctrineYamlContract:
-    """Contract tests: normative policy_doctrine.yaml must load and map cleanly.
-
-    These tests pin domain behavior to the governance document under
-    docs/Regulation/policy_doctrine.yaml.
-    """
+    """Contract tests: normative policy_doctrine.yaml must load and map cleanly."""
 
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.name == "universal-policy-doctrine"
         assert str(doctrine.version) == "8.2.4"
-        assert doctrine.schema_id == "universal-rule-schema"
+        assert str(doctrine.schema_id) == "universal-rule-schema"
+        assert doctrine.metadata.name == doctrine.name
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.is_compatible_with(doctrine.spec_version, doctrine.schema_version)
         assert doctrine.version.is_compatible(doctrine.spec_version)
         assert doctrine.version.is_compatible(doctrine.schema_version)
 
@@ -64,30 +61,29 @@ class TestPolicyDoctrineYamlContract:
         assert doctrine.cross_layer_binding.policy_purpose
         assert doctrine.cross_layer_binding.conflict_resolution_binding.schema_layer
 
-    def test_conflict_resolution_binding_fields(self, doctrine: PolicyDoctrine) -> None:
+    def test_conflict_resolution_intent_fields(self, doctrine: PolicyDoctrine) -> None:
         binding = doctrine.cross_layer_binding.conflict_resolution_binding
         data = binding.model_dump()
         assert set(data) == {"policy_layer", "schema_layer", "spec_layer", "precedence"}
-        assert binding.strategies == ResolutionStrategy.chain()
+        assert "strategies" not in data
 
-    def test_cross_layer_precedence(self, doctrine: PolicyDoctrine) -> None:
+    def test_cross_layer_precedence_is_intent_only(self, doctrine: PolicyDoctrine) -> None:
         precedence = doctrine.priority_hierarchy.cross_layer_precedence
         assert "SPECIFICATION.md" in precedence.precedence_algorithm
         assert precedence.policy_role
         assert precedence.order
-        assert precedence.strategies[0] == ResolutionStrategy.EXPLICIT_OVERRIDE
-        assert precedence.strategies[-1] == ResolutionStrategy.CONFLICT_ARTIFACT
+        assert not hasattr(precedence, "strategies")
 
     def test_machine_id_exclusions(self, doctrine: PolicyDoctrine) -> None:
         exclusions = doctrine.identity_resolution.machine_id_semantics.exclusions
         assert "execution ID" in exclusions
         assert "runtime lookup key" in exclusions
 
-    def test_lifecycle_definition_operations(self, doctrine: PolicyDoctrine) -> None:
+    def test_lifecycle_guidance_operations(self, doctrine: PolicyDoctrine) -> None:
         lifecycle = doctrine.lifecycle_definition
-        assert frozenset(IdentityOperation) == frozenset(lifecycle._GUIDANCE_ENUM)
-        assert "two distinct" in lifecycle.get_guidance(IdentityOperation.FORK).lower()
-        assert "combine" in lifecycle.get_guidance(IdentityOperation.MERGE).lower()
+        assert lifecycle.has(IdentityOperation.FORK)
+        assert "two distinct" in doctrine.get_lifecycle_guidance(IdentityOperation.FORK).lower()
+        assert "combine" in doctrine.get_lifecycle_guidance(IdentityOperation.MERGE).lower()
 
     def test_versioning_intent_nested(self, doctrine: PolicyDoctrine) -> None:
         intent = doctrine.version_strategy.intent
@@ -97,25 +93,27 @@ class TestPolicyDoctrineYamlContract:
 
     def test_writing_principles(self, doctrine: PolicyDoctrine) -> None:
         assert len(doctrine.writing_principles) == 5
-        principle = doctrine.writing_principles.get("WP-001")
+        principle = doctrine.get_principle("WP-001")
         assert principle is not None
         assert "Precision" in principle.title
 
     def test_sections_and_lookups(self, doctrine: PolicyDoctrine) -> None:
-        assert {section.id for section in doctrine.sections} >= DocumentStructure.REQUIRED_SECTION_IDS
-        assert doctrine.sections.get("directives") is not None
-        assert doctrine.sections.get("flexible_standards") is not None
-        assert doctrine.sections.get("specific_directives") is not None
+        assert {str(section.id) for section in doctrine.sections} >= DocumentTemplate.REQUIRED_SECTION_IDS
+        assert doctrine.get_section("directives") is not None
+        assert doctrine.get_section("flexible_standards") is not None
+        assert doctrine.require_section("specific_directives") is not None
 
     def test_contamination_guard(self, doctrine: PolicyDoctrine) -> None:
-        guard = doctrine.contamination_guard
-        assert guard.is_prohibited(ProhibitedField.PARAMETERS)
-        assert guard.is_prohibited("evaluator_hint")
-        assert not guard.is_prohibited("machine_id")
-        assert set(guard.prohibited_fields) == set(ProhibitedField)
+        assert not doctrine.is_policy_field_allowed(ProhibitedField.PARAMETERS)
+        assert not doctrine.is_policy_field_allowed("evaluator_hint")
+        assert doctrine.is_policy_field_allowed("machine_id")
+        assert set(doctrine.contamination_guard.prohibited_fields) == set(ProhibitedField)
+        assert doctrine.contamination_guard.collect_violations(
+            ["parameters", "description", "weight"]
+        ) == ("parameters", "weight")
 
     def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.priority_hierarchy.outranks(
+        assert doctrine.outranks(
             PriorityCategory.CONSTITUTIONAL,
             PriorityCategory.OPERATIONAL,
         )
@@ -132,10 +130,10 @@ class TestPolicyDoctrineYamlContract:
         self,
         doctrine: PolicyDoctrine,
     ) -> None:
-        flexible = doctrine.sections.get("flexible_standards")
+        flexible = doctrine.get_section("flexible_standards")
         assert flexible is not None
         assert flexible.schema_encoding is not None
-        assert isinstance(flexible.schema_encoding, str)
+        assert str(flexible.schema_encoding)
 
     def test_section_depth_within_limit(self, doctrine: PolicyDoctrine) -> None:
         for section in doctrine.sections:

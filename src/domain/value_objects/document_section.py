@@ -1,4 +1,4 @@
-"""Document section value objects — universal document structure."""
+"""Document template — universal document section structure."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pydantic import BeforeValidator, Field, model_validator
 from domain.base import DomainValueObject, NameableMixin, TreeNodeMixin, none_as_empty, require_unique
 from domain.collections import IdentifiedCollection
 from domain.enums import ContentType
-from domain.identifiers import GovernanceText, SectionId
+from domain.identifiers import GovernanceGuidance, SectionId
 
 
 class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
@@ -20,10 +20,6 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     Depth is node-counted (leaf = 1). WP-003: max nesting is 3 levels.
     ``schema_encoding`` is authoring guidance only (YAML prose), not executable
     schema configuration.
-
-    Tree API (from :class:`TreeNodeMixin`):
-    ``get`` / ``require`` / ``has``, ``get_where`` / ``collect_where``,
-    ``iter_nodes`` / ``traverse``, ``max_depth``.
     """
 
     MAX_DEPTH: ClassVar[int] = 3
@@ -36,17 +32,17 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     )
 
     id: SectionId = Field(description="Unique section identifier")
-    title: GovernanceText = Field(description="Human-readable section title")
+    title: GovernanceGuidance = Field(description="Human-readable section title")
     required: bool = Field(
         default=True,
         description="Whether this section must be present in a complete document",
     )
     content_type: ContentType = Field(description="Expected content format")
-    guidance: GovernanceText | None = Field(
+    guidance: GovernanceGuidance | None = Field(
         default=None,
         description="Authoring guidance for this section (optional on nested sections)",
     )
-    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)] = Field(
+    columns: Annotated[tuple[GovernanceGuidance, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
         description="Table column headers (empty when not tabular)",
     )
@@ -54,7 +50,7 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
         default=(),
         description="Subsections",
     )
-    schema_encoding: GovernanceText | None = Field(
+    schema_encoding: GovernanceGuidance | None = Field(
         default=None,
         description=(
             "Authoring guidance for how this section maps to the rule schema. "
@@ -88,14 +84,13 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
         return self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
 
 
-class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
+class DocumentTemplate(IdentifiedCollection[str, DocumentSection]):
     """Validated tree of universal document sections (YAML list root).
 
-    Lookup is tree-wide (any nested section id), not top-level only.
-    Uses the shared collection API: ``get`` / ``require`` / ``has`` / ``ids``.
+    Lookup is tree-wide (any nested section id).
     """
 
-    REQUIRED_SECTION_IDS: ClassVar[frozenset[SectionId]] = frozenset(
+    REQUIRED_SECTION_IDS: ClassVar[frozenset[str]] = frozenset(
         {
             "preamble",
             "governance",
@@ -105,7 +100,7 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
             "sanctions",
         }
     )
-    DIRECTIVES_CHILD_IDS: ClassVar[frozenset[SectionId]] = frozenset(
+    DIRECTIVES_CHILD_IDS: ClassVar[frozenset[str]] = frozenset(
         {
             "specific_directives",
             "flexible_standards",
@@ -115,17 +110,17 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     @model_validator(mode="after")
     def _validate_ids(self) -> Self:
         """Enforce required sections, unique nested IDs, and directives children."""
-        present = {section.id for section in self.root}
+        present = {str(section.id) for section in self.root}
         missing = self.REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        nested_ids = [section_id for section in self.root for section_id in section.iter_ids()]
+        nested_ids = [str(section_id) for section in self.root for section_id in section.iter_ids()]
         require_unique(nested_ids, label="section ID")
 
         directives = self.get("directives")
         if directives is not None and directives.children:
-            child_ids = {child.id for child in directives.children}
+            child_ids = {str(child.id) for child in directives.children}
             missing_children = self.DIRECTIVES_CHILD_IDS - child_ids
             if missing_children:
                 raise ValueError(
@@ -140,10 +135,14 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
         return self.items
 
     @cached_property
-    def _index(self) -> dict[SectionId, DocumentSection]:
+    def _index(self) -> dict[str, DocumentSection]:
         """Index every section in the tree for O(1) lookup."""
         return {
-            section.id: section
+            str(section.id): section
             for root in self.root
             for section in root.iter_nodes()
         }
+
+
+# YAML key remains sections; historical name retained as alias.
+DocumentStructure = DocumentTemplate

@@ -8,22 +8,21 @@ from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, NameableMixin
 from domain.collections import IdentifiedCollection
-from domain.identifiers import GovernanceText, WritingPrincipleId
+from domain.identifiers import GovernanceDescription, GovernanceGuidance, WritingPrincipleId
 
 
 class WritingPrinciple(DomainValueObject, NameableMixin):
     """A governance principle that guides rule authors."""
 
     id: WritingPrincipleId = Field(description="Unique principle identifier")
-    title: GovernanceText = Field(description="Short principle name")
-    description: GovernanceText = Field(description="Detailed guidance for applying this principle")
+    title: GovernanceGuidance = Field(description="Short principle name")
+    description: GovernanceDescription = Field(
+        description="Detailed guidance for applying this principle"
+    )
 
 
-class WritingPrinciples(IdentifiedCollection[WritingPrincipleId, WritingPrinciple]):
-    """Collection of writing principles validated as a YAML list root.
-
-    Lookup: ``get`` / ``require`` / ``has`` / ``ids`` / ``items``.
-    """
+class WritingPrinciples(IdentifiedCollection[str, WritingPrinciple]):
+    """Collection of writing principles validated as a YAML list root."""
 
     @model_validator(mode="after")
     def _validate_non_empty(self) -> Self:

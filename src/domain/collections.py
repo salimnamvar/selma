@@ -1,13 +1,7 @@
 """Indexed collection base for identified domain items.
 
-Provides O(1) lookup by item id. Domain-specific structure rules live in
-subclasses as Pydantic validators.
-
-Lookup style (shared via :class:`~domain.base.IndexedLookupMixin`)
-------------------------------------------------------------------
-    get(key)     -> T | None
-    require(key) -> T          (raises KeyError when absent)
-    has(key)     -> bool
+Lookup keys are normalized with ``str(...)`` so string literals and scalar
+identifier value objects resolve the same entry.
 """
 
 from __future__ import annotations
@@ -36,20 +30,19 @@ class IdentifiedItem(Protocol[TId]):
 
 class IdentifiedCollection[TId: Hashable, TItem](
     RootModel[tuple[TItem, ...]],
-    IndexedLookupMixin[TId, TItem],
+    IndexedLookupMixin[str, TItem],
 ):
     """Immutable RootModel collection with O(1) lookup by item identifier.
 
-    Items should expose an ``.id`` property (see :class:`IdentifiedItem`).
-    Subclasses own length and structure invariants.
+    The public lookup key type is ``str`` (normalized form of item ids).
     """
 
     model_config = ConfigDict(frozen=True)
 
     root: tuple[TItem, ...]
 
-    def _item_id(self, item: TItem) -> TId:
-        return item.id  # type: ignore[attr-defined]
+    def _item_id(self, item: TItem) -> str:
+        return str(item.id)  # type: ignore[attr-defined]
 
     @model_validator(mode="after")
     def _validate_ids(self) -> Self:
@@ -57,8 +50,20 @@ class IdentifiedCollection[TId: Hashable, TItem](
         return self
 
     @cached_property
-    def _index(self) -> dict[TId, TItem]:
+    def _index(self) -> dict[str, TItem]:
         return {self._item_id(item): item for item in self.root}
+
+    def get(self, key: Hashable) -> TItem | None:
+        """Return the item for ``key``, or None when absent."""
+        return super().get(str(key))
+
+    def require(self, key: Hashable) -> TItem:
+        """Return the item for ``key``, or raise KeyError when absent."""
+        return super().require(str(key))
+
+    def has(self, key: Hashable) -> bool:
+        """Return True if an item with ``key`` exists."""
+        return super().has(str(key))
 
     @property
     def items(self) -> tuple[TItem, ...]:
@@ -73,5 +78,5 @@ class IdentifiedCollection[TId: Hashable, TItem](
 
     def __contains__(self, item: object) -> bool:
         """Membership by item instance (with ``.id``) or by identifier."""
-        key = item.id if hasattr(item, "id") else item  # type: ignore[attr-defined]
-        return self.has(key)  # type: ignore[arg-type]
+        key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
+        return self.has(key)

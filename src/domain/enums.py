@@ -1,4 +1,8 @@
-"""Domain enumerations — closed vocabularies from policy doctrine."""
+"""Domain enumerations — closed vocabularies from policy doctrine.
+
+Conflict *algorithms* live in the compilation engine / SPECIFICATION.md.
+This layer only holds declarative closed sets used by governance intent.
+"""
 
 from __future__ import annotations
 
@@ -76,30 +80,3 @@ class ProhibitedField(StrEnum):
     REMEDIATION = "remediation"
     TARGET = "target"
     LINEAGE = "lineage"
-
-
-class ResolutionStrategy(StrEnum):
-    """Conflict resolution strategies in canonical precedence order.
-
-    Matches cross_layer_precedence.order / conflict_resolution_binding.precedence
-    in policy_doctrine.yaml (declarative intent only — not executable logic).
-    """
-
-    EXPLICIT_OVERRIDE = "explicit_override"
-    COMPATIBLE_OVERRIDES = "compatible_overrides"
-    PRIORITY = "priority"
-    SPECIFICITY = "specificity"
-    RECENCY = "recency"
-    CONFLICT_ARTIFACT = "conflict_artifact"
-
-    @classmethod
-    def chain(cls) -> tuple[ResolutionStrategy, ...]:
-        """Return the full precedence chain in evaluation order."""
-        return (
-            cls.EXPLICIT_OVERRIDE,
-            cls.COMPATIBLE_OVERRIDES,
-            cls.PRIORITY,
-            cls.SPECIFICITY,
-            cls.RECENCY,
-            cls.CONFLICT_ARTIFACT,
-        )

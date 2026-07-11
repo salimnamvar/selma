@@ -19,9 +19,8 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
-from enum import Enum
 from functools import cached_property
-from typing import Any, ClassVar, Protocol, Self, TypeVar, cast, runtime_checkable
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -86,29 +85,6 @@ class StringCoercibleVO(DomainValueObject):
 
     def __str__(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement __str__")
-
-
-class EnumGuidedVO(DomainValueObject):
-    """Maps enum members to non-empty guidance fields of the same name.
-
-    Subclasses set ``_GUIDANCE_ENUM`` and declare a field per enum value.
-    """
-
-    _GUIDANCE_ENUM: ClassVar[type[Enum]]
-
-    @model_validator(mode="after")
-    def _validate_guidance(self) -> Self:
-        guidance_enum = getattr(type(self), "_GUIDANCE_ENUM", None)
-        if guidance_enum is None:
-            raise TypeError(f"{type(self).__name__} must define _GUIDANCE_ENUM ClassVar")
-        missing = [m.value for m in guidance_enum if m.value not in type(self).model_fields]
-        if missing:
-            raise ValueError(f"Missing guidance fields for enum members: {sorted(missing)}")
-        return self
-
-    def get_guidance(self, key: Enum) -> str:
-        """Return governance guidance text for the given enum member."""
-        return getattr(self, key.value)
 
 
 class IndexedLookupMixin[TKey: Hashable, TItem]:
