@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Annotated, Any, ClassVar, Self
+from typing import ClassVar, Self
 
-from pydantic import BaseModel, BeforeValidator, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from domain.base import VO_CONFIG
 from domain.enums import ContentType
@@ -27,10 +27,6 @@ DIRECTIVES_CHILD_IDS: frozenset[str] = frozenset(
         "flexible_standards",
     }
 )
-
-
-def _none_as_empty(value: Any) -> Any:
-    return () if value is None else value
 
 
 class Section(BaseModel):
@@ -55,14 +51,8 @@ class Section(BaseModel):
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
     guidance: GovernanceText | None = Field(default=None, description="Authoring guidance")
-    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(_none_as_empty)] = Field(
-        default=(),
-        description="Table column headers",
-    )
-    children: Annotated[tuple[Section, ...], BeforeValidator(_none_as_empty)] = Field(
-        default=(),
-        description="Subsections",
-    )
+    columns: tuple[GovernanceText, ...] = Field(default=(), description="Table column headers")
+    children: tuple[Section, ...] = Field(default=(), description="Subsections")
     schema_encoding: GovernanceText | None = Field(
         default=None,
         description="Authoring guidance for schema mapping (descriptive only)",
@@ -85,11 +75,6 @@ class Section(BaseModel):
         yield self
         for child in self.children:
             yield from child.traverse()
-
-    def iter_ids(self) -> Iterator[str]:
-        """Yield ``id`` values for this node and all descendants."""
-        for node in self.traverse():
-            yield str(node.id)
 
     def max_depth(self, current: int = 1) -> int:
         """Return maximum depth from this node (leaf depth = ``current``)."""

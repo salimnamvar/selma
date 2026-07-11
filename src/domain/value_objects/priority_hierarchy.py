@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from domain.base import VO_CONFIG
 from domain.enums import PriorityCategory
@@ -54,11 +54,9 @@ class PriorityHierarchy(BaseModel):
         description="How precedence maps across policy/schema/spec layers"
     )
 
-    _levels_by_category: dict[PriorityCategory, Level] = PrivateAttr(default_factory=dict)
-
     @model_validator(mode="after")
     def _validate_levels(self) -> Self:
-        levels_by_category: dict[PriorityCategory, Level] = {}
+        categories: list[PriorityCategory] = []
         for index, levels_entry in enumerate(self.levels, start=1):
             if levels_entry.rank != index:
                 raise ValueError(
@@ -66,23 +64,24 @@ class PriorityHierarchy(BaseModel):
                     f"rank={levels_entry.rank}, expected {index}. Levels must be "
                     "ordered and contiguous starting from 1."
                 )
-            if levels_entry.category in levels_by_category:
-                raise ValueError(
-                    f"Duplicate priority categories found: {levels_entry.category!r}"
-                )
-            levels_by_category[levels_entry.category] = levels_entry
-        missing = set(PriorityCategory) - set(levels_by_category)
+            categories.append(levels_entry.category)
+        if len(categories) != len(set(categories)):
+            raise ValueError(f"Duplicate priority categories found: {set(categories)}")
+        missing = set(PriorityCategory) - set(categories)
         if missing:
             raise ValueError(
                 f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}"
             )
-        object.__setattr__(self, "_levels_by_category", levels_by_category)
         return self
 
     def get_levels(self, category: PriorityCategory) -> Level | None:
         """Return the ``levels`` entry for ``category``, or None."""
-        return self._levels_by_category.get(category)
+        return next((entry for entry in self.levels if entry.category == category), None)
 
     def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right."""
-        return self._levels_by_category[left].rank < self._levels_by_category[right].rank
+        left_entry = self.get_levels(left)
+        right_entry = self.get_levels(right)
+        if left_entry is None or right_entry is None:
+            raise KeyError(f"Unknown priority category: {left!r} or {right!r}")
+        return left_entry.rank < right_entry.rank

@@ -242,13 +242,13 @@ class TestPolicyDoctrineYamlContract:
 
     def test_contamination_guard(self, doctrine: PolicyDoctrine) -> None:
         guard = doctrine.contamination_guard
-        assert doctrine.prohibited_fields_contains(ProhibitedField.PARAMETERS)
-        assert doctrine.prohibited_fields_contains("evaluator_hint")
-        assert not doctrine.prohibited_fields_contains("machine_id")
+        assert not doctrine.is_field_allowed(ProhibitedField.PARAMETERS)
+        assert not doctrine.is_field_allowed("evaluator_hint")
+        assert doctrine.is_field_allowed("machine_id")
         assert set(guard.prohibited_fields) == set(ProhibitedField)
-        assert guard.prohibited_fields_contains("parameters")
-        assert guard.prohibited_fields_contains("weight")
-        assert not guard.prohibited_fields_contains("description")
+        assert guard.is_prohibited("parameters")
+        assert guard.is_prohibited("weight")
+        assert not guard.is_prohibited("description")
 
     def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.outranks(

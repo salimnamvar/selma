@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Self
+
+from pydantic import BaseModel, Field, model_validator
 
 from domain.base import VO_CONFIG
 from domain.enums import IdentityOperation
@@ -21,6 +23,16 @@ class LifecycleDefinition(BaseModel):
     rename: GovernanceText = Field(description="When to use rename")
     retire: GovernanceText = Field(description="When to use retire")
     dag_intent: GovernanceText = Field(description="Constraint on lineage ancestry graph structure")
+
+    @model_validator(mode="after")
+    def _validate_operations_complete(self) -> Self:
+        """Ensure every ``IdentityOperation`` has a corresponding YAML field."""
+        expected = {operation.value for operation in IdentityOperation}
+        actual = set(type(self).model_fields) - {"dag_intent"}
+        if actual != expected:
+            missing = sorted(expected - actual)
+            raise ValueError(f"lifecycle_definition missing operations: {missing}")
+        return self
 
     def get_lifecycle_definition(self, operation: IdentityOperation) -> str:
         """Return lifecycle text for ``operation``.

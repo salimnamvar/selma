@@ -1,0 +1,1 @@
+"""Infrastructure adapters between external formats and the domain model."""

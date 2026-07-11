@@ -18,6 +18,7 @@ from domain import (
     PriorityCategory,
     Section,
 )
+from infrastructure.yaml_adapter import load_doctrine
 
 
 @pytest.fixture(scope="session")
@@ -29,7 +30,7 @@ def doctrine_document(policy_doctrine_yaml_path: Path) -> dict[str, Any]:
 @pytest.fixture(scope="session")
 def doctrine(doctrine_document: dict[str, Any]) -> PolicyDoctrine:
     """Build PolicyDoctrine from the normative YAML once per session."""
-    return PolicyDoctrine.model_validate(doctrine_document)
+    return load_doctrine(doctrine_document)
 
 
 @pytest.fixture

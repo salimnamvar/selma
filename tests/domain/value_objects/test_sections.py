@@ -53,18 +53,24 @@ class TestSection:
                 ),
             )
 
-    def test_none_columns_coerced_to_empty(
+    def test_omitted_columns_and_children_default_to_empty(
         self,
         make_prose_section: Callable[..., Section],
     ) -> None:
-        section = make_prose_section(
-            id="preamble",
-            title="Preamble",
-            columns=None,
-            children=None,
-        )
+        section = make_prose_section(id="preamble", title="Preamble")
         assert section.columns == ()
         assert section.children == ()
+
+    def test_null_columns_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            Section.model_validate(
+                {
+                    "id": "preamble",
+                    "title": "Preamble",
+                    "content_type": ContentType.PROSE,
+                    "columns": None,
+                }
+            )
 
     def test_traverse(self) -> None:
         child = Section(
@@ -84,5 +90,4 @@ class TestSection:
             "directives",
             "specific_directives",
         ]
-        assert list(parent.iter_ids()) == ["directives", "specific_directives"]
         assert parent.max_depth() == 2
