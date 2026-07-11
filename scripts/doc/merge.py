@@ -4,10 +4,17 @@ import sys
 
 
 class DocumentMerger:
-    def __init__(self, input_dir: Path, output_file: Path, exclude: list[str] | None = None):
+    def __init__(
+        self,
+        input_dir: Path,
+        output_file: Path,
+        exclude: list[str] | None = None,
+        extensions: set[str] | None = None,
+    ):
         self.input_dir = input_dir
         self.output_file = output_file
         self.exclude = set(exclude) if exclude else set()
+        self.extensions = extensions or {".py", ".md", ".txt", ".rst"}
 
     def merge(self):
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -19,7 +26,7 @@ class DocumentMerger:
 
         readme = [e for e in entries if e.is_file() and e.name.lower().startswith("readme")]
         common = [e for e in entries if e.is_dir() and e.name == "common" and e.name not in self.exclude]
-        rest_files = [e for e in entries if e.is_file() and not e.name.lower().startswith("readme")]
+        rest_files = [e for e in entries if e.is_file() and not e.name.lower().startswith("readme") and e.suffix in self.extensions]
         rest_dirs = [e for e in entries if e.is_dir() and e.name != "common" and e.name not in self.exclude]
 
         for f in readme:
@@ -41,6 +48,18 @@ class DocumentMerger:
             print(f"Warning: could not read {path}: {e}", file=sys.stderr)
 
 
+DEFAULT_EXCLUDE = [
+    "archived",
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    "node_modules",
+]
+
+DEFAULT_EXTENSIONS = {".py", ".md", ".txt", ".rst"}
+
+
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description="Merge doc directories into separate .md files.")
     p.add_argument(
@@ -60,8 +79,8 @@ def parse_args(argv=None):
     p.add_argument(
         "--exclude",
         nargs="*",
-        default=["archived"],
-        help="Subdirectory names to exclude (default: archived)",
+        default=None,
+        help=f"Subdirectory names to exclude (default: {DEFAULT_EXCLUDE})",
     )
     args = p.parse_args(argv)
     if args.output is None:
@@ -73,11 +92,18 @@ def parse_args(argv=None):
 
 
 def main(
-    input=["docs/C4-Design", "docs/Regulation", "docs/User-Story"],
+    input=None,
     output=None,
-    exclude=["archived"],
+    exclude=None,
+    extensions=None,
     argv=None,
 ):
+    if input is None:
+        input = ["src/domain"]
+    if exclude is None:
+        exclude = list(DEFAULT_EXCLUDE)
+    if extensions is None:
+        extensions = DEFAULT_EXTENSIONS
     if output is None:
         root = Path(__file__).resolve().parents[2]
         output = [root / f"{Path(d).name}.md" for d in input]
@@ -85,13 +111,13 @@ def main(
         args = parse_args(argv)
         input = args.input
         output = args.output
-        exclude = args.exclude
+        exclude = args.exclude if args.exclude is not None else list(DEFAULT_EXCLUDE)
     for in_dir, out_file in zip(input, output):
         in_path, out_path = Path(in_dir), Path(out_file)
         if not in_path.is_dir():
             print(f"Warning: {in_dir} is not a directory. Skipping.", file=sys.stderr)
             continue
-        merger = DocumentMerger(in_path, out_path, exclude=exclude)
+        merger = DocumentMerger(in_path, out_path, exclude=exclude, extensions=extensions)
         merger.merge()
         print(f"Merged {in_dir} -> {out_file}")
 
