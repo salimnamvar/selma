@@ -23,6 +23,12 @@ _MATCH_WORD: str = "word"
 _MATCH_KEY: str = "key"
 _MATCH_REGEX: str = "regex"
 _VALID_MODES: Set[str] = {_MATCH_WORD, _MATCH_KEY, _MATCH_REGEX}
+# Same-length ties: regex (alias removal) before key before word (broad).
+_MODE_PRIORITY: Dict[str, int] = {
+    _MATCH_REGEX: 0,
+    _MATCH_KEY: 1,
+    _MATCH_WORD: 2,
+}
 
 _REQUIRED_KEYS: Tuple[str, ...] = (
     "scan_dirs",
@@ -282,7 +288,12 @@ def _build_rules(
                     )
                 )
 
-    rules.sort(key=lambda rule: len(rule._original), reverse=True)
+    rules.sort(
+        key=lambda rule: (
+            -len(rule._original),
+            _MODE_PRIORITY.get(rule._mode, 99),
+        )
+    )
     return rules, skipped
 
 
