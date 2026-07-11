@@ -15,11 +15,6 @@ WritingPrincipleId = Annotated[
     Field(pattern=r"^WP-\d{3}$", description="Unique writing principle identifier"),
 ]
 
-SemanticVersion = Annotated[
-    str,
-    Field(pattern=r"^\d+\.\d+\.\d+$", description="Semantic version in MAJOR.MINOR.PATCH format"),
-]
-
 SectionId = Annotated[
     str,
     Field(pattern=r"^[a-z][a-z0-9_]*$", description="Unique document section identifier"),

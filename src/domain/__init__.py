@@ -5,9 +5,9 @@ from domain.identifiers import (
     Guidance,
     MachineId,
     SectionId,
-    SemanticVersion,
     WritingPrincipleId,
 )
+from domain.value_objects.semantic_version import SemanticVersion
 
 __all__ = [
     "ContentType",

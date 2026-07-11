@@ -1,18 +1,20 @@
 from collections import Counter
 from typing import Generator, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import SectionId, SemanticVersion, WritingPrincipleId
+from domain.identifiers import SectionId, WritingPrincipleId
+from domain.value_objects.base import DomainValueObject
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.document_section import DocumentSection
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
-from domain.value_objects.identity_resolution import IdentityResolution
+from domain.value_objects.identity_policy import IdentityPolicy
 from domain.value_objects.priority_hierarchy import PriorityHierarchy, PriorityLevel
+from domain.value_objects.semantic_version import SemanticVersion
 from domain.value_objects.versioning_strategy import VersioningStrategy
 from domain.value_objects.writing_principle import WritingPrinciple
+from domain.value_objects.writing_principles import WritingPrinciples
 
 MAX_SECTION_DEPTH = 3
 
@@ -28,14 +30,12 @@ REQUIRED_SECTION_IDS = frozenset(
 )
 
 
-class PolicyDoctrine(BaseModel):
+class PolicyDoctrine(DomainValueObject):
     """Aggregate root representing the complete governance doctrine.
 
     Owns all governance metadata, identity policies, writing principles,
     priority hierarchy, document structure, and versioning strategy.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str = Field(description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
@@ -45,10 +45,9 @@ class PolicyDoctrine(BaseModel):
     rule_contract_id: str = Field(description="Identifier of the compatible rule schema")
 
     cross_layer_binding: CrossLayerBinding = Field(description="Layer relationship constraints")
-    identity_resolution: IdentityResolution = Field(description="Identity mapping policy")
-    identity_lifecycle: IdentityLifecycleIntent = Field(description="Lifecycle operation governance")
+    identity_policy: IdentityPolicy = Field(description="Identity governance policy")
     contamination_guard: ContaminationGuard = Field(description="Policy-layer field constraints")
-    writing_principles: tuple[WritingPrinciple, ...] = Field(description="Authoring principles")
+    writing_principles: WritingPrinciples = Field(description="Authoring principles with uniqueness invariant")
     priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict resolution")
     versioning_strategy: VersioningStrategy = Field(description="Versioning intent")
     sections: tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
@@ -75,28 +74,9 @@ class PolicyDoctrine(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_priority_level_ordering(self) -> "PolicyDoctrine":
-        levels = self.priority_hierarchy.levels
-        for expected_num, level in enumerate(levels, start=1):
-            if level.level != expected_num:
-                raise ValueError(
-                    f"Priority level '{level.id}' has level={level.level}, "
-                    f"expected {expected_num} at position {expected_num}"
-                )
-        return self
-
-    @model_validator(mode="after")
     def check_section_depth(self) -> "PolicyDoctrine":
-
-        def _max_depth(section: DocumentSection, current: int = 1) -> int:
-            if not section.children:
-                return current
-            return max(_max_depth(child, current + 1) for child in section.children)
-
         for section in self.sections:
-            depth = _max_depth(section)
-            if depth > MAX_SECTION_DEPTH:
-                raise ValueError(f"Section '{section.id}' has depth {depth}, exceeds maximum {MAX_SECTION_DEPTH}")
+            section.validate_max_depth(MAX_SECTION_DEPTH)
         return self
 
     def get_section(self, section_id: SectionId) -> Optional[DocumentSection]:
@@ -108,14 +88,8 @@ class PolicyDoctrine(BaseModel):
 
     def get_writing_principle(self, principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
         """Retrieve a writing principle by its identifier."""
-        for principle in self.writing_principles:
-            if principle.id == principle_id:
-                return principle
-        return None
+        return self.writing_principles.get(principle_id)
 
     def get_priority_level(self, category: PriorityCategory) -> Optional[PriorityLevel]:
         """Retrieve a priority level by its category."""
-        for level in self.priority_hierarchy.levels:
-            if level.id == category:
-                return level
-        return None
+        return self.priority_hierarchy.get_level(category)

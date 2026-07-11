@@ -1,12 +1,13 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from domain.identifiers import Guidance
+from domain.value_objects.base import DomainValueObject
 
 
-class ConflictResolutionBinding(BaseModel):
+class ConflictResolutionBinding(DomainValueObject):
     """Describes how each layer contributes to conflict resolution."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+    model_config = {"frozen": True, "extra": "forbid", "populate_by_name": True}
 
     policy: Guidance = Field(description="Policy layer's role in conflict resolution")
     schema_layer: Guidance = Field(alias="schema", description="Schema layer's role in conflict resolution")
@@ -14,20 +15,16 @@ class ConflictResolutionBinding(BaseModel):
     precedence: Guidance = Field(description="Declared precedence chain")
 
 
-class FieldLegality(BaseModel):
+class FieldLegality(DomainValueObject):
     """Defines what each layer may contain."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     policy_layer: Guidance = Field(description="What the policy layer may contain")
     schema_layer: Guidance = Field(description="What the schema layer may contain")
     spec_layer: Guidance = Field(description="What the specification layer may contain")
 
 
-class CrossLayerBinding(BaseModel):
+class CrossLayerBinding(DomainValueObject):
     """Describes the structural relationship between policy, schema, and specification layers."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     normative_source: str = Field(description="The authoritative behavioral source")
     this_layer_purpose: Guidance = Field(description="Purpose of the policy layer")

@@ -1,12 +1,11 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from domain.identifiers import Description, WritingPrincipleId
+from domain.value_objects.base import DomainValueObject
 
 
-class WritingPrinciple(BaseModel):
+class WritingPrinciple(DomainValueObject):
     """A governance principle that guides rule authors in writing directives."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: WritingPrincipleId = Field(description="Unique principle identifier")
     title: str = Field(description="Short principle name")

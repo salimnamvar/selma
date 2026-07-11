@@ -1,3 +1,4 @@
+from domain.value_objects.base import DomainValueObject
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import (
     ConflictResolutionBinding,
@@ -5,15 +6,16 @@ from domain.value_objects.cross_layer_binding import (
     FieldLegality,
 )
 from domain.value_objects.document_section import DocumentSection
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
-from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
+from domain.value_objects.identity_policy import IdentityPolicy
 from domain.value_objects.priority_hierarchy import (
     CrossLayerPrecedence,
     PriorityHierarchy,
     PriorityLevel,
 )
+from domain.value_objects.semantic_version import SemanticVersion
 from domain.value_objects.versioning_strategy import VersioningStrategy, VersionIntent
 from domain.value_objects.writing_principle import WritingPrinciple
+from domain.value_objects.writing_principles import WritingPrinciples
 
 __all__ = [
     "ConflictResolutionBinding",
@@ -21,13 +23,14 @@ __all__ = [
     "CrossLayerBinding",
     "CrossLayerPrecedence",
     "DocumentSection",
+    "DomainValueObject",
     "FieldLegality",
-    "IdentityLifecycleIntent",
-    "IdentityResolution",
-    "MachineIdSemantics",
+    "IdentityPolicy",
     "PriorityHierarchy",
     "PriorityLevel",
+    "SemanticVersion",
     "VersionIntent",
     "VersioningStrategy",
     "WritingPrinciple",
+    "WritingPrinciples",
 ]

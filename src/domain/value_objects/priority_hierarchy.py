@@ -1,13 +1,14 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional
+
+from pydantic import Field, model_validator
 
 from domain.enums import PriorityCategory
 from domain.identifiers import Description, Guidance
+from domain.value_objects.base import DomainValueObject
 
 
-class PriorityLevel(BaseModel):
+class PriorityLevel(DomainValueObject):
     """An authority level in the governance priority hierarchy."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: PriorityCategory = Field(description="Unique level identifier")
     level: int = Field(description="Numeric authority rank (1 = highest)")
@@ -16,10 +17,8 @@ class PriorityLevel(BaseModel):
     examples: tuple[Description, ...] = Field(description="Typical rules at this authority level")
 
 
-class CrossLayerPrecedence(BaseModel):
+class CrossLayerPrecedence(DomainValueObject):
     """Describes how conflict resolution maps across layers."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
 
     normative_algorithm: str = Field(description="Where the algorithm lives")
     structural_override: str = Field(description="Schema-level override mechanism")
@@ -27,12 +26,27 @@ class CrossLayerPrecedence(BaseModel):
     order: Guidance = Field(description="Precedence chain order")
 
 
-class PriorityHierarchy(BaseModel):
-    """Declares the authority levels and conflict resolution intent."""
+class PriorityHierarchy(DomainValueObject):
+    """Declares the authority levels and conflict resolution intent.
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    Enforces that levels are declared in strict ascending order by authority rank.
+    """
 
     description: Guidance = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(description="Ordered authority levels")
     conflict_resolution_intent: Guidance = Field(description="Governance intent for conflict resolution")
     cross_layer_precedence: CrossLayerPrecedence = Field(description="How precedence maps across layers")
+
+    @model_validator(mode="after")
+    def _validate_level_ordering(self) -> "PriorityHierarchy":
+        for expected_num, level in enumerate(self.levels, start=1):
+            if level.level != expected_num:
+                raise ValueError(
+                    f"Priority level '{level.id}' has level={level.level}, "
+                    f"expected {expected_num} at position {expected_num}"
+                )
+        return self
+
+    def get_level(self, category: PriorityCategory) -> Optional[PriorityLevel]:
+        """Retrieve a priority level by its category."""
+        return next((level for level in self.levels if level.id == category), None)
