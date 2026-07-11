@@ -84,4 +84,5 @@ class TestSection:
             "directives",
             "specific_directives",
         ]
+        assert list(parent.iter_ids()) == ["directives", "specific_directives"]
         assert parent.max_depth() == 2

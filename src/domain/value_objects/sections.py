@@ -86,6 +86,11 @@ class Section(BaseModel):
         for child in self.children:
             yield from child.traverse()
 
+    def iter_ids(self) -> Iterator[str]:
+        """Yield ``id`` values for this node and all descendants."""
+        for node in self.traverse():
+            yield str(node.id)
+
     def max_depth(self, current: int = 1) -> int:
         """Return maximum depth from this node (leaf depth = ``current``)."""
         result = current

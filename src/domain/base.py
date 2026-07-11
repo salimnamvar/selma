@@ -7,5 +7,4 @@ from pydantic import ConfigDict
 VO_CONFIG = ConfigDict(
     frozen=True,
     extra="forbid",
-    populate_by_name=True,
 )

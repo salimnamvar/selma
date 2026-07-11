@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from domain.base import VO_CONFIG
 from domain.doctrine import Doctrine
@@ -43,9 +43,12 @@ class PolicyDoctrine(BaseModel):
         description="Universal document section definitions",
     )
 
+    _sections_by_id: dict[str, Section] = PrivateAttr(default_factory=dict)
+    _writing_principles_by_id: dict[str, WritingPrinciple] = PrivateAttr(default_factory=dict)
+
     @model_validator(mode="after")
     def _validate_aggregate(self) -> Self:
-        """Enforce cross-field invariants across doctrine sections."""
+        """Enforce cross-field invariants and build O(1) collection indexes."""
         if not self.doctrine.version.is_compatible(self.doctrine.spec_version):
             raise ValueError(
                 f"MAJOR version mismatch: doctrine={self.doctrine.version} "
@@ -57,22 +60,26 @@ class PolicyDoctrine(BaseModel):
                 f"vs schema={self.doctrine.schema_version}"
             )
 
-        principle_ids = [str(principle.id) for principle in self.writing_principles]
-        if len(principle_ids) != len(set(principle_ids)):
-            dupes = {item for item in principle_ids if principle_ids.count(item) > 1}
-            raise ValueError(f"Duplicate IDs found: {dupes}")
+        writing_principles_by_id: dict[str, WritingPrinciple] = {}
+        for principle in self.writing_principles:
+            principle_id = str(principle.id)
+            if principle_id in writing_principles_by_id:
+                raise ValueError(f"Duplicate IDs found: {{{principle_id!r}}}")
+            writing_principles_by_id[principle_id] = principle
 
-        present = {str(section.id) for section in self.sections}
-        missing = REQUIRED_SECTION_IDS - present
+        sections_by_id: dict[str, Section] = {}
+        for section in self.sections:
+            for node in section.traverse():
+                section_id = str(node.id)
+                if section_id in sections_by_id:
+                    raise ValueError(f"Duplicate section ID found: {section_id!r}")
+                sections_by_id[section_id] = node
+
+        missing = REQUIRED_SECTION_IDS - sections_by_id.keys()
         if missing:
             raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        nested_ids = [str(node.id) for section in self.sections for node in section.traverse()]
-        if len(nested_ids) != len(set(nested_ids)):
-            dupes = {item for item in nested_ids if nested_ids.count(item) > 1}
-            raise ValueError(f"Duplicate section ID found: {dupes}")
-
-        directives = self.get_sections("directives")
+        directives = sections_by_id.get("directives")
         if directives is not None and directives.children:
             child_ids = {str(child.id) for child in directives.children}
             missing_children = DIRECTIVES_CHILD_IDS - child_ids
@@ -80,6 +87,9 @@ class PolicyDoctrine(BaseModel):
                 raise ValueError(
                     f"Directives section missing expected children: {sorted(missing_children)}"
                 )
+
+        object.__setattr__(self, "_sections_by_id", sections_by_id)
+        object.__setattr__(self, "_writing_principles_by_id", writing_principles_by_id)
         return self
 
     def is_compatible_with(
@@ -100,25 +110,19 @@ class PolicyDoctrine(BaseModel):
 
     def get_sections(self, id: str) -> Section | None:
         """Return a ``sections`` entry by ``id`` (tree-wide), or None."""
-        return next(
-            (node for section in self.sections for node in section.traverse() if str(node.id) == id),
-            None,
-        )
+        return self._sections_by_id.get(id)
 
     def require_sections(self, id: str) -> Section:
         """Return a ``sections`` entry by ``id``, or raise KeyError."""
-        result = self.get_sections(id)
+        result = self._sections_by_id.get(id)
         if result is None:
             raise KeyError(f"Item with key '{id}' not found")
         return result
 
     def get_writing_principles(self, id: str) -> WritingPrinciple | None:
         """Return a ``writing_principles`` entry by ``id``, or None."""
-        return next(
-            (principle for principle in self.writing_principles if str(principle.id) == id),
-            None,
-        )
+        return self._writing_principles_by_id.get(id)
 
     def get_lifecycle_definition(self, operation: IdentityOperation) -> str:
         """Return the ``lifecycle_definition`` text for an identity operation."""
-        return getattr(self.lifecycle_definition, operation.value)
+        return self.lifecycle_definition.get_lifecycle_definition(operation)
