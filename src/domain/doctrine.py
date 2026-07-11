@@ -1,5 +1,3 @@
-from typing import FrozenSet, Optional, Set, Tuple
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.enums import PriorityCategory
@@ -24,7 +22,7 @@ class PolicyDoctrine(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     _MAX_SECTION_DEPTH: int = 3
-    _REQUIRED_SECTION_IDS: FrozenSet[str] = frozenset(
+    _REQUIRED_SECTION_IDS: frozenset[str] = frozenset(
         {
             "preamble",
             "governance",
@@ -46,10 +44,10 @@ class PolicyDoctrine(BaseModel):
     identity_resolution: IdentityResolution = Field(description="Identity mapping policy")
     identity_lifecycle: IdentityLifecycleIntent = Field(description="Lifecycle operation governance")
     contamination_guard: ContaminationGuard = Field(description="Policy-layer field constraints")
-    writing_principles: Tuple[WritingPrinciple, ...] = Field(description="Authoring principles")
+    writing_principles: tuple[WritingPrinciple, ...] = Field(description="Authoring principles")
     priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict resolution")
     versioning_strategy: VersioningStrategy = Field(description="Versioning intent")
-    sections: Tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
+    sections: tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
     def check_version_compatibility(self) -> "PolicyDoctrine":
@@ -68,7 +66,7 @@ class PolicyDoctrine(BaseModel):
     @model_validator(mode="after")
     def check_no_duplicate_sections(self) -> "PolicyDoctrine":
         """Validate no duplicate section IDs exist (recursive)."""
-        seen: Set[str] = set()
+        seen: set[str] = set()
         for section in self.sections:
             for section_id in section.all_ids():
                 if section_id in seen:
@@ -79,8 +77,8 @@ class PolicyDoctrine(BaseModel):
     @model_validator(mode="after")
     def check_required_sections_present(self) -> "PolicyDoctrine":
         """Validate all required sections are present."""
-        present: Set[str] = {s.id for s in self.sections}
-        missing: FrozenSet[str] = self._REQUIRED_SECTION_IDS - present
+        present: set[str] = {s.id for s in self.sections}
+        missing: frozenset[str] = self._REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {missing}")
         return self
@@ -94,16 +92,16 @@ class PolicyDoctrine(BaseModel):
                 raise ValueError(f"Section '{section.id}' has depth {depth}, exceeds maximum {self._MAX_SECTION_DEPTH}")
         return self
 
-    def get_section(self, a_section_id: SectionId) -> Optional[DocumentSection]:
+    def get_section(self, a_section_id: SectionId) -> DocumentSection | None:
         """Retrieve a document section by its identifier, searching recursively.
 
         Args:
             a_section_id (SectionId): The section identifier to search for.
 
         Returns:
-            Optional[DocumentSection]: The section if found, None otherwise.
+            DocumentSection | None: The section if found, None otherwise.
         """
-        result: Optional[DocumentSection] = None
+        result: DocumentSection | None = None
         for section in self.sections:
             result = self._find_in_tree(section, a_section_id)
             if result is not None:
@@ -111,9 +109,9 @@ class PolicyDoctrine(BaseModel):
         return result
 
     @staticmethod
-    def _find_in_tree(a_section: DocumentSection, a_section_id: SectionId) -> Optional[DocumentSection]:
+    def _find_in_tree(a_section: DocumentSection, a_section_id: SectionId) -> DocumentSection | None:
         """Recursively search for a section by ID in the tree."""
-        result: Optional[DocumentSection] = None
+        result: DocumentSection | None = None
         if a_section.id == a_section_id:
             result = a_section
         elif a_section.children:
@@ -123,32 +121,32 @@ class PolicyDoctrine(BaseModel):
                     break
         return result
 
-    def get_writing_principle(self, a_principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
+    def get_writing_principle(self, a_principle_id: WritingPrincipleId) -> WritingPrinciple | None:
         """Retrieve a writing principle by its identifier.
 
         Args:
             a_principle_id (WritingPrincipleId): The principle identifier to search for.
 
         Returns:
-            Optional[WritingPrinciple]: The principle if found, None otherwise.
+            WritingPrinciple | None: The principle if found, None otherwise.
         """
-        result: Optional[WritingPrinciple] = None
+        result: WritingPrinciple | None = None
         for principle in self.writing_principles:
             if principle.id == a_principle_id:
                 result = principle
                 break
         return result
 
-    def get_priority_level(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
+    def get_priority_level(self, a_category: PriorityCategory) -> PriorityLevel | None:
         """Retrieve a priority level by its category.
 
         Args:
             a_category (PriorityCategory): The category to search for.
 
         Returns:
-            Optional[PriorityLevel]: The level if found, None otherwise.
+            PriorityLevel | None: The level if found, None otherwise.
         """
-        result: Optional[PriorityLevel] = None
+        result: PriorityLevel | None = None
         for level in self.priority_hierarchy.levels:
             if level.id == a_category:
                 result = level

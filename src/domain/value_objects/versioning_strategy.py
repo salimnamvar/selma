@@ -1,3 +1,5 @@
+"""Versioning strategy value object."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

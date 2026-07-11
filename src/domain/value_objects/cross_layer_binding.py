@@ -1,7 +1,5 @@
 """Cross-layer binding value objects."""
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -14,10 +12,7 @@ class ConflictResolutionBinding(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     policy: str = Field(description="Policy layer's role in conflict resolution")
-    schema_layer: str = Field(
-        alias="schema",
-        description="Schema layer's role in conflict resolution",
-    )
+    schema_layer: str = Field(alias="schema", description="Schema layer's role in conflict resolution")
     spec: str = Field(description="Specification layer's role in conflict resolution")
     precedence: str = Field(description="Declared precedence chain")
     normative_algorithm: str = Field(description="Where the normative resolution algorithm is defined")

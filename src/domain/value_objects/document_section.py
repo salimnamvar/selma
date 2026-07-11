@@ -1,8 +1,6 @@
 """Document section value object."""
 
-from __future__ import annotations
-
-from typing import Generator, Optional, Tuple
+from collections.abc import Generator
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -19,13 +17,13 @@ class DocumentSection(BaseModel):
     title: str = Field(description="Human-readable section title")
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
-    guidance: Optional[str] = Field(default=None, description="Authoring guidance for this section")
-    columns: Optional[Tuple[str, ...]] = Field(default=None, description="Table column headers")
-    children: Optional[Tuple[DocumentSection, ...]] = Field(default=None, description="Subsections")
-    schema_encoding: Optional[str] = Field(default=None, description="Schema encoding instructions")
+    guidance: str | None = Field(default=None, description="Authoring guidance for this section")
+    columns: tuple[str, ...] | None = Field(default=None, description="Table column headers")
+    children: tuple["DocumentSection", ...] | None = Field(default=None, description="Subsections")
+    schema_encoding: str | None = Field(default=None, description="Schema encoding instructions")
 
     @model_validator(mode="after")
-    def check_columns_require_tabular_content(self) -> DocumentSection:
+    def check_columns_require_tabular_content(self) -> "DocumentSection":
         """Validate columns are only present for tabular content types."""
         if self.columns and self.content_type == ContentType.PROSE:
             raise ValueError(f"Section '{self.id}': columns are not applicable for prose-only content")
