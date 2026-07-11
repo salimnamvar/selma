@@ -110,9 +110,8 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument(
         "-o",
         "--output",
-        nargs="+",
-        default=None,
-        help="Output .md files (one per input, same order)",
+        default=".tmp",
+        help="Output directory for merged .md files (default: .tmp under project root)",
     )
     p.add_argument(
         "--exclude",
@@ -134,17 +133,12 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="File extensions to include",
     )
     args: argparse.Namespace = p.parse_args(a_argv)
-    if args.output is None:
-        root: Path = Path(__file__).resolve().parents[2]
-        args.output = [str(root / f"{Path(d).name}.md") for d in args.input]
-    if len(args.input) != len(args.output):
-        p.error("Number of --input and --output must match")
     return args
 
 
 def main(
     a_input: Optional[List[str]] = None,
-    a_output: Optional[List[str]] = None,
+    a_output: Optional[str] = None,
     a_exclude: Optional[List[str]] = None,
     a_extensions: Optional[Set[str]] = None,
     a_argv: Optional[List[str]] = None,
@@ -153,7 +147,7 @@ def main(
 
     Args:
         a_input (Optional[List[str]]): Input directories. Overrides parse_args default.
-        a_output (Optional[List[str]]): Output .md files. Overrides parse_args default.
+        a_output (Optional[str]): Output directory for merged .md files. Overrides parse_args default.
         a_exclude (Optional[List[str]]): Directory names to skip. Overrides parse_args default.
         a_extensions (Optional[Set[str]]): File extensions to include. Overrides parse_args default.
         a_argv (Optional[List[str]]): CLI arguments to parse. Uses sys.argv when None.
@@ -161,13 +155,18 @@ def main(
     args: argparse.Namespace = parse_args(a_argv)
 
     input_dirs: List[str] = a_input if a_input is not None else args.input
-    output_files: List[str] = a_output if a_output is not None else args.output
+    output_dir: str = a_output if a_output is not None else args.output
     exclude: List[str] = a_exclude if a_exclude is not None else args.exclude
     extensions: Set[str] = a_extensions if a_extensions is not None else set(args.extensions)
 
-    for in_dir, out_file in zip(input_dirs, output_files, strict=True):
+    out_root: Path = Path(output_dir)
+    if not out_root.is_absolute():
+        out_root = Path(__file__).resolve().parents[2] / out_root
+    out_root.mkdir(parents=True, exist_ok=True)
+
+    for in_dir in input_dirs:
         in_path: Path = Path(in_dir)
-        out_path: Path = Path(out_file)
+        out_path: Path = out_root / f"{in_path.name}.md"
         if not in_path.is_dir():
             print(f"Warning: {in_dir} is not a directory. Skipping.", file=sys.stderr)
             continue
@@ -178,7 +177,7 @@ def main(
             a_extensions=extensions,
         )
         merger.merge()
-        print(f"Merged {in_dir} -> {out_file}")
+        print(f"Merged {in_dir} -> {out_path}")
 
 
 if __name__ == "__main__":
