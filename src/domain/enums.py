@@ -1,20 +1,8 @@
-"""Domain enumerations — closed vocabularies from policy doctrine.
-
-Conflict *algorithms* live in the compilation engine / SPECIFICATION.md.
-This layer only holds declarative closed sets used by governance intent.
-"""
+"""Domain enumerations — closed vocabularies from policy doctrine."""
 
 from __future__ import annotations
 
 from enum import StrEnum
-
-_PRIORITY_RANKS: dict[str, int] = {
-    "constitutional": 1,
-    "statutory": 2,
-    "regulatory": 3,
-    "operational": 4,
-    "advisory": 5,
-}
 
 
 class ContentType(StrEnum):
@@ -46,17 +34,9 @@ class PriorityCategory(StrEnum):
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
 
-    @property
-    def rank(self) -> int:
-        """Return the canonical authority rank (1 = highest)."""
-        return _PRIORITY_RANKS[self.value]
-
 
 class ProhibitedField(StrEnum):
-    """Machine-executable schema fields that must never appear in policy prose.
-
-    Matches contamination_guard.prohibited_fields in policy_doctrine.yaml.
-    """
+    """Machine-executable schema fields that must never appear in policy prose."""
 
     PARAMETERS = "parameters"
     CONDITIONS = "conditions"

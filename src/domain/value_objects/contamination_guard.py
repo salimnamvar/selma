@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 from pydantic import BaseModel, Field
 
 from domain.base import VO_CONFIG
@@ -12,17 +10,13 @@ from domain.identifiers import GovernanceText
 
 
 class ContaminationGuard(BaseModel):
-    """Defines what is prohibited and allowed in the policy layer.
-
-    Aligns with contamination_guard in policy_doctrine.yaml.
-    ``prohibited_fields`` mirrors the YAML list; enforcement uses ``ProhibitedField``.
-    """
+    """Defines what is prohibited and allowed in the policy layer."""
 
     model_config = VO_CONFIG
 
     prohibited_fields: frozenset[ProhibitedField] = Field(
         min_length=1,
-        description="Schema fields that must not appear in policy prose (YAML mirror)",
+        description="Schema fields that must not appear in policy prose",
     )
     allowed_machine_references: tuple[GovernanceText, ...] = Field(
         min_length=1,
@@ -32,28 +26,10 @@ class ContaminationGuard(BaseModel):
         description="Constraints on schema metadata in policy"
     )
 
-    def is_prohibited(self, key: str | ProhibitedField) -> bool:
-        """Return True if field must not appear in policy prose."""
+    def prohibited_fields_contains(self, key: str | ProhibitedField) -> bool:
+        """Return True when ``key`` is listed in ``prohibited_fields``."""
         try:
             field = key if isinstance(key, ProhibitedField) else ProhibitedField(key)
         except ValueError:
             return False
-        return field in ProhibitedField
-
-    def is_allowed(self, key: str | ProhibitedField) -> bool:
-        """Return True if field may appear in policy prose."""
-        return not self.is_prohibited(key)
-
-    def collect_violations(self, fields: Iterable[str | ProhibitedField]) -> tuple[str, ...]:
-        """Return prohibited field names present in ``fields`` (declaration order)."""
-        violations: list[str] = []
-        for field in fields:
-            if self.is_prohibited(field):
-                violations.append(field.value if isinstance(field, ProhibitedField) else str(field))
-        return tuple(violations)
-
-    def validate_fields(self, fields: Iterable[str | ProhibitedField]) -> None:
-        """Raise ValueError when any field is prohibited in policy prose."""
-        violations = self.collect_violations(fields)
-        if violations:
-            raise ValueError(f"Prohibited policy fields: {list(violations)}")
+        return field in self.prohibited_fields

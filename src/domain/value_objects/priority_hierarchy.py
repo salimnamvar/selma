@@ -1,18 +1,18 @@
-"""Authority hierarchy — priority ranks and conflict-resolution intent."""
+"""Priority hierarchy — authority ranks and conflict-resolution intent."""
 
 from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from domain.base import VO_CONFIG, require_unique
+from domain.base import VO_CONFIG
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
 
-class PriorityLevel(BaseModel):
-    """An authority rank in the governance priority hierarchy."""
+class Level(BaseModel):
+    """One entry in the policy_doctrine.yaml ``priority_hierarchy.levels`` collection."""
 
     model_config = VO_CONFIG
 
@@ -40,13 +40,13 @@ class CrossLayerPrecedence(BaseModel):
     )
 
 
-class AuthorityHierarchy(BaseModel):
+class PriorityHierarchy(BaseModel):
     """Declares authority levels and conflict-resolution intent."""
 
     model_config = VO_CONFIG
 
     description: GovernanceText = Field(description="How priority hierarchy works")
-    levels: tuple[PriorityLevel, ...] = Field(min_length=1, description="Ordered authority levels")
+    levels: tuple[Level, ...] = Field(min_length=1, description="Ordered authority levels")
     conflict_resolution: GovernanceText = Field(
         description="Governance intent for how priority affects conflict resolution"
     )
@@ -56,38 +56,34 @@ class AuthorityHierarchy(BaseModel):
 
     @model_validator(mode="after")
     def _validate_levels(self) -> Self:
-        for index, level in enumerate(self.levels, start=1):
-            if level.rank != index:
+        for index, levels_entry in enumerate(self.levels, start=1):
+            if levels_entry.rank != index:
                 raise ValueError(
-                    f"Priority rank '{level.category}' at position {index} has "
-                    f"rank={level.rank}, expected {index}. Levels must be "
+                    f"Priority rank '{levels_entry.category}' at position {index} has "
+                    f"rank={levels_entry.rank}, expected {index}. Levels must be "
                     "ordered and contiguous starting from 1."
                 )
-        require_unique([level.category for level in self.levels], label="priority categories")
-        missing = set(PriorityCategory) - {level.category for level in self.levels}
+        categories = [levels_entry.category for levels_entry in self.levels]
+        if len(categories) != len(set(categories)):
+            raise ValueError(f"Duplicate priority categories found: {set(categories)}")
+        missing = set(PriorityCategory) - set(categories)
         if missing:
             raise ValueError(
                 f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}"
             )
         return self
 
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def index(self) -> dict[PriorityCategory, PriorityLevel]:
-        """Lookup index keyed by priority category."""
-        return {level.category: level for level in self.levels}
+    def _ranks(self) -> dict[PriorityCategory, int]:
+        return {levels_entry.category: levels_entry.rank for levels_entry in self.levels}
 
-    def get(self, key: PriorityCategory) -> PriorityLevel | None:
-        """Return the level for ``key``, or None."""
-        return self.index.get(key)
-
-    def require(self, key: PriorityCategory) -> PriorityLevel:
-        """Return the level for ``key``, or raise KeyError."""
-        result = self.get(key)
-        if result is None:
-            raise KeyError(f"Priority rank for category '{key}' not found")
-        return result
+    def get_levels(self, category: PriorityCategory) -> Level | None:
+        """Return the ``levels`` entry for ``category``, or None."""
+        return next(
+            (levels_entry for levels_entry in self.levels if levels_entry.category == category),
+            None,
+        )
 
     def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right."""
-        return self.require(left).rank < self.require(right).rank
+        ranks = self._ranks()
+        return ranks[left] < ranks[right]

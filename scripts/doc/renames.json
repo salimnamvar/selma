@@ -54,6 +54,21 @@
       "plan": "class-2",
       "current": ["VersioningStrategy"],
       "target": "VersionStrategy"
+    },
+    {
+      "plan": "field-2 type alias",
+      "current": ["RuleContractId"],
+      "target": "SchemaId"
+    },
+    {
+      "plan": "yaml-section sections",
+      "current": ["DocumentSection"],
+      "target": "Section"
+    },
+    {
+      "plan": "yaml-section levels",
+      "current": ["PriorityLevel"],
+      "target": "Level"
     }
   ],
 
@@ -293,31 +308,7 @@
         "docs/Regulation/policy_doctrine.yaml"
       ]
     },
-    {
-      "plan": "field-29 / complete-21",
-      "current": ["level"],
-      "target": "rank",
-      "mode": "word",
-      "scope": [
-        "src/domain/value_objects/priority_hierarchy.py",
-        "tests/domain/value_objects/test_priority_hierarchy.py",
-        "tests/domain/test_doctrine.py",
-        "tests/domain/conftest.py"
-      ]
-    },
-    {
-      "plan": "field-29 / complete-21",
-      "current": ["level"],
-      "target": "rank",
-      "mode": "regex",
-      "pattern": "([\"'])level([\"'])",
-      "replacement": "\\1rank\\2",
-      "scope": [
-        "tests/domain/conftest.py",
-        "tests/domain/test_doctrine.py",
-        "tests/domain/value_objects/test_priority_hierarchy.py"
-      ]
-    },
+
     {
       "plan": "field-33 / complete-25",
       "current": ["normative_algorithm"],
@@ -368,6 +359,16 @@
       "plan": "class-2 module",
       "current": ["src/domain/value_objects/versioning_strategy.py"],
       "target": "src/domain/value_objects/version_strategy.py"
+    },
+    {
+      "plan": "yaml-section sections module",
+      "current": ["src/domain/value_objects/document_section.py"],
+      "target": "src/domain/value_objects/sections.py"
+    },
+    {
+      "plan": "yaml-section writing_principles module",
+      "current": ["src/domain/value_objects/writing_principle.py"],
+      "target": "src/domain/value_objects/writing_principles.py"
     }
   ],
 
@@ -398,6 +399,11 @@
       "note": "Keep."
     },
     {
+      "plan": "field-29 / complete-21",
+      "name": "rank / Level",
+      "note": "Field rank on levels[] entries. Class PriorityLevel renamed to Level; collection stays levels."
+    },
+    {
       "plan": "field-30..32,34..38,40,41,43..59",
       "name": "unchanged fields",
       "note": "Already correct per Refactoring-Plan.md."
@@ -406,6 +412,11 @@
       "plan": "section-kept",
       "name": "cross_layer_binding / identity_resolution / contamination_guard / priority_hierarchy / writing_principles",
       "note": "YAML sections kept as-is."
+    },
+    {
+      "plan": "policy_doctrine aggregate module",
+      "name": "policy_doctrine.py / doctrine.py",
+      "note": "PolicyDoctrine in policy_doctrine.py; Doctrine in doctrine.py — both mirror YAML."
     }
   ]
 }

@@ -1,11 +1,12 @@
-"""Domain identifiers — Annotated scalar aliases and field-path helpers."""
+"""Domain identifiers — Annotated scalar aliases and SemanticVersion."""
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from packaging.version import InvalidVersion, Version
-from pydantic import BeforeValidator, Field
+from pydantic import BaseModel, Field, model_validator
+
+from domain.base import VO_CONFIG
 
 type GovernanceText = Annotated[
     str,
@@ -20,17 +21,7 @@ type MachineId = Annotated[
     ),
 ]
 
-type WritingPrincipleId = Annotated[
-    str,
-    Field(pattern=r"^WP-\d{3}$", description="Unique writing principle identifier"),
-]
-
-type SectionId = Annotated[
-    str,
-    Field(pattern=r"^[a-z][a-z0-9_]*$", description="Unique document section identifier"),
-]
-
-type RuleContractId = Annotated[
+type SchemaId = Annotated[
     str,
     Field(
         pattern=r"^[a-z][a-z0-9-]*$",
@@ -39,69 +30,33 @@ type RuleContractId = Annotated[
     ),
 ]
 
-type SemanticVersion = Annotated[
-    str,
-    Field(
-        pattern=r"^\d+\.\d+\.\d+$",
-        description="Semantic version in MAJOR.MINOR.PATCH format",
-    ),
-]
 
-def _normalize_field_path(value: str) -> str:
-    """Strip and reject empty field path strings."""
-    raw = value.strip()
-    if not raw:
-        raise ValueError("Field path must be non-empty")
-    return raw
+class SemanticVersion(BaseModel):
+    """Three-component semantic version (MAJOR.MINOR.PATCH)."""
 
+    model_config = VO_CONFIG
 
-type FieldPath = Annotated[
-    str,
-    BeforeValidator(_normalize_field_path),
-    Field(min_length=1, description="Original path expression as authored"),
-]
+    major: int = Field(ge=0, description="MAJOR version component")
+    minor: int = Field(ge=0, description="MINOR version component")
+    patch: int = Field(ge=0, description="PATCH version component")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _parse_string(cls, value: Any) -> Any:
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            parts = value.split(".")
+            if len(parts) != 3 or not all(part.isdigit() for part in parts):
+                raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
+            return {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
+        raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
 
-def parse_semver(value: SemanticVersion) -> Version:
-    """Parse a validated semantic version string via packaging."""
-    try:
-        return Version(value)
-    except InvalidVersion as exc:
-        raise ValueError(f"Invalid semantic version {value!r}") from exc
+    def is_compatible(self, other: SemanticVersion) -> bool:
+        """Return True when both versions share the same MAJOR component."""
+        return self.major == other.major
 
-
-def major_version(version: SemanticVersion) -> str:
-    """Return the MAJOR component of a semantic version string."""
-    return version.partition(".")[0]
-
-
-def is_major_compatible(left: SemanticVersion, right: SemanticVersion) -> bool:
-    """Return True when both versions share the same MAJOR component."""
-    return major_version(left) == major_version(right)
-
-
-def split_field_path(path: FieldPath) -> tuple[str, str]:
-    """Parse a path expression into collection and field components."""
-    raw = path.strip()
-    if "[]." in raw:
-        collection, field = raw.rsplit("[].", maxsplit=1)
-    elif "." in raw:
-        collection, field = raw.rsplit(".", maxsplit=1)
-    else:
-        collection, field = raw, raw
-    return collection.strip(), field.strip()
-
-
-def field_path_collection(path: FieldPath) -> str:
-    """Return the collection component of a field path."""
-    return split_field_path(path)[0]
-
-
-def field_path_field(path: FieldPath) -> str:
-    """Return the field component of a field path."""
-    return split_field_path(path)[1]
-
-
-def field_path_is_field(path: FieldPath, name: str) -> bool:
-    """Return True when ``path`` ends at the given field name."""
-    return field_path_field(path) == name
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"

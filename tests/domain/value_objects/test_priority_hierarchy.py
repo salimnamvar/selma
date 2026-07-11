@@ -1,4 +1,4 @@
-"""Unit tests for AuthorityHierarchy value objects."""
+"""Unit tests for PriorityHierarchy value objects."""
 
 from __future__ import annotations
 
@@ -8,18 +8,18 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from domain import AuthorityHierarchy, PriorityCategory
+from domain import PriorityCategory, PriorityHierarchy
 
 
 @pytest.mark.unit
 @pytest.mark.domain
-class TestAuthorityHierarchy:
+class TestPriorityHierarchy:
     """Ordering, completeness, and authority comparison."""
 
     def test_complete_hierarchy(self, priority_hierarchy_payload: dict[str, Any]) -> None:
-        hierarchy = AuthorityHierarchy.model_validate(priority_hierarchy_payload)
+        hierarchy = PriorityHierarchy.model_validate(priority_hierarchy_payload)
 
-        assert hierarchy.get(PriorityCategory.CONSTITUTIONAL) is not None
+        assert hierarchy.get_levels(PriorityCategory.CONSTITUTIONAL) is not None
         assert hierarchy.outranks(
             PriorityCategory.CONSTITUTIONAL,
             PriorityCategory.ADVISORY,
@@ -34,7 +34,7 @@ class TestAuthorityHierarchy:
         payload["levels"] = full_priority_levels[:-1]
 
         with pytest.raises(ValidationError, match="missing categories"):
-            AuthorityHierarchy.model_validate(payload)
+            PriorityHierarchy.model_validate(payload)
 
     def test_out_of_order_rejected(
         self,
@@ -47,4 +47,4 @@ class TestAuthorityHierarchy:
         payload["levels"] = levels
 
         with pytest.raises(ValidationError, match="expected"):
-            AuthorityHierarchy.model_validate(payload)
+            PriorityHierarchy.model_validate(payload)

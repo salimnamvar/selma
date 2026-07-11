@@ -8,7 +8,7 @@ from domain.base import VO_CONFIG
 from domain.identifiers import GovernanceText
 
 
-class ConflictResolutionIntent(BaseModel):
+class ConflictResolutionBinding(BaseModel):
     """How each layer contributes to conflict resolution (declarative intent)."""
 
     model_config = VO_CONFIG
@@ -40,7 +40,7 @@ class CrossLayerBinding(BaseModel):
     policy_purpose: GovernanceText = Field(description="Purpose of the policy (this) layer")
     schema_purpose: GovernanceText = Field(description="Purpose of the schema layer")
     enforcement: GovernanceText = Field(description="How governance intent is enforced")
-    conflict_resolution_binding: ConflictResolutionIntent = Field(
+    conflict_resolution_binding: ConflictResolutionBinding = Field(
         description="How each layer contributes to conflict resolution"
     )
     runtime_prohibition: GovernanceText = Field(description="What this file must not do at runtime")

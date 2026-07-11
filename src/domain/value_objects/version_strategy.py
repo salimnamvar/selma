@@ -1,4 +1,4 @@
-"""Versioning intent — semantic versioning purpose across doctrine artifacts."""
+"""Version strategy — semantic versioning purpose across doctrine artifacts."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from domain.base import VO_CONFIG
 from domain.identifiers import GovernanceText
 
 
-class VersionComponentIntent(BaseModel):
+class Intent(BaseModel):
     """When to increment each semantic version component."""
 
     model_config = VO_CONFIG
@@ -18,14 +18,14 @@ class VersionComponentIntent(BaseModel):
     patch: GovernanceText = Field(description="When to increment PATCH version")
 
 
-class VersioningIntent(BaseModel):
+class VersionStrategy(BaseModel):
     """Versioning intent for doctrine, schema, and specification documents."""
 
     model_config = VO_CONFIG
 
     description: GovernanceText = Field(description="Versioning strategy overview")
     version_format: GovernanceText = Field(description="Version format pattern")
-    intent: VersionComponentIntent = Field(description="Version increment intent per component")
+    intent: Intent = Field(description="Version increment intent per component")
     migration_intent: GovernanceText = Field(
         description="Migration rules when crossing MAJOR version boundaries"
     )

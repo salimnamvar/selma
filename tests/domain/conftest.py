@@ -14,9 +14,9 @@ import yaml
 
 from domain import (
     ContentType,
-    DocumentSection,
     PolicyDoctrine,
     PriorityCategory,
+    Section,
 )
 
 
@@ -39,14 +39,14 @@ def doctrine_document_copy(doctrine_document: dict[str, Any]) -> dict[str, Any]:
 
 
 @pytest.fixture
-def make_prose_section() -> Callable[..., DocumentSection]:
-    """Factory for prose DocumentSection instances."""
+def make_prose_section() -> Callable[..., Section]:
+    """Factory for prose Section instances."""
 
     def _make(
         id: str = "preamble",
         title: str = "Preamble",
         **overrides: Any,
-    ) -> DocumentSection:
+    ) -> Section:
         payload: dict[str, Any] = {
             "id": id,
             "title": title,
@@ -54,20 +54,20 @@ def make_prose_section() -> Callable[..., DocumentSection]:
             "guidance": f"Guidance for {title}",
         }
         payload.update(overrides)
-        return DocumentSection.model_validate(payload)
+        return Section.model_validate(payload)
 
     return _make
 
 
 @pytest.fixture
 def minimal_sections(
-    make_prose_section: Callable[..., DocumentSection],
-) -> tuple[DocumentSection, ...]:
+    make_prose_section: Callable[..., Section],
+) -> tuple[Section, ...]:
     """Return a complete, valid top-level section tree."""
     return (
         make_prose_section(id="preamble", title="Preamble"),
         make_prose_section(id="governance", title="Governance"),
-        DocumentSection(
+        Section(
             id="definitions",
             title="Definitions",
             content_type=ContentType.TABLE,
@@ -75,19 +75,19 @@ def minimal_sections(
             guidance="Define terms",
         ),
         make_prose_section(id="principles", title="Principles"),
-        DocumentSection(
+        Section(
             id="directives",
             title="Directives",
             content_type=ContentType.MIXED,
             guidance="List obligations",
             children=(
-                DocumentSection(
+                Section(
                     id="specific_directives",
                     title="Specific Directives",
                     content_type=ContentType.TABLE,
                     columns=("Type", "Description", "Machine ID"),
                 ),
-                DocumentSection(
+                Section(
                     id="flexible_standards",
                     title="Flexible Standards",
                     content_type=ContentType.TABLE,
@@ -95,7 +95,7 @@ def minimal_sections(
                 ),
             ),
         ),
-        DocumentSection(
+        Section(
             id="sanctions",
             title="Sanctions",
             content_type=ContentType.TABLE,
@@ -131,7 +131,7 @@ def full_priority_levels() -> list[dict[str, Any]]:
 def priority_hierarchy_payload(
     full_priority_levels: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Return a valid AuthorityHierarchy model_validate payload."""
+    """Return a valid PriorityHierarchy model_validate payload."""
     return {
         "description": "Authority levels",
         "levels": full_priority_levels,

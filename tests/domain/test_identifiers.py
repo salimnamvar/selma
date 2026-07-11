@@ -5,48 +5,36 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from domain import (
-    FieldPath,
-    MachineId,
-    SemanticVersion,
-    field_path_collection,
-    field_path_field,
-    field_path_is_field,
-    is_major_compatible,
-    major_version,
-    parse_semver,
-)
+from domain import MachineId, SemanticVersion
 
 
 @pytest.mark.unit
 @pytest.mark.domain
 class TestSemanticVersion:
-    """SemanticVersion pattern validation and MAJOR compatibility."""
-
-    _adapter: TypeAdapter[SemanticVersion] = TypeAdapter(SemanticVersion)
+    """SemanticVersion parsing and MAJOR compatibility."""
 
     @pytest.mark.parametrize(
         ("raw", "major", "minor", "patch"),
         [
-            ("0.0.1", "0", "0", "1"),
-            ("8.2.4", "8", "2", "4"),
-            ("10.0.0", "10", "0", "0"),
+            ("0.0.1", 0, 0, 1),
+            ("8.2.4", 8, 2, 4),
+            ("10.0.0", 10, 0, 0),
         ],
         ids=["patch-only", "doctrine-version", "double-digit-major"],
     )
     def test_parse_string(
         self,
         raw: str,
-        major: str,
-        minor: str,
-        patch: str,
+        major: int,
+        minor: int,
+        patch: int,
     ) -> None:
-        version = self._adapter.validate_python(raw)
+        version = SemanticVersion.model_validate(raw)
 
-        assert version == raw
-        assert major_version(version) == major
-        assert version.split(".") == [major, minor, patch]
-        assert str(parse_semver(version)) == raw
+        assert version.major == major
+        assert version.minor == minor
+        assert version.patch == patch
+        assert str(version) == raw
 
     @pytest.mark.parametrize(
         "invalid",
@@ -55,15 +43,15 @@ class TestSemanticVersion:
     )
     def test_invalid_format_rejected(self, invalid: str) -> None:
         with pytest.raises(ValidationError):
-            self._adapter.validate_python(invalid)
+            SemanticVersion.model_validate(invalid)
 
     def test_major_compatibility(self) -> None:
-        left = self._adapter.validate_python("8.2.4")
-        same_major = self._adapter.validate_python("8.0.0")
-        other_major = self._adapter.validate_python("9.0.0")
+        left = SemanticVersion.model_validate("8.2.4")
+        same_major = SemanticVersion.model_validate("8.0.0")
+        other_major = SemanticVersion.model_validate("9.0.0")
 
-        assert is_major_compatible(left, same_major)
-        assert not is_major_compatible(left, other_major)
+        assert left.is_compatible(same_major)
+        assert not left.is_compatible(other_major)
 
 
 @pytest.mark.unit
@@ -89,38 +77,3 @@ class TestMachineId:
         adapter: TypeAdapter[MachineId] = TypeAdapter(MachineId)
         with pytest.raises(ValidationError):
             adapter.validate_python(invalid)
-
-
-@pytest.mark.unit
-@pytest.mark.domain
-class TestFieldPath:
-    """FieldPath string validation and path helper functions."""
-
-    _adapter: TypeAdapter[FieldPath] = TypeAdapter(FieldPath)
-
-    @pytest.mark.parametrize(
-        ("raw", "collection", "field"),
-        [
-            ("rules[].lineage_id", "rules", "lineage_id"),
-            ("CG-IR nodes[].directive_id", "CG-IR nodes", "directive_id"),
-            ("rules.id", "rules", "id"),
-            ("standalone", "standalone", "standalone"),
-        ],
-        ids=["bracket-path", "spaced-collection", "dot-path", "bare-token"],
-    )
-    def test_parse_path(
-        self,
-        raw: str,
-        collection: str,
-        field: str,
-    ) -> None:
-        path = self._adapter.validate_python(raw)
-
-        assert path == raw
-        assert field_path_collection(path) == collection
-        assert field_path_field(path) == field
-        assert field_path_is_field(path, field)
-
-    def test_empty_path_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            self._adapter.validate_python("   ")
