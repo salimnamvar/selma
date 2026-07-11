@@ -17,7 +17,7 @@ Classes:
 from __future__ import annotations
 
 from functools import total_ordering
-from typing import Annotated, Any, Dict, Self
+from typing import Annotated, Any, Self
 
 from pydantic import Field, model_validator
 
@@ -75,20 +75,12 @@ class SemanticVersion(DomainValueObject):
     @model_validator(mode="before")
     @classmethod
     def _coerce_string(cls, a_data: Any) -> Any:
-        """Coerce a MAJOR.MINOR.PATCH string into component fields.
-
-        Args:
-            a_data (Any): Raw input (string or mapping).
-
-        Returns:
-            Any: Parsed mapping or original input.
-        """
+        """Coerce a MAJOR.MINOR.PATCH string into component fields."""
         result: Any = a_data
         if isinstance(a_data, str):
             parts: list[str] = a_data.split(".")
             if len(parts) != 3 or not all(part.isdigit() for part in parts):
-                msg: str = f"Invalid semantic version {a_data!r}; expected MAJOR.MINOR.PATCH"
-                raise ValueError(msg)
+                raise ValueError(f"Invalid semantic version {a_data!r}; expected MAJOR.MINOR.PATCH")
             result = {
                 "major": int(parts[0]),
                 "minor": int(parts[1]),
@@ -103,37 +95,23 @@ class SemanticVersion(DomainValueObject):
         return f"SemanticVersion({self!s})"
 
     def is_compatible_with(self, a_other: SemanticVersion) -> bool:
-        """Return True when both versions share the same MAJOR component.
-
-        Args:
-            a_other (SemanticVersion): Version to compare against.
-
-        Returns:
-            bool: True if MAJOR versions match.
-        """
+        """Return True when both versions share the same MAJOR component."""
         result: bool = self.major == a_other.major
         return result
 
     def __lt__(self, a_other: object) -> bool:
-        if not isinstance(a_other, SemanticVersion):
-            return NotImplemented
-        result: bool = (self.major, self.minor, self.patch) < (
-            a_other.major,
-            a_other.minor,
-            a_other.patch,
-        )
+        result: bool = NotImplemented
+        if isinstance(a_other, SemanticVersion):
+            result = (self.major, self.minor, self.patch) < (
+                a_other.major,
+                a_other.minor,
+                a_other.patch,
+            )
         return result
 
     @classmethod
     def from_string(cls, a_value: str) -> Self:
-        """Construct from a MAJOR.MINOR.PATCH string.
-
-        Args:
-            a_value (str): Version string.
-
-        Returns:
-            Self: Parsed semantic version.
-        """
+        """Construct from a MAJOR.MINOR.PATCH string."""
         result: Self = cls.model_validate(a_value)
         return result
 
@@ -156,14 +134,7 @@ class FieldPath(DomainValueObject):
     @model_validator(mode="before")
     @classmethod
     def _coerce_string(cls, a_data: Any) -> Any:
-        """Coerce a dotted path string into collection/field components.
-
-        Args:
-            a_data (Any): Raw input (string or mapping).
-
-        Returns:
-            Any: Parsed mapping or original input.
-        """
+        """Coerce a dotted path string into collection/field components."""
         result: Any = a_data
         if isinstance(a_data, str):
             raw: str = a_data.strip()
@@ -177,12 +148,7 @@ class FieldPath(DomainValueObject):
                 collection, field = raw.rsplit(".", maxsplit=1)
             else:
                 collection, field = raw, raw
-            parsed: Dict[str, str] = {
-                "collection": collection.strip(),
-                "field": field.strip(),
-                "raw": raw,
-            }
-            result = parsed
+            result = {"collection": collection.strip(), "field": field.strip(), "raw": raw}
         return result
 
     def __str__(self) -> str:

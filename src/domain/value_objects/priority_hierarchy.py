@@ -37,18 +37,12 @@ class PriorityLevel(DomainValueObject):
 
     @model_validator(mode="after")
     def check_rank_matches_category(self) -> PriorityLevel:
-        """Ensure numeric level matches the category canonical rank.
-
-        Returns:
-            PriorityLevel: Validated instance.
-
-        Raises:
-            ValueError: If level does not match category rank.
-        """
+        """Ensure numeric level matches the category canonical rank."""
         result: PriorityLevel = self
         if self.level != self.id.rank:
-            msg: str = f"Priority level '{self.id}' has level={self.level}, expected canonical rank {self.id.rank}"
-            raise ValueError(msg)
+            raise ValueError(
+                f"Priority level '{self.id}' has level={self.level}, expected canonical rank {self.id.rank}"
+            )
         return result
 
 
@@ -100,23 +94,15 @@ class PriorityHierarchy(DomainValueObject):
 
     @model_validator(mode="after")
     def check_levels(self) -> PriorityHierarchy:
-        """Validate ordering, uniqueness, and completeness of priority levels.
-
-        Returns:
-            PriorityHierarchy: Validated instance.
-
-        Raises:
-            ValueError: If levels are unordered, incomplete, or duplicated.
-        """
+        """Validate ordering, uniqueness, and completeness of priority levels."""
         result: PriorityHierarchy = self
         for index, level in enumerate(self.levels, start=1):
             if level.level != index:
-                msg: str = (
+                raise ValueError(
                     f"Priority level '{level.id}' at position {index} has "
                     f"level={level.level}, expected {index}. Levels must be "
                     "ordered and contiguous starting from 1."
                 )
-                raise ValueError(msg)
 
         category_ids: List[PriorityCategory] = [level.id for level in self.levels]
         if len(category_ids) != len(set(category_ids)):
@@ -137,26 +123,11 @@ class PriorityHierarchy(DomainValueObject):
         return result
 
     def get_level(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
-        """Return the priority level for a category.
-
-        Args:
-            a_category (PriorityCategory): Authority category to resolve.
-
-        Returns:
-            Optional[PriorityLevel]: Matching level, or None if absent.
-        """
+        """Return the priority level for a category."""
         result: Optional[PriorityLevel] = self._level_index.get(a_category)
         return result
 
     def outranks(self, a_left: PriorityCategory, a_right: PriorityCategory) -> bool:
-        """Return True if left has higher authority than right.
-
-        Args:
-            a_left (PriorityCategory): Candidate higher-authority category.
-            a_right (PriorityCategory): Candidate lower-authority category.
-
-        Returns:
-            bool: True if left outranks right.
-        """
+        """Return True if left has higher authority than right."""
         result: bool = self._level_index[a_left].level < self._level_index[a_right].level
         return result

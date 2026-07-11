@@ -66,88 +66,44 @@ class PolicyDoctrine(DomainValueObject):
 
     @model_validator(mode="after")
     def check_version_compatibility(self) -> PolicyDoctrine:
-        """Enforce MAJOR version compatibility across doctrine artifacts.
-
-        Returns:
-            PolicyDoctrine: Validated instance.
-
-        Raises:
-            ValueError: If MAJOR versions diverge.
-        """
+        """Enforce MAJOR version compatibility across doctrine artifacts."""
         result: PolicyDoctrine = self
         if not self.version.is_compatible_with(self.spec_version):
-            msg: str = f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
-            raise ValueError(msg)
+            raise ValueError(
+                f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
+            )
         if not self.version.is_compatible_with(self.rule_contract_version):
-            msg = f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
-            raise ValueError(msg)
+            raise ValueError(
+                f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
+            )
         return result
 
     @property
     def sections(self) -> Tuple[DocumentSection, ...]:
-        """Return top-level document sections.
-
-        Returns:
-            Tuple[DocumentSection, ...]: Top-level sections.
-        """
+        """Return top-level document sections."""
         result: Tuple[DocumentSection, ...] = self.document_structure.sections
         return result
 
     def get_section(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Retrieve a document section by ID.
-
-        Args:
-            a_section_id (SectionId): Section identifier to search for.
-
-        Returns:
-            Optional[DocumentSection]: Matching section, or None.
-        """
+        """Retrieve a document section by ID."""
         result: Optional[DocumentSection] = self.document_structure.get(a_section_id)
         return result
 
-    def get_writing_principle(
-        self,
-        a_principle_id: WritingPrincipleId,
-    ) -> Optional[WritingPrinciple]:
-        """Retrieve a writing principle by identifier.
-
-        Args:
-            a_principle_id (WritingPrincipleId): Principle identifier.
-
-        Returns:
-            Optional[WritingPrinciple]: Matching principle, or None.
-        """
+    def get_writing_principle(self, a_principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
+        """Retrieve a writing principle by identifier."""
         result: Optional[WritingPrinciple] = self.writing_principles.get(a_principle_id)
         return result
 
     def get_priority_level(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
-        """Retrieve a priority level by category.
-
-        Args:
-            a_category (PriorityCategory): Authority category.
-
-        Returns:
-            Optional[PriorityLevel]: Matching level, or None.
-        """
+        """Retrieve a priority level by category."""
         result: Optional[PriorityLevel] = self.priority_hierarchy.get_level(a_category)
         return result
 
     @classmethod
     def from_document(cls, a_document: Dict[str, Any]) -> PolicyDoctrine:
-        """Build a doctrine aggregate from a policy_doctrine document mapping.
-
-        Args:
-            a_document (Dict[str, Any]): Full top-level policy_doctrine YAML mapping.
-
-        Returns:
-            PolicyDoctrine: Validated aggregate root.
-
-        Raises:
-            ValueError: If the doctrine metadata block is missing.
-        """
+        """Build a doctrine aggregate from a policy_doctrine document mapping."""
         if "doctrine" not in a_document:
-            msg: str = "Document must contain a top-level 'doctrine' metadata block"
-            raise ValueError(msg)
+            raise ValueError("Document must contain a top-level 'doctrine' metadata block")
 
         meta: Dict[str, Any] = a_document["doctrine"]
         payload: Dict[str, Any] = {

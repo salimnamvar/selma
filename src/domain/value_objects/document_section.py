@@ -5,7 +5,7 @@ Structural sections and validated document structure for governance documents.
 
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable, Iterator
 from functools import cached_property
 from typing import Any, ClassVar, Dict, FrozenSet, Optional, Set, Tuple
 
@@ -69,81 +69,43 @@ class DocumentSection(DomainValueObject):
     @field_validator("columns", "children", mode="before")
     @classmethod
     def _none_as_empty(cls, a_value: Any) -> Any:
-        """Coerce YAML null to empty tuple; lists coerce to tuples automatically.
-
-        Args:
-            a_value (Any): Raw field value.
-
-        Returns:
-            Any: Empty tuple when null, otherwise original value.
-        """
+        """Coerce YAML null to empty tuple; lists coerce to tuples automatically."""
         result: Any = () if a_value is None else a_value
         return result
 
     @model_validator(mode="after")
     def check_content_invariants(self) -> DocumentSection:
-        """Validate columns vs content type and local nesting depth.
-
-        Returns:
-            DocumentSection: Validated instance.
-
-        Raises:
-            ValueError: If columns or depth violate section rules.
-        """
-        result: DocumentSection = self
+        """Validate columns vs content type and local nesting depth."""
         if self.columns and self.content_type == ContentType.PROSE:
-            msg: str = f"Section '{self.id}': columns are not applicable for prose-only content"
-            raise ValueError(msg)
+            raise ValueError(f"Section '{self.id}': columns are not applicable for prose-only content")
         if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
-            msg = f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
-            raise ValueError(msg)
+            raise ValueError(f"Section '{self.id}': columns require tabular content type, got {self.content_type}")
         depth: int = self.max_depth()
         if depth > self.MAX_DEPTH:
-            msg = f"Section '{self.id}' has depth {depth}, exceeds maximum {self.MAX_DEPTH}"
-            raise ValueError(msg)
-        return result
+            raise ValueError(f"Section '{self.id}' has depth {depth}, exceeds maximum {self.MAX_DEPTH}")
+        return self
 
     def max_depth(self, a_current: int = 1) -> int:
-        """Return the maximum nesting depth from this section.
-
-        Args:
-            a_current (int): Current depth counter. Defaults to 1.
-
-        Returns:
-            int: Maximum nesting depth.
-        """
-        result: int = a_current if not self.children else max(child.max_depth(a_current + 1) for child in self.children)
+        """Return the maximum nesting depth from this section."""
+        result: int = a_current
+        if self.children:
+            result = max(child.max_depth(a_current + 1) for child in self.children)
         return result
 
-    def all_ids(self) -> Generator[SectionId]:
-        """Yield this section ID and all descendant IDs.
-
-        Yields:
-            SectionId: Section IDs in tree order.
-        """
+    def all_ids(self) -> Iterator[SectionId]:
+        """Yield this section ID and all descendant IDs."""
         yield self.id
         for child in self.children:
             yield from child.all_ids()
 
-    def traverse(self) -> Generator[DocumentSection]:
-        """Yield this section and all descendants in pre-order.
-
-        Yields:
-            DocumentSection: Sections in pre-order.
-        """
+    def traverse(self) -> Iterator[DocumentSection]:
+        """Yield this section and all descendants in pre-order."""
         yield self
         for child in self.children:
             yield from child.traverse()
 
     def find(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Find a section by ID within this subtree.
-
-        Args:
-            a_section_id (SectionId): Section identifier to locate.
-
-        Returns:
-            Optional[DocumentSection]: Matching section, or None.
-        """
+        """Find a section by ID within this subtree."""
         result: Optional[DocumentSection] = None
         if self.id == a_section_id:
             result = self
@@ -157,11 +119,7 @@ class DocumentSection(DomainValueObject):
 
     @property
     def is_tabular(self) -> bool:
-        """Return True when this section may carry table columns.
-
-        Returns:
-            bool: True if content type is tabular or columns are present.
-        """
+        """Return True when this section may carry table columns."""
         result: bool = self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
         return result
 
@@ -197,15 +155,7 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
 
     @model_validator(mode="after")
     def check_structure(self) -> DocumentStructure:
-        """Enforce required sections, unique IDs, and directives children.
-
-        Returns:
-            DocumentStructure: Validated instance.
-
-        Raises:
-            ValueError: If structure invariants are violated.
-        """
-        result: DocumentStructure = self
+        """Enforce required sections, unique IDs, and directives children."""
         present: Set[SectionId] = {section.id for section in self.root}
         missing: FrozenSet[SectionId] = self.REQUIRED_SECTION_IDS - present
         if missing:
@@ -228,15 +178,11 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
             if missing_children:
                 raise ValueError(f"Directives section missing expected children: {sorted(missing_children)}")
 
-        return result
+        return self
 
     @property
     def sections(self) -> Tuple[DocumentSection, ...]:
-        """Return top-level document sections.
-
-        Returns:
-            Tuple[DocumentSection, ...]: Top-level sections.
-        """
+        """Return top-level document sections."""
         result: Tuple[DocumentSection, ...] = self.root
         return result
 
@@ -249,23 +195,12 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
         return mapping
 
     def get(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Return a section by ID from the full tree.
-
-        Args:
-            a_section_id (SectionId): Section identifier.
-
-        Returns:
-            Optional[DocumentSection]: Matching section, or None.
-        """
+        """Return a section by ID from the full tree."""
         result: Optional[DocumentSection] = self._index.get(a_section_id)
         return result
 
     def all_section_ids(self) -> FrozenSet[SectionId]:
-        """Return every section ID in the tree.
-
-        Returns:
-            FrozenSet[SectionId]: All section identifiers.
-        """
+        """Return every section ID in the tree."""
         result: FrozenSet[SectionId] = frozenset(self._index)
         return result
 
@@ -274,13 +209,6 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
 
     @classmethod
     def from_sections(cls, a_sections: Iterable[DocumentSection]) -> DocumentStructure:
-        """Build a validated structure from top-level sections.
-
-        Args:
-            a_sections (Iterable[DocumentSection]): Top-level sections.
-
-        Returns:
-            DocumentStructure: Validated document structure.
-        """
+        """Build a validated structure from top-level sections."""
         result: DocumentStructure = cls(tuple(a_sections))
         return result
