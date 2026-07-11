@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import ClassVar, Self
+from typing import Annotated, ClassVar, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
-from domain.base import VO_CONFIG
+from domain.base import VO_CONFIG, none_as_empty
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText
 
@@ -51,8 +51,14 @@ class Section(BaseModel):
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
     guidance: GovernanceText | None = Field(default=None, description="Authoring guidance")
-    columns: tuple[GovernanceText, ...] = Field(default=(), description="Table column headers")
-    children: tuple[Section, ...] = Field(default=(), description="Subsections")
+    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)] = Field(
+        default=(),
+        description="Table column headers",
+    )
+    children: Annotated[tuple[Section, ...], BeforeValidator(none_as_empty)] = Field(
+        default=(),
+        description="Subsections",
+    )
     schema_encoding: GovernanceText | None = Field(
         default=None,
         description="Authoring guidance for schema mapping (descriptive only)",

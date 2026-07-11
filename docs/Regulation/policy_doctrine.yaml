@@ -1,12 +1,4 @@
 # policy_doctrine.yaml
-# Human governance document. Describes HOW humans write and manage rules.
-# Contains NO machine-executable logic. Priority hierarchy and conflict
-# resolution are DECLARATIVE DESCRIPTIONS of governance intent, not
-# executable algorithms. The machine implementation lives in the
-# Compilation Engine, not here.
-#
-# NORMATIVE SOURCE: SPECIFICATION.md 8.2.4
-# This file is a governance intent layer, not a structural or behavioral source.
 
 doctrine:
   name: universal-policy-doctrine
@@ -19,10 +11,6 @@ doctrine:
   schema_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
-# This policy is the governance intent layer.
-# SPECIFICATION.md is the normative behavioral source.
-# rule_schema.json is the structural projection of spec invariants.
-# Policy MUST NOT contain elements that contradict spec invariants.
 cross_layer_binding:
   normative_source: "SPECIFICATION.md"
   policy_purpose: "Governance intent description"
@@ -45,10 +33,6 @@ cross_layer_binding:
     spec_layer: "System behavior. Defines invariants for both other layers."
 
 # ─── IDENTITY RESOLUTION ────────────────────────────────────────
-# Selma uses a dual identity model:
-# - Lineage ID: immutable root for audit trail (assigned once, never changes)
-# - Execution ID: active node identity (changes on fork/merge/split)
-# The canonical identifier in policy is "Machine ID" which maps to lineage_id.
 identity_resolution:
   canonical_field: "Machine ID"
   policy_location: "directive_tables[].Machine ID"
@@ -79,8 +63,6 @@ identity_resolution:
     This policy describes governance intent for when to use each operation.
 
 # ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
-# Describes WHEN to use each lifecycle operation. Implementation details
-# are in SPECIFICATION.md and rule_schema.json.
 lifecycle_definition:
   revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
@@ -104,15 +86,7 @@ lifecycle_definition:
     defined in SPECIFICATION.md §2.2.3.
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
-# This document MUST NOT contain machine-executable logic.
-# PROHIBITED: parameters, conditions, evaluator_hint, evaluator_type,
-# evaluator_config, weight, depends_on, conflicts_with, status,
-# created_at, expires_at, remediation, target, lineage.
-# ALLOWED: Machine ID columns (cross-reference labels only).
 contamination_guard:
-  # NOTE: If adding new schema fields, evaluate contamination risk before
-  # allowing them in policy. The fields below are machine-executable and
-  # MUST NOT appear in governance prose.
   prohibited_fields:
     - parameters
     - conditions
@@ -154,9 +128,6 @@ writing_principles:
     description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
 
 # ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
-# This is a DESCRIPTION of governance intent, not an executable algorithm.
-# The compilation engine translates this into CG-IR conflict resolution logic
-# via the Conflict Resolution Mapping in SPECIFICATION.md Section 2.15.
 priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
@@ -206,8 +177,6 @@ priority_hierarchy:
     order: "explicit override (schema) → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
 
 # ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
-# Describes versioning intent. The actual version resolution function
-# lives in the Provenance Manager engine.
 version_strategy:
   description: >
     Policy doctrine, rule schema, and specification follow semantic versioning.

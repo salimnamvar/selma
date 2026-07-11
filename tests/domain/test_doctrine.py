@@ -16,7 +16,6 @@ from domain import (
     ProhibitedField,
     Section,
 )
-from domain.doctrine import Doctrine
 from domain.identifiers import SemanticVersion
 from domain.policy_doctrine import PolicyDoctrine as PolicyDoctrineClass
 from domain.value_objects.contamination_guard import ContaminationGuard
@@ -31,6 +30,7 @@ from domain.value_objects.priority_hierarchy import CrossLayerPrecedence, Level,
 from domain.value_objects.sections import Section as SectionModel
 from domain.value_objects.version_strategy import Intent, VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
+from infrastructure.yaml_adapter import flatten_doctrine_document, load_doctrine
 
 
 def _unwrap_annotation(annotation: Any) -> Any:
@@ -85,7 +85,7 @@ class TestPolicyDoctrineInvariants:
         doctrine_document_copy["doctrine"]["spec_version"] = "9.0.0"
 
         with pytest.raises(ValidationError, match="MAJOR version mismatch"):
-            PolicyDoctrine.model_validate(doctrine_document_copy)
+            load_doctrine(doctrine_document_copy)
 
     def test_missing_section_rejected(
         self,
@@ -93,8 +93,8 @@ class TestPolicyDoctrineInvariants:
     ) -> None:
         del doctrine_document_copy["writing_principles"]
 
-        with pytest.raises(ValidationError):
-            PolicyDoctrine.model_validate(doctrine_document_copy)
+        with pytest.raises(ValueError, match="missing required section"):
+            load_doctrine(doctrine_document_copy)
 
     def test_missing_required_sections_rejected(
         self,
@@ -107,7 +107,7 @@ class TestPolicyDoctrineInvariants:
         ]
 
         with pytest.raises(ValidationError, match="Missing required sections"):
-            PolicyDoctrine.model_validate(doctrine_document_copy)
+            load_doctrine(doctrine_document_copy)
 
     def test_duplicate_principle_ids_rejected(
         self,
@@ -117,7 +117,7 @@ class TestPolicyDoctrineInvariants:
         doctrine_document_copy["writing_principles"] = [duplicate, duplicate]
 
         with pytest.raises(ValidationError, match="Duplicate IDs"):
-            PolicyDoctrine.model_validate(doctrine_document_copy)
+            load_doctrine(doctrine_document_copy)
 
 
 @pytest.mark.integration
@@ -129,9 +129,10 @@ class TestPolicyDoctrineYamlContract:
         self,
         doctrine_document: dict[str, Any],
     ) -> None:
-        """Every YAML key must match a Pydantic field name (no aliases)."""
+        """Flattened YAML payload keys must match PolicyDoctrine fields (no aliases)."""
+        flattened = flatten_doctrine_document(doctrine_document)
         unknown_keys: list[str] = []
-        for key, value in doctrine_document.items():
+        for key, value in flattened.items():
             if key not in PolicyDoctrine.model_fields:
                 unknown_keys.append(key)
                 continue
@@ -143,7 +144,7 @@ class TestPolicyDoctrineYamlContract:
                 else:
                     _assert_yaml_keys_match_model(value, nested, key, unknown_keys)
 
-        for index, section in enumerate(doctrine_document["sections"]):
+        for index, section in enumerate(flattened["sections"]):
             _assert_yaml_keys_match_model(section, SectionModel, f"sections[{index}]", unknown_keys)
             for child_index, child in enumerate(section.get("children", ())):
                 _assert_yaml_keys_match_model(
@@ -158,7 +159,6 @@ class TestPolicyDoctrineYamlContract:
     def test_model_has_no_field_aliases(self) -> None:
         models = (
             PolicyDoctrineClass,
-            Doctrine,
             CrossLayerBinding,
             ConflictResolutionBinding,
             FieldLegality,
@@ -184,17 +184,14 @@ class TestPolicyDoctrineYamlContract:
         assert aliases == []
 
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.doctrine.name == "universal-policy-doctrine"
-        assert str(doctrine.doctrine.version) == "8.2.4"
-        assert doctrine.doctrine.schema_id == "universal-rule-schema"
+        assert doctrine.name == "universal-policy-doctrine"
+        assert str(doctrine.version) == "8.2.4"
+        assert doctrine.schema_id == "universal-rule-schema"
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.is_compatible_with(
-            doctrine.doctrine.spec_version,
-            doctrine.doctrine.schema_version,
-        )
-        assert doctrine.doctrine.version.is_compatible(doctrine.doctrine.spec_version)
-        assert doctrine.doctrine.version.is_compatible(doctrine.doctrine.schema_version)
+        assert doctrine.is_compatible_with(doctrine.spec_version, doctrine.schema_version)
+        assert doctrine.version.is_compatible(doctrine.spec_version)
+        assert doctrine.version.is_compatible(doctrine.schema_version)
 
     def test_cross_layer_binding_fields(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.cross_layer_binding.policy_purpose

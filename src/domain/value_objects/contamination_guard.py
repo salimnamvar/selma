@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from domain.base import VO_CONFIG
 from domain.enums import ProhibitedField
@@ -28,15 +27,6 @@ class ContaminationGuard(BaseModel):
     metadata_constraints: GovernanceText = Field(
         description="Constraints on schema metadata in policy"
     )
-
-    @model_validator(mode="after")
-    def _validate_completeness(self) -> Self:
-        missing = set(ProhibitedField) - self.prohibited_fields
-        if missing:
-            raise ValueError(
-                f"Missing prohibited fields: {sorted(field.value for field in missing)}"
-            )
-        return self
 
     def is_prohibited(self, field: str | ProhibitedField) -> bool:
         """Return True when ``field`` is listed in ``prohibited_fields``."""
