@@ -6,7 +6,15 @@ from domain.enums import ContentType
 from domain.identifiers import Prose, SectionId
 
 
-class DocumentSection(BaseModel):
+class TableSchema(BaseModel):
+    """Defines the column structure for tabular sections."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    columns: tuple[str, ...] = Field(description="Ordered column headers")
+
+
+class SectionDefinition(BaseModel):
     """A structural section defining the composition of a governance document."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -16,6 +24,5 @@ class DocumentSection(BaseModel):
     required: bool = Field(description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
     guidance: Prose = Field(description="Authoring guidance for this section")
-    columns: Optional[tuple[str, ...]] = Field(default=None, description="Table column headers")
-    children: Optional[tuple["DocumentSection", ...]] = Field(default=None, description="Subsections")
-    schema_encoding: Optional[Prose] = Field(default=None, description="Schema encoding instructions")
+    table_schema: Optional[TableSchema] = Field(default=None, description="Table column structure")
+    children: tuple["SectionDefinition", ...] = Field(default_factory=tuple, description="Subsections")

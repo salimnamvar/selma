@@ -1,15 +1,13 @@
-import re
 from typing import Annotated, Any
 
 from pydantic import Field, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
+import re
+
 
 class SemanticVersion:
-    """Rich value object for semantic versioning.
-
-    Parses from string, serializes to string, exposes major/minor/patch properties.
-    """
+    """Rich value object for semantic versioning."""
 
     def __init__(self, major: int, minor: int, patch: int) -> None:
         self.major = major
@@ -42,7 +40,7 @@ class SemanticVersion:
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, SemanticVersion):
-            return self.major == other.major and self.minor == other.minor and self.patch == other.patch
+            return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
         return False
 
     def __hash__(self) -> int:
@@ -66,10 +64,7 @@ class SemanticVersion:
 
 
 class MachineId:
-    """Rich value object for machine identity.
-
-    Validates pattern, exposes prefix and number properties.
-    """
+    """Rich value object for machine identity."""
 
     _pattern = re.compile(r"^([A-Z][A-Z0-9]+)-([0-9]+)$")
 
@@ -109,5 +104,9 @@ class MachineId:
 SectionId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]*$", description="Unique document section identifier")]
 
 WritingPrincipleId = Annotated[str, Field(pattern=r"^WP-\d{3}$", description="Unique writing principle identifier")]
+
+RuleContractId = Annotated[str, Field(min_length=1, description="Rule contract identifier")]
+
+FieldPath = Annotated[str, Field(min_length=1, description="Dotted path to a field in a layer")]
 
 Prose = Annotated[str, Field(min_length=1, description="Governance prose or guidance")]

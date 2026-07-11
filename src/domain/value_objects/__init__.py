@@ -1,34 +1,31 @@
-from domain.value_objects.contamination_guard import ContaminationGuard
-from domain.value_objects.cross_layer_binding import (
-    ConflictResolutionBinding,
-    CrossLayerBinding,
-    FieldLegality,
-)
-from domain.value_objects.document_section import DocumentSection
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent, LifecycleOperationIntent
-from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
-from domain.value_objects.priority_hierarchy import (
-    CrossLayerPrecedence,
-    PriorityHierarchy,
-    PriorityLevel,
-)
-from domain.value_objects.versioning_strategy import VersioningStrategy, VersionComponentIntent
+from domain.value_objects.contamination_policy import ContaminationPolicy
+from domain.value_objects.cross_layer_policy import ConflictResolutionPolicy, CrossLayerPolicy
+from domain.value_objects.doctrine_metadata import DoctrineMetadata, RuleContractReference
+from domain.value_objects.document_structure import DocumentStructure
+from domain.value_objects.governance_constraints import GovernanceConstraints
+from domain.value_objects.identity_policy import IdentityPolicy, MachineIdSemantics
+from domain.value_objects.priority_system import PriorityLevel, PrioritySystem
+from domain.value_objects.section_definition import SectionDefinition, TableSchema
+from domain.value_objects.versioning_policy import VersionComponentIntent, VersioningPolicy
 from domain.value_objects.writing_principle import WritingPrinciple
+from domain.value_objects.writing_principle_set import WritingPrincipleSet
 
 __all__ = [
-    "ConflictResolutionBinding",
-    "ContaminationGuard",
-    "CrossLayerBinding",
-    "CrossLayerPrecedence",
-    "DocumentSection",
-    "FieldLegality",
-    "IdentityLifecycleIntent",
-    "IdentityResolution",
-    "LifecycleOperationIntent",
+    "ConflictResolutionPolicy",
+    "ContaminationPolicy",
+    "CrossLayerPolicy",
+    "DocumentStructure",
+    "DoctrineMetadata",
+    "GovernanceConstraints",
+    "IdentityPolicy",
     "MachineIdSemantics",
-    "PriorityHierarchy",
     "PriorityLevel",
+    "PrioritySystem",
+    "RuleContractReference",
+    "SectionDefinition",
+    "TableSchema",
     "VersionComponentIntent",
-    "VersioningStrategy",
+    "VersioningPolicy",
     "WritingPrinciple",
+    "WritingPrincipleSet",
 ]

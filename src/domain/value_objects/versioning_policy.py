@@ -13,16 +13,11 @@ class VersionComponentIntent(BaseModel):
     intent: Prose = Field(description="Governance intent for this component")
 
 
-class VersioningStrategy(BaseModel):
-    """Describes versioning intent for doctrine, schema, and specification documents.
-
-    Uses a collection of VersionComponentIntent to satisfy the Open-Closed Principle:
-    new version components can be added without modifying this class.
-    """
+class VersioningPolicy(BaseModel):
+    """Describes versioning intent for doctrine, schema, and specification documents."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     format: str = Field(description="Version format pattern")
     intents: tuple[VersionComponentIntent, ...] = Field(description="Component-specific intents")
-    migration_intent: Prose = Field(description="Migration rules when crossing MAJOR boundaries")
-    synchronization_intent: Prose = Field(description="How versions synchronize across documents")
+    migration_rules: Prose = Field(description="Migration rules when crossing MAJOR boundaries")

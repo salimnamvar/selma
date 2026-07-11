@@ -3,17 +3,16 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import SectionId, SemanticVersion, WritingPrincipleId
-from domain.value_objects.contamination_guard import ContaminationGuard
-from domain.value_objects.cross_layer_binding import CrossLayerBinding
-from domain.value_objects.document_section import DocumentSection
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
-from domain.value_objects.identity_resolution import IdentityResolution
-from domain.value_objects.priority_hierarchy import PriorityHierarchy, PriorityLevel
-from domain.value_objects.versioning_strategy import VersioningStrategy
+from domain.identifiers import WritingPrincipleId
+from domain.value_objects.doctrine_metadata import DoctrineMetadata
+from domain.value_objects.document_structure import DocumentStructure
+from domain.value_objects.governance_constraints import GovernanceConstraints
+from domain.value_objects.identity_policy import IdentityPolicy
+from domain.value_objects.priority_system import PriorityLevel, PrioritySystem
+from domain.value_objects.section_definition import SectionDefinition
+from domain.value_objects.versioning_policy import VersioningPolicy
 from domain.value_objects.writing_principle import WritingPrinciple
-
-MAX_SECTION_DEPTH = 3
+from domain.value_objects.writing_principle_set import WritingPrincipleSet
 
 REQUIRED_SECTION_IDS: frozenset[str] = frozenset(
     {
@@ -32,40 +31,37 @@ class PolicyDoctrine(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str = Field(description="Unique doctrine identifier")
-    version: SemanticVersion = Field(description="Doctrine version")
-    description: str = Field(description="Human-readable purpose statement")
-    spec_version: SemanticVersion = Field(description="Compatible specification version")
-    rule_contract_version: SemanticVersion = Field(description="Compatible rule schema version")
-    rule_contract_id: str = Field(description="Identifier of the compatible rule schema")
-
-    cross_layer_binding: CrossLayerBinding = Field(description="Layer relationship constraints")
-    identity_resolution: IdentityResolution = Field(description="Identity mapping policy")
-    identity_lifecycle: IdentityLifecycleIntent = Field(description="Lifecycle operation governance")
-    contamination_guard: ContaminationGuard = Field(description="Policy-layer field constraints")
-    writing_principles: tuple[WritingPrinciple, ...] = Field(description="Authoring principles")
-    priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict resolution")
-    versioning_strategy: VersioningStrategy = Field(description="Versioning intent")
-    sections: tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
+    metadata: DoctrineMetadata = Field(description="Doctrine identity and versioning")
+    identity_policy: IdentityPolicy = Field(description="Identity governance policy")
+    governance_constraints: GovernanceConstraints = Field(description="Governance constraints")
+    writing_principles: WritingPrincipleSet = Field(description="Authoring principles")
+    document_structure: DocumentStructure = Field(description="Document section definitions")
+    priority_system: PrioritySystem = Field(description="Priority levels and conflict resolution")
+    versioning: VersioningPolicy = Field(description="Versioning intent")
 
     @model_validator(mode="after")
     def check_major_version_synchronization(self) -> "PolicyDoctrine":
         """Enforce MAJOR version compatibility across doctrine, spec, and rule contract."""
-        if not (self.version.major == self.spec_version.major == self.rule_contract_version.major):
+        doctrine_major = self.metadata.version.major
+        spec_major = self.metadata.spec_version.major
+        contract_major = self.metadata.contract.version.major
+        if not (doctrine_major == spec_major == contract_major):
             raise ValueError("Doctrine, specification, and rule contract MUST share the same MAJOR version")
         return self
 
     @model_validator(mode="after")
     def check_no_duplicate_sections(self) -> "PolicyDoctrine":
-        ids = [s.id for s in self.sections]
-        if len(ids) != len(set(ids)):
-            duplicates = {sid for sid in ids if ids.count(sid) > 1}
+        ids = list(self.document_structure.all_ids())
+        from collections import Counter
+
+        duplicates = [sid for sid, count in Counter(ids).items() if count > 1]
+        if duplicates:
             raise ValueError(f"Duplicate section IDs: {duplicates}")
         return self
 
     @model_validator(mode="after")
     def check_required_sections_present(self) -> "PolicyDoctrine":
-        present = {s.id for s in self.sections}
+        present = {s.id for s in self.document_structure.sections}
         missing = REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {missing}")
@@ -73,22 +69,30 @@ class PolicyDoctrine(BaseModel):
 
     @model_validator(mode="after")
     def check_section_depth(self) -> "PolicyDoctrine":
-        def _max_depth(section: DocumentSection, current: int = 1) -> int:
-            if not section.children:
-                return current
-            return max(_max_depth(child, current + 1) for child in section.children)
-
-        for section in self.sections:
-            depth = _max_depth(section)
-            if depth > MAX_SECTION_DEPTH:
-                raise ValueError(f"Section '{section.id}' has depth {depth}, exceeds maximum {MAX_SECTION_DEPTH}")
+        self.document_structure.validate_depth()
         return self
 
-    def get_section(self, section_id: SectionId) -> Optional[DocumentSection]:
-        return next((s for s in self.sections if s.id == section_id), None)
+    @model_validator(mode="after")
+    def check_priority_level_completeness(self) -> "PolicyDoctrine":
+        """Ensure all PriorityCategory enum values are represented."""
+        present = {level.category for level in self.priority_system.levels}
+        expected = set(PriorityCategory)
+        if present != expected:
+            missing = expected - present
+            extra = present - expected
+            parts: list[str] = []
+            if missing:
+                parts.append(f"Missing: {missing}")
+            if extra:
+                parts.append(f"Extra: {extra}")
+            raise ValueError(f"Priority level mismatch: {'; '.join(parts)}")
+        return self
+
+    def get_section(self, section_id: str) -> Optional[SectionDefinition]:
+        return next((s for s in self.document_structure.sections if s.id == section_id), None)
 
     def get_writing_principle(self, principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
-        return next((p for p in self.writing_principles if p.id == principle_id), None)
+        return self.writing_principles.get(principle_id)
 
     def get_priority_level(self, category: PriorityCategory) -> Optional[PriorityLevel]:
-        return next((lvl for lvl in self.priority_hierarchy.levels if lvl.id == category), None)
+        return self.priority_system.get_level(category)

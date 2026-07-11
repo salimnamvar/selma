@@ -4,8 +4,8 @@ from domain.enums import ProhibitedField
 from domain.identifiers import Prose
 
 
-class ContaminationGuard(BaseModel):
-    """Defines what is prohibited and allowed in the policy layer."""
+class ContaminationPolicy(BaseModel):
+    """Defines what is prohibited in the policy layer."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
