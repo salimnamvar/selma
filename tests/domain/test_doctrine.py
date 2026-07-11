@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -14,6 +14,7 @@ from domain import (
     PolicyDoctrine,
     PriorityCategory,
     ProhibitedField,
+    ResolutionStrategy,
 )
 
 
@@ -24,13 +25,20 @@ class TestPolicyDoctrineInvariants:
 
     def test_major_mismatch_rejected(
         self,
-        doctrine_document_copy: Dict[str, Any],
+        doctrine_document_copy: dict[str, Any],
     ) -> None:
-        # Arrange
         doctrine_document_copy["doctrine"]["spec_version"] = "9.0.0"
 
-        # Act / Assert
         with pytest.raises(ValidationError, match="MAJOR version mismatch"):
+            PolicyDoctrine.from_dict(doctrine_document_copy)
+
+    def test_missing_section_rejected(
+        self,
+        doctrine_document_copy: dict[str, Any],
+    ) -> None:
+        del doctrine_document_copy["writing_principles"]
+
+        with pytest.raises(ValueError, match="missing required section"):
             PolicyDoctrine.from_dict(doctrine_document_copy)
 
 
@@ -60,12 +68,15 @@ class TestPolicyDoctrineYamlContract:
         binding = doctrine.cross_layer_binding.conflict_resolution_binding
         data = binding.model_dump()
         assert set(data) == {"policy_layer", "schema_layer", "spec_layer", "precedence"}
+        assert binding.strategies == ResolutionStrategy.chain()
 
     def test_cross_layer_precedence(self, doctrine: PolicyDoctrine) -> None:
         precedence = doctrine.priority_hierarchy.cross_layer_precedence
         assert "SPECIFICATION.md" in precedence.precedence_algorithm
         assert precedence.policy_role
         assert precedence.order
+        assert precedence.strategies[0] == ResolutionStrategy.EXPLICIT_OVERRIDE
+        assert precedence.strategies[-1] == ResolutionStrategy.CONFLICT_ARTIFACT
 
     def test_machine_id_exclusions(self, doctrine: PolicyDoctrine) -> None:
         exclusions = doctrine.identity_resolution.machine_id_semantics.exclusions
@@ -75,8 +86,8 @@ class TestPolicyDoctrineYamlContract:
     def test_lifecycle_definition_operations(self, doctrine: PolicyDoctrine) -> None:
         lifecycle = doctrine.lifecycle_definition
         assert frozenset(IdentityOperation) == frozenset(lifecycle._GUIDANCE_ENUM)
-        assert "two distinct" in lifecycle.guidance_for(IdentityOperation.FORK).lower()
-        assert "combine" in lifecycle.guidance_for(IdentityOperation.MERGE).lower()
+        assert "two distinct" in lifecycle.get_guidance(IdentityOperation.FORK).lower()
+        assert "combine" in lifecycle.get_guidance(IdentityOperation.MERGE).lower()
 
     def test_versioning_intent_nested(self, doctrine: PolicyDoctrine) -> None:
         intent = doctrine.version_strategy.intent
@@ -101,7 +112,7 @@ class TestPolicyDoctrineYamlContract:
         assert guard.is_prohibited(ProhibitedField.PARAMETERS)
         assert guard.is_prohibited("evaluator_hint")
         assert not guard.is_prohibited("machine_id")
-        assert ProhibitedField.LINEAGE in guard.prohibited_fields
+        assert set(guard.prohibited_fields) == set(ProhibitedField)
 
     def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.priority_hierarchy.outranks(

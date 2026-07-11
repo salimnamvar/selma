@@ -1,22 +1,30 @@
-"""Cross-Layer Binding Value Objects."""
+"""Cross-layer binding — policy / schema / spec relationship constraints."""
 
 from __future__ import annotations
 
 from pydantic import Field
 
 from domain.base import DomainValueObject
+from domain.enums import ResolutionStrategy
 from domain.identifiers import GovernanceText
 
 
 class ConflictResolutionBinding(DomainValueObject):
-    """How each layer contributes to conflict resolution."""
+    """How each layer contributes to conflict resolution.
+
+    Prose fields mirror policy_doctrine.yaml; ``strategies`` exposes the
+    closed :class:`ResolutionStrategy` chain.
+    """
 
     policy_layer: GovernanceText = Field(description="Policy layer's role in conflict resolution")
-    schema_layer: GovernanceText = Field(
-        description="Schema layer's role in conflict resolution",
-    )
+    schema_layer: GovernanceText = Field(description="Schema layer's role in conflict resolution")
     spec_layer: GovernanceText = Field(description="Specification layer's role in conflict resolution")
-    precedence: GovernanceText = Field(description="Declared precedence chain")
+    precedence: GovernanceText = Field(description="Declared precedence chain (declarative prose)")
+
+    @property
+    def strategies(self) -> tuple[ResolutionStrategy, ...]:
+        """Canonical resolution chain matching the declared precedence prose."""
+        return ResolutionStrategy.chain()
 
 
 class FieldLegality(DomainValueObject):
@@ -31,9 +39,7 @@ class CrossLayerBinding(DomainValueObject):
     """Structural relationship between policy, schema, and specification layers."""
 
     normative_source: GovernanceText = Field(description="The authoritative behavioral source")
-    policy_purpose: GovernanceText = Field(
-        description="Purpose of the policy (this) layer",
-    )
+    policy_purpose: GovernanceText = Field(description="Purpose of the policy (this) layer")
     schema_purpose: GovernanceText = Field(description="Purpose of the schema layer")
     enforcement: GovernanceText = Field(description="How governance intent is enforced")
     conflict_resolution_binding: ConflictResolutionBinding = Field(

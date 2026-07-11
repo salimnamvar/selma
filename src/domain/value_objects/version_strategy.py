@@ -1,4 +1,4 @@
-"""Version Strategy Value Objects."""
+"""Version strategy — semantic versioning intent across doctrine artifacts."""
 
 from __future__ import annotations
 
@@ -20,7 +20,13 @@ class VersionStrategy(DomainValueObject):
     """Versioning intent for doctrine, schema, and specification documents."""
 
     description: GovernanceText = Field(description="Versioning strategy overview")
-    version_format: GovernanceText = Field(description="Version format pattern (e.g. MAJOR.MINOR.PATCH)")
+    version_format: GovernanceText = Field(
+        description="Version format pattern (e.g. MAJOR.MINOR.PATCH)"
+    )
     intent: VersionIntent = Field(description="Version increment intent per component")
-    migration_intent: GovernanceText = Field(description="Migration rules when crossing MAJOR version boundaries")
-    synchronization_intent: GovernanceText = Field(description="How versions synchronize across documents")
+    migration_intent: GovernanceText = Field(
+        description="Migration rules when crossing MAJOR version boundaries"
+    )
+    synchronization_intent: GovernanceText = Field(
+        description="How versions synchronize across documents"
+    )

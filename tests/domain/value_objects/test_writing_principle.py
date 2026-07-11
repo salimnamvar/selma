@@ -14,7 +14,7 @@ class TestWritingPrinciples:
     """Collection uniqueness and lookup behavior."""
 
     def test_unique_ids_required(self) -> None:
-        principle: WritingPrinciple = WritingPrinciple(
+        principle = WritingPrinciple(
             id="WP-001",
             title="Precision",
             description="Use exact language",
@@ -22,8 +22,12 @@ class TestWritingPrinciples:
         with pytest.raises(ValidationError, match="Duplicate"):
             WritingPrinciples((principle, principle))
 
+    def test_empty_rejected(self) -> None:
+        with pytest.raises(ValidationError, match="must not be empty"):
+            WritingPrinciples(())
+
     def test_get_and_membership(self) -> None:
-        collection: WritingPrinciples = WritingPrinciples(
+        collection = WritingPrinciples(
             (
                 WritingPrinciple(id="WP-001", title="A", description="Alpha"),
                 WritingPrinciple(id="WP-002", title="B", description="Beta"),

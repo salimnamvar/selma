@@ -1,25 +1,33 @@
-"""Domain Model Base.
-
-Shared immutable base, protocols, mixins, and small validation helpers.
+"""Domain model base: immutable VOs, protocols, mixins, and shared helpers.
 
 Construction and serialization use Pydantic v2 natively:
-    - from_dict / to_dict   (dict roundtrip)
-    - from_json / to_json   (JSON string roundtrip)
-    - from_str  / to_str    (string-parseable VOs)
-    - from_tuple / to_tuple (collection roundtrip)
+    model_validate / model_dump / model_validate_json / model_dump_json
+
+Method naming convention
+------------------------
+    get / get_where / get_*   optional retrieval (T | None)
+    require / require_*       mandatory retrieval or invariant (raises)
+    has / is_*                boolean predicates
+    iter_*                    lazy multi-result walks
+    collect_*                 eager multi-result gathers
+    from_*                    factories
+    _validate_*               Pydantic / domain validators (private)
+    _*                        other private helpers
 """
 
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Hashable, Iterator, Sequence
+from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
 from enum import Enum
 from functools import cached_property
-from typing import Any, Protocol, TypeVar, cast, runtime_checkable
+from typing import Any, ClassVar, Protocol, Self, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
 TId = TypeVar("TId", bound=Hashable, covariant=True)
+TKey = TypeVar("TKey", bound=Hashable)
+TItem = TypeVar("TItem")
 TNode = TypeVar("TNode", bound="TreeNodeMixin")
 
 
@@ -35,7 +43,7 @@ class Identifiable(Protocol[TId]):
 
 @runtime_checkable
 class Nameable(Protocol):
-    """Protocol for domain objects with a name/title."""
+    """Protocol for domain objects with a human-readable name."""
 
     @property
     def name(self) -> str:
@@ -44,105 +52,111 @@ class Nameable(Protocol):
 
 
 class DomainValueObject(BaseModel):
-    """Immutable value-object base with strict validation and alias support."""
+    """Immutable value-object base with strict validation.
+
+    Does not strip whitespace: governance prose must be preserved exactly.
+    """
 
     model_config = ConfigDict(
         frozen=True,
         extra="forbid",
         populate_by_name=True,
-        str_strip_whitespace=True,
         ignored_types=(cached_property,),
     )
 
-    @classmethod
-    def from_dict(cls, a_data: dict[str, Any]) -> DomainValueObject:
-        """Build an instance from a dict."""
-        return cls.model_validate(a_data)
-
-    @classmethod
-    def from_json(cls, a_json: str) -> DomainValueObject:
-        """Build an instance from a JSON string."""
-        return cls.model_validate_json(a_json)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize to a dict."""
-        return self.model_dump()
-
-    def to_json(self) -> str:
-        """Serialize to a JSON string."""
-        return self.model_dump_json()
-
 
 class StringCoercibleVO(DomainValueObject):
-    """Value object that can be constructed from a formatted string.
+    """Value object constructible from a formatted string.
 
-    Subclasses override ``_parse_string`` to define parsing logic. The
-    ``model_validate("...")`` call is handled by Pydantic automatically.
+    Subclasses implement ``_parse_string``. Pydantic routes string input
+    through the before-validator automatically via ``model_validate``.
     """
 
     @model_validator(mode="before")
     @classmethod
-    def _coerce_string(cls, a_data: Any) -> Any:
-        """Coerce a string input into structured component fields."""
-        if isinstance(a_data, str):
-            return cls._parse_string(a_data)
-        return a_data
+    def _coerce_string(cls, data: Any) -> Any:
+        result: Any = data
+        if isinstance(data, str):
+            result = cls._parse_string(data)
+        return result
 
     @classmethod
-    def _parse_string(cls, a_string: str) -> dict[str, Any]:
-        """Parse a string into a dict of field values. Override in subclasses."""
-        msg = f"{cls.__name__} must implement _parse_string"
-        raise NotImplementedError(msg)
+    def _parse_string(cls, value: str) -> dict[str, Any]:
+        raise NotImplementedError(f"{cls.__name__} must implement _parse_string")
 
-    @classmethod
-    def from_str(cls, a_string: str) -> StringCoercibleVO:
-        """Build an instance from a formatted string."""
-        return cls.model_validate(a_string)
-
-    def to_str(self) -> str:
-        """Serialize to a formatted string."""
-        return str(self)
+    def __str__(self) -> str:
+        raise NotImplementedError(f"{type(self).__name__} must implement __str__")
 
 
 class EnumGuidedVO(DomainValueObject):
-    """Value object mapping enum members to GovernanceText guidance fields.
+    """Maps enum members to non-empty guidance fields of the same name.
 
-    Subclasses declare ``_GUIDANCE_ENUM`` pointing to the enum type and
-    add a GovernanceText field for each enum member. The base class validates
-    completeness and provides ``guidance_for``.
+    Subclasses set ``_GUIDANCE_ENUM`` and declare a field per enum value.
     """
 
+    _GUIDANCE_ENUM: ClassVar[type[Enum]]
+
     @model_validator(mode="after")
-    def _validate_enum(self) -> EnumGuidedVO:
-        """Ensure every enum member has a corresponding field."""
+    def _validate_guidance(self) -> Self:
         guidance_enum = getattr(type(self), "_GUIDANCE_ENUM", None)
         if guidance_enum is None:
-            msg = f"{type(self).__name__} must define _GUIDANCE_ENUM ClassVar"
-            raise TypeError(msg)
-        missing = [
-            member.value
-            for member in guidance_enum
-            if not hasattr(self, member.value)
-        ]
+            raise TypeError(f"{type(self).__name__} must define _GUIDANCE_ENUM ClassVar")
+        missing = [m.value for m in guidance_enum if m.value not in type(self).model_fields]
         if missing:
             raise ValueError(f"Missing guidance fields for enum members: {sorted(missing)}")
         return self
 
-    def guidance_for(self, a_member: Enum) -> str:
-        """Return the governance guidance text for the given enum member."""
-        return getattr(self, a_member.value)
+    def get_guidance(self, key: Enum) -> str:
+        """Return governance guidance text for the given enum member."""
+        return getattr(self, key.value)
 
 
-def require_unique(a_ids: Sequence[Hashable], *, a_label: str) -> None:
+class IndexedLookupMixin[TKey: Hashable, TItem]:
+    """Shared keyed lookup over a host-provided ``_index`` mapping.
+
+    Host classes implement ``_index`` (often via ``@cached_property``).
+    Public API is the domain-wide lookup trio: ``get`` / ``require`` / ``has``.
+    """
+
+    def _lookup_index(self) -> Mapping[TKey, TItem]:
+        return cast(Mapping[TKey, TItem], cast(Any, self)._index)
+
+    def get(self, key: TKey) -> TItem | None:
+        """Return the item for ``key``, or None when absent."""
+        return self._lookup_index().get(key)
+
+    def require(self, key: TKey) -> TItem:
+        """Return the item for ``key``, or raise KeyError when absent."""
+        index = self._lookup_index()
+        try:
+            result = index[key]
+        except KeyError as exc:
+            raise KeyError(f"Item with key '{key}' not found") from exc
+        return result
+
+    def has(self, key: TKey) -> bool:
+        """Return True if an item with ``key`` exists."""
+        return key in self._lookup_index()
+
+    @property
+    def ids(self) -> tuple[TKey, ...]:
+        """Return keys in index order."""
+        return tuple(self._lookup_index())
+
+
+def require_unique(ids: Sequence[Hashable], *, label: str) -> None:
     """Raise ValueError when the sequence contains duplicate identifiers."""
-    dupes = {id_ for id_, count in Counter(a_ids).items() if count > 1}
+    dupes = {item for item, count in Counter(ids).items() if count > 1}
     if dupes:
-        raise ValueError(f"Duplicate {a_label} found: {dupes}")
+        raise ValueError(f"Duplicate {label} found: {dupes}")
 
 
-def none_as_empty(a_value: Any) -> Any:
+def none_as_empty(value: Any) -> Any:
     """Coerce YAML/JSON null to an empty tuple for optional sequence fields."""
-    return () if a_value is None else a_value
+    result: Any = value
+    if value is None:
+        result = ()
+    return result
 
 
 class NameableMixin:
@@ -155,35 +169,59 @@ class NameableMixin:
 
 
 class TreeNodeMixin:
-    """Hierarchical traversal for objects that expose a ``children`` sequence.
+    """Hierarchical traversal for hosts that expose a ``children`` sequence.
 
-    Host classes must provide ``children`` (e.g. a Pydantic field). This mixin
-    does not declare ``children`` so it cannot shadow model fields.
+    Depth uses node-counting semantics (a leaf has depth 1), matching the
+    governance rule “do not exceed N levels of nested sections”.
+
+    Lookup style matches :class:`IndexedLookupMixin`:
+    ``get`` / ``require`` by id; ``get_where`` / ``collect_where`` by predicate.
     """
 
     def _child_nodes(self: TNode) -> Sequence[TNode]:
-        """Return child nodes from the host's ``children`` attribute."""
         return cast(Sequence[TNode], cast(Any, self).children)
 
-    def traverse(self: TNode) -> Iterator[TNode]:
+    def iter_nodes(self: TNode) -> Iterator[TNode]:
         """Yield this node and all descendants in pre-order."""
         yield self
         for child in self._child_nodes():
-            yield from child.traverse()
+            yield from child.iter_nodes()
 
-    def find_where(self: TNode, a_predicate: Callable[[TNode], bool]) -> TNode | None:
-        """Return the first node matching ``a_predicate``, or None."""
-        result: TNode | None = self if a_predicate(self) else None
-        for child in self._child_nodes():
-            if result is None:
-                result = child.find_where(a_predicate)
+    # Alias kept for graph/tree vocabulary call sites.
+    traverse = iter_nodes
+
+    def get_where(self: TNode, predicate: Callable[[TNode], bool]) -> TNode | None:
+        """Return the first node matching ``predicate``, or None."""
+        result: TNode | None = None
+        for node in self.iter_nodes():
+            if predicate(node):
+                result = node
+                break
         return result
 
-    def find(self: TNode, a_id: Hashable) -> TNode | None:
-        """Return the first node whose ``id`` equals ``a_id``, or None."""
-        return self.find_where(lambda node: getattr(node, "id", None) == a_id)
+    def collect_where(self: TNode, predicate: Callable[[TNode], bool]) -> list[TNode]:
+        """Return all nodes matching ``predicate`` (pre-order)."""
+        return [node for node in self.iter_nodes() if predicate(node)]
 
-    def max_depth(self, a_current: int = 0) -> int:
-        """Return maximum depth from this node to any leaf (leaf depth = ``a_current``)."""
-        children: Sequence[TreeNodeMixin] = cast(Sequence[TreeNodeMixin], cast(Any, self).children)
-        return a_current if not children else max(child.max_depth(a_current + 1) for child in children)
+    def get(self: TNode, key: Hashable) -> TNode | None:
+        """Return the first node whose ``id`` equals ``key``, or None."""
+        return self.get_where(lambda node: getattr(node, "id", None) == key)
+
+    def require(self: TNode, key: Hashable) -> TNode:
+        """Return the first node whose ``id`` equals ``key``, or raise KeyError."""
+        result = self.get(key)
+        if result is None:
+            raise KeyError(f"Item with key '{key}' not found")
+        return result
+
+    def has(self, key: Hashable) -> bool:
+        """Return True if a node with ``id`` equal to ``key`` exists."""
+        return self.get(key) is not None
+
+    def max_depth(self, current: int = 1) -> int:
+        """Return maximum depth from this node to any leaf (leaf depth = ``current``)."""
+        children = self._child_nodes()
+        result = current
+        if children:
+            result = max(child.max_depth(current + 1) for child in children)
+        return result

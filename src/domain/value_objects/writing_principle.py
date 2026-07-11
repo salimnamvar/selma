@@ -1,8 +1,10 @@
-"""Writing Principle Value Objects."""
+"""Writing principles — authoring guidance for rule documents."""
 
 from __future__ import annotations
 
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject, NameableMixin
 from domain.collections import IdentifiedCollection
@@ -18,9 +20,18 @@ class WritingPrinciple(DomainValueObject, NameableMixin):
 
 
 class WritingPrinciples(IdentifiedCollection[WritingPrincipleId, WritingPrinciple]):
-    """Collection of writing principles validated as a YAML list root."""
+    """Collection of writing principles validated as a YAML list root.
+
+    Lookup: ``get`` / ``require`` / ``has`` / ``ids`` / ``items``.
+    """
+
+    @model_validator(mode="after")
+    def _validate_non_empty(self) -> Self:
+        if not self.root:
+            raise ValueError("Writing principles collection must not be empty")
+        return self
 
     @property
     def principles(self) -> tuple[WritingPrinciple, ...]:
-        """Return principles in declaration order."""
-        return self.root
+        """Return principles in declaration order (alias for ``items``)."""
+        return self.items

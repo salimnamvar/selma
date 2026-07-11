@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import pytest
 from pydantic import ValidationError
@@ -57,9 +57,9 @@ class TestDocumentSection:
         self,
         make_prose_section: Callable[..., DocumentSection],
     ) -> None:
-        section: DocumentSection = make_prose_section(
-            a_id="preamble",
-            a_title="Preamble",
+        section = make_prose_section(
+            id="preamble",
+            title="Preamble",
             columns=None,
             children=None,
         )
@@ -67,27 +67,31 @@ class TestDocumentSection:
         assert section.children == ()
 
     def test_traverse_and_find(self) -> None:
-        # Arrange
-        child: DocumentSection = DocumentSection(
+        child = DocumentSection(
             id="specific_directives",
             title="Specific",
             content_type=ContentType.TABLE,
             columns=("Type", "Description"),
         )
-        parent: DocumentSection = DocumentSection(
+        parent = DocumentSection(
             id="directives",
             title="Directives",
             content_type=ContentType.MIXED,
             children=(child,),
         )
 
-        # Act / Assert
-        assert [section.id for section in parent.traverse()] == [
+        assert [section.id for section in parent.iter_nodes()] == [
             "directives",
             "specific_directives",
         ]
-        assert parent.find("specific_directives") is child
-        assert parent.find("missing") is None
+        assert list(parent.traverse()) == list(parent.iter_nodes())
+        assert parent.get("specific_directives") is child
+        assert parent.get("missing") is None
+        assert parent.require("specific_directives") is child
+        assert parent.has("specific_directives")
+        assert not parent.has("missing")
+        assert parent.collect_where(lambda node: node.id == "specific_directives") == [child]
+        assert parent.max_depth() == 2
 
 
 @pytest.mark.unit
@@ -97,26 +101,26 @@ class TestDocumentStructure:
 
     def test_required_sections(
         self,
-        minimal_sections: Tuple[DocumentSection, ...],
+        minimal_sections: tuple[DocumentSection, ...],
     ) -> None:
-        incomplete: List[DocumentSection] = [section for section in minimal_sections if section.id != "preamble"]
+        incomplete = [section for section in minimal_sections if section.id != "preamble"]
         with pytest.raises(ValidationError, match="Missing required sections"):
             DocumentStructure(tuple(incomplete))
 
     def test_duplicate_ids(
         self,
-        minimal_sections: Tuple[DocumentSection, ...],
+        minimal_sections: tuple[DocumentSection, ...],
         make_prose_section: Callable[..., DocumentSection],
     ) -> None:
-        sections: List[DocumentSection] = list(minimal_sections)
-        sections.append(make_prose_section(a_id="preamble", a_title="Dup"))
+        sections = list(minimal_sections)
+        sections.append(make_prose_section(id="preamble", title="Dup"))
         with pytest.raises(ValidationError, match="Duplicate section ID"):
             DocumentStructure(tuple(sections))
 
-    def test_lookup(self, minimal_sections: Tuple[DocumentSection, ...]) -> None:
-        structure: DocumentStructure = DocumentStructure(minimal_sections)
+    def test_lookup(self, minimal_sections: tuple[DocumentSection, ...]) -> None:
+        structure = DocumentStructure(minimal_sections)
 
         assert structure.get("flexible_standards") is not None
         assert structure.get("nope") is None
-        assert structure.all_ids() >= DocumentStructure.REQUIRED_SECTION_IDS
+        assert frozenset(structure.ids) >= DocumentStructure.REQUIRED_SECTION_IDS
         assert len(structure) == len(minimal_sections)

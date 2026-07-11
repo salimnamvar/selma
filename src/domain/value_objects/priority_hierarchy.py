@@ -1,13 +1,14 @@
-"""Priority Hierarchy Value Objects."""
+"""Priority hierarchy value objects — authority ranks and conflict intent."""
 
 from __future__ import annotations
 
 from functools import cached_property
+from typing import ClassVar, Self
 
 from pydantic import Field, model_validator
 
-from domain.base import DomainValueObject, NameableMixin, require_unique
-from domain.enums import PriorityCategory
+from domain.base import DomainValueObject, IndexedLookupMixin, NameableMixin, require_unique
+from domain.enums import PriorityCategory, ResolutionStrategy
 from domain.identifiers import GovernanceText
 
 
@@ -24,26 +25,47 @@ class PriorityLevel(DomainValueObject, NameableMixin):
     )
 
     @model_validator(mode="after")
-    def _validate_rank(self) -> PriorityLevel:
-        """Ensure numeric rank matches the category canonical rank."""
+    def _validate_rank(self) -> Self:
         if self.rank != self.category.rank:
             raise ValueError(
-                f"Priority rank '{self.category}' has rank={self.rank}, expected canonical rank {self.category.rank}"
+                f"Priority rank '{self.category}' has rank={self.rank}, "
+                f"expected canonical rank {self.category.rank}"
             )
         return self
 
 
 class CrossLayerPrecedence(DomainValueObject):
-    """How conflict-resolution precedence maps across layers."""
+    """How conflict-resolution precedence maps across layers.
 
-    precedence_algorithm: GovernanceText = Field(description="Where the normative resolution algorithm is defined")
-    structural_override: GovernanceText = Field(description="Schema-level override mechanism for conflict resolution")
+    Prose fields mirror policy_doctrine.yaml; ``strategies`` exposes the
+    closed vocabulary from :class:`ResolutionStrategy`.
+    """
+
+    precedence_algorithm: GovernanceText = Field(
+        description="Where the normative resolution algorithm is defined"
+    )
+    structural_override: GovernanceText = Field(
+        description="Schema-level override mechanism for conflict resolution"
+    )
     policy_role: GovernanceText = Field(description="Policy layer's role in precedence")
-    order: GovernanceText = Field(description="Precedence chain order")
+    order: GovernanceText = Field(description="Precedence chain order (declarative prose)")
+
+    @property
+    def strategies(self) -> tuple[ResolutionStrategy, ...]:
+        """Canonical resolution chain (domain vocabulary for the prose order)."""
+        return ResolutionStrategy.chain()
 
 
-class PriorityHierarchy(DomainValueObject):
-    """Declares authority levels and conflict-resolution intent."""
+class PriorityHierarchy(
+    DomainValueObject,
+    IndexedLookupMixin[PriorityCategory, PriorityLevel],
+):
+    """Declares authority levels and conflict-resolution intent.
+
+    Lookup style matches collections: ``get`` / ``require`` / ``has`` by category.
+    """
+
+    CANONICAL_STRATEGIES: ClassVar[tuple[ResolutionStrategy, ...]] = ResolutionStrategy.chain()
 
     description: GovernanceText = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(
@@ -58,50 +80,35 @@ class PriorityHierarchy(DomainValueObject):
     )
 
     @model_validator(mode="after")
-    def _validate_levels(self) -> PriorityHierarchy:
-        """Validate ordering, uniqueness, and completeness of priority levels."""
-        for index, rank in enumerate(self.levels, start=1):
-            if rank.rank != index:
+    def _validate_levels(self) -> Self:
+        for index, level in enumerate(self.levels, start=1):
+            if level.rank != index:
                 raise ValueError(
-                    f"Priority rank '{rank.category}' at position {index} has "
-                    f"rank={rank.rank}, expected {index}. Levels must be "
+                    f"Priority rank '{level.category}' at position {index} has "
+                    f"rank={level.rank}, expected {index}. Levels must be "
                     "ordered and contiguous starting from 1."
                 )
 
-        require_unique([rank.category for rank in self.levels], a_label="priority categories")
+        require_unique([level.category for level in self.levels], label="priority categories")
 
-        expected = set(PriorityCategory)
-        present = {rank.category for rank in self.levels}
-        missing = expected - present
+        missing = set(PriorityCategory) - {level.category for level in self.levels}
         if missing:
             raise ValueError(f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}")
 
         return self
 
     @cached_property
-    def _levels_index(self) -> dict[PriorityCategory, PriorityLevel]:
-        """Index priority levels by category for O(1) lookup."""
-        return {rank.category: rank for rank in self.levels}
+    def _index(self) -> dict[PriorityCategory, PriorityLevel]:
+        return {level.category: level for level in self.levels}
 
-    def get(self, a_category: PriorityCategory) -> PriorityLevel | None:
-        """Return the priority rank for a category, or None if not found."""
-        return self._levels_index.get(a_category)
-
-    def find(self, a_category: PriorityCategory) -> PriorityLevel:
-        """Return the priority rank for a category, raising if not found."""
-        try:
-            return self._levels_index[a_category]
-        except KeyError as exc:
-            raise KeyError(f"Priority rank for category '{a_category}' not found") from exc
-
-    def outranks(self, a_left: PriorityCategory, a_right: PriorityCategory) -> bool:
+    def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right (lower rank number)."""
-        return self._levels_index[a_left].rank < self._levels_index[a_right].rank
+        return self.require(left).rank < self.require(right).rank
 
-    def highest(self) -> PriorityLevel:
+    def get_highest(self) -> PriorityLevel:
         """Return the highest authority rank."""
         return self.levels[0]
 
-    def lowest(self) -> PriorityLevel:
+    def get_lowest(self) -> PriorityLevel:
         """Return the lowest authority rank."""
         return self.levels[-1]

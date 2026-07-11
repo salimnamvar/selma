@@ -1,24 +1,30 @@
-"""Document Section Value Objects."""
+"""Document section value objects — universal document structure."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import cached_property
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Self, cast
 
 from pydantic import BeforeValidator, Field, model_validator
 
-from domain.base import DomainValueObject, NameableMixin, TreeNodeMixin, none_as_empty
+from domain.base import DomainValueObject, NameableMixin, TreeNodeMixin, none_as_empty, require_unique
 from domain.collections import IdentifiedCollection
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
 
-_OptionalTuple = Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)]
-_OptionalChildren = Annotated[tuple["DocumentSection", ...], BeforeValidator(none_as_empty)]
-
 
 class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
-    """A structural section defining governance document composition."""
+    """A structural section defining governance document composition.
+
+    Depth is node-counted (leaf = 1). WP-003: max nesting is 3 levels.
+    ``schema_encoding`` is authoring guidance only (YAML prose), not executable
+    schema configuration.
+
+    Tree API (from :class:`TreeNodeMixin`):
+    ``get`` / ``require`` / ``has``, ``get_where`` / ``collect_where``,
+    ``iter_nodes`` / ``traverse``, ``max_depth``.
+    """
 
     MAX_DEPTH: ClassVar[int] = 3
     _TABULAR_CONTENT_TYPES: ClassVar[frozenset[ContentType]] = frozenset(
@@ -38,13 +44,13 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     content_type: ContentType = Field(description="Expected content format")
     guidance: GovernanceText | None = Field(
         default=None,
-        description="Authoring guidance for this section",
+        description="Authoring guidance for this section (optional on nested sections)",
     )
-    columns: _OptionalTuple = Field(
+    columns: Annotated[tuple[GovernanceText, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
         description="Table column headers (empty when not tabular)",
     )
-    children: _OptionalChildren = Field(
+    children: Annotated[tuple[DocumentSection, ...], BeforeValidator(none_as_empty)] = Field(
         default=(),
         description="Subsections",
     )
@@ -57,33 +63,24 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     )
 
     @model_validator(mode="after")
-    def _validate_content(self) -> DocumentSection:
-        """Validate columns vs content type and local nesting depth."""
-        if self.columns and self.content_type == ContentType.PROSE:
-            raise ValueError(f"Section '{self.id}': columns are not applicable for prose-only content")
+    def _validate_content(self) -> Self:
         if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
-            raise ValueError(f"Section '{self.id}': columns require tabular content type, got {self.content_type}")
+            raise ValueError(
+                f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
+            )
         depth = self.max_depth()
         if depth > self.MAX_DEPTH:
             raise ValueError(f"Section '{self.id}' has depth {depth}, exceeds maximum {self.MAX_DEPTH}")
         return self
 
-    def max_depth(self, a_current: int = 1) -> int:
-        """Return the maximum nesting depth from this section (leaf = 1)."""
-        return a_current if not self.children else max(child.max_depth(a_current + 1) for child in self.children)
-
-    def all_ids(self) -> Iterator[SectionId]:
+    def iter_ids(self) -> Iterator[SectionId]:
         """Yield this section ID and all descendant IDs."""
-        yield self.id
-        for child in self.children:
-            yield from child.all_ids()
+        for node in self.iter_nodes():
+            yield node.id
 
-    def find_required(self) -> list[DocumentSection]:
-        """Return all required sections in this subtree."""
-        result: list[DocumentSection] = [self] if self.required else []
-        for child in self.children:
-            result.extend(child.find_required())
-        return result
+    def collect_required(self) -> list[DocumentSection]:
+        """Return all required sections in this subtree (pre-order)."""
+        return cast(list[DocumentSection], self.collect_where(lambda node: node.required))
 
     @property
     def is_tabular(self) -> bool:
@@ -92,7 +89,11 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
 
 
 class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
-    """Validated tree of universal document sections as a YAML list root."""
+    """Validated tree of universal document sections (YAML list root).
+
+    Lookup is tree-wide (any nested section id), not top-level only.
+    Uses the shared collection API: ``get`` / ``require`` / ``has`` / ``ids``.
+    """
 
     REQUIRED_SECTION_IDS: ClassVar[frozenset[SectionId]] = frozenset(
         {
@@ -112,46 +113,37 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     )
 
     @model_validator(mode="after")
-    def _validate_ids(self) -> DocumentStructure:
+    def _validate_ids(self) -> Self:
         """Enforce required sections, unique nested IDs, and directives children."""
-        present: set[SectionId] = {section.id for section in self.root}
-        missing: frozenset[SectionId] = self.REQUIRED_SECTION_IDS - present
+        present = {section.id for section in self.root}
+        missing = self.REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        seen: set[SectionId] = set()
-        for section in self.root:
-            for section_id in section.all_ids():
-                if section_id in seen:
-                    raise ValueError(f"Duplicate section ID: {section_id}")
-                seen.add(section_id)
+        nested_ids = [section_id for section in self.root for section_id in section.iter_ids()]
+        require_unique(nested_ids, label="section ID")
 
-        directives: DocumentSection | None = next(
-            (section for section in self.root if section.id == "directives"),
-            None,
-        )
+        directives = self.get("directives")
         if directives is not None and directives.children:
-            child_ids: set[SectionId] = {child.id for child in directives.children}
-            missing_children: frozenset[SectionId] = self.DIRECTIVES_CHILD_IDS - child_ids
+            child_ids = {child.id for child in directives.children}
+            missing_children = self.DIRECTIVES_CHILD_IDS - child_ids
             if missing_children:
-                raise ValueError(f"Directives section missing expected children: {sorted(missing_children)}")
+                raise ValueError(
+                    f"Directives section missing expected children: {sorted(missing_children)}"
+                )
 
         return self
 
     @property
     def sections(self) -> tuple[DocumentSection, ...]:
         """Return top-level document sections."""
-        return self.root
+        return self.items
 
     @cached_property
     def _index(self) -> dict[SectionId, DocumentSection]:
         """Index every section in the tree for O(1) lookup."""
-        mapping: dict[SectionId, DocumentSection] = {}
-        for root_section in self.root:
-            for section in root_section.traverse():
-                mapping[section.id] = section
-        return mapping
-
-    def all_ids(self) -> frozenset[SectionId]:
-        """Return every section ID in the tree."""
-        return frozenset(self._index)
+        return {
+            section.id: section
+            for root in self.root
+            for section in root.iter_nodes()
+        }

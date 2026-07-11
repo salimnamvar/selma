@@ -1,11 +1,7 @@
-"""Policy Doctrine Value Objects.
-
-Public value-object surface for the governance domain.
-"""
+"""Policy doctrine value objects."""
 
 from __future__ import annotations
 
-from domain.base import DomainValueObject
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import (
     ConflictResolutionBinding,
@@ -30,7 +26,6 @@ __all__ = [
     "CrossLayerPrecedence",
     "DocumentSection",
     "DocumentStructure",
-    "DomainValueObject",
     "FieldLegality",
     "IdentityResolution",
     "LifecycleDefinition",

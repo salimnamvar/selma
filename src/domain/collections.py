@@ -1,19 +1,24 @@
 """Indexed collection base for identified domain items.
 
-Provides ``get`` / ``find`` / secondary-attribute lookup used by list-rooted
-value objects. Domain-specific uniqueness and structure rules stay in
+Provides O(1) lookup by item id. Domain-specific structure rules live in
 subclasses as Pydantic validators.
+
+Lookup style (shared via :class:`~domain.base.IndexedLookupMixin`)
+------------------------------------------------------------------
+    get(key)     -> T | None
+    require(key) -> T          (raises KeyError when absent)
+    has(key)     -> bool
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Iterator, Sequence
+from collections.abc import Hashable, Iterator
 from functools import cached_property
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Protocol, Self, TypeVar, runtime_checkable
 
-from pydantic import ConfigDict, Field, RootModel, model_validator
+from pydantic import ConfigDict, RootModel, model_validator
 
-from domain.base import require_unique
+from domain.base import IndexedLookupMixin, require_unique
 
 TId = TypeVar("TId", bound=Hashable, covariant=True)
 TItem = TypeVar("TItem")
@@ -29,118 +34,44 @@ class IdentifiedItem(Protocol[TId]):
         ...
 
 
-class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
+class IdentifiedCollection[TId: Hashable, TItem](
+    RootModel[tuple[TItem, ...]],
+    IndexedLookupMixin[TId, TItem],
+):
     """Immutable RootModel collection with O(1) lookup by item identifier.
 
     Items should expose an ``.id`` property (see :class:`IdentifiedItem`).
-    The default uniqueness check applies to top-level items only; override
-    :meth:`_validate_ids` when nested identity rules apply.
-
-    Iteration, length, and membership operate on collection items (not on
-    Pydantic model fields).
+    Subclasses own length and structure invariants.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    root: tuple[TItem, ...] = Field(min_length=1)
+    root: tuple[TItem, ...]
 
-    @classmethod
-    def from_tuple(cls, a_items: tuple[TItem, ...]) -> IdentifiedCollection[TId, TItem]:
-        """Build a collection from a tuple of items."""
-        return cls(a_items)
-
-    def to_tuple(self) -> tuple[TItem, ...]:
-        """Serialize to a tuple of items."""
-        return self.root
-
-    def _item_id(self, a_item: TItem) -> TId:
-        """Extract the identifier from a collection item."""
-        return a_item.id  # type: ignore[attr-defined]
+    def _item_id(self, item: TItem) -> TId:
+        return item.id  # type: ignore[attr-defined]
 
     @model_validator(mode="after")
-    def _validate_ids(self) -> IdentifiedCollection[TId, TItem]:
-        """Reject collections that contain duplicate top-level identifiers."""
-        require_unique(
-            [self._item_id(item) for item in self.root],
-            a_label="IDs",
-        )
+    def _validate_ids(self) -> Self:
+        require_unique([self._item_id(item) for item in self.root], label="IDs")
         return self
 
     @cached_property
     def _index(self) -> dict[TId, TItem]:
-        """Build and cache a lookup index by item identifier."""
         return {self._item_id(item): item for item in self.root}
 
-    def get(self, a_id: TId) -> TItem | None:
-        """Return the item for ``a_id``, or None when absent."""
-        return self._index.get(a_id)
-
-    def find(self, a_id: TId) -> TItem:
-        """Return the item for ``a_id``, or raise KeyError when absent."""
-        try:
-            return self._index[a_id]
-        except KeyError as exc:
-            raise KeyError(f"Item with id '{a_id}' not found in collection") from exc
-
-    def get_all(self, a_ids: Sequence[TId]) -> list[TItem]:
-        """Return items for the given identifiers (order preserved, missing skipped)."""
-        return [self._index[id_] for id_ in a_ids if id_ in self._index]
-
-    def find_all(self, a_ids: Sequence[TId]) -> list[TItem]:
-        """Return items for the given identifiers (raises if any are missing)."""
-        return [self.find(id_) for id_ in a_ids]
-
-    def get_by(self, a_attr: str, a_value: Any) -> TItem | None:
-        """Return the first item whose attribute ``a_attr`` equals ``a_value``."""
-        result: TItem | None = None
-        for item in self.root:
-            if getattr(item, a_attr, None) == a_value:
-                result = item
-                break
-        return result
-
-    def find_by(self, a_attr: str, a_value: Any) -> TItem:
-        """Return the first item whose attribute equals ``a_value``, or raise."""
-        result = self.get_by(a_attr, a_value)
-        if result is None:
-            raise KeyError(f"Item with {a_attr}={a_value!r} not found in collection")
-        return result
-
     @property
-    def ids(self) -> list[TId]:
-        """Return item identifiers in declaration order."""
-        return list(self._index.keys())
-
-    @property
-    def items(self) -> list[TItem]:
+    def items(self) -> tuple[TItem, ...]:
         """Return all items in declaration order."""
-        return list(self.root)
-
-    def filter(self, a_predicate: Callable[[TItem], bool]) -> list[TItem]:
-        """Return items matching the given predicate."""
-        return [item for item in self.root if a_predicate(item)]
-
-    def filter_by(self, **kwargs: Any) -> list[TItem]:
-        """Return items whose attributes match all given keyword arguments."""
-        return [item for item in self.root if all(getattr(item, key) == value for key, value in kwargs.items())]
-
-    def map(self, a_func: Callable[[TItem], Any]) -> list[Any]:
-        """Apply ``a_func`` to each item and return the results."""
-        return [a_func(item) for item in self.root]
-
-    def has(self, a_id: TId) -> bool:
-        """Return True if an item with ``a_id`` exists."""
-        return a_id in self._index
+        return self.root
 
     def __iter__(self) -> Iterator[TItem]:  # type: ignore[override]
-        """Yield top-level collection items in declaration order."""
         yield from self.root
 
     def __len__(self) -> int:
-        """Return the number of items in the collection."""
         return len(self.root)
 
-    def __contains__(self, a_item: object) -> bool:
-        """Support membership by item instance (with ``.id``) or by identifier."""
-        item_id = a_item.id if hasattr(a_item, "id") else a_item  # type: ignore[attr-defined]
-        return item_id in self._index
+    def __contains__(self, item: object) -> bool:
+        """Membership by item instance (with ``.id``) or by identifier."""
+        key = item.id if hasattr(item, "id") else item  # type: ignore[attr-defined]
+        return self.has(key)  # type: ignore[arg-type]

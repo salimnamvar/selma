@@ -1,7 +1,8 @@
-"""Lifecycle Definition Value Objects."""
+"""Lifecycle definition — when to use each identity operation."""
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import ClassVar
 
 from pydantic import Field
@@ -12,9 +13,12 @@ from domain.identifiers import GovernanceText
 
 
 class LifecycleDefinition(EnumGuidedVO):
-    """Describes when to use each identity lifecycle operation."""
+    """Describes when to use each identity lifecycle operation.
 
-    _GUIDANCE_ENUM: ClassVar[type[IdentityOperation]] = IdentityOperation
+    Field names match IdentityOperation values and policy_doctrine.yaml keys.
+    """
+
+    _GUIDANCE_ENUM: ClassVar[type[Enum]] = IdentityOperation
 
     revision: GovernanceText = Field(description="When to use revision")
     fork: GovernanceText = Field(description="When to use fork")

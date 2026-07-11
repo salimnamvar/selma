@@ -1,8 +1,10 @@
-"""Contamination Guard Value Objects."""
+"""Contamination guard — fields prohibited in policy-layer prose."""
 
 from __future__ import annotations
 
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
 from domain.enums import ProhibitedField
@@ -10,7 +12,10 @@ from domain.identifiers import GovernanceText
 
 
 class ContaminationGuard(DomainValueObject):
-    """Defines what is prohibited and allowed in the policy layer."""
+    """Defines what is prohibited and allowed in the policy layer.
+
+    Aligns with contamination_guard in policy_doctrine.yaml.
+    """
 
     prohibited_fields: frozenset[ProhibitedField] = Field(
         min_length=1,
@@ -20,16 +25,28 @@ class ContaminationGuard(DomainValueObject):
         min_length=1,
         description="How Machine IDs may appear in policy",
     )
-    metadata_constraints: GovernanceText = Field(description="Constraints on schema metadata in policy")
+    metadata_constraints: GovernanceText = Field(
+        description="Constraints on schema metadata in policy"
+    )
 
-    def is_prohibited(self, a_field: str | ProhibitedField) -> bool:
+    @model_validator(mode="after")
+    def _validate_fields(self) -> Self:
+        """Ensure the guard covers the full closed vocabulary of prohibited fields."""
+        missing = set(ProhibitedField) - self.prohibited_fields
+        if missing:
+            raise ValueError(
+                f"Contamination guard missing prohibited fields: {sorted(f.value for f in missing)}"
+            )
+        return self
+
+    def is_prohibited(self, key: str | ProhibitedField) -> bool:
         """Return True if field must not appear in policy prose."""
-        result: bool = False
-        if isinstance(a_field, ProhibitedField):
-            result = a_field in self.prohibited_fields
+        result = False
+        if isinstance(key, ProhibitedField):
+            result = key in self.prohibited_fields
         else:
             try:
-                result = ProhibitedField(a_field) in self.prohibited_fields
+                result = ProhibitedField(key) in self.prohibited_fields
             except ValueError:
                 result = False
         return result

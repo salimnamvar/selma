@@ -1,11 +1,14 @@
-"""Policy Doctrine Domain Model.
+"""Policy Doctrine domain model.
 
 Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
 
-Conventions:
-    - Value objects: model_validate / model_dump (Pydantic v2)
-    - Collections: get(), find(), get_by(), find_by(), filter(), map()
-    - Trees: traverse(), find(), find_where(), max_depth()
+Method naming convention:
+    get / get_where / get_*   optional retrieval (T | None)
+    require / require_*       mandatory retrieval or invariant (raises)
+    has / is_*                boolean predicates
+    iter_* / collect_*        multi-result walks / gathers
+    from_*                    factories
+    _validate_*               private validators
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from domain.base import (
     DomainValueObject,
     EnumGuidedVO,
     Identifiable,
+    IndexedLookupMixin,
     Nameable,
     NameableMixin,
     StringCoercibleVO,
@@ -76,6 +80,7 @@ __all__ = [
     "IdentifiedItem",
     "IdentityOperation",
     "IdentityResolution",
+    "IndexedLookupMixin",
     "LifecycleDefinition",
     "MachineId",
     "MachineIdSemantics",

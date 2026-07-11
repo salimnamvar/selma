@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable
 
 import pytest
 import yaml
@@ -21,69 +21,40 @@ from domain import (
 
 
 @pytest.fixture(scope="session")
-def doctrine_document(policy_doctrine_yaml_path: Path) -> Dict[str, Any]:
-    """Load the normative policy_doctrine.yaml once per session.
-
-    Args:
-        policy_doctrine_yaml_path (Path): Path to the YAML file.
-
-    Returns:
-        Dict[str, Any]: Parsed YAML document.
-    """
-    result: Dict[str, Any] = yaml.safe_load(policy_doctrine_yaml_path.read_text(encoding="utf-8"))
-    return result
+def doctrine_document(policy_doctrine_yaml_path: Path) -> dict[str, Any]:
+    """Load the normative policy_doctrine.yaml once per session."""
+    return yaml.safe_load(policy_doctrine_yaml_path.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="session")
-def doctrine(doctrine_document: Dict[str, Any]) -> PolicyDoctrine:
-    """Build PolicyDoctrine from the normative YAML once per session.
-
-    Args:
-        doctrine_document (Dict[str, Any]): Parsed YAML document.
-
-    Returns:
-        PolicyDoctrine: Validated doctrine aggregate.
-    """
-    result: PolicyDoctrine = PolicyDoctrine.from_dict(doctrine_document)
-    return result
+def doctrine(doctrine_document: dict[str, Any]) -> PolicyDoctrine:
+    """Build PolicyDoctrine from the normative YAML once per session."""
+    return PolicyDoctrine.from_dict(doctrine_document)
 
 
 @pytest.fixture
-def doctrine_document_copy(doctrine_document: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a deep copy of the doctrine document for mutation tests.
-
-    Args:
-        doctrine_document (Dict[str, Any]): Session-scoped YAML mapping.
-
-    Returns:
-        Dict[str, Any]: Isolated mutable copy.
-    """
-    result: Dict[str, Any] = deepcopy(doctrine_document)
-    return result
+def doctrine_document_copy(doctrine_document: dict[str, Any]) -> dict[str, Any]:
+    """Return a deep copy of the doctrine document for mutation tests."""
+    return deepcopy(doctrine_document)
 
 
 @pytest.fixture
 def make_prose_section() -> Callable[..., DocumentSection]:
-    """Factory for prose DocumentSection instances.
-
-    Returns:
-        Callable[..., DocumentSection]: Builder accepting field overrides.
-    """
+    """Factory for prose DocumentSection instances."""
 
     def _make(
-        a_id: str = "preamble",
-        a_title: str = "Preamble",
-        **a_overrides: Any,
+        id: str = "preamble",
+        title: str = "Preamble",
+        **overrides: Any,
     ) -> DocumentSection:
-        payload: Dict[str, Any] = {
-            "id": a_id,
-            "title": a_title,
+        payload: dict[str, Any] = {
+            "id": id,
+            "title": title,
             "content_type": ContentType.PROSE,
-            "guidance": f"Guidance for {a_title}",
+            "guidance": f"Guidance for {title}",
         }
-        payload.update(a_overrides)
-        result: DocumentSection = DocumentSection.model_validate(payload)
-        return result
+        payload.update(overrides)
+        return DocumentSection.model_validate(payload)
 
     return _make
 
@@ -91,18 +62,11 @@ def make_prose_section() -> Callable[..., DocumentSection]:
 @pytest.fixture
 def minimal_sections(
     make_prose_section: Callable[..., DocumentSection],
-) -> Tuple[DocumentSection, ...]:
-    """Return a complete, valid top-rank section tree.
-
-    Args:
-        make_prose_section (Callable[..., DocumentSection]): Prose section factory.
-
-    Returns:
-        Tuple[DocumentSection, ...]: Required sections with directives children.
-    """
-    result: Tuple[DocumentSection, ...] = (
-        make_prose_section(a_id="preamble", a_title="Preamble"),
-        make_prose_section(a_id="governance", a_title="Governance"),
+) -> tuple[DocumentSection, ...]:
+    """Return a complete, valid top-level section tree."""
+    return (
+        make_prose_section(id="preamble", title="Preamble"),
+        make_prose_section(id="governance", title="Governance"),
         DocumentSection(
             id="definitions",
             title="Definitions",
@@ -110,7 +74,7 @@ def minimal_sections(
             columns=("Term", "Definition", "Exclusion"),
             guidance="Define terms",
         ),
-        make_prose_section(a_id="principles", a_title="Principles"),
+        make_prose_section(id="principles", title="Principles"),
         DocumentSection(
             id="directives",
             title="Directives",
@@ -139,24 +103,19 @@ def minimal_sections(
             guidance="Consequences",
         ),
     )
-    return result
 
 
 @pytest.fixture
-def full_priority_levels() -> List[Dict[str, Any]]:
-    """Return a complete, ordered priority-rank payload.
-
-    Returns:
-        List[Dict[str, Any]]: Level dicts matching PriorityCategory ranks.
-    """
-    titles: Dict[PriorityCategory, str] = {
+def full_priority_levels() -> list[dict[str, Any]]:
+    """Return a complete, ordered priority-rank payload."""
+    titles: dict[PriorityCategory, str] = {
         PriorityCategory.CONSTITUTIONAL: "Constitutional",
         PriorityCategory.STATUTORY: "Statutory",
         PriorityCategory.REGULATORY: "Regulatory",
         PriorityCategory.OPERATIONAL: "Operational",
         PriorityCategory.ADVISORY: "Advisory",
     }
-    result: List[Dict[str, Any]] = [
+    return [
         {
             "category": category.value,
             "rank": category.rank,
@@ -166,22 +125,14 @@ def full_priority_levels() -> List[Dict[str, Any]]:
         }
         for category in PriorityCategory
     ]
-    return result
 
 
 @pytest.fixture
 def priority_hierarchy_payload(
-    full_priority_levels: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Return a valid PriorityHierarchy model_validate payload.
-
-    Args:
-        full_priority_levels (List[Dict[str, Any]]): Ordered rank dicts.
-
-    Returns:
-        Dict[str, Any]: Complete hierarchy mapping.
-    """
-    result: Dict[str, Any] = {
+    full_priority_levels: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return a valid PriorityHierarchy model_validate payload."""
+    return {
         "description": "Authority levels",
         "levels": full_priority_levels,
         "conflict_resolution": "Higher wins",
@@ -192,4 +143,3 @@ def priority_hierarchy_payload(
             "order": "override → priority → specificity → recency",
         },
     }
-    return result
