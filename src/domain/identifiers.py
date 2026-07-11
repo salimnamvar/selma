@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Annotated, Any
 
 from pydantic import Field, model_validator
@@ -59,35 +60,46 @@ def is_major_compatible(left: SemanticVersion, right: SemanticVersion) -> bool:
     return major_version(left) == major_version(right)
 
 
+def _split_field_path(raw: str) -> tuple[str, str]:
+    """Parse a path expression into collection and field components."""
+    if "[]." in raw:
+        collection, field = raw.rsplit("[].", maxsplit=1)
+    elif "." in raw:
+        collection, field = raw.rsplit(".", maxsplit=1)
+    else:
+        collection, field = raw, raw
+    return collection.strip(), field.strip()
+
+
 class FieldPath(DomainValueObject):
     """Structured location of an identity field (string-coercible)."""
 
-    collection: str = Field(min_length=1, description="Collection or container name")
-    field: str = Field(min_length=1, description="Field name within the collection")
     raw: str = Field(min_length=1, description="Original path expression as authored")
 
     @model_validator(mode="before")
     @classmethod
-    def _parse_string(cls, value: Any) -> Any:
-        result: Any = value
+    def _coerce_input(cls, value: Any) -> Any:
         if isinstance(value, str):
             raw = value.strip()
             if not raw:
                 raise ValueError("Field path must be non-empty")
-            collection: str
-            field: str
-            if "[]." in raw:
-                collection, field = raw.rsplit("[].", maxsplit=1)
-            elif "." in raw:
-                collection, field = raw.rsplit(".", maxsplit=1)
-            else:
-                collection, field = raw, raw
-            result = {
-                "collection": collection.strip(),
-                "field": field.strip(),
-                "raw": raw,
-            }
-        return result
+            return {"raw": raw}
+        if isinstance(value, dict) and "raw" in value:
+            raw = str(value["raw"]).strip()
+            if not raw:
+                raise ValueError("Field path must be non-empty")
+            return {"raw": raw}
+        return value
+
+    @cached_property
+    def collection(self) -> str:
+        """Collection or container name derived from ``raw``."""
+        return _split_field_path(self.raw)[0]
+
+    @cached_property
+    def field(self) -> str:
+        """Field name within the collection derived from ``raw``."""
+        return _split_field_path(self.raw)[1]
 
     def __str__(self) -> str:
         return self.raw

@@ -56,46 +56,18 @@ class PolicyDoctrine(DomainValueObject):
     version_strategy: VersioningIntent = Field(description="Versioning intent")
     sections: DocumentSections = Field(description="Universal document section definitions")
 
-    @property
-    def name(self) -> str:
-        """Doctrine name."""
-        return self.doctrine.name
-
-    @property
-    def version(self) -> SemanticVersion:
-        """Doctrine version."""
-        return self.doctrine.version
-
-    @property
-    def description(self) -> str:
-        """Doctrine purpose statement."""
-        return self.doctrine.description
-
-    @property
-    def spec_version(self) -> SemanticVersion:
-        """Compatible specification version."""
-        return self.doctrine.spec_version
-
-    @property
-    def schema_version(self) -> SemanticVersion:
-        """Compatible rule schema version."""
-        return self.doctrine.schema_version
-
-    @property
-    def schema_id(self) -> RuleContractId:
-        """Compatible rule schema identifier."""
-        return self.doctrine.schema_id
-
     @model_validator(mode="after")
     def _validate_versions(self) -> Self:
         """Enforce MAJOR version compatibility across doctrine artifacts."""
-        if not is_major_compatible(self.version, self.spec_version):
+        if not is_major_compatible(self.doctrine.version, self.doctrine.spec_version):
             raise ValueError(
-                f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
+                f"MAJOR version mismatch: doctrine={self.doctrine.version} "
+                f"vs spec={self.doctrine.spec_version}"
             )
-        if not is_major_compatible(self.version, self.schema_version):
+        if not is_major_compatible(self.doctrine.version, self.doctrine.schema_version):
             raise ValueError(
-                f"MAJOR version mismatch: doctrine={self.version} vs schema={self.schema_version}"
+                f"MAJOR version mismatch: doctrine={self.doctrine.version} "
+                f"vs schema={self.doctrine.schema_version}"
             )
         return self
 

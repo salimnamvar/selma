@@ -48,15 +48,17 @@ class TestPolicyDoctrineYamlContract:
     """Contract tests: normative policy_doctrine.yaml must load and map cleanly."""
 
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.name == "universal-policy-doctrine"
-        assert doctrine.version == "8.2.4"
-        assert doctrine.schema_id == "universal-rule-schema"
-        assert doctrine.doctrine.name == doctrine.name
+        assert doctrine.doctrine.name == "universal-policy-doctrine"
+        assert doctrine.doctrine.version == "8.2.4"
+        assert doctrine.doctrine.schema_id == "universal-rule-schema"
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.is_compatible_with(doctrine.spec_version, doctrine.schema_version)
-        assert is_major_compatible(doctrine.version, doctrine.spec_version)
-        assert is_major_compatible(doctrine.version, doctrine.schema_version)
+        assert doctrine.is_compatible_with(
+            doctrine.doctrine.spec_version,
+            doctrine.doctrine.schema_version,
+        )
+        assert is_major_compatible(doctrine.doctrine.version, doctrine.doctrine.spec_version)
+        assert is_major_compatible(doctrine.doctrine.version, doctrine.doctrine.schema_version)
 
     def test_cross_layer_binding_fields(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.cross_layer_binding.policy_purpose
