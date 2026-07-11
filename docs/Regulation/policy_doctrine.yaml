@@ -27,11 +27,11 @@ cross_layer_binding:
   normative_source: "SPECIFICATION.md"
   this_layer_purpose: "Governance intent description"
   schema_layer_purpose: "Structural projection of spec invariants"
-  enforcement: "Engine validates schema against spec invariants at compile time"
+  enforcement: "Governance intent is enforced indirectly: compile-time validators check schema field legality against spec invariants"
   conflict_resolution_binding:
     policy: "Declares computed-factor intent (priority, specificity, recency). No override fields."
     schema: "Optional conflict_resolution field is structural override data only."
-    spec: "Normative resolve_conflict algorithm. Override checked before computed factors."
+    spec: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_prohibition: >
     This file MUST NOT be read during inspection, evaluation, finding FSM
@@ -64,10 +64,14 @@ identity_resolution:
     definition: "Stable external lineage identifier assigned at directive authoring time"
     not: ["execution ID", "compile-time artifact", "runtime lookup key"]
     assignment: "Assigned once at first authoring; never reassigned"
-    compile_binding: "rule.lineage_id = Machine ID (bijective at root-assignment level)"
-    initial_execution_id: "rule.id = rule.lineage_id on first creation"
-    post_fork_split: "Multiple active rules may share lineage_id with distinct execution_ids"
-    runtime: "Engine uses rule.lineage_id / node.lineage_id — never reads policy tables"
+    governance_intent: >
+      Machine ID is the human-facing identity root. It provides a stable
+      reference point for audit trails, cross-referencing between policy
+      and machine rules, and governance discussions. It must never change
+      because governance processes (amendments, sanctions, reviews) depend
+      on stable identity references. Implementation mapping to
+      rule.lineage_id and compile-time binding details are defined in
+      SPECIFICATION.md §2.3.
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle: >
     Identity lifecycle operations (fork, merge, split) are defined in
@@ -88,7 +92,9 @@ identity_lifecycle_intent:
     semantically lossy — e.g. merging PAY-800 and AUTH-001 produces
     AUTH-001 as root, which loses the PAY-800 provenance. A future
     MERGE-NN namespace (e.g. MGR-18) could preserve provenance explicitly.
-    Current approach is acceptable for determinism guarantees.
+    Current approach is accepted with mandatory mitigations per
+    SPECIFICATION.md §2.2.2 (provenance surfacing, parent_lineage_ids
+    display, non-surviving parent tracing).
   split: "Use when one directive restructured into multiple independent directives."
   rename: "Use when display name changes but semantic intent is unchanged."
   retire: "Use when directive is no longer applicable. ID preserved in audit trail."
@@ -128,14 +134,6 @@ contamination_guard:
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
     declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
-  note: >
-    Priority hierarchy and conflict resolution below are DECLARATIVE
-    DESCRIPTIONS of governance intent for human authors. They describe
-    WHAT the governing body intends, not HOW the machine implements it.
-    Human authors use this guidance when setting schema fields (priority,
-    conflict_resolution). The runtime engine executes ONLY
-    SPECIFICATION.md Section 2.15 over schema/CG-IR fields — this file
-    is never read at inspection, evaluation, or conflict resolution runtime.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:
@@ -163,10 +161,6 @@ priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
     that higher-priority rules take precedence. This is intent, not code.
-  internal_representation: >
-    Priority levels are represented internally as integers (1–5) for
-    comparison. Enum labels (constitutional, statutory, etc.) are presentation
-    only. See SPECIFICATION.md §2.15 priority_level mapping.
   levels:
     - id: constitutional
       level: 1
@@ -197,13 +191,9 @@ priority_hierarchy:
   conflict_resolution_intent: >
     The governing body declares that when two rules conflict, the engine
     first checks for explicit override, then applies computed resolution
-    factors (in order):
-    0. Explicit override (schema conflict_resolution field) takes precedence over all computed factors
-    0b. Compatible symmetric override pairs ({always_wins, never_wins}, identical defer_to targets) resolve deterministically per §2.15 compatible_overrides()
-    1. Higher priority level wins
-    2. If same level: more specific rule wins (specificity is a composite integer score per SPECIFICATION.md §2.15: scope constraints (weighted ×100) + evaluator field bindings + target_type via scope_specificity_score. Two engines MUST agree on scores for identical CG-IR node bodies.)
-    3. If same specificity: newer rule wins
-    4. If still tied: escalate as Conflict Artifact for human review
+    factors. The precedence chain is: explicit override (schema
+    conflict_resolution field) → compatible_overrides (symmetric pairs)
+    → priority → specificity → recency → Conflict Artifact.
     This is governance intent only — not executable logic in this file.
     The compilation engine implements this via SPECIFICATION.md
     Section 2.15. Optional explicit override (conflict_resolution field in
@@ -228,21 +218,17 @@ versioning_strategy:
     minor: "New backward-compatible features"
     patch: "Bug fixes and clarifications"
   migration_intent: >
-    When crossing a MAJOR version boundary (e.g. 8.x → 9.x), lineage_ids
-    are identity_preserved by default — the same Machine ID retains its
-    lineage across versions. Schema field additions in the new MAJOR version
+    When crossing a MAJOR version boundary, the governing body intends that
+    lineage_ids are identity_preserved by default — the same Machine ID retains
+    its lineage across versions. Schema field additions in new MAJOR versions
     MUST have defaults so existing datasets remain valid. Field removals or
-    renames require a migration descriptor (metadata.migration) documenting
-    the transformation. The compilation engine MUST validate cross-version
-    lineage integrity.
+    renames require a migration descriptor documenting the transformation.
   synchronization_intent: >
     All three documents MUST share the same MAJOR version. MINOR and PATCH
-    versions MAY differ independently within the same MAJOR family
-    (see SPECIFICATION.md §5 version compatibility matrix). MAJOR mismatch
-    is incompatible. This is a compatibility matrix, not strict version equality.
-    Formal definition: dataset(schema_version=S) accepts policy(policy_version=P)
-    if and only if floor(S) == floor(P). A validator MUST reject datasets
-    where MAJOR versions differ.
+    versions MAY differ independently within the same MAJOR family.
+    MAJOR mismatch is incompatible. This is a compatibility matrix, not
+    strict version equality. See SPECIFICATION.md §5 for the normative
+    compatibility matrix and formal compatibility rule.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
 sections:

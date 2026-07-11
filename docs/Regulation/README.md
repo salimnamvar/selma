@@ -36,46 +36,29 @@ Formal verification audits MUST include the complete five-document corpus below.
 
 ## The Layered Authority Model
 
-| Layer | Document | Role | Runtime Authority |
-| :--- | :--- | :--- | :--- |
-| **Normative** | `SPECIFICATION.md` | Defines absolute system behaviors, algorithms, and invariants | **Highest.** The sole source of runtime semantics |
-| **Structural** | `rule_schema.json` | Structural JSON Schema projection of spec invariants | **Data Carrier.** Read by the engine; contains no executable logic |
-| **Governance** | `policy_doctrine.yaml` | Human-facing governance intent and formatting guide | **None.** Completely prohibited at inspection and evaluation runtime |
+See SPECIFICATION.md §1.2 for the normative three-layer hierarchy.
+
+**Summary:** Spec > Schema > Policy. Policy has zero runtime authority.
 
 ### The Policy Runtime Prohibition
 
-A key architectural strength is the **Policy Runtime Prohibition**. The compilation and execution engines never interpret prose fields from the governance layer. Instead, the policy layer dictates human authoring constraints (enforced via compile-time schema validation), ensuring that runtime execution evaluates *only* highly structured schema fields.
+See SPECIFICATION.md §1.2 (normative) and `policy_doctrine.yaml` `cross_layer_binding.runtime_prohibition`.
+
+**Mechanical enforcement:** CI runs `scripts/validate_contracts.py` to scan runtime source paths (`src/`) for references to `policy_doctrine.yaml`. Runtime startup MAY additionally assert the doctrine file is absent from configured data paths (SPECIFICATION.md §9.7 item 5).
 
 ### Version Synchronization Invariant
 
-Cross-layer compatibility enforces strict semantic version consistency across all layers via a major-version math boundary:
+See SPECIFICATION.md §5 for the normative version compatibility matrix and formal compatibility rule.
 
-```
-dataset(S) accepts policy(P) ⟺ ⌊S⌋ == ⌊P⌋
-```
-
-Minor and patch versions are allowed to evolve independently within the same major family, but a major version mismatch results in an absolute compile-time rejection.
+**Summary:** MAJOR MUST match; MINOR/PATCH MAY differ. Formal rule: `dataset(S) accepts policy(P) ⟺ ⌊S⌋ == ⌊P⌋`.
 
 ### Architectural Risks & Mitigations
 
-Four known edge cases require monitoring during implementation. See `docs/User-Story/User_Stories.md` (Executive Architectural Overview → Architectural Risks & Mitigations) for detailed risk analysis.
+See SPECIFICATION.md §2.2.2 (merge provenance loss), §2.11 (finding_aggregates latency), §2.9 (discriminator under-validation), and §2.12 (skipped nodes cascade) for the normative risk analysis and mitigations.
 
-| Risk | Summary | Mitigation |
-| :--- | :--- | :--- |
-| **Lossy Lexicographic Merges** | `lineage_id := MIN(parent_a, parent_b)` is deterministic but may obscure provenance | Metadata parsing for lineage tracing; future `MERGE-NN` namespace (e.g. `MGR-18`) |
-| **Time Realism in `finding_aggregates`** | Pre-computed aggregates exclude current-inspection findings | Multi-pass inspection or delayed escalation until reinspection |
-| **Discriminator Under-Validation** | `evaluator_type` ↔ `evaluator_config` may bypass standard JSON Schema engines | Canonical reference validator with AST-walking discriminator (§2.9) + invalid-pairing test corpus (§9.2.15, S-31) |
-| **Cascade Invisibility via Skipped Nodes** | Dependency failures bypass downstream checks without findings | Surface `skipped_nodes` in pipeline trace and dashboards |
+### Binding Rules
 
-**Binding Rules:**
-1. SPECIFICATION.md is the single normative source for all system behavior
-2. rule_schema.json MUST be derivable from spec invariants — no schema element may contradict spec
-3. policy_doctrine.yaml describes governance intent only — no executable fields
-4. When spec and schema conflict, spec wins
-5. Version synchronization is a compatibility matrix: MAJOR MUST match; MINOR/PATCH MAY differ
-6. All `x-*` keys in rule_schema.json are informative and non-normative
-7. The engine validates schema against spec invariants at compile time
-8. **Policy runtime prohibition:** policy_doctrine.yaml MUST NOT be read during inspection, evaluation, finding FSM transitions, or conflict resolution at runtime
+See SPECIFICATION.md §1.2 for the normative binding rules. All `x-*` keys in rule_schema.json are informative and non-normative (see `x-normative-status` annotation).
 
 ## The Separation Principle
 
@@ -106,35 +89,9 @@ This forms a strict bidirectional pointer:
 
 **Anchor Reference Syntax (§7.2):** `section:<id>[/<subsection>]` or JSON Pointer per [RFC 6901](https://tools.ietf.org/html/rfc6901) (`/path/to/section`).
 
-## Policy Runtime Prohibition
-
-**Policy MUST NOT be read at runtime.** This prohibition is stated in each document for self-contained clarity:
-
-- **policy_doctrine.yaml**: `cross_layer_binding.runtime_prohibition` and `contamination_guard.note`
-- **rule_schema.json**: `x-cross-layer-binding.policy_runtime_prohibition`
-- **SPECIFICATION.md**: §2.15 conflict resolution, §2.2 identity resolution, and cross-layer binding sections
-
-The compilation engine implements all runtime behavior over schema/CG-IR fields only. Policy prose is authoritative for human authoring but never interpreted by the engine.
-
-**Mechanical enforcement:** CI runs `scripts/validate_contracts.py` to scan runtime source paths (`src/`) for references to `policy_doctrine.yaml`. Runtime startup MAY additionally assert the doctrine file is absent from configured data paths (SPECIFICATION.md §9.7 item 5).
-
 ## Contamination Guards
 
-Each contract explicitly lists what it MUST NOT contain:
-
-### Policy Contract Forbidden Fields
-`parameters`, `conditions`, `evaluator_hint`, `evaluator_type`, `evaluator_config`, `weight`, `depends_on`, `conflicts_with`, `status`, `created_at`, `expires_at`, `remediation`, `target`, `lineage`
-
-### Rule Contract Forbidden Root Fields
-`preamble`, `governance`, `definitions`, `principles`, `sanctions`, `references`, `writing_principles`, `sections`, `guidance`, `columns`
-
-## Version Synchronization
-
-Both contracts reference each other's version:
-- `policy_doctrine.yaml` → `doctrine.rule_contract_version` + `doctrine.rule_contract_id`
-- `rule_schema.json` → `policy_contract_version` + `policy_contract_id`
-
-Update both when either contract changes.
+See `policy_doctrine.yaml` `contamination_guard.prohibited_fields` for the normative list of forbidden fields. See SPECIFICATION.md §1.2 binding rules for cross-layer contamination principles.
 
 ## Compatibility Matrix
 
@@ -151,21 +108,13 @@ All three documents share the same MAJOR version. MINOR and PATCH may differ ind
 
 ## Conflict Resolution Mapping
 
+**Normative source: SPECIFICATION.md §2.15.** This section serves as a quick-reference index.
+
 **Precedence Chain:** Explicit override (schema `conflict_resolution` field) → `compatible_overrides()` for symmetric pairs (`{always_wins, never_wins}`, identical `defer_to` targets) → priority → specificity → recency → Conflict Artifact. Missing or ambiguous `defer_to` targets fall through to computed resolution (not Conflict Artifact). Cross-lineage pairs produce advisory Conflict Artifacts only (§2.15.2). All inputs are frozen in the CG-IR snapshot, making outcomes deterministic per snapshot.
 
 **Precedence Clarifier:** Policy prose describes governance *intent* for human authors. Schema `conflict_resolution` is structural override *data*. SPECIFICATION.md §2.15 is the sole *algorithm*. On any conflict between the three layers, spec wins; policy is never read at runtime.
 
-| Schema `priority` enum | `priority_level` integer |
-| :--- | :--- |
-| `constitutional` | 1 |
-| `statutory` | 2 |
-| `regulatory` | 3 |
-| `operational` | 4 |
-| `advisory` | 5 |
-
-Enum values are presentation; all comparisons use `priority_level` integers.
-
-See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and `resolve_conflict` function (including `compatible_overrides()`, DFS `defer_to` cycle detection, and §2.15.2 cross-lineage advisory resolution).
+See `rule_schema.json` `x-conflict-resolution-binding.priority_level_mapping` for the enum-to-integer mapping. See SPECIFICATION.md §2.15 for the normative `specificity_score` algorithm and `resolve_conflict` function (including `compatible_overrides()`, DFS `defer_to` cycle detection, and §2.15.2 cross-lineage advisory resolution).
 
 ## Reference Validator
 
@@ -173,53 +122,23 @@ Production-grade implementations SHOULD ship a canonical reference validator sat
 
 ## Compile-Time Engine Invariants
 
-JSON Schema Draft-07 structural validation is **necessary but insufficient** for full contract conformance. The following semantic invariants MUST be enforced by the compilation engine (reference validator) at compile time — they cannot be expressed structurally in JSON Schema alone:
-
-| Invariant | Schema Coverage | Engine Responsibility |
-| :--- | :--- | :--- |
-| **Evaluator portability** | Regex flags whitelist (`^[ims]*$`) | RE2 linter pass; reject PCRE features (backreferences, lookaheads). NFC string normalization. IEEE 754 finite numerics (reject NaN/±Infinity). |
-| **UTC timestamps** | `utc_datetime` pattern (`…Z$`) | Normalize all timestamps to UTC before hashing; reject `±HH:MM` offsets. |
-| **Evaluator type safety** | `oneOf` + `additionalProperties: false` (primary); `allOf` `not:{required:[…]}` (weak secondary) | AST-walking discriminator validator per §2.9 — mandatory normative gate. |
-| **Evaluator complexity** | Per-level `maxItems` only | Recursive AST walk: depth ≤ 32, total nodes ≤ 256, width ≤ 64. |
-| **Metadata non-executability** | `patternProperties` rejects `x-exec*`, `x-eval*`, `x-hint*`, `evaluator_*` keys | Engine MUST ignore metadata at evaluation runtime regardless of content. |
-| **Policy version consistency** | `policy_contract_version` field required | Engine MUST verify `major(policy_contract_version) == major(policy.version)`. |
-| **Finding FSM** | `x-finding-fsm` informative annotation only | Finding FSM Engine enforces transitions per SPECIFICATION.md §3.1 at runtime. |
-
-
+See SPECIFICATION.md §2.9 for the normative compile-time engine invariants. JSON Schema Draft-07 structural validation is necessary but insufficient — custom compile-time validators are mandatory for evaluator complexity limits, discriminator validation, and portability constraints.
 
 ## Migration Rules
 
-Cross-version migration follows the invariants defined in SPECIFICATION.md §2.2.4 and §5. Key points: `lineage_id` is preserved across MAJOR versions by default; field removals require a migration descriptor (`metadata.migration`).
+See SPECIFICATION.md §2.2.4 and §5 for normative migration and versioning invariants.
 
 ## Composite Evaluator Recursion
 
-The schema supports recursive composite evaluators. See SPECIFICATION.md §2.9 for compile-time complexity limits (depth ≤ 32, nodes ≤ 256, width ≤ 64, pattern length ≤ 4096, metadata ≤ 16 384 bytes). **Critical:** JSON Schema Draft-07 cannot natively enforce recursive depth or aggregate node count limits. Custom compile-time validators MUST walk the evaluator AST to enforce these limits (§2.9 JSON Schema Draft-07 Enforcement Limitation).
+See SPECIFICATION.md §2.9 for compile-time complexity limits (depth ≤ 32, nodes ≤ 256, width ≤ 64, pattern length ≤ 4096, metadata ≤ 16 384 bytes). JSON Schema Draft-07 cannot natively enforce recursive depth or aggregate node count limits — custom compile-time validators MUST walk the evaluator AST (§2.9).
 
 ## Deterministic Serialization & Hashing
 
-See SPECIFICATION.md §2.6, §2.16 for the normative hash formulas and §2.16.1 for the array ordering classification table.
-
-Key points:
-- **Dual hash model:** `semantic_hash` (evaluator/scope/priority/status/depends_on/created_at/deontic_type) + `presentation_hash` (description, directive_revision, control_version) compose `node_hash`
-- **Edge hash:** Directional `{source: directive_id, target: directive_id}` — independent of node content
-- **Snapshot hash:** SHA-256 of sorted `node_hashes[]` + sorted `edge_hashes[]` + provenance (compiled_at excluded)
-- **Ordered arrays:** `sub_evaluators`, `pipeline_trace`, `skipped_nodes`
-- **Unordered arrays (sorted before hash):** `depends_on`, `conflicts_with`, `parent_lineage_ids`, `parent_execution_ids`
+See SPECIFICATION.md §2.6 for the normative hash formulas and §2.16 for the serialization rules and array ordering classification table.
 
 ## Evaluation Portability & Complexity Guardrails
 
-The evaluation layer enforces pure, mathematical isolation. See SPECIFICATION.md §2.9 for the full evaluator contract and portability constraints.
-
-### System Complexity Limits (Quick Reference)
-
-| Complexity Metric | Limit | Failure Signal |
-| :--- | :--- | :--- |
-| Max composite recursion depth | 32 levels | `SchemaError: evaluator depth exceeded` |
-| Max evaluator nodes per rule | 256 nodes | `SchemaError: evaluator count exceeded` |
-| Max composite width | 64 nodes | `SchemaError: evaluator width exceeded` |
-| Max regex pattern length | 4,096 chars | `SchemaError: pattern too long` |
-| Max ancestry depth | 64 steps | Compile-time lineage rejection |
-| Max metadata per rule | 16 384 bytes (16 KiB) | `SchemaError: metadata too large` |
+See SPECIFICATION.md §2.9 for the full evaluator contract, portability constraints, and complexity limits.
 
 ## Compilation Pipeline
 

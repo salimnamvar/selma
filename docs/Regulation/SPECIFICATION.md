@@ -1425,9 +1425,9 @@ Findings follow a strict state transition model:
 | Open | Waived | waive (accepted risk) | Regulatory Official | S-29 |
 | Acknowledged | Evidence Submitted | submit evidence | Compliance Representative | S-13 |
 | Evidence Submitted | Pending Verification | System (automatic) | System | — |
-| Pending Verification | Verified | approve | Regulatory Official | S-14 |
-| Pending Verification | Rejected | reject | Regulatory Official | S-14 |
-| Rejected | Open | reopen with comments | Regulatory Official | S-14 |
+| Pending Verification | Verified | approve | Regulatory Official | S-14a |
+| Pending Verification | Rejected | reject | Regulatory Official | S-14b |
+| Rejected | Open | "finding.reopen" (requires comments) | Regulatory Official | S-14c |
 | Verified | Closed | System (automatic) | System | — |
 | Waived | Closed | System (automatic) | System | — |
 
@@ -1488,7 +1488,7 @@ Findings follow a strict state transition model:
 
 **Segregation of Duties:**
 - Directive creator ≠ Finding waiver (same person cannot both create a rule and waive findings from it; enforced on `finding.waive` — see S-29)
-- Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it; enforced on `finding.approve_remediation` — see S-14)
+- Evidence submitter ≠ Remediation approver (same person cannot both submit evidence and approve it; enforced on `finding.approve_remediation` — see S-14a, S-33)
 
 **Creator Provenance (`authored_by`):**
 
@@ -2132,7 +2132,7 @@ Certain §8 invariants require architectural review beyond mechanical JSON/schem
 | AA-01 | **Mediated Feedback** | Verify analytics engine has no write path to CG-IR or Finding FSM; integration test proving finding events cannot trigger compilation | S-17, S-18 |
 | AA-02 | **Declarative Governance** | Static analysis confirming runtime modules load only schema/CG-IR fields; policy_doctrine.yaml absent from runtime data paths | S-05, all |
 | AA-03 | **Evaluator Purity** | AST analysis or sandboxed execution proving evaluators perform no IO, no randomness, no environment reads | S-10, S-21 |
-| AA-04 | **Segregation of Duties** | Integration test: `finding.waive` denied when actor ∈ `creator_provenance`; `finding.approve_remediation` denied when actor submitted evidence | S-14, S-29 |
+| AA-04 | **Segregation of Duties** | Integration test: `finding.waive` denied when actor ∈ `creator_provenance`; `finding.approve_remediation` denied when actor submitted evidence | S-14a, S-29 |
 | AA-05 | **Conflict Resolution Determinism** | Replay test: identical CG-IR snapshot + identical target → byte-identical conflict outcomes including compatible_overrides pairs | S-05, S-28 |
 | AA-06 | **Discriminator Completeness** | Corpus of invalid `evaluator_type`/`evaluator_config` pairings MUST be rejected by reference validator (§2.9, §9.2.15) | S-21, S-27 |
 | AA-07 | **Portable Serialization** | RE2 canary vectors (§9.2.6) + UTC/NaN rejection tests pass on reference validator | S-21 |
