@@ -1,9 +1,12 @@
-"""Policy doctrine aggregate root."""
+"""Policy Doctrine Aggregate Root.
+
+Complete governance doctrine for the policy authoring layer.
+"""
 
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Any
+from typing import Any, Dict, Optional, Tuple
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -23,10 +26,21 @@ from domain.value_objects.writing_principle import WritingPrinciple, WritingPrin
 class PolicyDoctrine(DomainValueObject):
     """Aggregate root representing the complete governance doctrine.
 
-    Owns governance metadata, identity policy, writing principles, priority
-    hierarchy, document structure, and versioning strategy. Structural tree
-    invariants live on :class:`DocumentStructure`; this root enforces only
-    cross-cutting rules such as MAJOR version synchronization.
+    Attributes:
+        name (str): Unique doctrine identifier.
+        version (SemanticVersion): Doctrine version.
+        description (str): Human-readable purpose statement.
+        spec_version (SemanticVersion): Compatible specification version.
+        rule_contract_version (SemanticVersion): Compatible rule schema version.
+        rule_contract_id (RuleContractId): Compatible rule schema identifier.
+        cross_layer_binding (CrossLayerBinding): Layer relationship constraints.
+        identity_resolution (IdentityResolution): Identity mapping policy.
+        identity_lifecycle (IdentityLifecycleIntent): Lifecycle operation governance.
+        contamination_guard (ContaminationGuard): Policy-layer field constraints.
+        writing_principles (WritingPrinciples): Authoring principles.
+        priority_hierarchy (PriorityHierarchy): Authority levels and conflict resolution.
+        versioning_strategy (VersioningStrategy): Versioning intent.
+        document_structure (DocumentStructure): Universal document section definitions.
     """
 
     model_config = ConfigDict(
@@ -60,91 +74,138 @@ class PolicyDoctrine(DomainValueObject):
 
     @model_validator(mode="before")
     @classmethod
-    def _normalize_collections(cls, data: Any) -> Any:
-        """Accept bare lists for principles/sections as used in the YAML document."""
-        if not isinstance(data, dict):
-            return data
-        raw: dict[str, Any] = dict(data)  # type: ignore[arg-type]
-        normalized: dict[str, Any] = dict(raw)
+    def _normalize_collections(cls, a_data: Any) -> Any:
+        """Accept bare lists for principles and sections from YAML.
 
-        principles = normalized.get("writing_principles")
-        if isinstance(principles, list):
-            normalized["writing_principles"] = {"principles": principles}
+        Args:
+            a_data (Any): Raw input mapping or instance data.
 
-        sections = normalized.get("sections")
-        if isinstance(sections, list):
-            normalized["sections"] = {"sections": sections}
+        Returns:
+            Any: Normalized mapping or original input.
+        """
+        result: Any = a_data
+        if isinstance(a_data, dict):
+            raw: Dict[str, Any] = dict(a_data)  # type: ignore[arg-type]
+            normalized: Dict[str, Any] = dict(raw)
 
-        document_structure = normalized.get("document_structure")
-        if isinstance(document_structure, list):
-            normalized["document_structure"] = {"sections": document_structure}
+            principles: Any = normalized.get("writing_principles")
+            if isinstance(principles, list):
+                normalized["writing_principles"] = {"principles": principles}
 
-        return normalized
+            sections: Any = normalized.get("sections")
+            if isinstance(sections, list):
+                normalized["sections"] = {"sections": sections}
+
+            document_structure: Any = normalized.get("document_structure")
+            if isinstance(document_structure, list):
+                normalized["document_structure"] = {"sections": document_structure}
+
+            result = normalized
+        return result
 
     @model_validator(mode="after")
     def check_version_compatibility(self) -> PolicyDoctrine:
-        """Enforce MAJOR version compatibility across doctrine, spec, and rule contract."""
+        """Enforce MAJOR version compatibility across doctrine artifacts.
+
+        Returns:
+            PolicyDoctrine: Validated instance.
+
+        Raises:
+            ValueError: If MAJOR versions diverge.
+        """
+        result: PolicyDoctrine = self
         if not self.version.is_compatible_with(self.spec_version):
-            msg = f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
+            msg: str = f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
             raise ValueError(msg)
         if not self.version.is_compatible_with(self.rule_contract_version):
             msg = f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
             raise ValueError(msg)
-        return self
-
-    # ── Convenience projections ──────────────────────────────────────────
+        return result
 
     @property
-    def sections(self) -> tuple[DocumentSection, ...]:
-        """Top-level document sections (projection of document structure)."""
-        return self.document_structure.sections
+    def sections(self) -> Tuple[DocumentSection, ...]:
+        """Return top-level document sections.
+
+        Returns:
+            Tuple[DocumentSection, ...]: Top-level sections.
+        """
+        result: Tuple[DocumentSection, ...] = self.document_structure.sections
+        return result
 
     @cached_property
-    def _principle_index(self) -> dict[WritingPrincipleId, WritingPrinciple]:
-        return {p.id: p for p in self.writing_principles.principles}
+    def _principle_index(self) -> Dict[WritingPrincipleId, WritingPrinciple]:
+        result: Dict[WritingPrincipleId, WritingPrinciple] = {
+            principle.id: principle for principle in self.writing_principles.principles
+        }
+        return result
 
-    def get_section(self, section_id: SectionId) -> DocumentSection | None:
-        """Retrieve a document section by ID, searching the full tree."""
-        return self.document_structure.get(section_id)
+    def get_section(self, a_section_id: SectionId) -> Optional[DocumentSection]:
+        """Retrieve a document section by ID.
 
-    def get_writing_principle(self, principle_id: WritingPrincipleId) -> WritingPrinciple | None:
-        """Retrieve a writing principle by its identifier."""
-        return self.writing_principles.get(principle_id)
+        Args:
+            a_section_id (SectionId): Section identifier to search for.
 
-    def get_priority_level(self, category: PriorityCategory) -> PriorityLevel | None:
-        """Retrieve a priority level by its category."""
-        return self.priority_hierarchy.get_level(category)
+        Returns:
+            Optional[DocumentSection]: Matching section, or None.
+        """
+        result: Optional[DocumentSection] = self.document_structure.get(a_section_id)
+        return result
+
+    def get_writing_principle(
+        self,
+        a_principle_id: WritingPrincipleId,
+    ) -> Optional[WritingPrinciple]:
+        """Retrieve a writing principle by identifier.
+
+        Args:
+            a_principle_id (WritingPrincipleId): Principle identifier.
+
+        Returns:
+            Optional[WritingPrinciple]: Matching principle, or None.
+        """
+        result: Optional[WritingPrinciple] = self.writing_principles.get(a_principle_id)
+        return result
+
+    def get_priority_level(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
+        """Retrieve a priority level by category.
+
+        Args:
+            a_category (PriorityCategory): Authority category.
+
+        Returns:
+            Optional[PriorityLevel]: Matching level, or None.
+        """
+        result: Optional[PriorityLevel] = self.priority_hierarchy.get_level(a_category)
+        return result
 
     @classmethod
-    def from_document(cls, document: dict[str, Any]) -> PolicyDoctrine:
-        """Build a doctrine aggregate from a full policy_doctrine document mapping.
+    def from_document(cls, a_document: Dict[str, Any]) -> PolicyDoctrine:
+        """Build a doctrine aggregate from a policy_doctrine document mapping.
 
-        Expects the top-level shape of ``policy_doctrine.yaml``::
+        Args:
+            a_document (Dict[str, Any]): Full top-level policy_doctrine YAML mapping.
 
-            doctrine: {name, version, ...}
-            cross_layer_binding: {...}
-            identity_resolution: {...}
-            identity_lifecycle_intent: {...}
-            contamination_guard: {...}
-            writing_principles: [...]
-            priority_hierarchy: {...}
-            versioning_strategy: {...}
-            sections: [...]
+        Returns:
+            PolicyDoctrine: Validated aggregate root.
+
+        Raises:
+            ValueError: If the doctrine metadata block is missing.
         """
-        if "doctrine" not in document:
-            msg = "Document must contain a top-level 'doctrine' metadata block"
+        if "doctrine" not in a_document:
+            msg: str = "Document must contain a top-level 'doctrine' metadata block"
             raise ValueError(msg)
 
-        meta = document["doctrine"]
-        payload: dict[str, Any] = {
+        meta: Dict[str, Any] = a_document["doctrine"]
+        payload: Dict[str, Any] = {
             **meta,
-            "cross_layer_binding": document["cross_layer_binding"],
-            "identity_resolution": document["identity_resolution"],
-            "identity_lifecycle_intent": document["identity_lifecycle_intent"],
-            "contamination_guard": document["contamination_guard"],
-            "writing_principles": document["writing_principles"],
-            "priority_hierarchy": document["priority_hierarchy"],
-            "versioning_strategy": document["versioning_strategy"],
-            "sections": document["sections"],
+            "cross_layer_binding": a_document["cross_layer_binding"],
+            "identity_resolution": a_document["identity_resolution"],
+            "identity_lifecycle_intent": a_document["identity_lifecycle_intent"],
+            "contamination_guard": a_document["contamination_guard"],
+            "writing_principles": a_document["writing_principles"],
+            "priority_hierarchy": a_document["priority_hierarchy"],
+            "versioning_strategy": a_document["versioning_strategy"],
+            "sections": a_document["sections"],
         }
-        return cls.model_validate(payload)
+        result: PolicyDoctrine = cls.model_validate(payload)
+        return result

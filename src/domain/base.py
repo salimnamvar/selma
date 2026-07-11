@@ -1,4 +1,7 @@
-"""Shared base for immutable domain models."""
+"""Domain Model Base.
+
+Shared immutable base for governance domain value objects.
+"""
 
 from __future__ import annotations
 

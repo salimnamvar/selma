@@ -1,15 +1,28 @@
-"""Domain identifiers and scalar value types."""
+"""Domain Identifiers.
+
+Scalar types and structured identifiers for the policy doctrine domain.
+
+Type Aliases:
+    GovernanceText: Non-empty governance prose.
+    MachineId: Immutable lineage identifier pattern.
+    WritingPrincipleId: Writing principle identifier pattern.
+    SectionId: Document section identifier pattern.
+    RuleContractId: Compatible rule schema identifier pattern.
+
+Classes:
+    SemanticVersion: Structured MAJOR.MINOR.PATCH with compatibility checks.
+    FieldPath: Structured cross-layer identity field location.
+"""
 
 from __future__ import annotations
 
 import re
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, ClassVar, Dict, Match, Optional, Pattern, Self
 
 from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
 
-# Non-empty governance prose (descriptions, guidance, intent statements).
 GovernanceText = Annotated[
     str,
     Field(min_length=1, description="Non-empty governance guidance, description, or intent"),
@@ -42,15 +55,17 @@ RuleContractId = Annotated[
     ),
 ]
 
-_SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
-
 
 class SemanticVersion(DomainValueObject):
-    """Semantic version with structured components and MAJOR compatibility rules.
+    """Semantic version with structured components and MAJOR compatibility.
 
-    Accepts either component kwargs or a ``MAJOR.MINOR.PATCH`` string so
-    doctrine documents can load versions directly from YAML scalars.
+    Attributes:
+        major (int): Breaking changes that require migration.
+        minor (int): New backward-compatible features.
+        patch (int): Bug fixes and clarifications.
     """
+
+    _PATTERN: ClassVar[Pattern[str]] = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
     major: int = Field(ge=0, description="Breaking changes that require migration")
     minor: int = Field(ge=0, description="New backward-compatible features")
@@ -58,18 +73,27 @@ class SemanticVersion(DomainValueObject):
 
     @model_validator(mode="before")
     @classmethod
-    def _parse_string(cls, data: Any) -> Any:
-        if isinstance(data, str):
-            match = _SEMVER_RE.fullmatch(data)
+    def _parse_string(cls, a_data: Any) -> Any:
+        """Parse a MAJOR.MINOR.PATCH string into component fields.
+
+        Args:
+            a_data (Any): Raw input (string or mapping).
+
+        Returns:
+            Any: Parsed mapping or original input.
+        """
+        result: Any = a_data
+        if isinstance(a_data, str):
+            match: Optional[Match[str]] = cls._PATTERN.fullmatch(a_data)
             if match is None:
-                msg = f"Invalid semantic version {data!r}; expected MAJOR.MINOR.PATCH"
+                msg: str = f"Invalid semantic version {a_data!r}; expected MAJOR.MINOR.PATCH"
                 raise ValueError(msg)
-            return {
+            result = {
                 "major": int(match.group(1)),
                 "minor": int(match.group(2)),
                 "patch": int(match.group(3)),
             }
-        return data
+        return result
 
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
@@ -77,45 +101,71 @@ class SemanticVersion(DomainValueObject):
     def __repr__(self) -> str:
         return f"SemanticVersion({self!s})"
 
-    def is_compatible_with(self, other: SemanticVersion) -> bool:
+    def is_compatible_with(self, a_other: SemanticVersion) -> bool:
         """Return True when both versions share the same MAJOR component.
 
-        This is the doctrine synchronization rule: documents must share the
-        same MAJOR family; MINOR and PATCH may diverge independently.
+        Args:
+            a_other (SemanticVersion): Version to compare against.
+
+        Returns:
+            bool: True if MAJOR versions match.
         """
-        return self.major == other.major
+        result: bool = self.major == a_other.major
+        return result
 
-    def __lt__(self, other: object) -> bool:
-        if not isinstance(other, SemanticVersion):
-            return NotImplemented
-        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
+    def __lt__(self, a_other: object) -> bool:
+        result: bool = NotImplemented  # type: ignore[assignment]
+        if isinstance(a_other, SemanticVersion):
+            result = (self.major, self.minor, self.patch) < (
+                a_other.major,
+                a_other.minor,
+                a_other.patch,
+            )
+        return result
 
-    def __le__(self, other: object) -> bool:
-        if not isinstance(other, SemanticVersion):
-            return NotImplemented
-        return self == other or self < other
+    def __le__(self, a_other: object) -> bool:
+        result: bool = NotImplemented  # type: ignore[assignment]
+        if isinstance(a_other, SemanticVersion):
+            result = self == a_other or self < a_other
+        return result
 
-    def __gt__(self, other: object) -> bool:
-        if not isinstance(other, SemanticVersion):
-            return NotImplemented
-        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+    def __gt__(self, a_other: object) -> bool:
+        result: bool = NotImplemented  # type: ignore[assignment]
+        if isinstance(a_other, SemanticVersion):
+            result = (self.major, self.minor, self.patch) > (
+                a_other.major,
+                a_other.minor,
+                a_other.patch,
+            )
+        return result
 
-    def __ge__(self, other: object) -> bool:
-        if not isinstance(other, SemanticVersion):
-            return NotImplemented
-        return self == other or self > other
+    def __ge__(self, a_other: object) -> bool:
+        result: bool = NotImplemented  # type: ignore[assignment]
+        if isinstance(a_other, SemanticVersion):
+            result = self == a_other or self > a_other
+        return result
 
     @classmethod
-    def from_string(cls, value: str) -> Self:
-        """Construct from a ``MAJOR.MINOR.PATCH`` string."""
-        return cls.model_validate(value)
+    def from_string(cls, a_value: str) -> Self:
+        """Construct from a MAJOR.MINOR.PATCH string.
+
+        Args:
+            a_value (str): Version string.
+
+        Returns:
+            Self: Parsed semantic version.
+        """
+        result: Self = cls.model_validate(a_value)
+        return result
 
 
 class FieldPath(DomainValueObject):
     """Structured location of an identity field across layers.
 
-    Accepts either a dotted path string (e.g. ``rules[].lineage_id``) or
-    explicit collection/field components.
+    Attributes:
+        collection (str): Collection or container name.
+        field (str): Field name within the collection.
+        raw (str): Original path expression as authored.
     """
 
     collection: str = Field(min_length=1, description="Collection or container name")
@@ -124,20 +174,35 @@ class FieldPath(DomainValueObject):
 
     @model_validator(mode="before")
     @classmethod
-    def _parse_path(cls, data: Any) -> Any:
-        if isinstance(data, str):
-            raw = data.strip()
+    def _parse_path(cls, a_data: Any) -> Any:
+        """Parse a dotted path string into collection/field components.
+
+        Args:
+            a_data (Any): Raw input (string or mapping).
+
+        Returns:
+            Any: Parsed mapping or original input.
+        """
+        result: Any = a_data
+        if isinstance(a_data, str):
+            raw: str = a_data.strip()
             if not raw:
                 raise ValueError("Field path must be non-empty")
-            # Accept forms like "rules[].lineage_id" or "CG-IR nodes[].directive_id"
+            collection: str
+            field: str
             if "[]." in raw:
                 collection, field = raw.rsplit("[].", maxsplit=1)
             elif "." in raw:
                 collection, field = raw.rsplit(".", maxsplit=1)
             else:
                 collection, field = raw, raw
-            return {"collection": collection.strip(), "field": field.strip(), "raw": raw}
-        return data
+            parsed: Dict[str, str] = {
+                "collection": collection.strip(),
+                "field": field.strip(),
+                "raw": raw,
+            }
+            result = parsed
+        return result
 
     def __str__(self) -> str:
         return self.raw

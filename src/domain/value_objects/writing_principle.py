@@ -1,8 +1,12 @@
-"""Writing principle value objects."""
+"""Writing Principle Value Objects.
+
+Authoring principles that guide directive writers.
+"""
 
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Dict, List, Optional, Tuple
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -11,7 +15,13 @@ from domain.identifiers import GovernanceText, WritingPrincipleId
 
 
 class WritingPrinciple(DomainValueObject):
-    """A governance principle that guides rule authors in writing directives."""
+    """A governance principle that guides rule authors.
+
+    Attributes:
+        id (WritingPrincipleId): Unique principle identifier.
+        title (GovernanceText): Short principle name.
+        description (GovernanceText): Detailed application guidance.
+    """
 
     id: WritingPrincipleId = Field(description="Unique principle identifier")
     title: GovernanceText = Field(description="Short principle name")
@@ -19,7 +29,11 @@ class WritingPrinciple(DomainValueObject):
 
 
 class WritingPrinciples(DomainValueObject):
-    """Collection of writing principles with uniqueness and O(1) lookup."""
+    """Collection of writing principles with uniqueness and lookup.
+
+    Attributes:
+        principles (Tuple[WritingPrinciple, ...]): Authoring principles.
+    """
 
     model_config = ConfigDict(
         frozen=True,
@@ -27,34 +41,49 @@ class WritingPrinciples(DomainValueObject):
         ignored_types=(cached_property,),
     )
 
-    principles: tuple[WritingPrinciple, ...] = Field(
+    principles: Tuple[WritingPrinciple, ...] = Field(
         min_length=1,
         description="Authoring principles",
     )
 
     @model_validator(mode="after")
     def check_unique_ids(self) -> WritingPrinciples:
-        """Reject collections that contain duplicate principle IDs."""
-        ids = [p.id for p in self.principles]
+        """Reject collections that contain duplicate principle IDs.
+
+        Returns:
+            WritingPrinciples: Validated instance.
+
+        Raises:
+            ValueError: If principle IDs are duplicated.
+        """
+        result: WritingPrinciples = self
+        ids: List[WritingPrincipleId] = [principle.id for principle in self.principles]
         if len(ids) != len(set(ids)):
             raise ValueError("Duplicate writing principle IDs are not allowed")
-        return self
+        return result
 
     @cached_property
-    def _index(self) -> dict[WritingPrincipleId, WritingPrinciple]:
-        return {p.id: p for p in self.principles}
+    def _index(self) -> Dict[WritingPrincipleId, WritingPrinciple]:
+        result: Dict[WritingPrincipleId, WritingPrinciple] = {principle.id: principle for principle in self.principles}
+        return result
 
-    def get(self, principle_id: WritingPrincipleId) -> WritingPrinciple | None:
-        """Return a principle by ID, or None if absent."""
-        return self._index.get(principle_id)
+    def get(self, a_principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
+        """Return a principle by ID.
 
-    def __iter__(self):  # type: ignore[no-untyped-def]
-        return iter(self.principles)
+        Args:
+            a_principle_id (WritingPrincipleId): Principle identifier.
+
+        Returns:
+            Optional[WritingPrinciple]: Matching principle, or None.
+        """
+        result: Optional[WritingPrinciple] = self._index.get(a_principle_id)
+        return result
 
     def __len__(self) -> int:
         return len(self.principles)
 
-    def __contains__(self, item: object) -> bool:
-        if isinstance(item, str):
-            return item in self._index
-        return False
+    def __contains__(self, a_item: object) -> bool:
+        result: bool = False
+        if isinstance(a_item, str):
+            result = a_item in self._index
+        return result

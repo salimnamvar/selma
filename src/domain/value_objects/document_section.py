@@ -1,10 +1,13 @@
-"""Document section and document structure value objects."""
+"""Document Section Value Objects.
+
+Structural sections and validated document structure for governance documents.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable, Sequence
 from functools import cached_property
-from typing import cast
+from typing import ClassVar, Dict, FrozenSet, Optional, Set, Tuple, cast
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -12,40 +15,29 @@ from domain.base import DomainValueObject
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
 
-# Doctrine WP-003 / structural integrity: max three levels of nested sections.
-MAX_SECTION_DEPTH = 3
-
-# Top-level sections required by the universal document template.
-REQUIRED_SECTION_IDS: frozenset[SectionId] = frozenset(
-    {
-        "preamble",
-        "governance",
-        "definitions",
-        "principles",
-        "directives",
-        "sanctions",
-    }
-)
-
-# Expected children of the directives section (when present).
-DIRECTIVES_CHILD_IDS: frozenset[SectionId] = frozenset(
-    {
-        "specific_directives",
-        "flexible_standards",
-    }
-)
-
-_TABULAR_CONTENT_TYPES = frozenset(
-    {
-        ContentType.TABLE,
-        ContentType.PROSE_OR_TABLE,
-        ContentType.MIXED,
-    }
-)
-
 
 class DocumentSection(DomainValueObject):
-    """A structural section defining the composition of a governance document."""
+    """A structural section defining governance document composition.
+
+    Attributes:
+        id (SectionId): Unique section identifier.
+        title (GovernanceText): Human-readable section title.
+        required (bool): Whether this section must be present.
+        content_type (ContentType): Expected content format.
+        guidance (Optional[GovernanceText]): Authoring guidance.
+        columns (Tuple[GovernanceText, ...]): Table column headers.
+        children (Tuple[DocumentSection, ...]): Subsections.
+        schema_encoding (Optional[GovernanceText]): Schema mapping guidance.
+    """
+
+    MAX_DEPTH: ClassVar[int] = 3
+    _TABULAR_CONTENT_TYPES: ClassVar[FrozenSet[ContentType]] = frozenset(
+        {
+            ContentType.TABLE,
+            ContentType.PROSE_OR_TABLE,
+            ContentType.MIXED,
+        }
+    )
 
     id: SectionId = Field(description="Unique section identifier")
     title: GovernanceText = Field(description="Human-readable section title")
@@ -54,19 +46,19 @@ class DocumentSection(DomainValueObject):
         description="Whether this section must be present in a complete document",
     )
     content_type: ContentType = Field(description="Expected content format")
-    guidance: GovernanceText | None = Field(
+    guidance: Optional[GovernanceText] = Field(
         default=None,
         description="Authoring guidance for this section",
     )
-    columns: tuple[GovernanceText, ...] = Field(
+    columns: Tuple[GovernanceText, ...] = Field(
         default=(),
         description="Table column headers (empty when not tabular)",
     )
-    children: tuple[DocumentSection, ...] = Field(
+    children: Tuple[DocumentSection, ...] = Field(
         default=(),
         description="Subsections",
     )
-    schema_encoding: GovernanceText | None = Field(
+    schema_encoding: Optional[GovernanceText] = Field(
         default=None,
         description=(
             "Authoring guidance for how this section maps to the rule schema. "
@@ -76,78 +68,140 @@ class DocumentSection(DomainValueObject):
 
     @model_validator(mode="before")
     @classmethod
-    def _normalize_optional_collections(cls, data: object) -> object:
-        """Coerce YAML null/missing collections to empty tuples."""
-        if not isinstance(data, dict):
-            return data
-        raw: dict[str, object] = dict(data)  # type: ignore[arg-type]
-        normalized: dict[str, object] = dict(raw)
-        if normalized.get("columns") is None:
-            normalized["columns"] = ()
-        else:
-            columns = normalized.get("columns")
-            if isinstance(columns, list):
-                column_items = cast(Sequence[object], columns)
-                normalized["columns"] = tuple(column_items)
-        if normalized.get("children") is None:
-            normalized["children"] = ()
-        return normalized
+    def _normalize_optional_collections(cls, a_data: object) -> object:
+        """Coerce YAML null collections to empty tuples.
+
+        Args:
+            a_data (object): Raw input mapping or instance data.
+
+        Returns:
+            object: Normalized mapping or original input.
+        """
+        result: object = a_data
+        if isinstance(a_data, dict):
+            raw: Dict[str, object] = dict(a_data)  # type: ignore[arg-type]
+            normalized: Dict[str, object] = dict(raw)
+            if normalized.get("columns") is None:
+                normalized["columns"] = ()
+            else:
+                columns: object = normalized.get("columns")
+                if isinstance(columns, list):
+                    column_items: Sequence[object] = cast(Sequence[object], columns)
+                    normalized["columns"] = tuple(column_items)
+            if normalized.get("children") is None:
+                normalized["children"] = ()
+            result = normalized
+        return result
 
     @model_validator(mode="after")
     def check_content_invariants(self) -> DocumentSection:
-        """Validate columns vs content type and local nesting depth."""
+        """Validate columns vs content type and local nesting depth.
+
+        Returns:
+            DocumentSection: Validated instance.
+
+        Raises:
+            ValueError: If columns or depth violate section rules.
+        """
+        result: DocumentSection = self
         if self.columns and self.content_type == ContentType.PROSE:
-            msg = f"Section '{self.id}': columns are not applicable for prose-only content"
+            msg: str = f"Section '{self.id}': columns are not applicable for prose-only content"
             raise ValueError(msg)
-        if self.columns and self.content_type not in _TABULAR_CONTENT_TYPES:
+        if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
             msg = f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
             raise ValueError(msg)
-        depth = self.max_depth()
-        if depth > MAX_SECTION_DEPTH:
-            msg = f"Section '{self.id}' has depth {depth}, exceeds maximum {MAX_SECTION_DEPTH}"
+        depth: int = self.max_depth()
+        if depth > self.MAX_DEPTH:
+            msg = f"Section '{self.id}' has depth {depth}, exceeds maximum {self.MAX_DEPTH}"
             raise ValueError(msg)
-        return self
+        return result
 
-    def max_depth(self, current: int = 1) -> int:
-        """Return the maximum nesting depth from this section (this node = 1)."""
-        if not self.children:
-            return current
-        return max(child.max_depth(current + 1) for child in self.children)
+    def max_depth(self, a_current: int = 1) -> int:
+        """Return the maximum nesting depth from this section.
+
+        Args:
+            a_current (int): Current depth counter. Defaults to 1.
+
+        Returns:
+            int: Maximum nesting depth.
+        """
+        result: int = a_current if not self.children else max(child.max_depth(a_current + 1) for child in self.children)
+        return result
 
     def all_ids(self) -> Generator[SectionId]:
-        """Yield this section's ID and all descendant IDs in tree order."""
+        """Yield this section ID and all descendant IDs.
+
+        Yields:
+            SectionId: Section IDs in tree order.
+        """
         yield self.id
         for child in self.children:
             yield from child.all_ids()
 
     def traverse(self) -> Generator[DocumentSection]:
-        """Yield this section and all descendants in pre-order."""
+        """Yield this section and all descendants in pre-order.
+
+        Yields:
+            DocumentSection: Sections in pre-order.
+        """
         yield self
         for child in self.children:
             yield from child.traverse()
 
-    def find(self, section_id: SectionId) -> DocumentSection | None:
-        """Find a section by ID within this subtree (including self)."""
-        if self.id == section_id:
-            return self
-        for child in self.children:
-            found = child.find(section_id)
-            if found is not None:
-                return found
-        return None
+    def find(self, a_section_id: SectionId) -> Optional[DocumentSection]:
+        """Find a section by ID within this subtree.
+
+        Args:
+            a_section_id (SectionId): Section identifier to locate.
+
+        Returns:
+            Optional[DocumentSection]: Matching section, or None.
+        """
+        result: Optional[DocumentSection] = None
+        if self.id == a_section_id:
+            result = self
+        else:
+            for child in self.children:
+                found: Optional[DocumentSection] = child.find(a_section_id)
+                if found is not None:
+                    result = found
+                    break
+        return result
 
     @property
     def is_tabular(self) -> bool:
-        """Return True when this section may carry table columns."""
-        return self.content_type in _TABULAR_CONTENT_TYPES or bool(self.columns)
+        """Return True when this section may carry table columns.
+
+        Returns:
+            bool: True if content type is tabular or columns are present.
+        """
+        result: bool = self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
+        return result
 
 
 class DocumentStructure(DomainValueObject):
     """Validated tree of universal document sections.
 
-    Owns structural invariants (required roots, unique IDs, depth, directives
-    children) so the aggregate root does not micromanage the tree.
+    Attributes:
+        sections (Tuple[DocumentSection, ...]): Top-level document sections.
     """
+
+    REQUIRED_SECTION_IDS: ClassVar[FrozenSet[SectionId]] = frozenset(
+        {
+            "preamble",
+            "governance",
+            "definitions",
+            "principles",
+            "directives",
+            "sanctions",
+        }
+    )
+    DIRECTIVES_CHILD_IDS: ClassVar[FrozenSet[SectionId]] = frozenset(
+        {
+            "specific_directives",
+            "flexible_standards",
+        }
+    )
 
     model_config = ConfigDict(
         frozen=True,
@@ -155,58 +209,87 @@ class DocumentStructure(DomainValueObject):
         ignored_types=(cached_property,),
     )
 
-    sections: tuple[DocumentSection, ...] = Field(
+    sections: Tuple[DocumentSection, ...] = Field(
         min_length=1,
         description="Top-level document sections",
     )
 
     @model_validator(mode="after")
     def check_structure(self) -> DocumentStructure:
-        """Enforce required sections, unique IDs, and directives children."""
-        present = {section.id for section in self.sections}
-        missing = REQUIRED_SECTION_IDS - present
+        """Enforce required sections, unique IDs, and directives children.
+
+        Returns:
+            DocumentStructure: Validated instance.
+
+        Raises:
+            ValueError: If structure invariants are violated.
+        """
+        result: DocumentStructure = self
+        present: Set[SectionId] = {section.id for section in self.sections}
+        missing: FrozenSet[SectionId] = self.REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        seen: set[SectionId] = set()
+        seen: Set[SectionId] = set()
         for section in self.sections:
             for section_id in section.all_ids():
                 if section_id in seen:
                     raise ValueError(f"Duplicate section ID: {section_id}")
                 seen.add(section_id)
 
-        directives = next((s for s in self.sections if s.id == "directives"), None)
+        directives: Optional[DocumentSection] = next(
+            (section for section in self.sections if section.id == "directives"),
+            None,
+        )
         if directives is not None and directives.children:
-            child_ids = {c.id for c in directives.children}
-            missing_children = DIRECTIVES_CHILD_IDS - child_ids
+            child_ids: Set[SectionId] = {child.id for child in directives.children}
+            missing_children: FrozenSet[SectionId] = self.DIRECTIVES_CHILD_IDS - child_ids
             if missing_children:
                 raise ValueError(f"Directives section missing expected children: {sorted(missing_children)}")
 
-        return self
+        return result
 
     @cached_property
-    def _index(self) -> dict[SectionId, DocumentSection]:
-        mapping: dict[SectionId, DocumentSection] = {}
+    def _index(self) -> Dict[SectionId, DocumentSection]:
+        mapping: Dict[SectionId, DocumentSection] = {}
         for root in self.sections:
             for section in root.traverse():
                 mapping[section.id] = section
         return mapping
 
-    def get(self, section_id: SectionId) -> DocumentSection | None:
-        """Return a section by ID from the full tree, or None."""
-        return self._index.get(section_id)
+    def get(self, a_section_id: SectionId) -> Optional[DocumentSection]:
+        """Return a section by ID from the full tree.
 
-    def all_section_ids(self) -> frozenset[SectionId]:
-        """Return every section ID in the tree."""
-        return frozenset(self._index)
+        Args:
+            a_section_id (SectionId): Section identifier.
 
-    def __iter__(self):  # type: ignore[no-untyped-def]
-        return iter(self.sections)
+        Returns:
+            Optional[DocumentSection]: Matching section, or None.
+        """
+        result: Optional[DocumentSection] = self._index.get(a_section_id)
+        return result
+
+    def all_section_ids(self) -> FrozenSet[SectionId]:
+        """Return every section ID in the tree.
+
+        Returns:
+            FrozenSet[SectionId]: All section identifiers.
+        """
+        result: FrozenSet[SectionId] = frozenset(self._index)
+        return result
 
     def __len__(self) -> int:
         return len(self.sections)
 
     @classmethod
-    def from_sections(cls, sections: Iterable[DocumentSection]) -> DocumentStructure:
-        """Build a validated structure from an iterable of top-level sections."""
-        return cls(sections=tuple(sections))
+    def from_sections(cls, a_sections: Iterable[DocumentSection]) -> DocumentStructure:
+        """Build a validated structure from top-level sections.
+
+        Args:
+            a_sections (Iterable[DocumentSection]): Top-level sections.
+
+        Returns:
+            DocumentStructure: Validated document structure.
+        """
+        result: DocumentStructure = cls(sections=tuple(a_sections))
+        return result

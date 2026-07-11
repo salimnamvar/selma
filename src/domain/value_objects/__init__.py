@@ -1,4 +1,7 @@
-"""Value objects for the policy doctrine domain model."""
+"""Policy Doctrine Value Objects.
+
+Public value-object surface for the governance domain.
+"""
 
 from __future__ import annotations
 
@@ -9,13 +12,7 @@ from domain.value_objects.cross_layer_binding import (
     CrossLayerBinding,
     FieldLegality,
 )
-from domain.value_objects.document_section import (
-    DIRECTIVES_CHILD_IDS,
-    MAX_SECTION_DEPTH,
-    REQUIRED_SECTION_IDS,
-    DocumentSection,
-    DocumentStructure,
-)
+from domain.value_objects.document_section import DocumentSection, DocumentStructure
 from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent, LifecycleOperationIntent
 from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
 from domain.value_objects.priority_hierarchy import (
@@ -27,9 +24,6 @@ from domain.value_objects.versioning_strategy import VersioningStrategy, Version
 from domain.value_objects.writing_principle import WritingPrinciple, WritingPrinciples
 
 __all__ = [
-    "DIRECTIVES_CHILD_IDS",
-    "MAX_SECTION_DEPTH",
-    "REQUIRED_SECTION_IDS",
     "ConflictResolutionBinding",
     "ContaminationGuard",
     "CrossLayerBinding",

@@ -1,8 +1,6 @@
-"""Policy doctrine domain model.
+"""Policy Doctrine Domain Model.
 
-Models the governance-intent concerns of ``docs/Regulation/policy_doctrine.yaml``.
-This layer is descriptive of human authoring constraints; it is not loaded at
-runtime by the evaluation engine.
+Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
 """
 
 from __future__ import annotations
@@ -27,9 +25,6 @@ from domain.identifiers import (
     WritingPrincipleId,
 )
 from domain.value_objects import (
-    DIRECTIVES_CHILD_IDS,
-    MAX_SECTION_DEPTH,
-    REQUIRED_SECTION_IDS,
     ConflictResolutionBinding,
     ContaminationGuard,
     CrossLayerBinding,
@@ -51,9 +46,6 @@ from domain.value_objects import (
 )
 
 __all__ = [
-    "DIRECTIVES_CHILD_IDS",
-    "MAX_SECTION_DEPTH",
-    "REQUIRED_SECTION_IDS",
     "ConflictResolutionBinding",
     "ContaminationGuard",
     "ContentType",

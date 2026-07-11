@@ -1,8 +1,12 @@
-"""Enumerations for the domain model."""
+"""Domain Enumerations.
+
+Enumerations for content types, identity operations, priority, and contamination.
+"""
 
 from __future__ import annotations
 
 from enum import IntEnum, StrEnum
+from typing import List
 
 
 class ContentType(StrEnum):
@@ -39,8 +43,18 @@ class PriorityCategory(StrEnum):
 
     @property
     def rank(self) -> int:
-        """1-based authority rank derived from declaration order (1 = highest)."""
-        return list(PriorityCategory).index(self) + 1
+        """Return 1-based authority rank from declaration order.
+
+        Returns:
+            int: Rank where 1 is highest authority.
+        """
+        result: int = 0
+        members: List[PriorityCategory] = list(PriorityCategory)
+        for index, category in enumerate(members, start=1):
+            if category is self:
+                result = index
+                break
+        return result
 
 
 class ProhibitedField(StrEnum):
