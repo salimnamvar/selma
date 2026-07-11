@@ -74,7 +74,7 @@ class TestPolicyDoctrineYamlContract:
 
     def test_identity_lifecycle_operations(self, doctrine: PolicyDoctrine) -> None:
         lifecycle = doctrine.identity_lifecycle
-        assert frozenset(IdentityOperation) == lifecycle.SUPPORTED_OPERATIONS
+        assert frozenset(IdentityOperation) == frozenset(lifecycle._GUIDANCE_ENUM)
         assert "two distinct" in lifecycle.guidance_for(IdentityOperation.FORK).lower()
         assert "combine" in lifecycle.guidance_for(IdentityOperation.MERGE).lower()
 

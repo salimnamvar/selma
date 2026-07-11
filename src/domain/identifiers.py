@@ -8,9 +8,9 @@ from __future__ import annotations
 from functools import total_ordering
 from typing import Annotated, Any
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
-from domain.base import DomainValueObject
+from domain.base import StringCoercibleVO
 
 GovernanceText = Annotated[
     str,
@@ -43,7 +43,7 @@ RuleContractId = Annotated[
 
 
 @total_ordering
-class SemanticVersion(DomainValueObject):
+class SemanticVersion(StringCoercibleVO):
     """Semantic version with structured components and MAJOR compatibility.
 
     Accepts component kwargs or a ``MAJOR.MINOR.PATCH`` string via
@@ -54,17 +54,13 @@ class SemanticVersion(DomainValueObject):
     minor: int = Field(ge=0, description="New backward-compatible features")
     patch: int = Field(ge=0, description="Bug fixes and clarifications")
 
-    @model_validator(mode="before")
     @classmethod
-    def _coerce_string(cls, a_data: Any) -> Any:
-        """Coerce a MAJOR.MINOR.PATCH string into component fields."""
-        result: Any = a_data
-        if isinstance(a_data, str):
-            parts = a_data.split(".")
-            if len(parts) != 3 or not all(part.isdigit() for part in parts):
-                raise ValueError(f"Invalid semantic version {a_data!r}; expected MAJOR.MINOR.PATCH")
-            result = {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
-        return result
+    def _parse_string(cls, a_string: str) -> dict[str, Any]:
+        """Parse a MAJOR.MINOR.PATCH string into component fields."""
+        parts = a_string.split(".")
+        if len(parts) != 3 or not all(part.isdigit() for part in parts):
+            raise ValueError(f"Invalid semantic version {a_string!r}; expected MAJOR.MINOR.PATCH")
+        return {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
 
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
@@ -84,7 +80,7 @@ class SemanticVersion(DomainValueObject):
         return result
 
 
-class FieldPath(DomainValueObject):
+class FieldPath(StringCoercibleVO):
     """Structured location of an identity field across layers.
 
     Accepts a dotted path string (e.g. ``rules[].lineage_id``) or components
@@ -95,23 +91,19 @@ class FieldPath(DomainValueObject):
     field: str = Field(min_length=1, description="Field name within the collection")
     raw: str = Field(min_length=1, description="Original path expression as authored")
 
-    @model_validator(mode="before")
     @classmethod
-    def _coerce_string(cls, a_data: Any) -> Any:
-        """Coerce a dotted path string into collection/field components."""
-        result: Any = a_data
-        if isinstance(a_data, str):
-            raw = a_data.strip()
-            if not raw:
-                raise ValueError("Field path must be non-empty")
-            if "[]." in raw:
-                collection, field = raw.rsplit("[].", maxsplit=1)
-            elif "." in raw:
-                collection, field = raw.rsplit(".", maxsplit=1)
-            else:
-                collection, field = raw, raw
-            result = {"collection": collection.strip(), "field": field.strip(), "raw": raw}
-        return result
+    def _parse_string(cls, a_string: str) -> dict[str, Any]:
+        """Parse a dotted path string into collection/field components."""
+        raw = a_string.strip()
+        if not raw:
+            raise ValueError("Field path must be non-empty")
+        if "[]." in raw:
+            collection, field = raw.rsplit("[].", maxsplit=1)
+        elif "." in raw:
+            collection, field = raw.rsplit(".", maxsplit=1)
+        else:
+            collection, field = raw, raw
+        return {"collection": collection.strip(), "field": field.strip(), "raw": raw}
 
     def __str__(self) -> str:
         return self.raw

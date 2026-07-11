@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from functools import cached_property
 
 from pydantic import Field, model_validator
 
-from domain.base import DomainValueObject, NameableMixin
+from domain.base import DomainValueObject, NameableMixin, require_unique
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
@@ -69,13 +68,10 @@ class PriorityHierarchy(DomainValueObject):
                     "ordered and contiguous starting from 1."
                 )
 
-        category_ids = [level.id for level in self.levels]
-        dupes = {id_ for id_, count in Counter(category_ids).items() if count > 1}
-        if dupes:
-            raise ValueError(f"Duplicate priority categories found: {dupes}")
+        require_unique([level.id for level in self.levels], a_label="priority categories")
 
         expected = set(PriorityCategory)
-        present = set(category_ids)
+        present = {level.id for level in self.levels}
         missing = expected - present
         if missing:
             raise ValueError(f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}")

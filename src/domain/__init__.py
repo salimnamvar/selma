@@ -12,9 +12,11 @@ from __future__ import annotations
 
 from domain.base import (
     DomainValueObject,
+    EnumGuidedVO,
     Identifiable,
     Nameable,
     NameableMixin,
+    StringCoercibleVO,
     TreeNodeMixin,
     none_as_empty,
     require_unique,
@@ -65,6 +67,7 @@ __all__ = [
     "DocumentSection",
     "DocumentStructure",
     "DomainValueObject",
+    "EnumGuidedVO",
     "FieldLegality",
     "FieldPath",
     "GovernanceText",
@@ -87,6 +90,7 @@ __all__ = [
     "RuleContractId",
     "SectionId",
     "SemanticVersion",
+    "StringCoercibleVO",
     "TreeNodeMixin",
     "VersionIntent",
     "VersioningStrategy",

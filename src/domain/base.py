@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable, Hashable, Iterator, Sequence
+from enum import Enum
 from functools import cached_property
 from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 TId = TypeVar("TId", bound=Hashable, covariant=True)
 TNode = TypeVar("TNode", bound="TreeNodeMixin")
@@ -50,6 +51,57 @@ class DomainValueObject(BaseModel):
         str_strip_whitespace=True,
         ignored_types=(cached_property,),
     )
+
+
+class StringCoercibleVO(DomainValueObject):
+    """Value object that can be constructed from a formatted string.
+
+    Subclasses override ``_parse_string`` to define parsing logic. The
+    ``model_validate("...")`` call is handled by Pydantic automatically.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_string(cls, a_data: Any) -> Any:
+        """Coerce a string input into structured component fields."""
+        if isinstance(a_data, str):
+            return cls._parse_string(a_data)
+        return a_data
+
+    @classmethod
+    def _parse_string(cls, a_string: str) -> dict[str, Any]:
+        """Parse a string into a dict of field values. Override in subclasses."""
+        msg = f"{cls.__name__} must implement _parse_string"
+        raise NotImplementedError(msg)
+
+
+class EnumGuidedVO(DomainValueObject):
+    """Value object mapping enum members to GovernanceText guidance fields.
+
+    Subclasses declare ``_GUIDANCE_ENUM`` pointing to the enum type and
+    add a GovernanceText field for each enum member. The base class validates
+    completeness and provides ``guidance_for``.
+    """
+
+    @model_validator(mode="after")
+    def _check_enum_fields_complete(self) -> EnumGuidedVO:
+        """Ensure every enum member has a corresponding field."""
+        guidance_enum = getattr(type(self), "_GUIDANCE_ENUM", None)
+        if guidance_enum is None:
+            msg = f"{type(self).__name__} must define _GUIDANCE_ENUM ClassVar"
+            raise TypeError(msg)
+        missing = [
+            member.value
+            for member in guidance_enum
+            if not hasattr(self, member.value)
+        ]
+        if missing:
+            raise ValueError(f"Missing guidance fields for enum members: {sorted(missing)}")
+        return self
+
+    def guidance_for(self, a_member: Enum) -> str:
+        """Return the governance guidance text for the given enum member."""
+        return getattr(self, a_member.value)
 
 
 def require_unique(a_ids: Sequence[Hashable], *, a_label: str) -> None:
