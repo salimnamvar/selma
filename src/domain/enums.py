@@ -1,7 +1,4 @@
-"""Domain Enumerations.
-
-Enumerations for content types, identity operations, priority, and contamination.
-"""
+"""Domain Enumerations."""
 
 from __future__ import annotations
 
@@ -29,10 +26,7 @@ class IdentityOperation(StrEnum):
 
 
 class PriorityCategory(StrEnum):
-    """Authority levels in the governance priority hierarchy.
-
-    Declaration order matches ascending rank (1 = highest authority).
-    """
+    """Authority levels in governance priority hierarchy (declaration order = ascending rank)."""
 
     CONSTITUTIONAL = "constitutional"
     STATUTORY = "statutory"
@@ -42,13 +36,8 @@ class PriorityCategory(StrEnum):
 
     @property
     def rank(self) -> int:
-        """Return 1-based authority rank from declaration order.
-
-        Returns:
-            int: Rank where 1 is highest authority.
-        """
-        result: int = list(type(self)).index(self) + 1
-        return result
+        """Return 1-based authority rank from declaration order."""
+        return list(type(self)).index(self) + 1
 
 
 class ProhibitedField(StrEnum):

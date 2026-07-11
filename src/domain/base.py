@@ -9,9 +9,10 @@ Construction and serialization use Pydantic v2 natively:
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Hashable, Iterator, Sequence
 from functools import cached_property
-from typing import Any, Optional, Protocol, Set, TypeVar, cast, runtime_checkable
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 
@@ -52,34 +53,14 @@ class DomainValueObject(BaseModel):
 
 
 def require_unique(a_ids: Sequence[Hashable], *, a_label: str) -> None:
-    """Raise ValueError when the sequence contains duplicate identifiers.
-
-    Args:
-        a_ids: Identifiers to check.
-        a_label: Human-readable label used in the error message.
-
-    Raises:
-        ValueError: If any identifier appears more than once.
-    """
-    if len(a_ids) != len(set(a_ids)):
-        seen: Set[Hashable] = set()
-        duplicates: Set[Hashable] = set()
-        for id_ in a_ids:
-            if id_ in seen:
-                duplicates.add(id_)
-            seen.add(id_)
-        raise ValueError(f"Duplicate {a_label} found: {duplicates}")
+    """Raise ValueError when the sequence contains duplicate identifiers."""
+    dupes = {id_ for id_, count in Counter(a_ids).items() if count > 1}
+    if dupes:
+        raise ValueError(f"Duplicate {a_label} found: {dupes}")
 
 
 def none_as_empty(a_value: Any) -> Any:
-    """Coerce YAML/JSON null to an empty tuple for optional sequence fields.
-
-    Args:
-        a_value: Raw input value.
-
-    Returns:
-        Empty tuple when ``a_value`` is None, otherwise ``a_value`` unchanged.
-    """
+    """Coerce YAML/JSON null to an empty tuple for optional sequence fields."""
     return () if a_value is None else a_value
 
 
@@ -109,23 +90,19 @@ class TreeNodeMixin:
         for child in self._child_nodes():
             yield from child.traverse()
 
-    def find(self: TNode, a_predicate: Callable[[TNode], bool]) -> Optional[TNode]:
+    def find(self: TNode, a_predicate: Callable[[TNode], bool]) -> TNode | None:
         """Return the first node matching ``a_predicate``, or None."""
-        if a_predicate(self):
-            return self
+        result: TNode | None = self if a_predicate(self) else None
         for child in self._child_nodes():
-            found: Optional[TNode] = child.find(a_predicate)
-            if found is not None:
-                return found
-        return None
+            if result is None:
+                result = child.find(a_predicate)
+        return result
 
-    def find_by_id(self: TNode, a_id: Hashable) -> Optional[TNode]:
+    def find_by_id(self: TNode, a_id: Hashable) -> TNode | None:
         """Return the first node whose ``id`` equals ``a_id``, or None."""
         return self.find(lambda node: getattr(node, "id", None) == a_id)
 
     def depth(self, a_current: int = 0) -> int:
         """Return maximum depth from this node to any leaf (leaf depth = ``a_current``)."""
         children: Sequence[TreeNodeMixin] = cast(Sequence[TreeNodeMixin], cast(Any, self).children)
-        if not children:
-            return a_current
-        return max(child.depth(a_current + 1) for child in children)
+        return a_current if not children else max(child.depth(a_current + 1) for child in children)

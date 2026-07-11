@@ -1,7 +1,4 @@
-"""Writing Principle Value Objects.
-
-Authoring principles that guide directive writers.
-"""
+"""Writing Principle Value Objects."""
 
 from __future__ import annotations
 
@@ -13,13 +10,7 @@ from domain.identifiers import GovernanceText, WritingPrincipleId
 
 
 class WritingPrinciple(DomainValueObject, NameableMixin):
-    """A governance principle that guides rule authors.
-
-    Attributes:
-        id: Unique principle identifier.
-        title: Short principle name.
-        description: Detailed application guidance.
-    """
+    """A governance principle that guides rule authors."""
 
     id: WritingPrincipleId = Field(description="Unique principle identifier")
     title: GovernanceText = Field(description="Short principle name")
@@ -27,11 +18,7 @@ class WritingPrinciple(DomainValueObject, NameableMixin):
 
 
 class WritingPrinciples(IdentifiedCollection[WritingPrincipleId, WritingPrinciple]):
-    """Collection of writing principles validated as a YAML list root.
-
-    Uniqueness and indexing come from :class:`IdentifiedCollection`.
-    Secondary lookups: ``get_by("title", ...)`` / ``find_by("title", ...)``.
-    """
+    """Collection of writing principles validated as a YAML list root."""
 
     @property
     def principles(self) -> tuple[WritingPrinciple, ...]:

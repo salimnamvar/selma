@@ -1,11 +1,8 @@
-"""Policy Doctrine Aggregate Root.
-
-Complete governance doctrine for the policy authoring layer.
-"""
+"""Policy Doctrine Aggregate Root."""
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field, model_validator
 
@@ -22,29 +19,7 @@ from domain.value_objects.writing_principle import WritingPrinciples
 
 
 class PolicyDoctrine(DomainValueObject):
-    """Aggregate root representing the complete governance doctrine.
-
-    Nested collections expose a uniform lookup API
-    (``sections.get``, ``writing_principles.get``, ``priority_hierarchy.get``).
-    Construction from the normative YAML document uses :meth:`from_document`
-    after flattening the top-level ``doctrine`` metadata block.
-
-    Attributes:
-        name: Unique doctrine identifier.
-        version: Doctrine version.
-        description: Human-readable purpose statement.
-        spec_version: Compatible specification version.
-        rule_contract_version: Compatible rule schema version.
-        rule_contract_id: Compatible rule schema identifier.
-        cross_layer_binding: Layer relationship constraints.
-        identity_resolution: Identity mapping policy.
-        identity_lifecycle: Lifecycle operation governance.
-        contamination_guard: Policy-layer field constraints.
-        writing_principles: Authoring principles.
-        priority_hierarchy: Authority levels and conflict resolution.
-        versioning_strategy: Versioning intent.
-        sections: Universal document section definitions.
-    """
+    """Aggregate root representing the complete governance doctrine."""
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
@@ -77,28 +52,18 @@ class PolicyDoctrine(DomainValueObject):
         return self
 
     @classmethod
-    def from_document(cls, a_document: Dict[str, Any]) -> PolicyDoctrine:
+    def from_document(cls, a_document: dict[str, Any]) -> PolicyDoctrine:
         """Build a doctrine aggregate from a policy_doctrine document mapping.
 
         The normative YAML nests metadata under a top-level ``doctrine`` key.
         This factory flattens that shape into the flat field layout expected by
         the model; type coercion and field validation are handled by Pydantic.
-
-        Args:
-            a_document: Parsed policy_doctrine YAML mapping.
-
-        Returns:
-            Validated PolicyDoctrine aggregate.
-
-        Raises:
-            ValueError: If the top-level ``doctrine`` metadata block is missing.
-            ValidationError: If nested payload fails domain validation.
         """
         if "doctrine" not in a_document:
             raise ValueError("Document must contain a top-level 'doctrine' metadata block")
 
-        meta: Dict[str, Any] = a_document["doctrine"]
-        payload: Dict[str, Any] = {
+        meta = a_document["doctrine"]
+        payload: dict[str, Any] = {
             **meta,
             "cross_layer_binding": a_document["cross_layer_binding"],
             "identity_resolution": a_document["identity_resolution"],

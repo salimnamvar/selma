@@ -1,7 +1,4 @@
-"""Cross-Layer Binding Value Objects.
-
-Models the relationship between policy, schema, and specification layers.
-"""
+"""Cross-Layer Binding Value Objects."""
 
 from __future__ import annotations
 
@@ -12,14 +9,7 @@ from domain.identifiers import GovernanceText
 
 
 class ConflictResolutionBinding(DomainValueObject):
-    """How each layer contributes to conflict resolution.
-
-    Attributes:
-        policy (GovernanceText): Policy layer role in conflict resolution.
-        schema_layer (GovernanceText): Schema layer role in conflict resolution.
-        spec (GovernanceText): Specification layer role in conflict resolution.
-        precedence (GovernanceText): Declared precedence chain.
-    """
+    """How each layer contributes to conflict resolution."""
 
     policy: GovernanceText = Field(description="Policy layer's role in conflict resolution")
     schema_layer: GovernanceText = Field(
@@ -31,13 +21,7 @@ class ConflictResolutionBinding(DomainValueObject):
 
 
 class FieldLegality(DomainValueObject):
-    """Defines what each layer may contain.
-
-    Attributes:
-        policy_layer (GovernanceText): What the policy layer may contain.
-        schema_layer (GovernanceText): What the schema layer may contain.
-        spec_layer (GovernanceText): What the specification layer may contain.
-    """
+    """Defines what each layer may contain."""
 
     policy_layer: GovernanceText = Field(description="What the policy layer may contain")
     schema_layer: GovernanceText = Field(description="What the schema layer may contain")
@@ -45,17 +29,7 @@ class FieldLegality(DomainValueObject):
 
 
 class CrossLayerBinding(DomainValueObject):
-    """Structural relationship between policy, schema, and specification layers.
-
-    Attributes:
-        normative_source (GovernanceText): The authoritative behavioral source.
-        policy_layer_purpose (GovernanceText): Purpose of the policy layer.
-        schema_layer_purpose (GovernanceText): Purpose of the schema layer.
-        enforcement (GovernanceText): How governance intent is enforced.
-        conflict_resolution_binding (ConflictResolutionBinding): Layer conflict roles.
-        runtime_prohibition (GovernanceText): Runtime prohibition for this file.
-        field_legality (FieldLegality): Per-layer field legality.
-    """
+    """Structural relationship between policy, schema, and specification layers."""
 
     normative_source: GovernanceText = Field(description="The authoritative behavioral source")
     policy_layer_purpose: GovernanceText = Field(

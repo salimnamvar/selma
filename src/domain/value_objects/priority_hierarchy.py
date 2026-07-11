@@ -1,36 +1,25 @@
-"""Priority Hierarchy Value Objects.
-
-Authority levels and cross-layer conflict-resolution precedence.
-"""
+"""Priority Hierarchy Value Objects."""
 
 from __future__ import annotations
 
+from collections import Counter
 from functools import cached_property
-from typing import Dict, List, Optional, Set, Tuple
 
 from pydantic import Field, model_validator
 
-from domain.base import DomainValueObject, NameableMixin, require_unique
+from domain.base import DomainValueObject, NameableMixin
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
 
 class PriorityLevel(DomainValueObject, NameableMixin):
-    """An authority level in the governance priority hierarchy.
-
-    Attributes:
-        id: Unique level identifier.
-        level: Numeric authority rank (1 = highest).
-        title: Human-readable level name.
-        description: Scope and authority of this level.
-        examples: Typical rules at this level.
-    """
+    """An authority level in the governance priority hierarchy."""
 
     id: PriorityCategory = Field(description="Unique level identifier")
     level: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
     title: GovernanceText = Field(description="Human-readable level name")
     description: GovernanceText = Field(description="Scope and authority of this level")
-    examples: Tuple[GovernanceText, ...] = Field(
+    examples: tuple[GovernanceText, ...] = Field(
         default=(),
         description="Typical rules at this authority level",
     )
@@ -46,14 +35,7 @@ class PriorityLevel(DomainValueObject, NameableMixin):
 
 
 class CrossLayerPrecedence(DomainValueObject):
-    """How conflict-resolution precedence maps across layers.
-
-    Attributes:
-        normative_algorithm: Normative algorithm location.
-        structural_override: Schema-level override mechanism.
-        policy_role: Policy layer role in precedence.
-        order: Precedence chain order.
-    """
+    """How conflict-resolution precedence maps across layers."""
 
     normative_algorithm: GovernanceText = Field(description="Where the normative resolution algorithm is defined")
     structural_override: GovernanceText = Field(description="Schema-level override mechanism for conflict resolution")
@@ -62,17 +44,10 @@ class CrossLayerPrecedence(DomainValueObject):
 
 
 class PriorityHierarchy(DomainValueObject):
-    """Declares authority levels and conflict-resolution intent.
-
-    Attributes:
-        description: How priority hierarchy works.
-        levels: Ordered authority levels.
-        conflict_resolution_intent: Conflict resolution intent.
-        cross_layer_precedence: Cross-layer precedence map.
-    """
+    """Declares authority levels and conflict-resolution intent."""
 
     description: GovernanceText = Field(description="How priority hierarchy works")
-    levels: Tuple[PriorityLevel, ...] = Field(
+    levels: tuple[PriorityLevel, ...] = Field(
         min_length=1,
         description="Ordered authority levels",
     )
@@ -94,24 +69,25 @@ class PriorityHierarchy(DomainValueObject):
                     "ordered and contiguous starting from 1."
                 )
 
-        category_ids: List[PriorityCategory] = [level.id for level in self.levels]
-        require_unique(category_ids, a_label="priority categories")
+        category_ids = [level.id for level in self.levels]
+        dupes = {id_ for id_, count in Counter(category_ids).items() if count > 1}
+        if dupes:
+            raise ValueError(f"Duplicate priority categories found: {dupes}")
 
-        expected: Set[PriorityCategory] = set(PriorityCategory)
-        present: Set[PriorityCategory] = set(category_ids)
-        missing: Set[PriorityCategory] = expected - present
+        expected = set(PriorityCategory)
+        present = set(category_ids)
+        missing = expected - present
         if missing:
-            names: List[str] = sorted(category.value for category in missing)
-            raise ValueError(f"Priority hierarchy missing categories: {names}")
+            raise ValueError(f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}")
 
         return self
 
     @cached_property
-    def _levels_index(self) -> Dict[PriorityCategory, PriorityLevel]:
+    def _levels_index(self) -> dict[PriorityCategory, PriorityLevel]:
         """Index priority levels by category for O(1) lookup."""
         return {level.id: level for level in self.levels}
 
-    def get(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
+    def get(self, a_category: PriorityCategory) -> PriorityLevel | None:
         """Return the priority level for a category, or None if not found."""
         return self._levels_index.get(a_category)
 

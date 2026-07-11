@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Hashable, Iterator, Sequence
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import ConfigDict, Field, RootModel, model_validator
 
@@ -29,7 +29,7 @@ class IdentifiedItem(Protocol[TId]):
         ...
 
 
-class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
+class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
     """Immutable RootModel collection with O(1) lookup by item identifier.
 
     Items should expose an ``.id`` property (see :class:`IdentifiedItem`).
@@ -42,7 +42,7 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
 
     model_config = ConfigDict(frozen=True)
 
-    root: Tuple[TItem, ...] = Field(min_length=1)
+    root: tuple[TItem, ...] = Field(min_length=1)
 
     def _item_id(self, a_item: TItem) -> TId:
         """Extract the identifier from a collection item."""
@@ -58,11 +58,11 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
         return self
 
     @cached_property
-    def _index(self) -> Dict[TId, TItem]:
+    def _index(self) -> dict[TId, TItem]:
         """Build and cache a lookup index by item identifier."""
         return {self._item_id(item): item for item in self.root}
 
-    def get(self, a_id: TId) -> Optional[TItem]:
+    def get(self, a_id: TId) -> TItem | None:
         """Return the item for ``a_id``, or None when absent."""
         return self._index.get(a_id)
 
@@ -73,20 +73,22 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
         except KeyError as exc:
             raise KeyError(f"Item with id '{a_id}' not found in collection") from exc
 
-    def get_all(self, a_ids: Sequence[TId]) -> List[TItem]:
+    def get_all(self, a_ids: Sequence[TId]) -> list[TItem]:
         """Return items for the given identifiers (order preserved, missing skipped)."""
         return [self._index[id_] for id_ in a_ids if id_ in self._index]
 
-    def find_all(self, a_ids: Sequence[TId]) -> List[TItem]:
+    def find_all(self, a_ids: Sequence[TId]) -> list[TItem]:
         """Return items for the given identifiers (raises if any are missing)."""
         return [self.find(id_) for id_ in a_ids]
 
-    def get_by(self, a_attr: str, a_value: Any) -> Optional[TItem]:
+    def get_by(self, a_attr: str, a_value: Any) -> TItem | None:
         """Return the first item whose attribute ``a_attr`` equals ``a_value``."""
+        result: TItem | None = None
         for item in self.root:
             if getattr(item, a_attr, None) == a_value:
-                return item
-        return None
+                result = item
+                break
+        return result
 
     def find_by(self, a_attr: str, a_value: Any) -> TItem:
         """Return the first item whose attribute equals ``a_value``, or raise."""
@@ -96,28 +98,24 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
         return result
 
     @property
-    def ids(self) -> List[TId]:
+    def ids(self) -> list[TId]:
         """Return item identifiers in declaration order."""
         return list(self._index.keys())
 
     @property
-    def values(self) -> List[TItem]:
+    def values(self) -> list[TItem]:
         """Return all items in declaration order."""
         return list(self.root)
 
-    def filter(self, a_predicate: Callable[[TItem], bool]) -> List[TItem]:
+    def filter(self, a_predicate: Callable[[TItem], bool]) -> list[TItem]:
         """Return items matching the given predicate."""
         return [item for item in self.root if a_predicate(item)]
 
-    def filter_by(self, **kwargs: Any) -> List[TItem]:
+    def filter_by(self, **kwargs: Any) -> list[TItem]:
         """Return items whose attributes match all given keyword arguments."""
-        return [
-            item
-            for item in self.root
-            if all(getattr(item, key) == value for key, value in kwargs.items())
-        ]
+        return [item for item in self.root if all(getattr(item, key) == value for key, value in kwargs.items())]
 
-    def map(self, a_func: Callable[[TItem], Any]) -> List[Any]:
+    def map(self, a_func: Callable[[TItem], Any]) -> list[Any]:
         """Apply ``a_func`` to each item and return the results."""
         return [a_func(item) for item in self.root]
 
@@ -135,6 +133,5 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[Tuple[TItem, ...]]):
 
     def __contains__(self, a_item: object) -> bool:
         """Support membership by item instance (with ``.id``) or by identifier."""
-        if hasattr(a_item, "id"):
-            return a_item.id in self._index  # type: ignore[attr-defined]
-        return a_item in self._index
+        item_id = a_item.id if hasattr(a_item, "id") else a_item  # type: ignore[attr-defined]
+        return item_id in self._index
