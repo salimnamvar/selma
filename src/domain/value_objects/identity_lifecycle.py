@@ -1,3 +1,7 @@
+"""Identity lifecycle intent value object."""
+
+from __future__ import annotations
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

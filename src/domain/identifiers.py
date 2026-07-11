@@ -1,3 +1,7 @@
+"""Annotated type aliases for domain identifiers."""
+
+from __future__ import annotations
+
 from typing import Annotated
 
 from pydantic import Field
@@ -17,7 +21,10 @@ WritingPrincipleId = Annotated[
 
 SemanticVersion = Annotated[
     str,
-    Field(pattern=r"^\d+\.\d+\.\d+$", description="Semantic version in MAJOR.MINOR.PATCH format"),
+    Field(
+        pattern=r"^\d+\.\d+\.\d+$",
+        description="Semantic version in MAJOR.MINOR.PATCH format",
+    ),
 ]
 
 SectionId = Annotated[

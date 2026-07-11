@@ -1,3 +1,9 @@
+"""Identity resolution value objects."""
+
+from __future__ import annotations
+
+from typing import Tuple
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -7,7 +13,7 @@ class MachineIdSemantics(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     definition: str = Field(description="What Machine ID represents")
-    exclusions: tuple[str, ...] = Field(description="What Machine ID is not")
+    exclusions: Tuple[str, ...] = Field(description="What Machine ID is not")
     assignment: str = Field(description="How Machine ID is assigned")
     governance_intent: str = Field(description="Why Machine ID matters for governance")
 

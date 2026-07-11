@@ -1,3 +1,7 @@
+"""Enumerations for the domain model."""
+
+from __future__ import annotations
+
 from enum import StrEnum
 
 

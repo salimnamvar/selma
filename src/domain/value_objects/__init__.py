@@ -1,3 +1,7 @@
+"""Value objects for the policy doctrine domain model."""
+
+from __future__ import annotations
+
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.document_section import DocumentSection

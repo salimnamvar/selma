@@ -1,6 +1,16 @@
+"""Policy doctrine domain model."""
+
+from __future__ import annotations
+
 from domain.doctrine import PolicyDoctrine
 from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
-from domain.identifiers import MachineId, RuleContractId, SectionId, SemanticVersion, WritingPrincipleId
+from domain.identifiers import (
+    MachineId,
+    RuleContractId,
+    SectionId,
+    SemanticVersion,
+    WritingPrincipleId,
+)
 
 __all__ = [
     "ContentType",
