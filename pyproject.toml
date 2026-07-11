@@ -80,6 +80,7 @@ select = [
   "TRY",    # exception handling
   "RUF",    # Ruff-specific rules
   "D",      # pydocstyle / Google-style docstrings
+  "PLC0415",  # import-outside-top-level — enforce import.md (no in-function imports)
 ]
 ignore = [
   "E501",   # line-too-long — Google allows long URLs/examples in docs
