@@ -7,6 +7,7 @@ from domain.value_objects.cross_layer_binding import (
 )
 from domain.value_objects.document_section import DocumentSection
 from domain.value_objects.identity_policy import IdentityPolicy
+from domain.value_objects.machine_id import MachineId
 from domain.value_objects.priority_hierarchy import (
     CrossLayerPrecedence,
     PriorityHierarchy,
@@ -26,6 +27,7 @@ __all__ = [
     "DomainValueObject",
     "FieldLegality",
     "IdentityPolicy",
+    "MachineId",
     "PriorityHierarchy",
     "PriorityLevel",
     "SemanticVersion",

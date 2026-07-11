@@ -3,10 +3,10 @@ from domain.enums import ContentType, IdentityOperation, PriorityCategory, Prohi
 from domain.identifiers import (
     Description,
     Guidance,
-    MachineId,
     SectionId,
     WritingPrincipleId,
 )
+from domain.value_objects.machine_id import MachineId
 from domain.value_objects.semantic_version import SemanticVersion
 
 __all__ = [

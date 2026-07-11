@@ -1,7 +1,7 @@
 from collections import Counter
-from typing import Generator, Optional
+from typing import Generator
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from domain.enums import PriorityCategory
 from domain.identifiers import SectionId, WritingPrincipleId
@@ -15,8 +15,6 @@ from domain.value_objects.semantic_version import SemanticVersion
 from domain.value_objects.versioning_strategy import VersioningStrategy
 from domain.value_objects.writing_principle import WritingPrinciple
 from domain.value_objects.writing_principles import WritingPrinciples
-
-MAX_SECTION_DEPTH = 3
 
 REQUIRED_SECTION_IDS = frozenset(
     {
@@ -73,23 +71,26 @@ class PolicyDoctrine(DomainValueObject):
             raise ValueError(f"Missing required sections: {missing}")
         return self
 
-    @model_validator(mode="after")
-    def check_section_depth(self) -> "PolicyDoctrine":
-        for section in self.sections:
-            section.validate_max_depth(MAX_SECTION_DEPTH)
-        return self
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def sections_by_id(self) -> dict[SectionId, DocumentSection]:
+        """O(1) lookup mapping from section id to section."""
+        return {s.id: s for s in self.sections}
 
-    def get_section(self, section_id: SectionId) -> Optional[DocumentSection]:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def writing_principles_by_id(self) -> dict[WritingPrincipleId, WritingPrinciple]:
+        """O(1) lookup mapping from principle id to principle."""
+        return {p.id: p for p in self.writing_principles}
+
+    def get_section(self, section_id: SectionId) -> DocumentSection | None:
         """Retrieve a document section by its identifier."""
-        for section in self.sections:
-            if section.id == section_id:
-                return section
-        return None
+        return self.sections_by_id.get(section_id)
 
-    def get_writing_principle(self, principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:
+    def get_writing_principle(self, principle_id: WritingPrincipleId) -> WritingPrinciple | None:
         """Retrieve a writing principle by its identifier."""
         return self.writing_principles.get(principle_id)
 
-    def get_priority_level(self, category: PriorityCategory) -> Optional[PriorityLevel]:
+    def get_priority_level(self, category: PriorityCategory) -> PriorityLevel | None:
         """Retrieve a priority level by its category."""
         return self.priority_hierarchy.get_level(category)
