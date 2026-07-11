@@ -65,7 +65,7 @@ class SemanticVersion(StringCoercibleVO):
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
 
-    def is_compatible_with(self, a_other: SemanticVersion) -> bool:
+    def is_compatible(self, a_other: SemanticVersion) -> bool:
         """Return True when both versions share the same MAJOR component."""
         return self.major == a_other.major
 

@@ -66,7 +66,7 @@ class TestDocumentSection:
         assert section.columns == ()
         assert section.children == ()
 
-    def test_traverse_and_find_by_id(self) -> None:
+    def test_traverse_and_find(self) -> None:
         # Arrange
         child: DocumentSection = DocumentSection(
             id="specific_directives",
@@ -86,8 +86,8 @@ class TestDocumentSection:
             "directives",
             "specific_directives",
         ]
-        assert parent.find_by_id("specific_directives") is child
-        assert parent.find_by_id("missing") is None
+        assert parent.find("specific_directives") is child
+        assert parent.find("missing") is None
 
 
 @pytest.mark.unit

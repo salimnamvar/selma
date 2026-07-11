@@ -34,7 +34,7 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
 
     Items should expose an ``.id`` property (see :class:`IdentifiedItem`).
     The default uniqueness check applies to top-level items only; override
-    :meth:`check_unique_ids` when nested identity rules apply.
+    :meth:`_validate_ids` when nested identity rules apply.
 
     Iteration, length, and membership operate on collection items (not on
     Pydantic model fields).
@@ -49,7 +49,7 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
         return a_item.id  # type: ignore[attr-defined]
 
     @model_validator(mode="after")
-    def check_unique_ids(self) -> IdentifiedCollection[TId, TItem]:
+    def _validate_ids(self) -> IdentifiedCollection[TId, TItem]:
         """Reject collections that contain duplicate top-level identifiers."""
         require_unique(
             [self._item_id(item) for item in self.root],
@@ -103,7 +103,7 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
         return list(self._index.keys())
 
     @property
-    def values(self) -> list[TItem]:
+    def items(self) -> list[TItem]:
         """Return all items in declaration order."""
         return list(self.root)
 

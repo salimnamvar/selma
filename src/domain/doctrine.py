@@ -41,11 +41,11 @@ class PolicyDoctrine(DomainValueObject):
     sections: DocumentStructure = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
-    def check_version_compatibility(self) -> PolicyDoctrine:
+    def _validate_versions(self) -> PolicyDoctrine:
         """Enforce MAJOR version compatibility across doctrine artifacts."""
-        if not self.version.is_compatible_with(self.spec_version):
+        if not self.version.is_compatible(self.spec_version):
             raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
-        if not self.version.is_compatible_with(self.rule_contract_version):
+        if not self.version.is_compatible(self.rule_contract_version):
             raise ValueError(
                 f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
             )

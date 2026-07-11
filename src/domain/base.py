@@ -84,7 +84,7 @@ class EnumGuidedVO(DomainValueObject):
     """
 
     @model_validator(mode="after")
-    def _check_enum_fields_complete(self) -> EnumGuidedVO:
+    def _validate_enum(self) -> EnumGuidedVO:
         """Ensure every enum member has a corresponding field."""
         guidance_enum = getattr(type(self), "_GUIDANCE_ENUM", None)
         if guidance_enum is None:
@@ -142,19 +142,19 @@ class TreeNodeMixin:
         for child in self._child_nodes():
             yield from child.traverse()
 
-    def find(self: TNode, a_predicate: Callable[[TNode], bool]) -> TNode | None:
+    def find_where(self: TNode, a_predicate: Callable[[TNode], bool]) -> TNode | None:
         """Return the first node matching ``a_predicate``, or None."""
         result: TNode | None = self if a_predicate(self) else None
         for child in self._child_nodes():
             if result is None:
-                result = child.find(a_predicate)
+                result = child.find_where(a_predicate)
         return result
 
-    def find_by_id(self: TNode, a_id: Hashable) -> TNode | None:
+    def find(self: TNode, a_id: Hashable) -> TNode | None:
         """Return the first node whose ``id`` equals ``a_id``, or None."""
-        return self.find(lambda node: getattr(node, "id", None) == a_id)
+        return self.find_where(lambda node: getattr(node, "id", None) == a_id)
 
-    def depth(self, a_current: int = 0) -> int:
+    def max_depth(self, a_current: int = 0) -> int:
         """Return maximum depth from this node to any leaf (leaf depth = ``a_current``)."""
         children: Sequence[TreeNodeMixin] = cast(Sequence[TreeNodeMixin], cast(Any, self).children)
-        return a_current if not children else max(child.depth(a_current + 1) for child in children)
+        return a_current if not children else max(child.max_depth(a_current + 1) for child in children)

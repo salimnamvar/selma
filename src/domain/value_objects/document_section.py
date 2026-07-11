@@ -57,7 +57,7 @@ class DocumentSection(DomainValueObject, NameableMixin, TreeNodeMixin):
     )
 
     @model_validator(mode="after")
-    def check_content_invariants(self) -> DocumentSection:
+    def _validate_content(self) -> DocumentSection:
         """Validate columns vs content type and local nesting depth."""
         if self.columns and self.content_type == ContentType.PROSE:
             raise ValueError(f"Section '{self.id}': columns are not applicable for prose-only content")
@@ -112,7 +112,7 @@ class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     )
 
     @model_validator(mode="after")
-    def check_unique_ids(self) -> DocumentStructure:
+    def _validate_ids(self) -> DocumentStructure:
         """Enforce required sections, unique nested IDs, and directives children."""
         present: set[SectionId] = {section.id for section in self.root}
         missing: frozenset[SectionId] = self.REQUIRED_SECTION_IDS - present

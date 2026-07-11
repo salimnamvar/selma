@@ -5,7 +5,7 @@ Models governance-intent concerns of docs/Regulation/policy_doctrine.yaml.
 Conventions:
     - Value objects: model_validate / model_dump (Pydantic v2)
     - Collections: get(), find(), get_by(), find_by(), filter(), map()
-    - Trees: traverse(), find(), find_by_id(), depth()
+    - Trees: traverse(), find(), find_where(), max_depth()
 """
 
 from __future__ import annotations

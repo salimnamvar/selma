@@ -52,8 +52,8 @@ class TestSemanticVersion:
         same_major: SemanticVersion = SemanticVersion.model_validate("8.0.0")
         other_major: SemanticVersion = SemanticVersion.model_validate("9.0.0")
 
-        assert left.is_compatible_with(same_major)
-        assert not left.is_compatible_with(other_major)
+        assert left.is_compatible(same_major)
+        assert not left.is_compatible(other_major)
 
     def test_ordering(self) -> None:
         assert SemanticVersion.model_validate("1.0.0") < SemanticVersion.model_validate("1.0.1")

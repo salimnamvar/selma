@@ -24,7 +24,7 @@ class PriorityLevel(DomainValueObject, NameableMixin):
     )
 
     @model_validator(mode="after")
-    def check_rank_matches_category(self) -> PriorityLevel:
+    def _validate_rank(self) -> PriorityLevel:
         """Ensure numeric level matches the category canonical rank."""
         if self.level != self.id.rank:
             raise ValueError(
@@ -58,7 +58,7 @@ class PriorityHierarchy(DomainValueObject):
     )
 
     @model_validator(mode="after")
-    def check_levels(self) -> PriorityHierarchy:
+    def _validate_levels(self) -> PriorityHierarchy:
         """Validate ordering, uniqueness, and completeness of priority levels."""
         for index, level in enumerate(self.levels, start=1):
             if level.level != index:

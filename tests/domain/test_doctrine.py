@@ -49,8 +49,8 @@ class TestPolicyDoctrineYamlContract:
         assert doctrine.rule_contract_id == "universal-rule-schema"
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.version.is_compatible_with(doctrine.spec_version)
-        assert doctrine.version.is_compatible_with(doctrine.rule_contract_version)
+        assert doctrine.version.is_compatible(doctrine.spec_version)
+        assert doctrine.version.is_compatible(doctrine.rule_contract_version)
 
     def test_cross_layer_binding_aliases(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.cross_layer_binding.policy_layer_purpose
