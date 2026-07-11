@@ -1,18 +1,9 @@
-"""Policy doctrine aggregate root."""
-
-from __future__ import annotations
-
 from typing import FrozenSet, Optional, Set, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.enums import PriorityCategory
-from domain.identifiers import (
-    RuleContractId,
-    SectionId,
-    SemanticVersion,
-    WritingPrincipleId,
-)
+from domain.identifiers import RuleContractId, SectionId, SemanticVersion, WritingPrincipleId
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.document_section import DocumentSection
@@ -61,17 +52,32 @@ class PolicyDoctrine(BaseModel):
     sections: Tuple[DocumentSection, ...] = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
-    def check_no_duplicate_sections(self) -> PolicyDoctrine:
-        """Validate no duplicate section IDs exist."""
-        seen: Set[str] = set()
-        for section in self.sections:
-            if section.id in seen:
-                raise ValueError(f"Duplicate section ID: {section.id}")
-            seen.add(section.id)
+    def check_version_compatibility(self) -> "PolicyDoctrine":
+        """Enforce MAJOR version compatibility across doctrine, spec, and rule contract."""
+        doctrine_major: int = int(self.version.split(".")[0])
+        spec_major: int = int(self.spec_version.split(".")[0])
+        contract_major: int = int(self.rule_contract_version.split(".")[0])
+        if doctrine_major != spec_major:
+            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
+        if doctrine_major != contract_major:
+            raise ValueError(
+                f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
+            )
         return self
 
     @model_validator(mode="after")
-    def check_required_sections_present(self) -> PolicyDoctrine:
+    def check_no_duplicate_sections(self) -> "PolicyDoctrine":
+        """Validate no duplicate section IDs exist (recursive)."""
+        seen: Set[str] = set()
+        for section in self.sections:
+            for section_id in section.all_ids():
+                if section_id in seen:
+                    raise ValueError(f"Duplicate section ID: {section_id}")
+                seen.add(section_id)
+        return self
+
+    @model_validator(mode="after")
+    def check_required_sections_present(self) -> "PolicyDoctrine":
         """Validate all required sections are present."""
         present: Set[str] = {s.id for s in self.sections}
         missing: FrozenSet[str] = self._REQUIRED_SECTION_IDS - present
@@ -80,7 +86,7 @@ class PolicyDoctrine(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_section_depth(self) -> PolicyDoctrine:
+    def check_section_depth(self) -> "PolicyDoctrine":
         """Validate section tree depth does not exceed maximum."""
         for section in self.sections:
             depth: int = section.max_depth()
@@ -89,7 +95,7 @@ class PolicyDoctrine(BaseModel):
         return self
 
     def get_section(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Retrieve a document section by its identifier.
+        """Retrieve a document section by its identifier, searching recursively.
 
         Args:
             a_section_id (SectionId): The section identifier to search for.
@@ -99,9 +105,22 @@ class PolicyDoctrine(BaseModel):
         """
         result: Optional[DocumentSection] = None
         for section in self.sections:
-            if section.id == a_section_id:
-                result = section
+            result = self._find_in_tree(section, a_section_id)
+            if result is not None:
                 break
+        return result
+
+    @staticmethod
+    def _find_in_tree(a_section: DocumentSection, a_section_id: SectionId) -> Optional[DocumentSection]:
+        """Recursively search for a section by ID in the tree."""
+        result: Optional[DocumentSection] = None
+        if a_section.id == a_section_id:
+            result = a_section
+        elif a_section.children:
+            for child in a_section.children:
+                result = PolicyDoctrine._find_in_tree(child, a_section_id)
+                if result is not None:
+                    break
         return result
 
     def get_writing_principle(self, a_principle_id: WritingPrincipleId) -> Optional[WritingPrinciple]:

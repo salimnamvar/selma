@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Generator, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -45,3 +45,14 @@ class DocumentSection(BaseModel):
         else:
             result = max(child.max_depth(a_current + 1) for child in self.children)
         return result
+
+    def all_ids(self) -> Generator[str]:
+        """Recursively yield this section's ID and all descendant IDs.
+
+        Yields:
+            str: Section IDs in tree order.
+        """
+        yield self.id
+        if self.children:
+            for child in self.children:
+                yield from child.all_ids()
