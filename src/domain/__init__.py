@@ -1,7 +1,6 @@
 from domain.doctrine import PolicyDoctrine
-from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
-from domain.value_objects.machine_id import MachineId
-from domain.value_objects.semantic_version import SemanticVersion
+from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField, VersionComponent
+from domain.identifiers import MachineId, SemanticVersion
 
 __all__ = [
     "ContentType",
@@ -11,4 +10,5 @@ __all__ = [
     "PriorityCategory",
     "ProhibitedField",
     "SemanticVersion",
+    "VersionComponent",
 ]

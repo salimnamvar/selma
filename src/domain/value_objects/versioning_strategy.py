@@ -1,20 +1,28 @@
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from domain.value_objects.base import DomainValueObject
-
-
-class VersionIntent(DomainValueObject):
-    """Describes when to increment each version component."""
-
-    major: str = Field(description="When to increment MAJOR version")
-    minor: str = Field(description="When to increment MINOR version")
-    patch: str = Field(description="When to increment PATCH version")
+from domain.enums import VersionComponent
+from domain.identifiers import Prose
 
 
-class VersioningStrategy(DomainValueObject):
-    """Describes versioning intent for doctrine, schema, and specification documents."""
+class VersionComponentIntent(BaseModel):
+    """Describes the governance intent for a specific version component."""
 
-    version_format: str = Field(description="Version format pattern")
-    intent: VersionIntent = Field(description="Version increment intent")
-    migration_intent: str = Field(description="Migration rules when crossing MAJOR boundaries")
-    synchronization_intent: str = Field(description="How versions synchronize across documents")
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    component: VersionComponent = Field(description="The version component")
+    intent: Prose = Field(description="Governance intent for this component")
+
+
+class VersioningStrategy(BaseModel):
+    """Describes versioning intent for doctrine, schema, and specification documents.
+
+    Uses a collection of VersionComponentIntent to satisfy the Open-Closed Principle:
+    new version components can be added without modifying this class.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    format: str = Field(description="Version format pattern")
+    intents: tuple[VersionComponentIntent, ...] = Field(description="Component-specific intents")
+    migration_intent: Prose = Field(description="Migration rules when crossing MAJOR boundaries")
+    synchronization_intent: Prose = Field(description="How versions synchronize across documents")

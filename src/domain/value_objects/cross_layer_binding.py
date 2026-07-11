@@ -1,38 +1,40 @@
-from typing import ClassVar
+from pydantic import BaseModel, ConfigDict, Field
 
-from pydantic import ConfigDict, Field
-
-from domain.value_objects.base import DomainValueObject
+from domain.identifiers import Prose
 
 
-class ConflictResolutionBinding(DomainValueObject):
+class ConflictResolutionBinding(BaseModel):
     """Describes how each layer contributes to conflict resolution."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
-    policy: str = Field(description="Policy layer's role in conflict resolution")
-    schema_layer: str = Field(alias="schema", description="Schema layer's role in conflict resolution")
-    spec: str = Field(description="Specification layer's role in conflict resolution")
-    precedence: str = Field(description="Declared precedence chain")
+    policy: Prose = Field(description="Policy layer's role in conflict resolution")
+    schema_layer: Prose = Field(alias="schema", description="Schema layer's role in conflict resolution")
+    spec: Prose = Field(description="Specification layer's role in conflict resolution")
+    precedence: Prose = Field(description="Declared precedence chain")
 
 
-class FieldLegality(DomainValueObject):
+class FieldLegality(BaseModel):
     """Defines what each layer may contain."""
 
-    policy_layer: str = Field(description="What the policy layer may contain")
-    schema_layer: str = Field(description="What the schema layer may contain")
-    spec_layer: str = Field(description="What the specification layer may contain")
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    policy_layer: Prose = Field(description="What the policy layer may contain")
+    schema_layer: Prose = Field(description="What the schema layer may contain")
+    spec_layer: Prose = Field(description="What the specification layer may contain")
 
 
-class CrossLayerBinding(DomainValueObject):
+class CrossLayerBinding(BaseModel):
     """Describes the structural relationship between policy, schema, and specification layers."""
 
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     normative_source: str = Field(description="The authoritative behavioral source")
-    this_layer_purpose: str = Field(description="Purpose of the policy layer")
-    schema_layer_purpose: str = Field(description="Purpose of the schema layer")
-    enforcement: str = Field(description="How governance intent is enforced")
+    this_layer_purpose: Prose = Field(description="Purpose of the policy layer")
+    schema_layer_purpose: Prose = Field(description="Purpose of the schema layer")
+    enforcement: Prose = Field(description="How governance intent is enforced")
     conflict_resolution_binding: ConflictResolutionBinding = Field(
         description="How each layer contributes to conflict resolution"
     )
-    runtime_prohibition: str = Field(description="What this file must not do at runtime")
+    runtime_prohibition: Prose = Field(description="What this file must not do at runtime")
     field_legality: FieldLegality = Field(description="What each layer may contain")

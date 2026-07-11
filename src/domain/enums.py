@@ -30,6 +30,19 @@ class PriorityCategory(StrEnum):
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
 
+    @property
+    def rank(self) -> int:
+        """Derive hierarchy rank from enum definition order (1 = highest)."""
+        return list(PriorityCategory).index(self) + 1
+
+
+class VersionComponent(StrEnum):
+    """Components of a semantic version."""
+
+    MAJOR = "major"
+    MINOR = "minor"
+    PATCH = "patch"
+
 
 class ProhibitedField(StrEnum):
     """Schema fields that must never appear in policy prose."""
