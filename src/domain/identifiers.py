@@ -12,12 +12,15 @@ Type Aliases:
 Classes:
     SemanticVersion: Structured MAJOR.MINOR.PATCH with compatibility checks.
     FieldPath: Structured cross-layer identity field location.
+
+Construction and validation use Pydantic v2 (``model_validate`` / field
+constraints). Callers should not wrap these with custom factory methods.
 """
 
 from __future__ import annotations
 
 from functools import total_ordering
-from typing import Annotated, Any, Self
+from typing import Annotated, Any
 
 from pydantic import Field, model_validator
 
@@ -60,7 +63,8 @@ RuleContractId = Annotated[
 class SemanticVersion(DomainValueObject):
     """Semantic version with structured components and MAJOR compatibility.
 
-    Accepts component kwargs or a ``MAJOR.MINOR.PATCH`` string via model_validate.
+    Accepts component kwargs or a ``MAJOR.MINOR.PATCH`` string via
+    ``model_validate`` (Pydantic before-validator coercion).
 
     Attributes:
         major (int): Breaking changes that require migration.
@@ -91,9 +95,6 @@ class SemanticVersion(DomainValueObject):
     def __str__(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
 
-    def __repr__(self) -> str:
-        return f"SemanticVersion({self!s})"
-
     def is_compatible_with(self, a_other: SemanticVersion) -> bool:
         """Return True when both versions share the same MAJOR component."""
         result: bool = self.major == a_other.major
@@ -109,17 +110,12 @@ class SemanticVersion(DomainValueObject):
             )
         return result
 
-    @classmethod
-    def from_string(cls, a_value: str) -> Self:
-        """Construct from a MAJOR.MINOR.PATCH string."""
-        result: Self = cls.model_validate(a_value)
-        return result
-
 
 class FieldPath(DomainValueObject):
     """Structured location of an identity field across layers.
 
-    Accepts a dotted path string (e.g. ``rules[].lineage_id``) or components.
+    Accepts a dotted path string (e.g. ``rules[].lineage_id``) or components
+    via ``model_validate``.
 
     Attributes:
         collection (str): Collection or container name.

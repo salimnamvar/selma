@@ -11,7 +11,6 @@ from domain.enums import (
     ContentType,
     IdentityOperation,
     PriorityCategory,
-    PriorityRank,
     ProhibitedField,
     ResolutionStrategy,
 )
@@ -64,7 +63,6 @@ __all__ = [
     "PriorityCategory",
     "PriorityHierarchy",
     "PriorityLevel",
-    "PriorityRank",
     "ProhibitedField",
     "ResolutionStrategy",
     "RuleContractId",

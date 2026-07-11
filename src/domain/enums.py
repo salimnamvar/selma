@@ -5,7 +5,7 @@ Enumerations for content types, identity operations, priority, and contamination
 
 from __future__ import annotations
 
-from enum import IntEnum, StrEnum
+from enum import StrEnum
 
 
 class ContentType(StrEnum):
@@ -79,13 +79,3 @@ class ResolutionStrategy(StrEnum):
     SPECIFICITY = "specificity"
     RECENCY = "recency"
     CONFLICT_ARTIFACT = "conflict_artifact"
-
-
-class PriorityRank(IntEnum):
-    """Numeric authority ranks matching PriorityCategory declaration order."""
-
-    CONSTITUTIONAL = 1
-    STATUTORY = 2
-    REGULATORY = 3
-    OPERATIONAL = 4
-    ADVISORY = 5

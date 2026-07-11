@@ -29,8 +29,8 @@ class TestSemanticVersion:
         a_minor: int,
         a_patch: int,
     ) -> None:
-        # Arrange / Act
-        version: SemanticVersion = SemanticVersion.from_string(a_raw)
+        # Arrange / Act — coercion is owned by Pydantic model_validate
+        version: SemanticVersion = SemanticVersion.model_validate(a_raw)
 
         # Assert
         assert version.major == a_major
@@ -48,17 +48,17 @@ class TestSemanticVersion:
             SemanticVersion.model_validate(a_invalid)
 
     def test_major_compatibility(self) -> None:
-        left: SemanticVersion = SemanticVersion.from_string("8.2.4")
-        same_major: SemanticVersion = SemanticVersion.from_string("8.0.0")
-        other_major: SemanticVersion = SemanticVersion.from_string("9.0.0")
+        left: SemanticVersion = SemanticVersion.model_validate("8.2.4")
+        same_major: SemanticVersion = SemanticVersion.model_validate("8.0.0")
+        other_major: SemanticVersion = SemanticVersion.model_validate("9.0.0")
 
         assert left.is_compatible_with(same_major)
         assert not left.is_compatible_with(other_major)
 
     def test_ordering(self) -> None:
-        assert SemanticVersion.from_string("1.0.0") < SemanticVersion.from_string("1.0.1")
-        assert SemanticVersion.from_string("2.0.0") > SemanticVersion.from_string("1.9.9")
-        assert SemanticVersion.from_string("1.0.0") <= SemanticVersion.from_string("1.0.0")
+        assert SemanticVersion.model_validate("1.0.0") < SemanticVersion.model_validate("1.0.1")
+        assert SemanticVersion.model_validate("2.0.0") > SemanticVersion.model_validate("1.9.9")
+        assert SemanticVersion.model_validate("1.0.0") <= SemanticVersion.model_validate("1.0.0")
 
 
 @pytest.mark.unit

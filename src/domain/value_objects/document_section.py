@@ -5,15 +5,18 @@ Structural sections and validated document structure for governance documents.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
 from functools import cached_property
-from typing import Any, ClassVar, Dict, FrozenSet, Optional, Set, Tuple
+from typing import Annotated, ClassVar, Dict, FrozenSet, Iterator, Optional, Set, Tuple
 
-from pydantic import ConfigDict, Field, RootModel, field_validator, model_validator
+from pydantic import BeforeValidator, Field, model_validator
 
-from domain.base import DomainValueObject
+from domain.base import DomainValueObject, none_as_empty
+from domain.collections import IdentifiedCollection
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
+
+_OptionalTuple = Annotated[Tuple[GovernanceText, ...], BeforeValidator(none_as_empty)]
+_OptionalChildren = Annotated[Tuple["DocumentSection", ...], BeforeValidator(none_as_empty)]
 
 
 class DocumentSection(DomainValueObject):
@@ -50,11 +53,11 @@ class DocumentSection(DomainValueObject):
         default=None,
         description="Authoring guidance for this section",
     )
-    columns: Tuple[GovernanceText, ...] = Field(
+    columns: _OptionalTuple = Field(
         default=(),
         description="Table column headers (empty when not tabular)",
     )
-    children: Tuple[DocumentSection, ...] = Field(
+    children: _OptionalChildren = Field(
         default=(),
         description="Subsections",
     )
@@ -65,13 +68,6 @@ class DocumentSection(DomainValueObject):
             "Descriptive only — not machine-executable configuration."
         ),
     )
-
-    @field_validator("columns", "children", mode="before")
-    @classmethod
-    def _none_as_empty(cls, a_value: Any) -> Any:
-        """Coerce YAML null to empty tuple; lists coerce to tuples automatically."""
-        result: Any = () if a_value is None else a_value
-        return result
 
     @model_validator(mode="after")
     def check_content_invariants(self) -> DocumentSection:
@@ -104,14 +100,14 @@ class DocumentSection(DomainValueObject):
         for child in self.children:
             yield from child.traverse()
 
-    def find(self, a_section_id: SectionId) -> Optional[DocumentSection]:
+    def get(self, a_section_id: SectionId) -> Optional[DocumentSection]:
         """Find a section by ID within this subtree."""
         result: Optional[DocumentSection] = None
         if self.id == a_section_id:
             result = self
         else:
             for child in self.children:
-                found: Optional[DocumentSection] = child.find(a_section_id)
+                found: Optional[DocumentSection] = child.get(a_section_id)
                 if found is not None:
                     result = found
                     break
@@ -124,12 +120,13 @@ class DocumentSection(DomainValueObject):
         return result
 
 
-class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
+class DocumentStructure(IdentifiedCollection[SectionId, DocumentSection]):
     """Validated tree of universal document sections as a YAML list root.
 
     RootModel accepts the bare ``sections:`` list from the doctrine document.
-    Domain invariants (required roots, unique IDs, directives children) are
-    the only custom validation beyond Field constraints.
+    Construct via ``DocumentStructure.model_validate([...])`` or the RootModel
+    constructor. Nested uniqueness and required-section rules are domain
+    validators beyond the base collection index.
     """
 
     REQUIRED_SECTION_IDS: ClassVar[FrozenSet[SectionId]] = frozenset(
@@ -149,13 +146,17 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
         }
     )
 
-    model_config = ConfigDict(frozen=True)
-
-    root: Tuple[DocumentSection, ...] = Field(min_length=1)
+    def item_id(self, a_item: DocumentSection) -> SectionId:
+        """Return the top-level section identifier."""
+        result: SectionId = a_item.id
+        return result
 
     @model_validator(mode="after")
-    def check_structure(self) -> DocumentStructure:
-        """Enforce required sections, unique IDs, and directives children."""
+    def check_unique_ids(self) -> DocumentStructure:
+        """Enforce required sections, unique nested IDs, and directives children.
+
+        Overrides the base top-level uniqueness check with full-tree rules.
+        """
         present: Set[SectionId] = {section.id for section in self.root}
         missing: FrozenSet[SectionId] = self.REQUIRED_SECTION_IDS - present
         if missing:
@@ -194,21 +195,7 @@ class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
                 mapping[section.id] = section
         return mapping
 
-    def get(self, a_section_id: SectionId) -> Optional[DocumentSection]:
-        """Return a section by ID from the full tree."""
-        result: Optional[DocumentSection] = self._index.get(a_section_id)
-        return result
-
-    def all_section_ids(self) -> FrozenSet[SectionId]:
+    def all_ids(self) -> FrozenSet[SectionId]:
         """Return every section ID in the tree."""
         result: FrozenSet[SectionId] = frozenset(self._index)
-        return result
-
-    def __len__(self) -> int:
-        return len(self.root)
-
-    @classmethod
-    def from_sections(cls, a_sections: Iterable[DocumentSection]) -> DocumentStructure:
-        """Build a validated structure from top-level sections."""
-        result: DocumentStructure = cls(tuple(a_sections))
         return result

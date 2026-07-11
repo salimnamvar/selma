@@ -74,7 +74,7 @@ class TestPolicyDoctrineYamlContract:
 
     def test_identity_lifecycle_operations(self, doctrine: PolicyDoctrine) -> None:
         lifecycle = doctrine.identity_lifecycle
-        assert lifecycle.supported_operations() == frozenset(IdentityOperation)
+        assert frozenset(IdentityOperation) == lifecycle.SUPPORTED_OPERATIONS
         assert "two distinct" in lifecycle.guidance_for(IdentityOperation.FORK).lower()
         assert "combine" in lifecycle.guidance_for(IdentityOperation.MERGE).lower()
 
@@ -86,15 +86,15 @@ class TestPolicyDoctrineYamlContract:
 
     def test_writing_principles(self, doctrine: PolicyDoctrine) -> None:
         assert len(doctrine.writing_principles) == 5
-        principle = doctrine.get_writing_principle("WP-001")
+        principle = doctrine.writing_principles.get("WP-001")
         assert principle is not None
         assert "Precision" in principle.title
 
     def test_sections_and_lookups(self, doctrine: PolicyDoctrine) -> None:
         assert {section.id for section in doctrine.sections} >= DocumentStructure.REQUIRED_SECTION_IDS
-        assert doctrine.get_section("directives") is not None
-        assert doctrine.get_section("flexible_standards") is not None
-        assert doctrine.get_section("specific_directives") is not None
+        assert doctrine.sections.get("directives") is not None
+        assert doctrine.sections.get("flexible_standards") is not None
+        assert doctrine.sections.get("specific_directives") is not None
 
     def test_contamination_guard(self, doctrine: PolicyDoctrine) -> None:
         guard = doctrine.contamination_guard
@@ -108,7 +108,7 @@ class TestPolicyDoctrineYamlContract:
             PriorityCategory.CONSTITUTIONAL,
             PriorityCategory.OPERATIONAL,
         )
-        level = doctrine.get_priority_level(PriorityCategory.STATUTORY)
+        level = doctrine.priority_hierarchy.get(PriorityCategory.STATUTORY)
         assert level is not None
         assert level.level == 2
 
@@ -121,7 +121,7 @@ class TestPolicyDoctrineYamlContract:
         self,
         doctrine: PolicyDoctrine,
     ) -> None:
-        flexible = doctrine.get_section("flexible_standards")
+        flexible = doctrine.sections.get("flexible_standards")
         assert flexible is not None
         assert flexible.schema_encoding is not None
         assert isinstance(flexible.schema_encoding, str)

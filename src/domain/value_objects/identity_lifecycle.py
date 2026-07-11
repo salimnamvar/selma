@@ -7,7 +7,7 @@ completeness without a custom before-validator reshape.
 
 from __future__ import annotations
 
-from typing import FrozenSet
+from typing import ClassVar, FrozenSet
 
 from pydantic import Field
 
@@ -29,6 +29,8 @@ class IdentityLifecycleIntent(DomainValueObject):
         dag_intent (GovernanceText): Constraint on lineage ancestry graph structure.
     """
 
+    SUPPORTED_OPERATIONS: ClassVar[FrozenSet[IdentityOperation]] = frozenset(IdentityOperation)
+
     revision: GovernanceText = Field(description="When to use revision")
     fork: GovernanceText = Field(description="When to use fork")
     merge: GovernanceText = Field(description="When to use merge")
@@ -47,13 +49,4 @@ class IdentityLifecycleIntent(DomainValueObject):
             GovernanceText: Guidance text for the operation.
         """
         result: GovernanceText = getattr(self, a_operation.value)
-        return result
-
-    def supported_operations(self) -> FrozenSet[IdentityOperation]:
-        """Return the set of operations covered by this intent.
-
-        Returns:
-            FrozenSet[IdentityOperation]: Supported operations.
-        """
-        result: FrozenSet[IdentityOperation] = frozenset(IdentityOperation)
         return result

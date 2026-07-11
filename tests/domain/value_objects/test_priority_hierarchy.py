@@ -19,7 +19,7 @@ class TestPriorityHierarchy:
     def test_complete_hierarchy(self, priority_hierarchy_payload: Dict[str, Any]) -> None:
         hierarchy: PriorityHierarchy = PriorityHierarchy.model_validate(priority_hierarchy_payload)
 
-        assert hierarchy.get_level(PriorityCategory.CONSTITUTIONAL) is not None
+        assert hierarchy.get(PriorityCategory.CONSTITUTIONAL) is not None
         assert hierarchy.outranks(
             PriorityCategory.CONSTITUTIONAL,
             PriorityCategory.ADVISORY,

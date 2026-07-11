@@ -8,9 +8,9 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Dict, List, Optional, Set, Tuple
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
 
-from domain.base import DomainValueObject
+from domain.base import DomainValueObject, require_unique
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
@@ -72,14 +72,6 @@ class PriorityHierarchy(DomainValueObject):
         cross_layer_precedence (CrossLayerPrecedence): Cross-layer precedence map.
     """
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        populate_by_name=True,
-        str_strip_whitespace=True,
-        ignored_types=(cached_property,),
-    )
-
     description: GovernanceText = Field(description="How priority hierarchy works")
     levels: Tuple[PriorityLevel, ...] = Field(
         min_length=1,
@@ -105,8 +97,7 @@ class PriorityHierarchy(DomainValueObject):
                 )
 
         category_ids: List[PriorityCategory] = [level.id for level in self.levels]
-        if len(category_ids) != len(set(category_ids)):
-            raise ValueError("Duplicate priority categories are not allowed")
+        require_unique(category_ids, a_label="priority categories")
 
         expected: Set[PriorityCategory] = set(PriorityCategory)
         present: Set[PriorityCategory] = set(category_ids)
@@ -118,16 +109,16 @@ class PriorityHierarchy(DomainValueObject):
         return result
 
     @cached_property
-    def _level_index(self) -> Dict[PriorityCategory, PriorityLevel]:
+    def _index(self) -> Dict[PriorityCategory, PriorityLevel]:
         result: Dict[PriorityCategory, PriorityLevel] = {level.id: level for level in self.levels}
         return result
 
-    def get_level(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
+    def get(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
         """Return the priority level for a category."""
-        result: Optional[PriorityLevel] = self._level_index.get(a_category)
+        result: Optional[PriorityLevel] = self._index.get(a_category)
         return result
 
     def outranks(self, a_left: PriorityCategory, a_right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right."""
-        result: bool = self._level_index[a_left].level < self._level_index[a_right].level
+        result: bool = self._index[a_left].level < self._index[a_right].level
         return result

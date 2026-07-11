@@ -66,7 +66,7 @@ class TestDocumentSection:
         assert section.columns == ()
         assert section.children == ()
 
-    def test_traverse_and_find(self) -> None:
+    def test_traverse_and_get(self) -> None:
         # Arrange
         child: DocumentSection = DocumentSection(
             id="specific_directives",
@@ -86,8 +86,8 @@ class TestDocumentSection:
             "directives",
             "specific_directives",
         ]
-        assert parent.find("specific_directives") is child
-        assert parent.find("missing") is None
+        assert parent.get("specific_directives") is child
+        assert parent.get("missing") is None
 
 
 @pytest.mark.unit
@@ -118,5 +118,5 @@ class TestDocumentStructure:
 
         assert structure.get("flexible_standards") is not None
         assert structure.get("nope") is None
-        assert structure.all_section_ids() >= DocumentStructure.REQUIRED_SECTION_IDS
+        assert structure.all_ids() >= DocumentStructure.REQUIRED_SECTION_IDS
         assert len(structure) == len(minimal_sections)
