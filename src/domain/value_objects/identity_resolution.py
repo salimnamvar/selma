@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from domain.base import DomainValueObject
-from domain.identifiers import FieldPath, GovernanceText
+from domain.base import VO_CONFIG
+from domain.identifiers import FieldPath, GovernanceText, field_path_field, field_path_is_field
 
 
-class MachineIdSemantics(DomainValueObject):
+class MachineIdSemantics(BaseModel):
     """Defines the semantics of the Machine ID concept."""
+
+    model_config = VO_CONFIG
 
     definition: GovernanceText = Field(description="What Machine ID represents")
     exclusions: tuple[GovernanceText, ...] = Field(description="What Machine ID is not")
@@ -19,8 +21,10 @@ class MachineIdSemantics(DomainValueObject):
     governance_intent: GovernanceText = Field(description="Why Machine ID matters for governance")
 
 
-class IdentityResolution(DomainValueObject):
+class IdentityResolution(BaseModel):
     """How identities map across policy, schema, and specification layers."""
+
+    model_config = VO_CONFIG
 
     canonical_field: GovernanceText = Field(description="The canonical identity field name")
     policy_location: FieldPath = Field(description="Where identity appears in policy")
@@ -36,24 +40,24 @@ class IdentityResolution(DomainValueObject):
     @model_validator(mode="after")
     def _validate_mapping(self) -> Self:
         """Protect dual-identity meaning declared in policy doctrine."""
-        if not self.schema_lineage_location.is_field("lineage_id"):
+        if not field_path_is_field(self.schema_lineage_location, "lineage_id"):
             raise ValueError(
                 "schema_lineage_location must reference field 'lineage_id' "
-                f"(got {self.schema_lineage_location.field!r})"
+                f"(got {field_path_field(self.schema_lineage_location)!r})"
             )
-        if not self.schema_execution_location.is_field("id"):
+        if not field_path_is_field(self.schema_execution_location, "id"):
             raise ValueError(
                 "schema_execution_location must reference field 'id' "
-                f"(got {self.schema_execution_location.field!r})"
+                f"(got {field_path_field(self.schema_execution_location)!r})"
             )
-        if not self.spec_lineage_location.is_field("lineage_id"):
+        if not field_path_is_field(self.spec_lineage_location, "lineage_id"):
             raise ValueError(
                 "spec_lineage_location must reference field 'lineage_id' "
-                f"(got {self.spec_lineage_location.field!r})"
+                f"(got {field_path_field(self.spec_lineage_location)!r})"
             )
-        if not self.spec_execution_location.is_field("directive_id"):
+        if not field_path_is_field(self.spec_execution_location, "directive_id"):
             raise ValueError(
                 "spec_execution_location must reference field 'directive_id' "
-                f"(got {self.spec_execution_location.field!r})"
+                f"(got {field_path_field(self.spec_execution_location)!r})"
             )
         return self

@@ -3,24 +3,26 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field
 
-from domain.base import DomainValueObject
+from domain.base import VO_CONFIG
 from domain.enums import ProhibitedField
 from domain.identifiers import GovernanceText
 
 
-class ContaminationGuard(DomainValueObject):
+class ContaminationGuard(BaseModel):
     """Defines what is prohibited and allowed in the policy layer.
 
     Aligns with contamination_guard in policy_doctrine.yaml.
+    ``prohibited_fields`` mirrors the YAML list; enforcement uses ``ProhibitedField``.
     """
+
+    model_config = VO_CONFIG
 
     prohibited_fields: frozenset[ProhibitedField] = Field(
         min_length=1,
-        description="Schema fields that must not appear in policy prose",
+        description="Schema fields that must not appear in policy prose (YAML mirror)",
     )
     allowed_machine_references: tuple[GovernanceText, ...] = Field(
         min_length=1,
@@ -30,23 +32,13 @@ class ContaminationGuard(DomainValueObject):
         description="Constraints on schema metadata in policy"
     )
 
-    @model_validator(mode="after")
-    def _validate_fields(self) -> Self:
-        """Ensure the guard covers the full closed vocabulary of prohibited fields."""
-        missing = set(ProhibitedField) - self.prohibited_fields
-        if missing:
-            raise ValueError(
-                f"Contamination guard missing prohibited fields: {sorted(f.value for f in missing)}"
-            )
-        return self
-
     def is_prohibited(self, key: str | ProhibitedField) -> bool:
         """Return True if field must not appear in policy prose."""
         try:
             field = key if isinstance(key, ProhibitedField) else ProhibitedField(key)
         except ValueError:
             return False
-        return field in self.prohibited_fields
+        return field in ProhibitedField
 
     def is_allowed(self, key: str | ProhibitedField) -> bool:
         """Return True if field may appear in policy prose."""

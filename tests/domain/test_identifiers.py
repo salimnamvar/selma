@@ -5,7 +5,17 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from domain import FieldPath, MachineId, SemanticVersion, is_major_compatible, major_version
+from domain import (
+    FieldPath,
+    MachineId,
+    SemanticVersion,
+    field_path_collection,
+    field_path_field,
+    field_path_is_field,
+    is_major_compatible,
+    major_version,
+    parse_semver,
+)
 
 
 @pytest.mark.unit
@@ -36,6 +46,7 @@ class TestSemanticVersion:
         assert version == raw
         assert major_version(version) == major
         assert version.split(".") == [major, minor, patch]
+        assert str(parse_semver(version)) == raw
 
     @pytest.mark.parametrize(
         "invalid",
@@ -83,7 +94,9 @@ class TestMachineId:
 @pytest.mark.unit
 @pytest.mark.domain
 class TestFieldPath:
-    """FieldPath string coercion into structured components."""
+    """FieldPath string validation and path helper functions."""
+
+    _adapter: TypeAdapter[FieldPath] = TypeAdapter(FieldPath)
 
     @pytest.mark.parametrize(
         ("raw", "collection", "field"),
@@ -101,13 +114,13 @@ class TestFieldPath:
         collection: str,
         field: str,
     ) -> None:
-        path = FieldPath.model_validate(raw)
+        path = self._adapter.validate_python(raw)
 
-        assert path.collection == collection
-        assert path.field == field
-        assert str(path) == raw
-        assert path.is_field(field)
+        assert path == raw
+        assert field_path_collection(path) == collection
+        assert field_path_field(path) == field
+        assert field_path_is_field(path, field)
 
     def test_empty_path_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            FieldPath.model_validate("   ")
+            self._adapter.validate_python("   ")

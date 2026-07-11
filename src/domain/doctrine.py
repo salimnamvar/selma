@@ -5,23 +5,25 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
-from domain.base import DomainValueObject
+from domain.base import VO_CONFIG
 from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import GovernanceText, RuleContractId, SemanticVersion, is_major_compatible
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
-from domain.value_objects.document_section import DocumentSection, DocumentSections, find_section
+from domain.value_objects.document_section import DocumentSection, DocumentTemplate
 from domain.value_objects.identity_resolution import IdentityResolution
 from domain.value_objects.lifecycle_guidance import LifecycleGuidance
 from domain.value_objects.priority_hierarchy import AuthorityHierarchy
 from domain.value_objects.versioning_intent import VersioningIntent
-from domain.value_objects.writing_principle import WritingPrinciple, WritingPrinciples, find_principle
+from domain.value_objects.writing_principle import WritingPrinciple, WritingPrinciples
 
 
-class DoctrineMetadata(DomainValueObject):
+class DoctrineMetadata(BaseModel):
     """Identity and compatibility metadata for a policy doctrine document."""
+
+    model_config = VO_CONFIG
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
@@ -41,8 +43,10 @@ class DoctrineMetadata(DomainValueObject):
         )
 
 
-class PolicyDoctrine(DomainValueObject):
+class PolicyDoctrine(BaseModel):
     """Aggregate root for the complete governance doctrine."""
+
+    model_config = VO_CONFIG
 
     doctrine: DoctrineMetadata = Field(description="Doctrine identity and version matrix")
     cross_layer_binding: CrossLayerBinding = Field(description="Layer relationship constraints")
@@ -54,7 +58,7 @@ class PolicyDoctrine(DomainValueObject):
         description="Authority levels and conflict-resolution intent"
     )
     version_strategy: VersioningIntent = Field(description="Versioning intent")
-    sections: DocumentSections = Field(description="Universal document section definitions")
+    sections: DocumentTemplate = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
     def _validate_versions(self) -> Self:
@@ -93,18 +97,15 @@ class PolicyDoctrine(DomainValueObject):
 
     def get_section(self, key: str) -> DocumentSection | None:
         """Return a document section by id (tree-wide), or None."""
-        return find_section(self.sections, key)
+        return self.sections.get(key)
 
     def require_section(self, key: str) -> DocumentSection:
         """Return a document section by id, or raise KeyError."""
-        result = self.get_section(key)
-        if result is None:
-            raise KeyError(f"Item with key '{key}' not found")
-        return result
+        return self.sections.require(key)
 
     def get_principle(self, key: str) -> WritingPrinciple | None:
         """Return a writing principle by id, or None."""
-        return find_principle(self.writing_principles, key)
+        return self.writing_principles.get(key)
 
     def get_lifecycle_guidance(self, operation: IdentityOperation) -> str:
         """Return lifecycle guidance text for an identity operation."""

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Self
 
-from pydantic import AfterValidator, BeforeValidator, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, RootModel, computed_field, model_validator
 
-from domain.base import DomainValueObject, none_as_empty, require_unique
+from domain.base import ROOT_CONFIG, VO_CONFIG, none_as_empty, require_unique
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
 
@@ -30,8 +30,10 @@ DIRECTIVES_CHILD_IDS: frozenset[str] = frozenset(
 )
 
 
-class DocumentSection(DomainValueObject):
+class DocumentSection(BaseModel):
     """A structural section defining governance document composition."""
+
+    model_config = VO_CONFIG
 
     MAX_DEPTH: ClassVar[int] = 3
     _TABULAR_CONTENT_TYPES: ClassVar[frozenset[ContentType]] = frozenset(
@@ -61,7 +63,7 @@ class DocumentSection(DomainValueObject):
     )
 
     @model_validator(mode="after")
-    def _validate_content(self) -> DocumentSection:
+    def _validate_content(self) -> Self:
         if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
             raise ValueError(
                 f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
@@ -91,41 +93,58 @@ class DocumentSection(DomainValueObject):
             yield node.id
 
 
-def find_section(
-    sections: tuple[DocumentSection, ...],
-    key: str,
-) -> DocumentSection | None:
-    """Return the first section whose id equals ``key`` in the tree, or None."""
-    return next(
-        (node for root in sections for node in root.traverse() if str(node.id) == key),
-        None,
-    )
+class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
+    """Validated tree of universal document sections (YAML list root)."""
 
+    model_config = ROOT_CONFIG
 
-def _validate_document_sections(
-    sections: tuple[DocumentSection, ...],
-) -> tuple[DocumentSection, ...]:
-    present = {str(section.id) for section in sections}
-    missing = REQUIRED_SECTION_IDS - present
-    if missing:
-        raise ValueError(f"Missing required sections: {sorted(missing)}")
+    @model_validator(mode="after")
+    def _validate_structure(self) -> Self:
+        present = {str(section.id) for section in self.root}
+        missing = REQUIRED_SECTION_IDS - present
+        if missing:
+            raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-    nested_ids = [str(section_id) for section in sections for section_id in section.iter_ids()]
-    require_unique(nested_ids, label="section ID")
+        nested_ids = [str(section_id) for section in self.root for section_id in section.iter_ids()]
+        require_unique(nested_ids, label="section ID")
 
-    directives = find_section(sections, "directives")
-    if directives is not None and directives.children:
-        child_ids = {str(child.id) for child in directives.children}
-        missing_children = DIRECTIVES_CHILD_IDS - child_ids
-        if missing_children:
-            raise ValueError(
-                f"Directives section missing expected children: {sorted(missing_children)}"
-            )
-    return sections
+        directives = self.get("directives")
+        if directives is not None and directives.children:
+            child_ids = {str(child.id) for child in directives.children}
+            missing_children = DIRECTIVES_CHILD_IDS - child_ids
+            if missing_children:
+                raise ValueError(
+                    f"Directives section missing expected children: {sorted(missing_children)}"
+                )
+        return self
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def index(self) -> dict[str, DocumentSection]:
+        """Lookup index keyed by section id (tree-wide)."""
+        return {
+            str(section.id): section
+            for root in self.root
+            for section in root.traverse()
+        }
 
-type DocumentSections = Annotated[
-    tuple[DocumentSection, ...],
-    Field(min_length=1),
-    AfterValidator(_validate_document_sections),
-]
+    def get(self, key: str) -> DocumentSection | None:
+        """Return a section by id (tree-wide), or None."""
+        return self.index.get(key)
+
+    def require(self, key: str) -> DocumentSection:
+        """Return a section by id, or raise KeyError."""
+        result = self.get(key)
+        if result is None:
+            raise KeyError(f"Item with key '{key}' not found")
+        return result
+
+    def __iter__(self) -> Iterator[DocumentSection]:  # type: ignore[override]
+        yield from self.root
+
+    def __len__(self) -> int:
+        return len(self.root)
+
+    def __contains__(self, item: object) -> bool:
+        key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
+        return key in self.index

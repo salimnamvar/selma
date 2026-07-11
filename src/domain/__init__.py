@@ -1,13 +1,13 @@
 """Policy Doctrine domain model.
 
-Idiomatic Pydantic v2: frozen value objects, Annotated type aliases for scalars
-and collections, exact YAML field-name mapping, and domain validation via
-Field constraints and AfterValidator.
+Idiomatic Pydantic v2: shared ``VO_CONFIG``, Annotated scalar aliases,
+``RootModel`` collections with ``@computed_field`` indexes, and direct
+``model_validate`` from YAML with 1:1 field-name mapping.
 """
 
 from __future__ import annotations
 
-from domain.base import DomainValueObject, none_as_empty, require_unique
+from domain.base import VO_CONFIG, none_as_empty, require_unique
 from domain.doctrine import DoctrineMetadata, PolicyDoctrine
 from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
@@ -18,8 +18,13 @@ from domain.identifiers import (
     SectionId,
     SemanticVersion,
     WritingPrincipleId,
+    field_path_collection,
+    field_path_field,
+    field_path_is_field,
     is_major_compatible,
     major_version,
+    parse_semver,
+    split_field_path,
 )
 from domain.value_objects import (
     DIRECTIVES_CHILD_IDS,
@@ -30,7 +35,7 @@ from domain.value_objects import (
     CrossLayerBinding,
     CrossLayerPrecedence,
     DocumentSection,
-    DocumentSections,
+    DocumentTemplate,
     FieldLegality,
     IdentityResolution,
     LifecycleGuidance,
@@ -40,13 +45,12 @@ from domain.value_objects import (
     VersioningIntent,
     WritingPrinciple,
     WritingPrinciples,
-    find_principle,
-    find_section,
 )
 
 __all__ = [
     "DIRECTIVES_CHILD_IDS",
     "REQUIRED_SECTION_IDS",
+    "VO_CONFIG",
     "AuthorityHierarchy",
     "ConflictResolutionIntent",
     "ContaminationGuard",
@@ -55,8 +59,7 @@ __all__ = [
     "CrossLayerPrecedence",
     "DoctrineMetadata",
     "DocumentSection",
-    "DocumentSections",
-    "DomainValueObject",
+    "DocumentTemplate",
     "FieldLegality",
     "FieldPath",
     "GovernanceText",
@@ -77,10 +80,13 @@ __all__ = [
     "WritingPrinciple",
     "WritingPrincipleId",
     "WritingPrinciples",
-    "find_principle",
-    "find_section",
+    "field_path_collection",
+    "field_path_field",
+    "field_path_is_field",
     "is_major_compatible",
     "major_version",
     "none_as_empty",
+    "parse_semver",
     "require_unique",
+    "split_field_path",
 ]

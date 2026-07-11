@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from domain.base import DomainValueObject
+from domain.base import VO_CONFIG
 from domain.enums import IdentityOperation
 from domain.identifiers import GovernanceText
 
 
-class LifecycleGuidance(DomainValueObject):
+class LifecycleGuidance(BaseModel):
     """Direct mapping of identity lifecycle intent (YAML field names)."""
+
+    model_config = VO_CONFIG
 
     revision: GovernanceText = Field(description="When to use revision")
     fork: GovernanceText = Field(description="When to use fork")

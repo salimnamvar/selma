@@ -12,8 +12,7 @@ from domain.value_objects.document_section import (
     DIRECTIVES_CHILD_IDS,
     REQUIRED_SECTION_IDS,
     DocumentSection,
-    DocumentSections,
-    find_section,
+    DocumentTemplate,
 )
 from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
 from domain.value_objects.lifecycle_guidance import LifecycleGuidance
@@ -23,7 +22,7 @@ from domain.value_objects.priority_hierarchy import (
     PriorityLevel,
 )
 from domain.value_objects.versioning_intent import VersionComponentIntent, VersioningIntent
-from domain.value_objects.writing_principle import WritingPrinciple, WritingPrinciples, find_principle
+from domain.value_objects.writing_principle import WritingPrinciple, WritingPrinciples
 
 __all__ = [
     "DIRECTIVES_CHILD_IDS",
@@ -34,7 +33,7 @@ __all__ = [
     "CrossLayerBinding",
     "CrossLayerPrecedence",
     "DocumentSection",
-    "DocumentSections",
+    "DocumentTemplate",
     "FieldLegality",
     "IdentityResolution",
     "LifecycleGuidance",
@@ -44,6 +43,4 @@ __all__ = [
     "VersioningIntent",
     "WritingPrinciple",
     "WritingPrinciples",
-    "find_principle",
-    "find_section",
 ]

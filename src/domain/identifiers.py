@@ -1,13 +1,11 @@
-"""Domain identifiers — constrained string aliases and FieldPath."""
+"""Domain identifiers — Annotated scalar aliases and field-path helpers."""
 
 from __future__ import annotations
 
-from functools import cached_property
-from typing import Annotated, Any
+from typing import Annotated
 
-from pydantic import Field, model_validator
-
-from domain.base import DomainValueObject
+from packaging.version import InvalidVersion, Version
+from pydantic import BeforeValidator, Field
 
 type GovernanceText = Annotated[
     str,
@@ -49,6 +47,28 @@ type SemanticVersion = Annotated[
     ),
 ]
 
+def _normalize_field_path(value: str) -> str:
+    """Strip and reject empty field path strings."""
+    raw = value.strip()
+    if not raw:
+        raise ValueError("Field path must be non-empty")
+    return raw
+
+
+type FieldPath = Annotated[
+    str,
+    BeforeValidator(_normalize_field_path),
+    Field(min_length=1, description="Original path expression as authored"),
+]
+
+
+def parse_semver(value: SemanticVersion) -> Version:
+    """Parse a validated semantic version string via packaging."""
+    try:
+        return Version(value)
+    except InvalidVersion as exc:
+        raise ValueError(f"Invalid semantic version {value!r}") from exc
+
 
 def major_version(version: SemanticVersion) -> str:
     """Return the MAJOR component of a semantic version string."""
@@ -60,8 +80,9 @@ def is_major_compatible(left: SemanticVersion, right: SemanticVersion) -> bool:
     return major_version(left) == major_version(right)
 
 
-def _split_field_path(raw: str) -> tuple[str, str]:
+def split_field_path(path: FieldPath) -> tuple[str, str]:
     """Parse a path expression into collection and field components."""
+    raw = path.strip()
     if "[]." in raw:
         collection, field = raw.rsplit("[].", maxsplit=1)
     elif "." in raw:
@@ -71,39 +92,16 @@ def _split_field_path(raw: str) -> tuple[str, str]:
     return collection.strip(), field.strip()
 
 
-class FieldPath(DomainValueObject):
-    """Structured location of an identity field (string-coercible)."""
+def field_path_collection(path: FieldPath) -> str:
+    """Return the collection component of a field path."""
+    return split_field_path(path)[0]
 
-    raw: str = Field(min_length=1, description="Original path expression as authored")
 
-    @model_validator(mode="before")
-    @classmethod
-    def _coerce_input(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            raw = value.strip()
-            if not raw:
-                raise ValueError("Field path must be non-empty")
-            return {"raw": raw}
-        if isinstance(value, dict) and "raw" in value:
-            raw = str(value["raw"]).strip()
-            if not raw:
-                raise ValueError("Field path must be non-empty")
-            return {"raw": raw}
-        return value
+def field_path_field(path: FieldPath) -> str:
+    """Return the field component of a field path."""
+    return split_field_path(path)[1]
 
-    @cached_property
-    def collection(self) -> str:
-        """Collection or container name derived from ``raw``."""
-        return _split_field_path(self.raw)[0]
 
-    @cached_property
-    def field(self) -> str:
-        """Field name within the collection derived from ``raw``."""
-        return _split_field_path(self.raw)[1]
-
-    def __str__(self) -> str:
-        return self.raw
-
-    def is_field(self, name: str) -> bool:
-        """Return True when this path ends at the given field name."""
-        return self.field == name
+def field_path_is_field(path: FieldPath, name: str) -> bool:
+    """Return True when ``path`` ends at the given field name."""
+    return field_path_field(path) == name

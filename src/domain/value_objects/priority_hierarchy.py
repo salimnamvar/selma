@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
-from domain.base import DomainValueObject, require_unique
+from domain.base import VO_CONFIG, require_unique
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
 
-class PriorityLevel(DomainValueObject):
+class PriorityLevel(BaseModel):
     """An authority rank in the governance priority hierarchy."""
+
+    model_config = VO_CONFIG
 
     category: PriorityCategory = Field(description="Unique rank identifier")
     rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
@@ -21,8 +23,10 @@ class PriorityLevel(DomainValueObject):
     examples: tuple[GovernanceText, ...] = Field(default=(), description="Typical rules")
 
 
-class CrossLayerPrecedence(DomainValueObject):
+class CrossLayerPrecedence(BaseModel):
     """Declarative precedence intent across layers (not an algorithm)."""
+
+    model_config = VO_CONFIG
 
     precedence_algorithm: GovernanceText = Field(
         description="Where the normative resolution algorithm is defined (reference only)"
@@ -36,8 +40,10 @@ class CrossLayerPrecedence(DomainValueObject):
     )
 
 
-class AuthorityHierarchy(DomainValueObject):
+class AuthorityHierarchy(BaseModel):
     """Declares authority levels and conflict-resolution intent."""
+
+    model_config = VO_CONFIG
 
     description: GovernanceText = Field(description="How priority hierarchy works")
     levels: tuple[PriorityLevel, ...] = Field(min_length=1, description="Ordered authority levels")
@@ -65,9 +71,15 @@ class AuthorityHierarchy(DomainValueObject):
             )
         return self
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def index(self) -> dict[PriorityCategory, PriorityLevel]:
+        """Lookup index keyed by priority category."""
+        return {level.category: level for level in self.levels}
+
     def get(self, key: PriorityCategory) -> PriorityLevel | None:
         """Return the level for ``key``, or None."""
-        return next((level for level in self.levels if level.category == key), None)
+        return self.index.get(key)
 
     def require(self, key: PriorityCategory) -> PriorityLevel:
         """Return the level for ``key``, or raise KeyError."""

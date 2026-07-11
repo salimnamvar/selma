@@ -1,24 +1,20 @@
-"""Minimal domain base: immutable VO config and small shared helpers."""
+"""Shared Pydantic config and tiny validation helpers."""
 
 from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Hashable, Sequence
-from functools import cached_property
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
+VO_CONFIG = ConfigDict(
+    frozen=True,
+    extra="forbid",
+    populate_by_name=True,
+)
 
-class DomainValueObject(BaseModel):
-    """Immutable value-object base with strict validation."""
-
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        populate_by_name=True,
-        ignored_types=(cached_property,),
-    )
+ROOT_CONFIG = ConfigDict(frozen=True)
 
 
 def require_unique(ids: Sequence[Hashable], *, label: str) -> None:
@@ -34,5 +30,3 @@ def none_as_empty(value: Any) -> Any:
     if value is None:
         result = ()
     return result
-
-

@@ -14,6 +14,7 @@ from domain import (
     PolicyDoctrine,
     PriorityCategory,
     ProhibitedField,
+    field_path_field,
     is_major_compatible,
 )
 
@@ -124,8 +125,8 @@ class TestPolicyDoctrineYamlContract:
 
     def test_identity_field_paths(self, doctrine: PolicyDoctrine) -> None:
         resolution = doctrine.identity_resolution
-        assert resolution.schema_lineage_location.field == "lineage_id"
-        assert resolution.schema_execution_location.field == "id"
+        assert field_path_field(resolution.schema_lineage_location) == "lineage_id"
+        assert field_path_field(resolution.schema_execution_location) == "id"
 
     def test_schema_encoding_is_authoring_guidance(
         self,

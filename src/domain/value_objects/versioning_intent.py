@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from domain.base import DomainValueObject
+from domain.base import VO_CONFIG
 from domain.identifiers import GovernanceText
 
 
-class VersionComponentIntent(DomainValueObject):
+class VersionComponentIntent(BaseModel):
     """When to increment each semantic version component."""
+
+    model_config = VO_CONFIG
 
     major: GovernanceText = Field(description="When to increment MAJOR version")
     minor: GovernanceText = Field(description="When to increment MINOR version")
     patch: GovernanceText = Field(description="When to increment PATCH version")
 
 
-class VersioningIntent(DomainValueObject):
+class VersioningIntent(BaseModel):
     """Versioning intent for doctrine, schema, and specification documents."""
+
+    model_config = VO_CONFIG
 
     description: GovernanceText = Field(description="Versioning strategy overview")
     version_format: GovernanceText = Field(description="Version format pattern")

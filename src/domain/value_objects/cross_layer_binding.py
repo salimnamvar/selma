@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from domain.base import DomainValueObject
+from domain.base import VO_CONFIG
 from domain.identifiers import GovernanceText
 
 
-class ConflictResolutionIntent(DomainValueObject):
+class ConflictResolutionIntent(BaseModel):
     """How each layer contributes to conflict resolution (declarative intent)."""
+
+    model_config = VO_CONFIG
 
     policy_layer: GovernanceText = Field(description="Policy layer's role in conflict resolution")
     schema_layer: GovernanceText = Field(description="Schema layer's role in conflict resolution")
@@ -19,16 +21,20 @@ class ConflictResolutionIntent(DomainValueObject):
     )
 
 
-class FieldLegality(DomainValueObject):
+class FieldLegality(BaseModel):
     """Defines what each layer may contain."""
+
+    model_config = VO_CONFIG
 
     policy_layer: GovernanceText = Field(description="What the policy layer may contain")
     schema_layer: GovernanceText = Field(description="What the schema layer may contain")
     spec_layer: GovernanceText = Field(description="What the specification layer may contain")
 
 
-class CrossLayerBinding(DomainValueObject):
+class CrossLayerBinding(BaseModel):
     """Structural relationship between policy, schema, and specification layers."""
+
+    model_config = VO_CONFIG
 
     normative_source: GovernanceText = Field(description="The authoritative behavioral source")
     policy_purpose: GovernanceText = Field(description="Purpose of the policy (this) layer")

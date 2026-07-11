@@ -1,13 +1,13 @@
-"""Unit tests for DocumentSection and DocumentSections."""
+"""Unit tests for DocumentSection and DocumentTemplate."""
 
 from __future__ import annotations
 
 from typing import Callable
 
 import pytest
-from pydantic import TypeAdapter, ValidationError
+from pydantic import ValidationError
 
-from domain import REQUIRED_SECTION_IDS, ContentType, DocumentSection, DocumentSections
+from domain import REQUIRED_SECTION_IDS, ContentType, DocumentSection, DocumentTemplate
 
 
 @pytest.mark.unit
@@ -89,10 +89,8 @@ class TestDocumentSection:
 
 @pytest.mark.unit
 @pytest.mark.domain
-class TestDocumentSections:
+class TestDocumentTemplate:
     """Structural invariants for the universal document template."""
-
-    _adapter: TypeAdapter[DocumentSections] = TypeAdapter(DocumentSections)
 
     def test_required_sections(
         self,
@@ -100,7 +98,7 @@ class TestDocumentSections:
     ) -> None:
         incomplete = [section for section in minimal_sections if section.id != "preamble"]
         with pytest.raises(ValidationError, match="Missing required sections"):
-            self._adapter.validate_python(tuple(incomplete))
+            DocumentTemplate(tuple(incomplete))
 
     def test_duplicate_ids(
         self,
@@ -110,10 +108,11 @@ class TestDocumentSections:
         sections = list(minimal_sections)
         sections.append(make_prose_section(id="preamble", title="Dup"))
         with pytest.raises(ValidationError, match="Duplicate section ID"):
-            self._adapter.validate_python(tuple(sections))
+            DocumentTemplate(tuple(sections))
 
     def test_valid_structure(self, minimal_sections: tuple[DocumentSection, ...]) -> None:
-        structure = self._adapter.validate_python(minimal_sections)
+        structure = DocumentTemplate(minimal_sections)
 
-        assert {str(section.id) for section in structure} >= REQUIRED_SECTION_IDS
+        assert {str(section.id) for section in structure.root} >= REQUIRED_SECTION_IDS
+        assert structure.get("flexible_standards") is not None
         assert len(structure) == len(minimal_sections)

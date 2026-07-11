@@ -8,6 +8,14 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+_PRIORITY_RANKS: dict[str, int] = {
+    "constitutional": 1,
+    "statutory": 2,
+    "regulatory": 3,
+    "operational": 4,
+    "advisory": 5,
+}
+
 
 class ContentType(StrEnum):
     """Content formats permitted in document sections."""
@@ -30,16 +38,18 @@ class IdentityOperation(StrEnum):
 
 
 class PriorityCategory(StrEnum):
-    """Authority levels in the governance priority hierarchy.
-
-    Numeric ranks live on ``PriorityLevel.rank`` in YAML — not on the enum.
-    """
+    """Authority levels in the governance priority hierarchy."""
 
     CONSTITUTIONAL = "constitutional"
     STATUTORY = "statutory"
     REGULATORY = "regulatory"
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
+
+    @property
+    def rank(self) -> int:
+        """Return the canonical authority rank (1 = highest)."""
+        return _PRIORITY_RANKS[self.value]
 
 
 class ProhibitedField(StrEnum):
