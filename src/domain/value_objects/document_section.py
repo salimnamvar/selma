@@ -5,11 +5,11 @@ Structural sections and validated document structure for governance documents.
 
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Generator, Iterable
 from functools import cached_property
-from typing import ClassVar, Dict, FrozenSet, Optional, Set, Tuple, cast
+from typing import Any, ClassVar, Dict, FrozenSet, Optional, Set, Tuple
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, RootModel, field_validator, model_validator
 
 from domain.base import DomainValueObject
 from domain.enums import ContentType
@@ -66,31 +66,18 @@ class DocumentSection(DomainValueObject):
         ),
     )
 
-    @model_validator(mode="before")
+    @field_validator("columns", "children", mode="before")
     @classmethod
-    def _normalize_optional_collections(cls, a_data: object) -> object:
-        """Coerce YAML null collections to empty tuples.
+    def _none_as_empty(cls, a_value: Any) -> Any:
+        """Coerce YAML null to empty tuple; lists coerce to tuples automatically.
 
         Args:
-            a_data (object): Raw input mapping or instance data.
+            a_value (Any): Raw field value.
 
         Returns:
-            object: Normalized mapping or original input.
+            Any: Empty tuple when null, otherwise original value.
         """
-        result: object = a_data
-        if isinstance(a_data, dict):
-            raw: Dict[str, object] = dict(a_data)  # type: ignore[arg-type]
-            normalized: Dict[str, object] = dict(raw)
-            if normalized.get("columns") is None:
-                normalized["columns"] = ()
-            else:
-                columns: object = normalized.get("columns")
-                if isinstance(columns, list):
-                    column_items: Sequence[object] = cast(Sequence[object], columns)
-                    normalized["columns"] = tuple(column_items)
-            if normalized.get("children") is None:
-                normalized["children"] = ()
-            result = normalized
+        result: Any = () if a_value is None else a_value
         return result
 
     @model_validator(mode="after")
@@ -179,11 +166,12 @@ class DocumentSection(DomainValueObject):
         return result
 
 
-class DocumentStructure(DomainValueObject):
-    """Validated tree of universal document sections.
+class DocumentStructure(RootModel[Tuple[DocumentSection, ...]]):
+    """Validated tree of universal document sections as a YAML list root.
 
-    Attributes:
-        sections (Tuple[DocumentSection, ...]): Top-level document sections.
+    RootModel accepts the bare ``sections:`` list from the doctrine document.
+    Domain invariants (required roots, unique IDs, directives children) are
+    the only custom validation beyond Field constraints.
     """
 
     REQUIRED_SECTION_IDS: ClassVar[FrozenSet[SectionId]] = frozenset(
@@ -203,16 +191,9 @@ class DocumentStructure(DomainValueObject):
         }
     )
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        ignored_types=(cached_property,),
-    )
+    model_config = ConfigDict(frozen=True)
 
-    sections: Tuple[DocumentSection, ...] = Field(
-        min_length=1,
-        description="Top-level document sections",
-    )
+    root: Tuple[DocumentSection, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def check_structure(self) -> DocumentStructure:
@@ -225,20 +206,20 @@ class DocumentStructure(DomainValueObject):
             ValueError: If structure invariants are violated.
         """
         result: DocumentStructure = self
-        present: Set[SectionId] = {section.id for section in self.sections}
+        present: Set[SectionId] = {section.id for section in self.root}
         missing: FrozenSet[SectionId] = self.REQUIRED_SECTION_IDS - present
         if missing:
             raise ValueError(f"Missing required sections: {sorted(missing)}")
 
         seen: Set[SectionId] = set()
-        for section in self.sections:
+        for section in self.root:
             for section_id in section.all_ids():
                 if section_id in seen:
                     raise ValueError(f"Duplicate section ID: {section_id}")
                 seen.add(section_id)
 
         directives: Optional[DocumentSection] = next(
-            (section for section in self.sections if section.id == "directives"),
+            (section for section in self.root if section.id == "directives"),
             None,
         )
         if directives is not None and directives.children:
@@ -249,11 +230,21 @@ class DocumentStructure(DomainValueObject):
 
         return result
 
+    @property
+    def sections(self) -> Tuple[DocumentSection, ...]:
+        """Return top-level document sections.
+
+        Returns:
+            Tuple[DocumentSection, ...]: Top-level sections.
+        """
+        result: Tuple[DocumentSection, ...] = self.root
+        return result
+
     @cached_property
     def _index(self) -> Dict[SectionId, DocumentSection]:
         mapping: Dict[SectionId, DocumentSection] = {}
-        for root in self.sections:
-            for section in root.traverse():
+        for root_section in self.root:
+            for section in root_section.traverse():
                 mapping[section.id] = section
         return mapping
 
@@ -279,7 +270,7 @@ class DocumentStructure(DomainValueObject):
         return result
 
     def __len__(self) -> int:
-        return len(self.sections)
+        return len(self.root)
 
     @classmethod
     def from_sections(cls, a_sections: Iterable[DocumentSection]) -> DocumentStructure:
@@ -291,5 +282,5 @@ class DocumentStructure(DomainValueObject):
         Returns:
             DocumentStructure: Validated document structure.
         """
-        result: DocumentStructure = cls(sections=tuple(a_sections))
+        result: DocumentStructure = cls(tuple(a_sections))
         return result

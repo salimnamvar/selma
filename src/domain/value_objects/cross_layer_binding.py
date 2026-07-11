@@ -5,7 +5,7 @@ Models the relationship between policy, schema, and specification layers.
 
 from __future__ import annotations
 
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from domain.base import DomainValueObject
 from domain.identifiers import GovernanceText
@@ -20,8 +20,6 @@ class ConflictResolutionBinding(DomainValueObject):
         spec (GovernanceText): Specification layer role in conflict resolution.
         precedence (GovernanceText): Declared precedence chain.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     policy: GovernanceText = Field(description="Policy layer's role in conflict resolution")
     schema_layer: GovernanceText = Field(
@@ -58,8 +56,6 @@ class CrossLayerBinding(DomainValueObject):
         runtime_prohibition (GovernanceText): Runtime prohibition for this file.
         field_legality (FieldLegality): Per-layer field legality.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     normative_source: GovernanceText = Field(description="The authoritative behavioral source")
     policy_layer_purpose: GovernanceText = Field(

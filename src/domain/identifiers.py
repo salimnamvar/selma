@@ -16,8 +16,8 @@ Classes:
 
 from __future__ import annotations
 
-import re
-from typing import Annotated, Any, ClassVar, Dict, Match, Optional, Pattern, Self
+from functools import total_ordering
+from typing import Annotated, Any, Dict, Self
 
 from pydantic import Field, model_validator
 
@@ -56,8 +56,11 @@ RuleContractId = Annotated[
 ]
 
 
+@total_ordering
 class SemanticVersion(DomainValueObject):
     """Semantic version with structured components and MAJOR compatibility.
+
+    Accepts component kwargs or a ``MAJOR.MINOR.PATCH`` string via model_validate.
 
     Attributes:
         major (int): Breaking changes that require migration.
@@ -65,16 +68,14 @@ class SemanticVersion(DomainValueObject):
         patch (int): Bug fixes and clarifications.
     """
 
-    _PATTERN: ClassVar[Pattern[str]] = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
-
     major: int = Field(ge=0, description="Breaking changes that require migration")
     minor: int = Field(ge=0, description="New backward-compatible features")
     patch: int = Field(ge=0, description="Bug fixes and clarifications")
 
     @model_validator(mode="before")
     @classmethod
-    def _parse_string(cls, a_data: Any) -> Any:
-        """Parse a MAJOR.MINOR.PATCH string into component fields.
+    def _coerce_string(cls, a_data: Any) -> Any:
+        """Coerce a MAJOR.MINOR.PATCH string into component fields.
 
         Args:
             a_data (Any): Raw input (string or mapping).
@@ -84,14 +85,14 @@ class SemanticVersion(DomainValueObject):
         """
         result: Any = a_data
         if isinstance(a_data, str):
-            match: Optional[Match[str]] = cls._PATTERN.fullmatch(a_data)
-            if match is None:
+            parts: list[str] = a_data.split(".")
+            if len(parts) != 3 or not all(part.isdigit() for part in parts):
                 msg: str = f"Invalid semantic version {a_data!r}; expected MAJOR.MINOR.PATCH"
                 raise ValueError(msg)
             result = {
-                "major": int(match.group(1)),
-                "minor": int(match.group(2)),
-                "patch": int(match.group(3)),
+                "major": int(parts[0]),
+                "minor": int(parts[1]),
+                "patch": int(parts[2]),
             }
         return result
 
@@ -114,35 +115,13 @@ class SemanticVersion(DomainValueObject):
         return result
 
     def __lt__(self, a_other: object) -> bool:
-        result: bool = NotImplemented  # type: ignore[assignment]
-        if isinstance(a_other, SemanticVersion):
-            result = (self.major, self.minor, self.patch) < (
-                a_other.major,
-                a_other.minor,
-                a_other.patch,
-            )
-        return result
-
-    def __le__(self, a_other: object) -> bool:
-        result: bool = NotImplemented  # type: ignore[assignment]
-        if isinstance(a_other, SemanticVersion):
-            result = self == a_other or self < a_other
-        return result
-
-    def __gt__(self, a_other: object) -> bool:
-        result: bool = NotImplemented  # type: ignore[assignment]
-        if isinstance(a_other, SemanticVersion):
-            result = (self.major, self.minor, self.patch) > (
-                a_other.major,
-                a_other.minor,
-                a_other.patch,
-            )
-        return result
-
-    def __ge__(self, a_other: object) -> bool:
-        result: bool = NotImplemented  # type: ignore[assignment]
-        if isinstance(a_other, SemanticVersion):
-            result = self == a_other or self > a_other
+        if not isinstance(a_other, SemanticVersion):
+            return NotImplemented
+        result: bool = (self.major, self.minor, self.patch) < (
+            a_other.major,
+            a_other.minor,
+            a_other.patch,
+        )
         return result
 
     @classmethod
@@ -162,6 +141,8 @@ class SemanticVersion(DomainValueObject):
 class FieldPath(DomainValueObject):
     """Structured location of an identity field across layers.
 
+    Accepts a dotted path string (e.g. ``rules[].lineage_id``) or components.
+
     Attributes:
         collection (str): Collection or container name.
         field (str): Field name within the collection.
@@ -174,8 +155,8 @@ class FieldPath(DomainValueObject):
 
     @model_validator(mode="before")
     @classmethod
-    def _parse_path(cls, a_data: Any) -> Any:
-        """Parse a dotted path string into collection/field components.
+    def _coerce_string(cls, a_data: Any) -> Any:
+        """Coerce a dotted path string into collection/field components.
 
         Args:
             a_data (Any): Raw input (string or mapping).

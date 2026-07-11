@@ -6,14 +6,14 @@ Public value-object surface for the governance domain.
 from __future__ import annotations
 
 from domain.base import DomainValueObject
-from domain.value_objects.contamination_guard import ContaminationGuard, ProhibitedFieldSet
+from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import (
     ConflictResolutionBinding,
     CrossLayerBinding,
     FieldLegality,
 )
 from domain.value_objects.document_section import DocumentSection, DocumentStructure
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent, LifecycleOperationIntent
+from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
 from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
 from domain.value_objects.priority_hierarchy import (
     CrossLayerPrecedence,
@@ -34,11 +34,9 @@ __all__ = [
     "FieldLegality",
     "IdentityLifecycleIntent",
     "IdentityResolution",
-    "LifecycleOperationIntent",
     "MachineIdSemantics",
     "PriorityHierarchy",
     "PriorityLevel",
-    "ProhibitedFieldSet",
     "VersionIntent",
     "VersioningStrategy",
     "WritingPrinciple",

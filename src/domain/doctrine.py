@@ -5,10 +5,9 @@ Complete governance doctrine for the policy authoring layer.
 
 from __future__ import annotations
 
-from functools import cached_property
 from typing import Any, Dict, Optional, Tuple
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
 from domain.enums import PriorityCategory
@@ -43,13 +42,6 @@ class PolicyDoctrine(DomainValueObject):
         document_structure (DocumentStructure): Universal document section definitions.
     """
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        populate_by_name=True,
-        ignored_types=(cached_property,),
-    )
-
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
     description: str = Field(min_length=1, description="Human-readable purpose statement")
@@ -71,37 +63,6 @@ class PolicyDoctrine(DomainValueObject):
         alias="sections",
         description="Universal document section definitions",
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_collections(cls, a_data: Any) -> Any:
-        """Accept bare lists for principles and sections from YAML.
-
-        Args:
-            a_data (Any): Raw input mapping or instance data.
-
-        Returns:
-            Any: Normalized mapping or original input.
-        """
-        result: Any = a_data
-        if isinstance(a_data, dict):
-            raw: Dict[str, Any] = dict(a_data)  # type: ignore[arg-type]
-            normalized: Dict[str, Any] = dict(raw)
-
-            principles: Any = normalized.get("writing_principles")
-            if isinstance(principles, list):
-                normalized["writing_principles"] = {"principles": principles}
-
-            sections: Any = normalized.get("sections")
-            if isinstance(sections, list):
-                normalized["sections"] = {"sections": sections}
-
-            document_structure: Any = normalized.get("document_structure")
-            if isinstance(document_structure, list):
-                normalized["document_structure"] = {"sections": document_structure}
-
-            result = normalized
-        return result
 
     @model_validator(mode="after")
     def check_version_compatibility(self) -> PolicyDoctrine:
@@ -130,13 +91,6 @@ class PolicyDoctrine(DomainValueObject):
             Tuple[DocumentSection, ...]: Top-level sections.
         """
         result: Tuple[DocumentSection, ...] = self.document_structure.sections
-        return result
-
-    @cached_property
-    def _principle_index(self) -> Dict[WritingPrincipleId, WritingPrinciple]:
-        result: Dict[WritingPrincipleId, WritingPrinciple] = {
-            principle.id: principle for principle in self.writing_principles.principles
-        }
         return result
 
     def get_section(self, a_section_id: SectionId) -> Optional[DocumentSection]:

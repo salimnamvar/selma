@@ -81,6 +81,8 @@ class PriorityHierarchy(DomainValueObject):
     model_config = ConfigDict(
         frozen=True,
         extra="forbid",
+        populate_by_name=True,
+        str_strip_whitespace=True,
         ignored_types=(cached_property,),
     )
 
@@ -146,18 +148,6 @@ class PriorityHierarchy(DomainValueObject):
         result: Optional[PriorityLevel] = self._level_index.get(a_category)
         return result
 
-    def resolve(self, a_category: PriorityCategory) -> Optional[PriorityLevel]:
-        """Resolve a priority level by authority category.
-
-        Args:
-            a_category (PriorityCategory): Authority category to resolve.
-
-        Returns:
-            Optional[PriorityLevel]: Matching level, or None if absent.
-        """
-        result: Optional[PriorityLevel] = self.get_level(a_category)
-        return result
-
     def outranks(self, a_left: PriorityCategory, a_right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right.
 
@@ -168,7 +158,5 @@ class PriorityHierarchy(DomainValueObject):
         Returns:
             bool: True if left outranks right.
         """
-        left_level: PriorityLevel = self._level_index[a_left]
-        right_level: PriorityLevel = self._level_index[a_right]
-        result: bool = left_level.level < right_level.level
+        result: bool = self._level_index[a_left].level < self._level_index[a_right].level
         return result

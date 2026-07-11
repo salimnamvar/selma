@@ -182,7 +182,7 @@ class TestDocumentStructure:
     def test_required_sections(self) -> None:
         sections: List[DocumentSection] = [section for section in self._minimal_sections() if section.id != "preamble"]
         with pytest.raises(ValidationError, match="Missing required sections"):
-            DocumentStructure(sections=tuple(sections))
+            DocumentStructure(tuple(sections))
 
     def test_duplicate_ids(self) -> None:
         sections: List[DocumentSection] = list(self._minimal_sections())
@@ -194,10 +194,10 @@ class TestDocumentStructure:
             )
         )
         with pytest.raises(ValidationError, match="Duplicate section ID"):
-            DocumentStructure(sections=tuple(sections))
+            DocumentStructure(tuple(sections))
 
     def test_lookup(self) -> None:
-        structure: DocumentStructure = DocumentStructure(sections=self._minimal_sections())
+        structure: DocumentStructure = DocumentStructure(self._minimal_sections())
         assert structure.get("flexible_standards") is not None
         assert structure.get("nope") is None
         assert structure.all_section_ids() >= DocumentStructure.REQUIRED_SECTION_IDS
@@ -211,11 +211,11 @@ class TestWritingPrinciples:
             description="Use exact language",
         )
         with pytest.raises(ValidationError, match="Duplicate"):
-            WritingPrinciples(principles=(principle, principle))
+            WritingPrinciples((principle, principle))
 
     def test_get(self) -> None:
         collection: WritingPrinciples = WritingPrinciples(
-            principles=(
+            (
                 WritingPrinciple(id="WP-001", title="A", description="Alpha"),
                 WritingPrinciple(id="WP-002", title="B", description="Beta"),
             )
@@ -370,7 +370,7 @@ class TestDoctrineFromYaml:
         assert guard.is_prohibited(ProhibitedField.PARAMETERS)
         assert guard.is_prohibited("evaluator_hint")
         assert not guard.is_prohibited("machine_id")
-        assert ProhibitedField.LINEAGE in guard.as_field_set()
+        assert ProhibitedField.LINEAGE in guard.prohibited_fields
 
     def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.priority_hierarchy.outranks(

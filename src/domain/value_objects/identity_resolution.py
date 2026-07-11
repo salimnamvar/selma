@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from domain.base import DomainValueObject
 from domain.identifiers import FieldPath, GovernanceText
@@ -22,8 +22,6 @@ class MachineIdSemantics(DomainValueObject):
         assignment (GovernanceText): How Machine ID is assigned.
         governance_intent (GovernanceText): Why Machine ID matters for governance.
     """
-
-    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     definition: GovernanceText = Field(description="What Machine ID represents")
     exclusions: Tuple[GovernanceText, ...] = Field(

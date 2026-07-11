@@ -9,6 +9,11 @@ from pydantic import BaseModel, ConfigDict
 
 
 class DomainValueObject(BaseModel):
-    """Immutable, strict value-object base for the governance domain."""
+    """Immutable value-object base with strict validation and alias support."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        populate_by_name=True,
+        str_strip_whitespace=True,
+    )
