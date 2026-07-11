@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Self
 
 from pydantic import Field, model_validator
 
-from domain.base import DomainValueObject, require_unique
+from domain.base import DomainValueObject, build_index, require_unique
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
@@ -65,9 +66,13 @@ class AuthorityHierarchy(DomainValueObject):
             )
         return self
 
+    @cached_property
+    def _index(self) -> dict[PriorityCategory, PriorityLevel]:
+        return build_index(self.levels, key=lambda level: level.category)
+
     def get(self, key: PriorityCategory) -> PriorityLevel | None:
         """Return the level for ``key``, or None."""
-        return next((level for level in self.levels if level.category == key), None)
+        return self._index.get(key)
 
     def require(self, key: PriorityCategory) -> PriorityLevel:
         """Return the level for ``key``, or raise KeyError."""

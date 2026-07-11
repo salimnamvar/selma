@@ -1,8 +1,8 @@
 """Policy Doctrine domain model.
 
-Minimal Pydantic v2 design: DomainValueObject config base, Annotated string
-identifiers, packaging-backed SemanticVersion, YAML-shaped field names, and
-small collections validated via RootModel (no mixins, no lookup indexes).
+Minimal Pydantic v2 design: DomainValueObject config base, Annotated type
+aliases for scalar identifiers, packaging-backed SemanticVersion, YAML-shaped
+field names, and RootModel collections with shared ``build_index`` lookup.
 """
 
 from __future__ import annotations

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import cached_property
 from typing import Annotated, ClassVar, Self
 
-from pydantic import BeforeValidator, Field, RootModel, model_validator
+from pydantic import BeforeValidator, ConfigDict, Field, RootModel, model_validator
 
-from domain.base import DomainValueObject, none_as_empty, require_unique
+from domain.base import DomainValueObject, build_index, none_as_empty, require_unique
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
 
@@ -92,7 +93,7 @@ class DocumentSection(DomainValueObject):
 class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
     """Validated tree of universal document sections (YAML list root)."""
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(frozen=True, ignored_types=(cached_property,))
 
     REQUIRED_SECTION_IDS: ClassVar[frozenset[str]] = frozenset(
         {
@@ -131,12 +132,16 @@ class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
                 )
         return self
 
+    @cached_property
+    def _index(self) -> dict[str, DocumentSection]:
+        return build_index(
+            (section for root in self.root for section in root.traverse()),
+            key=lambda section: str(section.id),
+        )
+
     def get(self, key: str) -> DocumentSection | None:
         """Return a section by id (tree-wide), or None."""
-        return next(
-            (section for root in self.root for section in root.traverse() if str(section.id) == key),
-            None,
-        )
+        return self._index.get(key)
 
     def require(self, key: str) -> DocumentSection:
         """Return a section by id, or raise KeyError."""
@@ -153,4 +158,4 @@ class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
 
     def __contains__(self, item: object) -> bool:
         key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
-        return self.get(key) is not None
+        return key in self._index

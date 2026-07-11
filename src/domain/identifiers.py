@@ -11,12 +11,12 @@ from pydantic_core import CoreSchema, core_schema
 
 from domain.base import DomainValueObject
 
-GovernanceText = Annotated[
+type GovernanceText = Annotated[
     str,
     Field(min_length=1, description="Non-empty governance guidance, description, or intent"),
 ]
 
-MachineId = Annotated[
+type MachineId = Annotated[
     str,
     Field(
         pattern=r"^[A-Z][A-Z0-9]+-[0-9]+$",
@@ -24,17 +24,17 @@ MachineId = Annotated[
     ),
 ]
 
-WritingPrincipleId = Annotated[
+type WritingPrincipleId = Annotated[
     str,
     Field(pattern=r"^WP-\d{3}$", description="Unique writing principle identifier"),
 ]
 
-SectionId = Annotated[
+type SectionId = Annotated[
     str,
     Field(pattern=r"^[a-z][a-z0-9_]*$", description="Unique document section identifier"),
 ]
 
-RuleContractId = Annotated[
+type RuleContractId = Annotated[
     str,
     Field(
         pattern=r"^[a-z][a-z0-9-]*$",

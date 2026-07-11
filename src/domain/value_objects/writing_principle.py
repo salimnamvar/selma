@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import cached_property
 from typing import Self
 
-from pydantic import Field, RootModel, model_validator
+from pydantic import ConfigDict, Field, RootModel, model_validator
 
-from domain.base import DomainValueObject, require_unique
+from domain.base import DomainValueObject, build_index, require_unique
 from domain.identifiers import GovernanceText, WritingPrincipleId
 
 
@@ -22,7 +23,7 @@ class WritingPrinciple(DomainValueObject):
 class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
     """Collection of writing principles validated as a YAML list root."""
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(frozen=True, ignored_types=(cached_property,))
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
@@ -31,9 +32,13 @@ class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
         require_unique([str(item.id) for item in self.root], label="IDs")
         return self
 
+    @cached_property
+    def _index(self) -> dict[str, WritingPrinciple]:
+        return build_index(self.root, key=lambda item: str(item.id))
+
     def get(self, key: str) -> WritingPrinciple | None:
         """Return the principle for ``key``, or None."""
-        return next((item for item in self.root if str(item.id) == key), None)
+        return self._index.get(key)
 
     def require(self, key: str) -> WritingPrinciple:
         """Return the principle for ``key``, or raise KeyError."""
@@ -50,4 +55,4 @@ class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
 
     def __contains__(self, item: object) -> bool:
         key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
-        return self.get(key) is not None
+        return key in self._index
