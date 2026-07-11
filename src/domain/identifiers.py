@@ -27,10 +27,10 @@ SectionId = Annotated[
 
 Guidance = Annotated[
     str,
-    Field(description="Governance guidance or policy prose"),
+    Field(min_length=1, description="Governance guidance or policy prose"),
 ]
 
 Description = Annotated[
     str,
-    Field(description="Human-readable description"),
+    Field(min_length=1, description="Human-readable description"),
 ]

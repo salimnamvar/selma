@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Iterator, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,3 +19,10 @@ class DocumentSection(BaseModel):
     columns: Optional[tuple[str, ...]] = Field(default=None, description="Table column headers")
     children: Optional[tuple["DocumentSection", ...]] = Field(default=None, description="Subsections")
     schema_encoding: Optional[str] = Field(default=None, description="Schema encoding instructions")
+
+    def all_ids(self) -> Iterator[SectionId]:
+        """Yield this section's id and all descendant ids."""
+        yield self.id
+        if self.children:
+            for child in self.children:
+                yield from child.all_ids()

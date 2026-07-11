@@ -1,6 +1,7 @@
 from domain.doctrine import PolicyDoctrine
 from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
+    Description,
     Guidance,
     MachineId,
     SectionId,
@@ -10,13 +11,14 @@ from domain.identifiers import (
 
 __all__ = [
     "ContentType",
+    "Description",
     "Guidance",
     "IdentityOperation",
     "MachineId",
     "PolicyDoctrine",
     "PriorityCategory",
     "ProhibitedField",
-    "SemanticVersion",
     "SectionId",
+    "SemanticVersion",
     "WritingPrincipleId",
 ]

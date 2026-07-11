@@ -1,4 +1,5 @@
-from typing import Optional
+from collections import Counter
+from typing import Generator, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -54,11 +55,16 @@ class PolicyDoctrine(BaseModel):
 
     @model_validator(mode="after")
     def check_no_duplicate_sections(self) -> "PolicyDoctrine":
-        ids = [s.id for s in self.sections]
-        if len(ids) != len(set(ids)):
-            duplicates = {sid for sid in ids if ids.count(sid) > 1}
-            raise ValueError(f"Duplicate section IDs: {duplicates}")
+        ids = list(self._iter_section_ids())
+        duplicates = [sid for sid, count in Counter(ids).items() if count > 1]
+        if duplicates:
+            raise ValueError(f"Duplicate section IDs found: {duplicates}")
         return self
+
+    def _iter_section_ids(self) -> Generator[SectionId]:
+        """Recursively yield every SectionId in the document tree."""
+        for section in self.sections:
+            yield from section.all_ids()
 
     @model_validator(mode="after")
     def check_required_sections_present(self) -> "PolicyDoctrine":
@@ -70,10 +76,13 @@ class PolicyDoctrine(BaseModel):
 
     @model_validator(mode="after")
     def check_priority_level_ordering(self) -> "PolicyDoctrine":
-        levels = sorted(self.priority_hierarchy.levels, key=lambda pl: pl.level)
-        for i, level in enumerate(levels, start=1):
-            if level.level != i:
-                raise ValueError(f"Priority level {level.id} has level={level.level}, expected {i}")
+        levels = self.priority_hierarchy.levels
+        for expected_num, level in enumerate(levels, start=1):
+            if level.level != expected_num:
+                raise ValueError(
+                    f"Priority level '{level.id}' has level={level.level}, "
+                    f"expected {expected_num} at position {expected_num}"
+                )
         return self
 
     @model_validator(mode="after")
