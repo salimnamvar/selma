@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import cached_property
 from typing import Self
 
 from pydantic import Field, model_validator
@@ -20,20 +19,6 @@ class PriorityLevel(DomainValueObject):
     title: GovernanceText = Field(description="Human-readable rank name")
     description: GovernanceText = Field(description="Scope and authority of this rank")
     examples: tuple[GovernanceText, ...] = Field(default=(), description="Typical rules")
-
-    @model_validator(mode="after")
-    def _validate_rank(self) -> Self:
-        if self.rank != self.category.rank:
-            raise ValueError(
-                f"Priority rank '{self.category}' has rank={self.rank}, "
-                f"expected canonical rank {self.category.rank}"
-            )
-        return self
-
-    @property
-    def name(self) -> str:
-        """Human-readable name (title)."""
-        return self.title
 
 
 class CrossLayerPrecedence(DomainValueObject):
@@ -80,13 +65,9 @@ class AuthorityHierarchy(DomainValueObject):
             )
         return self
 
-    @cached_property
-    def _index(self) -> dict[PriorityCategory, PriorityLevel]:
-        return {level.category: level for level in self.levels}
-
     def get(self, key: PriorityCategory) -> PriorityLevel | None:
         """Return the level for ``key``, or None."""
-        return self._index.get(key)
+        return next((level for level in self.levels if level.category == key), None)
 
     def require(self, key: PriorityCategory) -> PriorityLevel:
         """Return the level for ``key``, or raise KeyError."""
@@ -95,18 +76,6 @@ class AuthorityHierarchy(DomainValueObject):
             raise KeyError(f"Priority rank for category '{key}' not found")
         return result
 
-    def has(self, key: PriorityCategory) -> bool:
-        """Return True if a level for ``key`` exists."""
-        return key in self._index
-
     def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True if left has higher authority than right."""
         return self.require(left).rank < self.require(right).rank
-
-    def get_highest(self) -> PriorityLevel:
-        """Return the highest authority rank."""
-        return self.levels[0]
-
-    def get_lowest(self) -> PriorityLevel:
-        """Return the lowest authority rank."""
-        return self.levels[-1]

@@ -32,8 +32,7 @@ class IdentityOperation(StrEnum):
 class PriorityCategory(StrEnum):
     """Authority levels in the governance priority hierarchy.
 
-    Ranks are explicit (1 = highest authority), not derived from declaration
-    order, so reordering members cannot silently change governance semantics.
+    Numeric ranks live on ``PriorityLevel.rank`` in YAML — not on the enum.
     """
 
     CONSTITUTIONAL = "constitutional"
@@ -41,23 +40,6 @@ class PriorityCategory(StrEnum):
     REGULATORY = "regulatory"
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
-
-    @property
-    def rank(self) -> int:
-        """Return 1-based authority rank (1 = highest)."""
-        result: int
-        match self:
-            case PriorityCategory.CONSTITUTIONAL:
-                result = 1
-            case PriorityCategory.STATUTORY:
-                result = 2
-            case PriorityCategory.REGULATORY:
-                result = 3
-            case PriorityCategory.OPERATIONAL:
-                result = 4
-            case PriorityCategory.ADVISORY:
-                result = 5
-        return result
 
 
 class ProhibitedField(StrEnum):

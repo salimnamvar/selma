@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from functools import cached_property
 from typing import Self
 
 from pydantic import Field, RootModel, model_validator
@@ -19,11 +18,6 @@ class WritingPrinciple(DomainValueObject):
     title: GovernanceText = Field(description="Short principle name")
     description: GovernanceText = Field(description="Detailed guidance")
 
-    @property
-    def name(self) -> str:
-        """Human-readable name (title)."""
-        return self.title
-
 
 class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
     """Collection of writing principles validated as a YAML list root."""
@@ -37,13 +31,9 @@ class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
         require_unique([str(item.id) for item in self.root], label="IDs")
         return self
 
-    @cached_property
-    def _index(self) -> dict[str, WritingPrinciple]:
-        return {str(item.id): item for item in self.root}
-
     def get(self, key: str) -> WritingPrinciple | None:
         """Return the principle for ``key``, or None."""
-        return self._index.get(key)
+        return next((item for item in self.root if str(item.id) == key), None)
 
     def require(self, key: str) -> WritingPrinciple:
         """Return the principle for ``key``, or raise KeyError."""
@@ -51,25 +41,6 @@ class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
         if result is None:
             raise KeyError(f"Item with key '{key}' not found")
         return result
-
-    def has(self, key: str) -> bool:
-        """Return True if principle id exists."""
-        return key in self._index
-
-    @property
-    def principles(self) -> tuple[WritingPrinciple, ...]:
-        """Return principles in declaration order."""
-        return self.root
-
-    @property
-    def items(self) -> tuple[WritingPrinciple, ...]:
-        """Return principles in declaration order."""
-        return self.root
-
-    @property
-    def ids(self) -> tuple[str, ...]:
-        """Return principle ids in declaration order."""
-        return tuple(self._index)
 
     def __iter__(self) -> Iterator[WritingPrinciple]:  # type: ignore[override]
         yield from self.root
@@ -79,4 +50,4 @@ class WritingPrinciples(RootModel[tuple[WritingPrinciple, ...]]):
 
     def __contains__(self, item: object) -> bool:
         key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
-        return self.has(key)
+        return self.get(key) is not None

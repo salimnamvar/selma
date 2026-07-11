@@ -118,12 +118,12 @@ def full_priority_levels() -> list[dict[str, Any]]:
     return [
         {
             "category": category.value,
-            "rank": category.rank,
+            "rank": rank,
             "title": titles[category],
             "description": f"{titles[category]} rules",
             "examples": (f"Example for {category.value}",),
         }
-        for category in PriorityCategory
+        for rank, category in enumerate(PriorityCategory, start=1)
     ]
 
 

@@ -80,17 +80,13 @@ class TestDocumentSection:
             children=(child,),
         )
 
-        assert [section.id for section in parent.iter_nodes()] == [
+        assert [section.id for section in parent.traverse()] == [
             "directives",
             "specific_directives",
         ]
-        assert list(parent.traverse()) == list(parent.iter_nodes())
         assert parent.get("specific_directives") is child
         assert parent.get("missing") is None
         assert parent.require("specific_directives") is child
-        assert parent.has("specific_directives")
-        assert not parent.has("missing")
-        assert parent.collect_where(lambda node: node.id == "specific_directives") == [child]
         assert parent.max_depth() == 2
 
 
@@ -122,5 +118,5 @@ class TestDocumentTemplate:
 
         assert structure.get("flexible_standards") is not None
         assert structure.get("nope") is None
-        assert frozenset(structure.ids) >= DocumentTemplate.REQUIRED_SECTION_IDS
+        assert {str(section.id) for section in structure.root} >= DocumentTemplate.REQUIRED_SECTION_IDS
         assert len(structure) == len(minimal_sections)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import total_ordering
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 from packaging.version import InvalidVersion, Version
 from pydantic import Field, GetCoreSchemaHandler, GetJsonSchemaHandler, model_validator
@@ -73,22 +73,12 @@ class SemanticVersion:
 
     @classmethod
     def model_validate(cls, value: Any) -> SemanticVersion:
-        """Validate from string, dict components, Version, or peer instance."""
-        result: SemanticVersion
+        """Validate from string, packaging Version, or peer instance."""
         if isinstance(value, cls):
-            result = value
-        elif isinstance(value, dict):
-            data = cast(dict[str, Any], value)
-            major, minor = data.get("major"), data.get("minor")
-            patch = data.get("patch", data.get("micro"))
-            if major is None or minor is None or patch is None:
-                raise ValueError(f"Invalid semantic version components: {value!r}")
-            result = cls(f"{major}.{minor}.{patch}")
-        elif isinstance(value, (str, Version)):
-            result = cls(value)
-        else:
-            raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
-        return result
+            return value
+        if isinstance(value, (str, Version)):
+            return cls(value)
+        raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
 
     @property
     def major(self) -> int:

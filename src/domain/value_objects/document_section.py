@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from functools import cached_property
+from collections.abc import Iterator
 from typing import Annotated, ClassVar, Self
 
 from pydantic import BeforeValidator, Field, RootModel, model_validator
@@ -56,11 +55,6 @@ class DocumentSection(DomainValueObject):
         return self
 
     @property
-    def name(self) -> str:
-        """Human-readable name (title)."""
-        return self.title
-
-    @property
     def is_tabular(self) -> bool:
         """Return True when this section may carry table columns."""
         return self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
@@ -71,18 +65,9 @@ class DocumentSection(DomainValueObject):
         for child in self.children:
             yield from child.traverse()
 
-    def iter_nodes(self) -> Iterator[DocumentSection]:
-        """Alias for :meth:`traverse`."""
-        yield from self.traverse()
-
     def get(self, key: str) -> DocumentSection | None:
         """Return the first node whose id equals ``key``, or None."""
-        result: DocumentSection | None = None
-        for node in self.traverse():
-            if str(node.id) == key:
-                result = node
-                break
-        return result
+        return next((node for node in self.traverse() if str(node.id) == key), None)
 
     def require(self, key: str) -> DocumentSection:
         """Return the node for ``key``, or raise KeyError."""
@@ -90,27 +75,6 @@ class DocumentSection(DomainValueObject):
         if result is None:
             raise KeyError(f"Item with key '{key}' not found")
         return result
-
-    def has(self, key: str) -> bool:
-        """Return True if a node with id ``key`` exists."""
-        return self.get(key) is not None
-
-    def get_where(self, predicate: Callable[[DocumentSection], bool]) -> DocumentSection | None:
-        """Return the first node matching ``predicate``, or None."""
-        result: DocumentSection | None = None
-        for node in self.traverse():
-            if predicate(node):
-                result = node
-                break
-        return result
-
-    def collect_where(self, predicate: Callable[[DocumentSection], bool]) -> list[DocumentSection]:
-        """Return all nodes matching ``predicate`` (pre-order)."""
-        return [node for node in self.traverse() if predicate(node)]
-
-    def collect_required(self) -> list[DocumentSection]:
-        """Return all required sections in this subtree."""
-        return self.collect_where(lambda node: node.required)
 
     def max_depth(self, current: int = 1) -> int:
         """Return maximum depth from this node (leaf depth = ``current``)."""
@@ -167,17 +131,12 @@ class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
                 )
         return self
 
-    @cached_property
-    def _index(self) -> dict[str, DocumentSection]:
-        return {
-            str(section.id): section
-            for root in self.root
-            for section in root.traverse()
-        }
-
     def get(self, key: str) -> DocumentSection | None:
         """Return a section by id (tree-wide), or None."""
-        return self._index.get(key)
+        return next(
+            (section for root in self.root for section in root.traverse() if str(section.id) == key),
+            None,
+        )
 
     def require(self, key: str) -> DocumentSection:
         """Return a section by id, or raise KeyError."""
@@ -185,25 +144,6 @@ class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
         if result is None:
             raise KeyError(f"Item with key '{key}' not found")
         return result
-
-    def has(self, key: str) -> bool:
-        """Return True if section id exists in the tree."""
-        return key in self._index
-
-    @property
-    def ids(self) -> tuple[str, ...]:
-        """Return all section ids in index order."""
-        return tuple(self._index)
-
-    @property
-    def sections(self) -> tuple[DocumentSection, ...]:
-        """Return top-level document sections."""
-        return self.root
-
-    @property
-    def items(self) -> tuple[DocumentSection, ...]:
-        """Return top-level document sections."""
-        return self.root
 
     def __iter__(self) -> Iterator[DocumentSection]:  # type: ignore[override]
         yield from self.root
@@ -213,4 +153,4 @@ class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
 
     def __contains__(self, item: object) -> bool:
         key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
-        return self.has(key)
+        return self.get(key) is not None

@@ -80,8 +80,6 @@ class TestPolicyDoctrineYamlContract:
         assert "runtime lookup key" in exclusions
 
     def test_lifecycle_guidance_operations(self, doctrine: PolicyDoctrine) -> None:
-        lifecycle = doctrine.lifecycle_definition
-        assert lifecycle.has(IdentityOperation.FORK)
         assert "two distinct" in doctrine.get_lifecycle_guidance(IdentityOperation.FORK).lower()
         assert "combine" in doctrine.get_lifecycle_guidance(IdentityOperation.MERGE).lower()
 

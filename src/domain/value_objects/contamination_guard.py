@@ -42,15 +42,11 @@ class ContaminationGuard(DomainValueObject):
 
     def is_prohibited(self, key: str | ProhibitedField) -> bool:
         """Return True if field must not appear in policy prose."""
-        result = False
-        if isinstance(key, ProhibitedField):
-            result = key in self.prohibited_fields
-        else:
-            try:
-                result = ProhibitedField(key) in self.prohibited_fields
-            except ValueError:
-                result = False
-        return result
+        try:
+            field = key if isinstance(key, ProhibitedField) else ProhibitedField(key)
+        except ValueError:
+            return False
+        return field in self.prohibited_fields
 
     def is_allowed(self, key: str | ProhibitedField) -> bool:
         """Return True if field may appear in policy prose."""

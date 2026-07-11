@@ -20,10 +20,6 @@ class LifecycleGuidance(DomainValueObject):
     retire: GovernanceText = Field(description="When to use retire")
     dag_intent: GovernanceText = Field(description="Constraint on lineage ancestry graph structure")
 
-    def get_guidance(self, key: IdentityOperation) -> str:
+    def get_guidance(self, operation: IdentityOperation) -> str:
         """Return guidance text for the given operation."""
-        return getattr(self, key.value)
-
-    def has(self, key: IdentityOperation) -> bool:
-        """Return True when guidance exists for the operation field."""
-        return hasattr(self, key.value)
+        return getattr(self, operation.value)

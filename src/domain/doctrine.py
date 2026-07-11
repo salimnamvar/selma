@@ -95,6 +95,22 @@ class PolicyDoctrine(DomainValueObject):
         """Compatible rule schema identifier."""
         return self.metadata.schema_id
 
+    @model_validator(mode="before")
+    @classmethod
+    def _from_yaml_document(cls, value: Any) -> Any:
+        """Map normative YAML top-level keys onto aggregate fields."""
+        if not isinstance(value, dict) or "metadata" in value:
+            return value
+        if "doctrine" not in value:
+            raise ValueError("Document must contain a top-level 'doctrine' metadata block")
+        for key in cls._SECTION_KEYS:
+            if key not in value:
+                raise ValueError(f"Document missing required section '{key}'")
+        return {
+            "metadata": value["doctrine"],
+            **{key: value[key] for key in cls._SECTION_KEYS},
+        }
+
     @model_validator(mode="after")
     def _validate_versions(self) -> Self:
         """Enforce MAJOR version compatibility across doctrine artifacts."""
@@ -147,21 +163,4 @@ class PolicyDoctrine(DomainValueObject):
     @classmethod
     def from_dict(cls, document: dict[str, Any]) -> PolicyDoctrine:
         """Build a doctrine aggregate from the normative YAML document shape."""
-        if "doctrine" not in document:
-            raise ValueError("Document must contain a top-level 'doctrine' metadata block")
-        for key in cls._SECTION_KEYS:
-            if key not in document:
-                raise ValueError(f"Document missing required section '{key}'")
-        return cls.model_validate(
-            {
-                "metadata": document["doctrine"],
-                "cross_layer_binding": document["cross_layer_binding"],
-                "identity_resolution": document["identity_resolution"],
-                "lifecycle_definition": document["lifecycle_definition"],
-                "contamination_guard": document["contamination_guard"],
-                "writing_principles": document["writing_principles"],
-                "priority_hierarchy": document["priority_hierarchy"],
-                "version_strategy": document["version_strategy"],
-                "sections": document["sections"],
-            }
-        )
+        return cls.model_validate(document)
