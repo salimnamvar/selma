@@ -92,7 +92,7 @@ def make_prose_section() -> Callable[..., DocumentSection]:
 def minimal_sections(
     make_prose_section: Callable[..., DocumentSection],
 ) -> Tuple[DocumentSection, ...]:
-    """Return a complete, valid top-level section tree.
+    """Return a complete, valid top-rank section tree.
 
     Args:
         make_prose_section (Callable[..., DocumentSection]): Prose section factory.
@@ -144,7 +144,7 @@ def minimal_sections(
 
 @pytest.fixture
 def full_priority_levels() -> List[Dict[str, Any]]:
-    """Return a complete, ordered priority-level payload.
+    """Return a complete, ordered priority-rank payload.
 
     Returns:
         List[Dict[str, Any]]: Level dicts matching PriorityCategory ranks.
@@ -158,8 +158,8 @@ def full_priority_levels() -> List[Dict[str, Any]]:
     }
     result: List[Dict[str, Any]] = [
         {
-            "id": category.value,
-            "level": category.rank,
+            "category": category.value,
+            "rank": category.rank,
             "title": titles[category],
             "description": f"{titles[category]} rules",
             "examples": (f"Example for {category.value}",),
@@ -176,7 +176,7 @@ def priority_hierarchy_payload(
     """Return a valid PriorityHierarchy model_validate payload.
 
     Args:
-        full_priority_levels (List[Dict[str, Any]]): Ordered level dicts.
+        full_priority_levels (List[Dict[str, Any]]): Ordered rank dicts.
 
     Returns:
         Dict[str, Any]: Complete hierarchy mapping.
@@ -184,9 +184,9 @@ def priority_hierarchy_payload(
     result: Dict[str, Any] = {
         "description": "Authority levels",
         "levels": full_priority_levels,
-        "conflict_resolution_intent": "Higher wins",
+        "conflict_resolution": "Higher wins",
         "cross_layer_precedence": {
-            "normative_algorithm": "SPEC §2.15",
+            "precedence_algorithm": "SPEC §2.15",
             "structural_override": "conflict_resolution field",
             "policy_role": "Declarative intent",
             "order": "override → priority → specificity → recency",

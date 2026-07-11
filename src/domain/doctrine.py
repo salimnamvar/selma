@@ -11,10 +11,10 @@ from domain.identifiers import RuleContractId, SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.document_section import DocumentStructure
-from domain.value_objects.identity_lifecycle import IdentityLifecycleIntent
 from domain.value_objects.identity_resolution import IdentityResolution
+from domain.value_objects.lifecycle_definition import LifecycleDefinition
 from domain.value_objects.priority_hierarchy import PriorityHierarchy
-from domain.value_objects.versioning_strategy import VersioningStrategy
+from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principle import WritingPrinciples
 
 
@@ -25,19 +25,18 @@ class PolicyDoctrine(DomainValueObject):
     version: SemanticVersion = Field(description="Doctrine version")
     description: str = Field(min_length=1, description="Human-readable purpose statement")
     spec_version: SemanticVersion = Field(description="Compatible specification version")
-    rule_contract_version: SemanticVersion = Field(description="Compatible rule schema version")
-    rule_contract_id: RuleContractId = Field(description="Identifier of the compatible rule schema")
+    schema_version: SemanticVersion = Field(description="Compatible rule schema version")
+    schema_id: RuleContractId = Field(description="Identifier of the compatible rule schema")
 
     cross_layer_binding: CrossLayerBinding = Field(description="Layer relationship constraints")
     identity_resolution: IdentityResolution = Field(description="Identity mapping policy")
-    identity_lifecycle: IdentityLifecycleIntent = Field(
-        alias="identity_lifecycle_intent",
+    lifecycle_definition: LifecycleDefinition = Field(
         description="Lifecycle operation governance",
     )
     contamination_guard: ContaminationGuard = Field(description="Policy-layer field constraints")
     writing_principles: WritingPrinciples = Field(description="Authoring principles")
     priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict resolution")
-    versioning_strategy: VersioningStrategy = Field(description="Versioning intent")
+    version_strategy: VersionStrategy = Field(description="Versioning intent")
     sections: DocumentStructure = Field(description="Universal document section definitions")
 
     @model_validator(mode="after")
@@ -45,9 +44,9 @@ class PolicyDoctrine(DomainValueObject):
         """Enforce MAJOR version compatibility across doctrine artifacts."""
         if not self.version.is_compatible(self.spec_version):
             raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
-        if not self.version.is_compatible(self.rule_contract_version):
+        if not self.version.is_compatible(self.schema_version):
             raise ValueError(
-                f"MAJOR version mismatch: doctrine={self.version} vs rule_contract={self.rule_contract_version}"
+                f"MAJOR version mismatch: doctrine={self.version} vs schema={self.schema_version}"
             )
         return self
 
@@ -67,11 +66,11 @@ class PolicyDoctrine(DomainValueObject):
             **meta,
             "cross_layer_binding": a_data["cross_layer_binding"],
             "identity_resolution": a_data["identity_resolution"],
-            "identity_lifecycle_intent": a_data["identity_lifecycle_intent"],
+            "lifecycle_definition": a_data["lifecycle_definition"],
             "contamination_guard": a_data["contamination_guard"],
             "writing_principles": a_data["writing_principles"],
             "priority_hierarchy": a_data["priority_hierarchy"],
-            "versioning_strategy": a_data["versioning_strategy"],
+            "version_strategy": a_data["version_strategy"],
             "sections": a_data["sections"],
         }
         return cls.model_validate(payload)

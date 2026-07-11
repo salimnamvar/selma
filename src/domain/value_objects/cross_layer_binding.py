@@ -11,12 +11,11 @@ from domain.identifiers import GovernanceText
 class ConflictResolutionBinding(DomainValueObject):
     """How each layer contributes to conflict resolution."""
 
-    policy: GovernanceText = Field(description="Policy layer's role in conflict resolution")
+    policy_layer: GovernanceText = Field(description="Policy layer's role in conflict resolution")
     schema_layer: GovernanceText = Field(
-        alias="schema",
         description="Schema layer's role in conflict resolution",
     )
-    spec: GovernanceText = Field(description="Specification layer's role in conflict resolution")
+    spec_layer: GovernanceText = Field(description="Specification layer's role in conflict resolution")
     precedence: GovernanceText = Field(description="Declared precedence chain")
 
 
@@ -32,11 +31,10 @@ class CrossLayerBinding(DomainValueObject):
     """Structural relationship between policy, schema, and specification layers."""
 
     normative_source: GovernanceText = Field(description="The authoritative behavioral source")
-    policy_layer_purpose: GovernanceText = Field(
-        alias="this_layer_purpose",
+    policy_purpose: GovernanceText = Field(
         description="Purpose of the policy (this) layer",
     )
-    schema_layer_purpose: GovernanceText = Field(description="Purpose of the schema layer")
+    schema_purpose: GovernanceText = Field(description="Purpose of the schema layer")
     enforcement: GovernanceText = Field(description="How governance intent is enforced")
     conflict_resolution_binding: ConflictResolutionBinding = Field(
         description="How each layer contributes to conflict resolution"

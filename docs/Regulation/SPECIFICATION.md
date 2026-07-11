@@ -1832,7 +1832,7 @@ Execution Artifacts
 | `evaluator_config` | ❌ Prohibited | ✅ Required | ✅ Defined |
 | `lineage` | ❌ Prohibited | ⚠️ Conditional | ✅ Defined |
 | `priority_hierarchy` | ✅ Declarative | ✅ As `priority` field | ✅ Defined |
-| `conflict_resolution_intent` | ✅ Declarative | ✅ As `conflict_resolution` field | ✅ Defined |
+| `conflict_resolution` | ✅ Declarative | ✅ As `conflict_resolution` field | ✅ Defined |
 | `conflict_resolution` | ❌ Prohibited | ✅ Optional override | ✅ Defined |
 
 **Note:** Priority hierarchy and conflict resolution are DECLARATIVE DESCRIPTIONS of governance intent in policy. Human authors use them when setting schema fields (`priority`, `conflict_resolution`). The runtime engine executes ONLY Section 2.15 over schema/CG-IR fields — policy prose is never read at runtime.

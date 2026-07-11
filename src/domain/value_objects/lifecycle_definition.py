@@ -1,4 +1,4 @@
-"""Identity Lifecycle Intent Value Objects."""
+"""Lifecycle Definition Value Objects."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from domain.enums import IdentityOperation
 from domain.identifiers import GovernanceText
 
 
-class IdentityLifecycleIntent(EnumGuidedVO):
+class LifecycleDefinition(EnumGuidedVO):
     """Describes when to use each identity lifecycle operation."""
 
     _GUIDANCE_ENUM: ClassVar[type[IdentityOperation]] = IdentityOperation

@@ -13,7 +13,6 @@ class MachineIdSemantics(DomainValueObject):
 
     definition: GovernanceText = Field(description="What Machine ID represents")
     exclusions: tuple[GovernanceText, ...] = Field(
-        alias="not",
         description="What Machine ID is not",
     )
     assignment: GovernanceText = Field(description="How Machine ID is assigned")
@@ -29,7 +28,7 @@ class IdentityResolution(DomainValueObject):
     schema_execution_location: FieldPath = Field(description="Where execution ID appears in schema")
     spec_lineage_location: FieldPath = Field(description="Where lineage ID appears in spec")
     spec_execution_location: FieldPath = Field(description="Where execution ID appears in spec")
-    rule: GovernanceText = Field(description="Identity mapping rule")
+    identity_mapping: GovernanceText = Field(description="Identity mapping rule")
     machine_id_semantics: MachineIdSemantics = Field(description="Detailed semantics of Machine ID")
     uniqueness: GovernanceText = Field(description="Uniqueness constraint for lineage IDs")
-    lifecycle: GovernanceText = Field(description="Reference to identity lifecycle operations")
+    lifecycle_reference: GovernanceText = Field(description="Reference to identity lifecycle operations")

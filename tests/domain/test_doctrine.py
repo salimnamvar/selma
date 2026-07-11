@@ -46,40 +46,40 @@ class TestPolicyDoctrineYamlContract:
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.name == "universal-policy-doctrine"
         assert str(doctrine.version) == "8.2.4"
-        assert doctrine.rule_contract_id == "universal-rule-schema"
+        assert doctrine.schema_id == "universal-rule-schema"
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.version.is_compatible(doctrine.spec_version)
-        assert doctrine.version.is_compatible(doctrine.rule_contract_version)
+        assert doctrine.version.is_compatible(doctrine.schema_version)
 
-    def test_cross_layer_binding_aliases(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.cross_layer_binding.policy_layer_purpose
+    def test_cross_layer_binding_fields(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.cross_layer_binding.policy_purpose
         assert doctrine.cross_layer_binding.conflict_resolution_binding.schema_layer
 
     def test_conflict_resolution_binding_fields(self, doctrine: PolicyDoctrine) -> None:
         binding = doctrine.cross_layer_binding.conflict_resolution_binding
         data = binding.model_dump()
-        assert set(data) == {"policy", "schema_layer", "spec", "precedence"}
+        assert set(data) == {"policy_layer", "schema_layer", "spec_layer", "precedence"}
 
     def test_cross_layer_precedence(self, doctrine: PolicyDoctrine) -> None:
         precedence = doctrine.priority_hierarchy.cross_layer_precedence
-        assert "SPECIFICATION.md" in precedence.normative_algorithm
+        assert "SPECIFICATION.md" in precedence.precedence_algorithm
         assert precedence.policy_role
         assert precedence.order
 
-    def test_machine_id_exclusions_alias(self, doctrine: PolicyDoctrine) -> None:
+    def test_machine_id_exclusions(self, doctrine: PolicyDoctrine) -> None:
         exclusions = doctrine.identity_resolution.machine_id_semantics.exclusions
         assert "execution ID" in exclusions
         assert "runtime lookup key" in exclusions
 
-    def test_identity_lifecycle_operations(self, doctrine: PolicyDoctrine) -> None:
-        lifecycle = doctrine.identity_lifecycle
+    def test_lifecycle_definition_operations(self, doctrine: PolicyDoctrine) -> None:
+        lifecycle = doctrine.lifecycle_definition
         assert frozenset(IdentityOperation) == frozenset(lifecycle._GUIDANCE_ENUM)
         assert "two distinct" in lifecycle.guidance_for(IdentityOperation.FORK).lower()
         assert "combine" in lifecycle.guidance_for(IdentityOperation.MERGE).lower()
 
     def test_versioning_intent_nested(self, doctrine: PolicyDoctrine) -> None:
-        intent = doctrine.versioning_strategy.intent
+        intent = doctrine.version_strategy.intent
         assert "breaking" in intent.major.lower()
         assert intent.minor
         assert intent.patch
@@ -108,9 +108,9 @@ class TestPolicyDoctrineYamlContract:
             PriorityCategory.CONSTITUTIONAL,
             PriorityCategory.OPERATIONAL,
         )
-        level = doctrine.priority_hierarchy.get(PriorityCategory.STATUTORY)
-        assert level is not None
-        assert level.level == 2
+        rank = doctrine.priority_hierarchy.get(PriorityCategory.STATUTORY)
+        assert rank is not None
+        assert rank.rank == 2
 
     def test_identity_field_paths(self, doctrine: PolicyDoctrine) -> None:
         resolution = doctrine.identity_resolution

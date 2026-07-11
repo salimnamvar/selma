@@ -20,7 +20,7 @@ class ContaminationGuard(DomainValueObject):
         min_length=1,
         description="How Machine IDs may appear in policy",
     )
-    metadata_note: GovernanceText = Field(description="Constraints on schema metadata in policy")
+    metadata_constraints: GovernanceText = Field(description="Constraints on schema metadata in policy")
 
     def is_prohibited(self, a_field: str | ProhibitedField) -> bool:
         """Return True if field must not appear in policy prose."""

@@ -15,8 +15,8 @@ doctrine:
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
   spec_version: "8.2.4"
-  rule_contract_version: "8.2.4"
-  rule_contract_id: "universal-rule-schema"
+  schema_version: "8.2.4"
+  schema_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
 # This policy is the governance intent layer.
@@ -25,13 +25,13 @@ doctrine:
 # Policy MUST NOT contain elements that contradict spec invariants.
 cross_layer_binding:
   normative_source: "SPECIFICATION.md"
-  this_layer_purpose: "Governance intent description"
-  schema_layer_purpose: "Structural projection of spec invariants"
+  policy_purpose: "Governance intent description"
+  schema_purpose: "Structural projection of spec invariants"
   enforcement: "Governance intent is enforced indirectly: compile-time validators check schema field legality against spec invariants"
   conflict_resolution_binding:
-    policy: "Declares computed-factor intent (priority, specificity, recency). No override fields."
-    schema: "Optional conflict_resolution field is structural override data only."
-    spec: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
+    policy_layer: "Declares computed-factor intent (priority, specificity, recency). No override fields."
+    schema_layer: "Optional conflict_resolution field is structural override data only."
+    spec_layer: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_prohibition: >
     This file MUST NOT be read during inspection, evaluation, finding FSM
@@ -56,13 +56,13 @@ identity_resolution:
   schema_execution_location: "rules[].id"
   spec_lineage_location: "CG-IR nodes[].lineage_id"
   spec_execution_location: "CG-IR nodes[].directive_id"
-  rule: >
+  identity_mapping: >
     Machine ID maps exclusively to lineage_id (immutable root).
     Execution ID is NOT represented in policy tables; it is assigned
     at schema compilation time as rule.id and may diverge after fork/merge/split.
   machine_id_semantics:
     definition: "Stable external lineage identifier assigned at directive authoring time"
-    not: ["execution ID", "compile-time artifact", "runtime lookup key"]
+    exclusions: ["execution ID", "compile-time artifact", "runtime lookup key"]
     assignment: "Assigned once at first authoring; never reassigned"
     governance_intent: >
       Machine ID is the human-facing identity root. It provides a stable
@@ -73,7 +73,7 @@ identity_resolution:
       rule.lineage_id and compile-time binding details are defined in
       SPECIFICATION.md §2.3.
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
-  lifecycle: >
+  lifecycle_reference: >
     Identity lifecycle operations (fork, merge, split) are defined in
     SPECIFICATION.md Section 2.2 and encoded in rule_schema.json lineage field.
     This policy describes governance intent for when to use each operation.
@@ -81,7 +81,7 @@ identity_resolution:
 # ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
 # Describes WHEN to use each lifecycle operation. Implementation details
 # are in SPECIFICATION.md and rule_schema.json.
-identity_lifecycle_intent:
+lifecycle_definition:
   revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
   merge: >
@@ -130,7 +130,7 @@ contamination_guard:
     - lineage
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
-  metadata_note: >
+  metadata_constraints: >
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
     declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
@@ -162,33 +162,33 @@ priority_hierarchy:
     Rules exist at different authority levels. The governing body declares
     that higher-priority rules take precedence. This is intent, not code.
   levels:
-    - id: constitutional
-      level: 1
+    - category: constitutional
+      rank: 1
       title: "Constitutional / Foundational"
       description: "Core principles that cannot be overridden by any lower-level rule."
       examples: ["Human safety over efficiency", "No rule may violate fundamental rights"]
-    - id: statutory
-      level: 2
+    - category: statutory
+      rank: 2
       title: "Statutory / Legislative"
       description: "Rules enacted by authorized governing bodies with full authority."
       examples: ["Traffic laws", "Tax regulations", "Employment standards"]
-    - id: regulatory
-      level: 3
+    - category: regulatory
+      rank: 3
       title: "Regulatory / Administrative"
       description: "Rules created by agencies to implement statutory requirements."
       examples: ["Building codes", "Environmental standards", "Industry guidelines"]
-    - id: operational
-      level: 4
+    - category: operational
+      rank: 4
       title: "Operational / Procedural"
       description: "Day-to-day procedures that implement higher-level rules."
       examples: ["Code review checklists", "Deployment procedures", "Incident response"]
-    - id: advisory
-      level: 5
+    - category: advisory
+      rank: 5
       title: "Advisory / Best Practice"
       description: "Recommendations that are not mandatory but encouraged."
       examples: ["Style guides", "Performance tips", "Architecture patterns"]
 
-  conflict_resolution_intent: >
+  conflict_resolution: >
     The governing body declares that when two rules conflict, the engine
     first checks for explicit override, then applies computed resolution
     factors. The precedence chain is: explicit override (schema
@@ -200,7 +200,7 @@ priority_hierarchy:
     rule_schema.json) is a structural data carrier checked FIRST by the engine
     before any computed factor. Policy MUST NOT define override fields.
   cross_layer_precedence:
-    normative_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
+    precedence_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
     structural_override: "rule_schema.json conflict_resolution field (optional)"
     policy_role: "Declarative intent for computed factors only"
     order: "explicit override (schema) → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
@@ -208,11 +208,11 @@ priority_hierarchy:
 # ─── VERSIONING STRATEGY (DECLARATIVE) ───────────────────────────
 # Describes versioning intent. The actual version resolution function
 # lives in the Provenance Manager engine.
-versioning_strategy:
+version_strategy:
   description: >
     Policy doctrine, rule schema, and specification follow semantic versioning.
     This describes intent. The version resolution function is in the engine.
-  format: "MAJOR.MINOR.PATCH"
+  version_format: "MAJOR.MINOR.PATCH"
   intent:
     major: "Breaking changes that require migration"
     minor: "New backward-compatible features"
