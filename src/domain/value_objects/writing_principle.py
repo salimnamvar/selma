@@ -8,6 +8,6 @@ class WritingPrinciple(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    id: WritingPrincipleId = Field(description="Unique principle identifier")
+    id: WritingPrincipleId
     title: str = Field(description="Short principle name")
     description: str = Field(description="Detailed guidance for applying this principle")

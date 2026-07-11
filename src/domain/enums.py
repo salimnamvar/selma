@@ -10,17 +10,6 @@ class ContentType(StrEnum):
     MIXED = "mixed"
 
 
-class IdentityOperation(StrEnum):
-    """Lifecycle operations for rule lineage identity."""
-
-    REVISION = "revision"
-    FORK = "fork"
-    MERGE = "merge"
-    SPLIT = "split"
-    RENAME = "rename"
-    RETIRE = "retire"
-
-
 class PriorityCategory(StrEnum):
     """Authority levels in the governance priority hierarchy."""
 
@@ -29,19 +18,6 @@ class PriorityCategory(StrEnum):
     REGULATORY = "regulatory"
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
-
-    @property
-    def rank(self) -> int:
-        """Derive hierarchy rank from enum definition order (1 = highest)."""
-        return list(PriorityCategory).index(self) + 1
-
-
-class VersionComponent(StrEnum):
-    """Components of a semantic version."""
-
-    MAJOR = "major"
-    MINOR = "minor"
-    PATCH = "patch"
 
 
 class ProhibitedField(StrEnum):
