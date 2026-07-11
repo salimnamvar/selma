@@ -130,7 +130,7 @@ contamination_guard:
     - lineage
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
-  metadata_note: >
+  metadata_constraints: >
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
     declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.

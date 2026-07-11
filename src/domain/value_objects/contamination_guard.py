@@ -20,4 +20,4 @@ class ContaminationGuard(BaseModel):
     allowed_machine_references: tuple[str, ...] = Field(
         min_length=1, description="How Machine IDs may appear in policy"
     )
-    metadata_note: str = Field(min_length=1, description="Constraints on schema metadata in policy")
+    metadata_constraints: str = Field(min_length=1, description="Constraints on schema metadata in policy")
