@@ -1,4 +1,6 @@
-from pydantic import Field
+from typing import ClassVar
+
+from pydantic import ConfigDict, Field
 
 from domain.identifiers import Guidance
 from domain.value_objects.base import DomainValueObject
@@ -7,7 +9,7 @@ from domain.value_objects.base import DomainValueObject
 class ConflictResolutionBinding(DomainValueObject):
     """Describes how each layer contributes to conflict resolution."""
 
-    model_config = {"frozen": True, "extra": "forbid", "populate_by_name": True}
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     policy: Guidance = Field(description="Policy layer's role in conflict resolution")
     schema_layer: Guidance = Field(alias="schema", description="Schema layer's role in conflict resolution")
