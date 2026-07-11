@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
 from domain.base import VO_CONFIG
+
+SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 
 type GovernanceText = Annotated[
     str,
@@ -48,10 +51,10 @@ class SemanticVersion(BaseModel):
         if isinstance(value, dict):
             return value
         if isinstance(value, str):
-            parts = value.split(".")
-            if len(parts) != 3 or not all(part.isdigit() for part in parts):
+            if not SEMVER_PATTERN.match(value):
                 raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
-            return {"major": int(parts[0]), "minor": int(parts[1]), "patch": int(parts[2])}
+            major, minor, patch = value.split(".")
+            return {"major": int(major), "minor": int(minor), "patch": int(patch)}
         raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
 
     def is_compatible(self, other: SemanticVersion) -> bool:

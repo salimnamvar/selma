@@ -34,11 +34,6 @@ class PriorityCategory(StrEnum):
     OPERATIONAL = "operational"
     ADVISORY = "advisory"
 
-    @property
-    def rank(self) -> int:
-        """Default rank from declaration order (1 = highest authority)."""
-        return list(type(self)).index(self) + 1
-
 
 class ProhibitedField(StrEnum):
     """Machine-executable schema fields that must never appear in policy prose."""
