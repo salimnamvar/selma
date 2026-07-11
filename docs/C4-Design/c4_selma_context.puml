@@ -1,0 +1,63 @@
+' ============================================================
+' Title:     Selma -- Context Diagram
+' Boundary:  Selma Rule Regularity Platform
+' Purpose:   Black-box view of the two governance actors, the
+'            automated service account, and the six external
+'            systems Selma compiles against, enforces capability
+'            through, certifies via AA-01..AA-07, and streams
+'            findings and security audit records into.
+' Contract:  8.2.4
+' Diagram:   8.2.4 (Phase B AIP alignment)
+' ============================================================
+@startuml c4_selma_context
+title Selma -- Context Diagram
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
+!include ./common/c4_styles.puml
+!theme plain
+
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+AddRelTag("compile_only", $legendText="compile-time only -- runtime access is prohibited")
+AddRelTag("immutable",    $legendText="append-only, HLC-ordered -- never mutated")
+AddRelTag("mediated",     $legendText="mediated output -- Selma never mutates external state")
+AddRelTag("async",        $legendText="asynchronous / eventually consistent delivery")
+
+
+
+Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities (directive.*), Conflict Artifact resolution, and finding disposition. Segregation-of-duties: directive creator cannot waive findings on own directives.")
+
+Person(compliance_rep, "Compliance Representative", "Human or system acting for the regulated entity. Submits targets for inspection and reinspection, acknowledges findings, and submits remediation evidence. Segregation-of-duties: evidence submitter cannot approve own remediation.")
+
+Person_Ext(system_actor, "Automated Service Account", "Programmatic service account with the narrowest capability set: inspection.submit, finding.view, and analytics.view only. Used by pipelines integrating compliance checks without governance rights.")
+
+System(selma, "Selma", "Domain-agnostic rule regularity platform. Enforces regulatory directives against inspection targets through hermetic compilation, pure-evaluator DAG inspection, deterministic conflict resolution, and a strict finding lifecycle FSM. Provides audit trail, capability-based access control, and segregation-of-duties across all governance operations.")
+
+System_Ext(governance_contracts, "Governance Contracts", "Human-authored authoring artifacts consumed at compile-time only: policy_doctrine.yaml (governance intent), rule_schema.json (structural validation contract), and directive tables with lineage IDs. Runtime access is prohibited.")
+
+System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types. Provides identity tokens and capability assertions Selma validates at every mutation gate.")
+
+System_Ext(cicd, "CI/CD Pipeline", "External trigger for architectural certification. Invokes Selma Architectural Audit Engine to run AA-01 through AA-07. Performs static analysis to verify policy runtime prohibition.")
+
+System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other.")
+
+System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives Finding Event Stream, security denials, inspection snapshots, system_state_hashes, pipeline traces, and AA certification artifacts. Supports external auditors and compliance reporting.")
+
+System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows receiving finding notifications: ticketing systems, RPA platforms, and regulatory portals. Human actors drive actual remediation work. Selma emits events in mediated fashion only -- no direct mutation of external remediation state.")
+
+Rel(regulatory_official, selma, "authors and governs directives; resolves Conflict Artifacts; disposes findings; views analytics", "HTTPS")
+Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; submits remediation evidence", "HTTPS")
+Rel(system_actor, selma, "submits inspections programmatically; views findings and analytics", "HTTPS")
+
+Rel(selma, governance_contracts, "reads Directive Graph under hermetic read-lock boundary", "compile-time only", $tags="compile_only")
+Rel(selma, iam, "validates actor identity and capability context at all mutation gates", "OAuth 2.0 / OIDC")
+Rel(cicd, selma, "triggers AA-01..AA-07 certification suite; enforces policy runtime prohibition via static analysis", "CI/CD")
+
+Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
+Rel(selma, regulated_systems, "returns inspection results and causal explanations per S-16", "HTTPS / API", $tags="mediated")
+
+Rel(selma, audit_platform, "streams Finding Event Stream, security denials, inspection snapshots, system_state_hashes, and certification artifacts", "append-only / HLC-ordered", $tags="immutable,async")
+Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
+
+@enduml

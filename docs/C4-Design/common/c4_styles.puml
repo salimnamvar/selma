@@ -1,0 +1,15 @@
+@startuml
+' ============================================================
+' Title:     Selma -- C4 Style Overrides
+' Purpose:   Consistent visual styling for all Selma C4 diagrams
+' Contract:  8.2.4
+' ============================================================
+
+!define ICONS false
+
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundCorner 5
+skinparam monochrome false
+@enduml
