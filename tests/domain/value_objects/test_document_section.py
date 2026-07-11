@@ -1,4 +1,4 @@
-"""Unit tests for DocumentSection and DocumentStructure."""
+"""Unit tests for DocumentSection and DocumentTemplate."""
 
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ class TestDocumentSection:
 
 @pytest.mark.unit
 @pytest.mark.domain
-class TestDocumentStructure:
+class TestDocumentTemplate:
     """Structural invariants for the universal document template."""
 
     def test_required_sections(

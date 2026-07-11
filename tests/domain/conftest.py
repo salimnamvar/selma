@@ -131,7 +131,7 @@ def full_priority_levels() -> list[dict[str, Any]]:
 def priority_hierarchy_payload(
     full_priority_levels: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Return a valid PriorityHierarchy model_validate payload."""
+    """Return a valid AuthorityHierarchy model_validate payload."""
     return {
         "description": "Authority levels",
         "levels": full_priority_levels,

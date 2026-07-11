@@ -7,10 +7,7 @@ from typing import Self
 from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
-from domain.identifiers import (
-    FieldPath,
-    GovernanceText,
-)
+from domain.identifiers import FieldPath, GovernanceText
 
 
 class MachineIdSemantics(DomainValueObject):
@@ -19,17 +16,11 @@ class MachineIdSemantics(DomainValueObject):
     definition: GovernanceText = Field(description="What Machine ID represents")
     exclusions: tuple[GovernanceText, ...] = Field(description="What Machine ID is not")
     assignment: GovernanceText = Field(description="How Machine ID is assigned")
-    governance_intent: GovernanceText = Field(
-        description="Why Machine ID matters for governance"
-    )
+    governance_intent: GovernanceText = Field(description="Why Machine ID matters for governance")
 
 
 class IdentityResolution(DomainValueObject):
-    """How identities map across policy, schema, and specification layers.
-
-    Machine ID maps exclusively to lineage_id (immutable root). Execution ID
-    is assigned at schema compilation time and is not represented in policy tables.
-    """
+    """How identities map across policy, schema, and specification layers."""
 
     canonical_field: GovernanceText = Field(description="The canonical identity field name")
     policy_location: FieldPath = Field(description="Where identity appears in policy")
@@ -40,9 +31,7 @@ class IdentityResolution(DomainValueObject):
     identity_mapping: GovernanceText = Field(description="Identity mapping rule")
     machine_id_semantics: MachineIdSemantics = Field(description="Detailed semantics of Machine ID")
     uniqueness: GovernanceText = Field(description="Uniqueness constraint for lineage IDs")
-    lifecycle_reference: GovernanceText = Field(
-        description="Reference to identity lifecycle operations"
-    )
+    lifecycle_reference: GovernanceText = Field(description="Reference to identity lifecycle operations")
 
     @model_validator(mode="after")
     def _validate_mapping(self) -> Self:

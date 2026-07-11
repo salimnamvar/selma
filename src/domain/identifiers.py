@@ -1,8 +1,4 @@
-"""Domain identifiers and scalar value types.
-
-Mechanics use Pydantic constraints and ``packaging.Version``. Domain behavior
-(``is_compatible``, FieldPath structure) stays explicit on value objects.
-"""
+"""Domain identifiers — constrained strings + packaging-backed SemanticVersion."""
 
 from __future__ import annotations
 
@@ -10,12 +6,10 @@ from functools import total_ordering
 from typing import Annotated, Any, cast
 
 from packaging.version import InvalidVersion, Version
-from pydantic import Field, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic import Field, GetCoreSchemaHandler, GetJsonSchemaHandler, model_validator
 from pydantic_core import CoreSchema, core_schema
 
-from domain.base import StringCoercibleVO
-
-# ── syntax-only constrained strings (no behavior beyond validation) ─────
+from domain.base import DomainValueObject
 
 GovernanceText = Annotated[
     str,
@@ -49,32 +43,22 @@ RuleContractId = Annotated[
     ),
 ]
 
-# Backward-compatible aliases (previously distinct RootModel subclasses).
-DomainText = GovernanceText
-GovernancePurpose = GovernanceText
-GovernanceGuidance = GovernanceText
-GovernanceConstraint = GovernanceText
-GovernanceDescription = GovernanceText
 
-
-def _parse_strict_semver(value: str) -> Version:
-    """Parse MAJOR.MINOR.PATCH only (doctrine uses strict three-part versions)."""
+def _parse_semver(value: str) -> Version:
+    """Parse strict MAJOR.MINOR.PATCH via packaging."""
     parts = value.split(".")
     if len(parts) != 3 or not all(part.isdigit() for part in parts):
         raise ValueError(f"Invalid semantic version {value!r}; expected MAJOR.MINOR.PATCH")
     try:
-        return Version(value)
+        result = Version(value)
     except InvalidVersion as exc:
         raise ValueError(f"Invalid semantic version {value!r}") from exc
+    return result
 
 
 @total_ordering
 class SemanticVersion:
-    """Semantic version with MAJOR compatibility for doctrine artifacts.
-
-    Parsing and comparison are delegated to :class:`packaging.version.Version`.
-    Domain rule ``is_compatible`` (same MAJOR) stays explicit here.
-    """
+    """Three-component semantic version delegated to packaging.Version."""
 
     __slots__ = ("_version",)
 
@@ -83,29 +67,28 @@ class SemanticVersion:
         if isinstance(value, SemanticVersion):
             self._version = value._version
         elif isinstance(value, Version):
-            # Re-validate strict three-part form via public string.
-            self._version = _parse_strict_semver(
-                f"{value.major}.{value.minor}.{value.micro}"
-            )
+            self._version = _parse_semver(f"{value.major}.{value.minor}.{value.micro}")
         else:
-            self._version = _parse_strict_semver(value)
+            self._version = _parse_semver(value)
 
     @classmethod
     def model_validate(cls, value: Any) -> SemanticVersion:
-        """Pydantic-style entry point used by tests and call sites."""
+        """Validate from string, dict components, Version, or peer instance."""
+        result: SemanticVersion
         if isinstance(value, cls):
-            return value
-        if isinstance(value, dict):
+            result = value
+        elif isinstance(value, dict):
             data = cast(dict[str, Any], value)
-            major = data.get("major")
-            minor = data.get("minor")
+            major, minor = data.get("major"), data.get("minor")
             patch = data.get("patch", data.get("micro"))
             if major is None or minor is None or patch is None:
                 raise ValueError(f"Invalid semantic version components: {value!r}")
-            return cls(f"{major}.{minor}.{patch}")
-        if isinstance(value, (str, Version)):
-            return cls(value)
-        raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
+            result = cls(f"{major}.{minor}.{patch}")
+        elif isinstance(value, (str, Version)):
+            result = cls(value)
+        else:
+            raise TypeError(f"Cannot validate SemanticVersion from {type(value)!r}")
+        return result
 
     @property
     def major(self) -> int:
@@ -119,7 +102,7 @@ class SemanticVersion:
 
     @property
     def patch(self) -> int:
-        """PATCH version component (packaging ``micro``)."""
+        """PATCH version component (packaging micro)."""
         return int(self._version.micro)
 
     def is_compatible(self, other: SemanticVersion) -> bool:
@@ -138,7 +121,7 @@ class SemanticVersion:
             result = self._version == other._version
         elif isinstance(other, str):
             try:
-                result = self._version == _parse_strict_semver(other)
+                result = self._version == _parse_semver(other)
             except ValueError:
                 result = False
         return result
@@ -165,10 +148,7 @@ class SemanticVersion:
         return core_schema.json_or_python_schema(
             json_schema=from_str,
             python_schema=core_schema.union_schema(
-                [
-                    core_schema.is_instance_schema(cls),
-                    from_str,
-                ]
+                [core_schema.is_instance_schema(cls), from_str]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
                 lambda instance: str(instance),
@@ -185,34 +165,35 @@ class SemanticVersion:
         return handler(core_schema.str_schema())
 
 
-class FieldPath(StringCoercibleVO):
-    """Structured location of an identity field across layers.
-
-    Has behavior (``is_field``, structured components) beyond bare string syntax.
-    """
+class FieldPath(DomainValueObject):
+    """Structured location of an identity field (string-coercible)."""
 
     collection: str = Field(min_length=1, description="Collection or container name")
     field: str = Field(min_length=1, description="Field name within the collection")
     raw: str = Field(min_length=1, description="Original path expression as authored")
 
+    @model_validator(mode="before")
     @classmethod
-    def _parse_string(cls, value: str) -> dict[str, Any]:
-        raw = value.strip()
-        if not raw:
-            raise ValueError("Field path must be non-empty")
-        collection: str
-        field: str
-        if "[]." in raw:
-            collection, field = raw.rsplit("[].", maxsplit=1)
-        elif "." in raw:
-            collection, field = raw.rsplit(".", maxsplit=1)
-        else:
-            collection, field = raw, raw
-        return {
-            "collection": collection.strip(),
-            "field": field.strip(),
-            "raw": raw,
-        }
+    def _parse_string(cls, value: Any) -> Any:
+        result: Any = value
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                raise ValueError("Field path must be non-empty")
+            collection: str
+            field: str
+            if "[]." in raw:
+                collection, field = raw.rsplit("[].", maxsplit=1)
+            elif "." in raw:
+                collection, field = raw.rsplit(".", maxsplit=1)
+            else:
+                collection, field = raw, raw
+            result = {
+                "collection": collection.strip(),
+                "field": field.strip(),
+                "raw": raw,
+            }
+        return result
 
     def __str__(self) -> str:
         return self.raw

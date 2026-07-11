@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, ClassVar, Self  # Any used by from_dict payloads
+from typing import Any, ClassVar, Self
 
 from pydantic import Field, model_validator
 
 from domain.base import DomainValueObject
 from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
-from domain.identifiers import (
-    GovernanceText,
-    RuleContractId,
-    SemanticVersion,
-)
+from domain.identifiers import GovernanceText, RuleContractId, SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.document_section import DocumentSection, DocumentTemplate
@@ -44,12 +40,7 @@ class DoctrineMetadata(DomainValueObject):
 
 
 class PolicyDoctrine(DomainValueObject):
-    """Aggregate root for the complete governance doctrine.
-
-    Owns doctrine-wide invariants and answers domain questions that span
-    nested value objects. YAML keys map 1:1 except nested ``doctrine`` meta,
-    which becomes :class:`DoctrineMetadata`.
-    """
+    """Aggregate root for the complete governance doctrine."""
 
     _SECTION_KEYS: ClassVar[tuple[str, ...]] = (
         "cross_layer_binding",
@@ -73,8 +64,6 @@ class PolicyDoctrine(DomainValueObject):
     )
     version_strategy: VersioningIntent = Field(description="Versioning intent")
     sections: DocumentTemplate = Field(description="Universal document section definitions")
-
-    # ── convenience projections (YAML top-level mental model) ───────────
 
     @property
     def name(self) -> str:
@@ -106,8 +95,6 @@ class PolicyDoctrine(DomainValueObject):
         """Compatible rule schema identifier."""
         return self.metadata.schema_id
 
-    # ── aggregate invariants ────────────────────────────────────────────
-
     @model_validator(mode="after")
     def _validate_versions(self) -> Self:
         """Enforce MAJOR version compatibility across doctrine artifacts."""
@@ -120,8 +107,6 @@ class PolicyDoctrine(DomainValueObject):
                 f"MAJOR version mismatch: doctrine={self.version} vs schema={self.schema_version}"
             )
         return self
-
-    # ── domain questions ────────────────────────────────────────────────
 
     def is_compatible_with(
         self,
@@ -161,30 +146,22 @@ class PolicyDoctrine(DomainValueObject):
 
     @classmethod
     def from_dict(cls, document: dict[str, Any]) -> PolicyDoctrine:
-        """Build a doctrine aggregate from the normative YAML document shape.
-
-        Adapts:
-        - nested ``doctrine`` metadata block → :class:`DoctrineMetadata`
-        - flat ``lifecycle_definition`` keys → :class:`LifecycleGuidance`
-        """
+        """Build a doctrine aggregate from the normative YAML document shape."""
         if "doctrine" not in document:
             raise ValueError("Document must contain a top-level 'doctrine' metadata block")
-
         for key in cls._SECTION_KEYS:
             if key not in document:
                 raise ValueError(f"Document missing required section '{key}'")
-
-        payload: dict[str, Any] = {
-            "metadata": document["doctrine"],
-            "cross_layer_binding": document["cross_layer_binding"],
-            "identity_resolution": document["identity_resolution"],
-            "lifecycle_definition": LifecycleGuidance.from_flat_dict(
-                document["lifecycle_definition"]
-            ),
-            "contamination_guard": document["contamination_guard"],
-            "writing_principles": document["writing_principles"],
-            "priority_hierarchy": document["priority_hierarchy"],
-            "version_strategy": document["version_strategy"],
-            "sections": document["sections"],
-        }
-        return cls.model_validate(payload)
+        return cls.model_validate(
+            {
+                "metadata": document["doctrine"],
+                "cross_layer_binding": document["cross_layer_binding"],
+                "identity_resolution": document["identity_resolution"],
+                "lifecycle_definition": document["lifecycle_definition"],
+                "contamination_guard": document["contamination_guard"],
+                "writing_principles": document["writing_principles"],
+                "priority_hierarchy": document["priority_hierarchy"],
+                "version_strategy": document["version_strategy"],
+                "sections": document["sections"],
+            }
+        )

@@ -20,9 +20,7 @@ class VersioningIntent(DomainValueObject):
     """Versioning intent for doctrine, schema, and specification documents."""
 
     description: GovernanceText = Field(description="Versioning strategy overview")
-    version_format: GovernanceText = Field(
-        description="Version format pattern (e.g. MAJOR.MINOR.PATCH)"
-    )
+    version_format: GovernanceText = Field(description="Version format pattern")
     intent: VersionComponentIntent = Field(description="Version increment intent per component")
     migration_intent: GovernanceText = Field(
         description="Migration rules when crossing MAJOR version boundaries"
@@ -30,8 +28,3 @@ class VersioningIntent(DomainValueObject):
     synchronization_intent: GovernanceText = Field(
         description="How versions synchronize across documents"
     )
-
-
-# YAML key remains version_strategy.
-VersionStrategy = VersioningIntent
-VersionIntent = VersionComponentIntent
