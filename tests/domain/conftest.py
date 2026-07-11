@@ -29,7 +29,7 @@ def doctrine_document(policy_doctrine_yaml_path: Path) -> dict[str, Any]:
 @pytest.fixture(scope="session")
 def doctrine(doctrine_document: dict[str, Any]) -> PolicyDoctrine:
     """Build PolicyDoctrine from the normative YAML once per session."""
-    return PolicyDoctrine.from_dict(doctrine_document)
+    return PolicyDoctrine.model_validate(doctrine_document)
 
 
 @pytest.fixture

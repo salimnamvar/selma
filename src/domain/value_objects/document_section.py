@@ -1,16 +1,33 @@
-"""Document template — universal document section structure (no mixins)."""
+"""Document template — universal document section structure."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
-from functools import cached_property
-from typing import Annotated, ClassVar, Self
+from typing import Annotated, ClassVar
 
-from pydantic import BeforeValidator, ConfigDict, Field, RootModel, model_validator
+from pydantic import AfterValidator, BeforeValidator, Field, model_validator
 
-from domain.base import DomainValueObject, build_index, none_as_empty, require_unique
+from domain.base import DomainValueObject, none_as_empty, require_unique
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText, SectionId
+
+# Domain constants derived from policy_doctrine.yaml governance rules.
+REQUIRED_SECTION_IDS: frozenset[str] = frozenset(
+    {
+        "preamble",
+        "governance",
+        "definitions",
+        "principles",
+        "directives",
+        "sanctions",
+    }
+)
+DIRECTIVES_CHILD_IDS: frozenset[str] = frozenset(
+    {
+        "specific_directives",
+        "flexible_standards",
+    }
+)
 
 
 class DocumentSection(DomainValueObject):
@@ -44,7 +61,7 @@ class DocumentSection(DomainValueObject):
     )
 
     @model_validator(mode="after")
-    def _validate_content(self) -> Self:
+    def _validate_content(self) -> DocumentSection:
         if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
             raise ValueError(
                 f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
@@ -55,27 +72,11 @@ class DocumentSection(DomainValueObject):
             )
         return self
 
-    @property
-    def is_tabular(self) -> bool:
-        """Return True when this section may carry table columns."""
-        return self.content_type in self._TABULAR_CONTENT_TYPES or bool(self.columns)
-
     def traverse(self) -> Iterator[DocumentSection]:
         """Yield this node and all descendants in pre-order."""
         yield self
         for child in self.children:
             yield from child.traverse()
-
-    def get(self, key: str) -> DocumentSection | None:
-        """Return the first node whose id equals ``key``, or None."""
-        return next((node for node in self.traverse() if str(node.id) == key), None)
-
-    def require(self, key: str) -> DocumentSection:
-        """Return the node for ``key``, or raise KeyError."""
-        result = self.get(key)
-        if result is None:
-            raise KeyError(f"Item with key '{key}' not found")
-        return result
 
     def max_depth(self, current: int = 1) -> int:
         """Return maximum depth from this node (leaf depth = ``current``)."""
@@ -90,72 +91,41 @@ class DocumentSection(DomainValueObject):
             yield node.id
 
 
-class DocumentTemplate(RootModel[tuple[DocumentSection, ...]]):
-    """Validated tree of universal document sections (YAML list root)."""
-
-    model_config = ConfigDict(frozen=True, ignored_types=(cached_property,))
-
-    REQUIRED_SECTION_IDS: ClassVar[frozenset[str]] = frozenset(
-        {
-            "preamble",
-            "governance",
-            "definitions",
-            "principles",
-            "directives",
-            "sanctions",
-        }
-    )
-    DIRECTIVES_CHILD_IDS: ClassVar[frozenset[str]] = frozenset(
-        {
-            "specific_directives",
-            "flexible_standards",
-        }
+def find_section(
+    sections: tuple[DocumentSection, ...],
+    key: str,
+) -> DocumentSection | None:
+    """Return the first section whose id equals ``key`` in the tree, or None."""
+    return next(
+        (node for root in sections for node in root.traverse() if str(node.id) == key),
+        None,
     )
 
-    @model_validator(mode="after")
-    def _validate_ids(self) -> Self:
-        present = {str(section.id) for section in self.root}
-        missing = self.REQUIRED_SECTION_IDS - present
-        if missing:
-            raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        nested_ids = [str(sid) for section in self.root for sid in section.iter_ids()]
-        require_unique(nested_ids, label="section ID")
+def _validate_document_sections(
+    sections: tuple[DocumentSection, ...],
+) -> tuple[DocumentSection, ...]:
+    present = {str(section.id) for section in sections}
+    missing = REQUIRED_SECTION_IDS - present
+    if missing:
+        raise ValueError(f"Missing required sections: {sorted(missing)}")
 
-        directives = self.get("directives")
-        if directives is not None and directives.children:
-            child_ids = {str(child.id) for child in directives.children}
-            missing_children = self.DIRECTIVES_CHILD_IDS - child_ids
-            if missing_children:
-                raise ValueError(
-                    f"Directives section missing expected children: {sorted(missing_children)}"
-                )
-        return self
+    nested_ids = [str(section_id) for section in sections for section_id in section.iter_ids()]
+    require_unique(nested_ids, label="section ID")
 
-    @cached_property
-    def _index(self) -> dict[str, DocumentSection]:
-        return build_index(
-            (section for root in self.root for section in root.traverse()),
-            key=lambda section: str(section.id),
-        )
+    directives = find_section(sections, "directives")
+    if directives is not None and directives.children:
+        child_ids = {str(child.id) for child in directives.children}
+        missing_children = DIRECTIVES_CHILD_IDS - child_ids
+        if missing_children:
+            raise ValueError(
+                f"Directives section missing expected children: {sorted(missing_children)}"
+            )
+    return sections
 
-    def get(self, key: str) -> DocumentSection | None:
-        """Return a section by id (tree-wide), or None."""
-        return self._index.get(key)
 
-    def require(self, key: str) -> DocumentSection:
-        """Return a section by id, or raise KeyError."""
-        result = self.get(key)
-        if result is None:
-            raise KeyError(f"Item with key '{key}' not found")
-        return result
-
-    def __iter__(self) -> Iterator[DocumentSection]:  # type: ignore[override]
-        yield from self.root
-
-    def __len__(self) -> int:
-        return len(self.root)
-
-    def __contains__(self, item: object) -> bool:
-        key = str(item.id) if hasattr(item, "id") else str(item)  # type: ignore[attr-defined]
-        return key in self._index
+type DocumentSections = Annotated[
+    tuple[DocumentSection, ...],
+    Field(min_length=1),
+    AfterValidator(_validate_document_sections),
+]

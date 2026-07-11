@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Hashable, Iterable, Sequence
+from collections.abc import Hashable, Sequence
 from functools import cached_property
 from typing import Any
 
@@ -36,10 +36,3 @@ def none_as_empty(value: Any) -> Any:
     return result
 
 
-def build_index[T, K: Hashable](
-    items: Iterable[T],
-    *,
-    key: Callable[[T], K],
-) -> dict[K, T]:
-    """Build a read-only lookup index from a sequence (caller enforces uniqueness)."""
-    return {key(item): item for item in items}

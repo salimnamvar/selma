@@ -1,13 +1,13 @@
-"""Unit tests for DocumentSection and DocumentTemplate."""
+"""Unit tests for DocumentSection and DocumentSections."""
 
 from __future__ import annotations
 
 from typing import Callable
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from domain import ContentType, DocumentSection, DocumentTemplate
+from domain import REQUIRED_SECTION_IDS, ContentType, DocumentSection, DocumentSections
 
 
 @pytest.mark.unit
@@ -66,7 +66,7 @@ class TestDocumentSection:
         assert section.columns == ()
         assert section.children == ()
 
-    def test_traverse_and_find(self) -> None:
+    def test_traverse(self) -> None:
         child = DocumentSection(
             id="specific_directives",
             title="Specific",
@@ -84,16 +84,15 @@ class TestDocumentSection:
             "directives",
             "specific_directives",
         ]
-        assert parent.get("specific_directives") is child
-        assert parent.get("missing") is None
-        assert parent.require("specific_directives") is child
         assert parent.max_depth() == 2
 
 
 @pytest.mark.unit
 @pytest.mark.domain
-class TestDocumentTemplate:
+class TestDocumentSections:
     """Structural invariants for the universal document template."""
+
+    _adapter: TypeAdapter[DocumentSections] = TypeAdapter(DocumentSections)
 
     def test_required_sections(
         self,
@@ -101,7 +100,7 @@ class TestDocumentTemplate:
     ) -> None:
         incomplete = [section for section in minimal_sections if section.id != "preamble"]
         with pytest.raises(ValidationError, match="Missing required sections"):
-            DocumentTemplate(tuple(incomplete))
+            self._adapter.validate_python(tuple(incomplete))
 
     def test_duplicate_ids(
         self,
@@ -111,12 +110,10 @@ class TestDocumentTemplate:
         sections = list(minimal_sections)
         sections.append(make_prose_section(id="preamble", title="Dup"))
         with pytest.raises(ValidationError, match="Duplicate section ID"):
-            DocumentTemplate(tuple(sections))
+            self._adapter.validate_python(tuple(sections))
 
-    def test_lookup(self, minimal_sections: tuple[DocumentSection, ...]) -> None:
-        structure = DocumentTemplate(minimal_sections)
+    def test_valid_structure(self, minimal_sections: tuple[DocumentSection, ...]) -> None:
+        structure = self._adapter.validate_python(minimal_sections)
 
-        assert structure.get("flexible_standards") is not None
-        assert structure.get("nope") is None
-        assert {str(section.id) for section in structure.root} >= DocumentTemplate.REQUIRED_SECTION_IDS
+        assert {str(section.id) for section in structure} >= REQUIRED_SECTION_IDS
         assert len(structure) == len(minimal_sections)

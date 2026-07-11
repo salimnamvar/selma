@@ -1,8 +1,8 @@
 """Policy Doctrine domain model.
 
-Minimal Pydantic v2 design: DomainValueObject config base, Annotated type
-aliases for scalar identifiers, packaging-backed SemanticVersion, YAML-shaped
-field names, and RootModel collections with shared ``build_index`` lookup.
+Idiomatic Pydantic v2: frozen value objects, Annotated type aliases for scalars
+and collections, exact YAML field-name mapping, and domain validation via
+Field constraints and AfterValidator.
 """
 
 from __future__ import annotations
@@ -18,15 +18,19 @@ from domain.identifiers import (
     SectionId,
     SemanticVersion,
     WritingPrincipleId,
+    is_major_compatible,
+    major_version,
 )
 from domain.value_objects import (
+    DIRECTIVES_CHILD_IDS,
+    REQUIRED_SECTION_IDS,
     AuthorityHierarchy,
     ConflictResolutionIntent,
     ContaminationGuard,
     CrossLayerBinding,
     CrossLayerPrecedence,
     DocumentSection,
-    DocumentTemplate,
+    DocumentSections,
     FieldLegality,
     IdentityResolution,
     LifecycleGuidance,
@@ -36,9 +40,13 @@ from domain.value_objects import (
     VersioningIntent,
     WritingPrinciple,
     WritingPrinciples,
+    find_principle,
+    find_section,
 )
 
 __all__ = [
+    "DIRECTIVES_CHILD_IDS",
+    "REQUIRED_SECTION_IDS",
     "AuthorityHierarchy",
     "ConflictResolutionIntent",
     "ContaminationGuard",
@@ -47,7 +55,7 @@ __all__ = [
     "CrossLayerPrecedence",
     "DoctrineMetadata",
     "DocumentSection",
-    "DocumentTemplate",
+    "DocumentSections",
     "DomainValueObject",
     "FieldLegality",
     "FieldPath",
@@ -69,6 +77,10 @@ __all__ = [
     "WritingPrinciple",
     "WritingPrincipleId",
     "WritingPrinciples",
+    "find_principle",
+    "find_section",
+    "is_major_compatible",
+    "major_version",
     "none_as_empty",
     "require_unique",
 ]

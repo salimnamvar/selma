@@ -5,36 +5,37 @@ from __future__ import annotations
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from domain import FieldPath, MachineId, SemanticVersion
+from domain import FieldPath, MachineId, SemanticVersion, is_major_compatible, major_version
 
 
 @pytest.mark.unit
 @pytest.mark.domain
 class TestSemanticVersion:
-    """SemanticVersion parsing (packaging-backed), compatibility, and ordering."""
+    """SemanticVersion pattern validation and MAJOR compatibility."""
+
+    _adapter: TypeAdapter[SemanticVersion] = TypeAdapter(SemanticVersion)
 
     @pytest.mark.parametrize(
         ("raw", "major", "minor", "patch"),
         [
-            ("0.0.1", 0, 0, 1),
-            ("8.2.4", 8, 2, 4),
-            ("10.0.0", 10, 0, 0),
+            ("0.0.1", "0", "0", "1"),
+            ("8.2.4", "8", "2", "4"),
+            ("10.0.0", "10", "0", "0"),
         ],
         ids=["patch-only", "doctrine-version", "double-digit-major"],
     )
     def test_parse_string(
         self,
         raw: str,
-        major: int,
-        minor: int,
-        patch: int,
+        major: str,
+        minor: str,
+        patch: str,
     ) -> None:
-        version = SemanticVersion.model_validate(raw)
+        version = self._adapter.validate_python(raw)
 
-        assert version.major == major
-        assert version.minor == minor
-        assert version.patch == patch
-        assert str(version) == raw
+        assert version == raw
+        assert major_version(version) == major
+        assert version.split(".") == [major, minor, patch]
 
     @pytest.mark.parametrize(
         "invalid",
@@ -42,21 +43,16 @@ class TestSemanticVersion:
         ids=["two-parts", "one-part", "non-numeric", "four-parts", "empty"],
     )
     def test_invalid_format_rejected(self, invalid: str) -> None:
-        with pytest.raises((ValidationError, ValueError, TypeError)):
-            SemanticVersion.model_validate(invalid)
+        with pytest.raises(ValidationError):
+            self._adapter.validate_python(invalid)
 
     def test_major_compatibility(self) -> None:
-        left = SemanticVersion.model_validate("8.2.4")
-        same_major = SemanticVersion.model_validate("8.0.0")
-        other_major = SemanticVersion.model_validate("9.0.0")
+        left = self._adapter.validate_python("8.2.4")
+        same_major = self._adapter.validate_python("8.0.0")
+        other_major = self._adapter.validate_python("9.0.0")
 
-        assert left.is_compatible(same_major)
-        assert not left.is_compatible(other_major)
-
-    def test_ordering(self) -> None:
-        assert SemanticVersion.model_validate("1.0.0") < SemanticVersion.model_validate("1.0.1")
-        assert SemanticVersion.model_validate("2.0.0") > SemanticVersion.model_validate("1.9.9")
-        assert SemanticVersion.model_validate("1.0.0") <= SemanticVersion.model_validate("1.0.0")
+        assert is_major_compatible(left, same_major)
+        assert not is_major_compatible(left, other_major)
 
 
 @pytest.mark.unit

@@ -8,12 +8,13 @@ import pytest
 from pydantic import ValidationError
 
 from domain import (
+    REQUIRED_SECTION_IDS,
     DocumentSection,
-    DocumentTemplate,
     IdentityOperation,
     PolicyDoctrine,
     PriorityCategory,
     ProhibitedField,
+    is_major_compatible,
 )
 
 
@@ -29,7 +30,7 @@ class TestPolicyDoctrineInvariants:
         doctrine_document_copy["doctrine"]["spec_version"] = "9.0.0"
 
         with pytest.raises(ValidationError, match="MAJOR version mismatch"):
-            PolicyDoctrine.from_dict(doctrine_document_copy)
+            PolicyDoctrine.model_validate(doctrine_document_copy)
 
     def test_missing_section_rejected(
         self,
@@ -37,8 +38,8 @@ class TestPolicyDoctrineInvariants:
     ) -> None:
         del doctrine_document_copy["writing_principles"]
 
-        with pytest.raises(ValueError, match="missing required section"):
-            PolicyDoctrine.from_dict(doctrine_document_copy)
+        with pytest.raises(ValidationError):
+            PolicyDoctrine.model_validate(doctrine_document_copy)
 
 
 @pytest.mark.integration
@@ -48,14 +49,14 @@ class TestPolicyDoctrineYamlContract:
 
     def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.name == "universal-policy-doctrine"
-        assert str(doctrine.version) == "8.2.4"
+        assert doctrine.version == "8.2.4"
         assert doctrine.schema_id == "universal-rule-schema"
-        assert doctrine.metadata.name == doctrine.name
+        assert doctrine.doctrine.name == doctrine.name
 
     def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.is_compatible_with(doctrine.spec_version, doctrine.schema_version)
-        assert doctrine.version.is_compatible(doctrine.spec_version)
-        assert doctrine.version.is_compatible(doctrine.schema_version)
+        assert is_major_compatible(doctrine.version, doctrine.spec_version)
+        assert is_major_compatible(doctrine.version, doctrine.schema_version)
 
     def test_cross_layer_binding_fields(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.cross_layer_binding.policy_purpose
@@ -96,7 +97,7 @@ class TestPolicyDoctrineYamlContract:
         assert "Precision" in principle.title
 
     def test_sections_and_lookups(self, doctrine: PolicyDoctrine) -> None:
-        assert {str(section.id) for section in doctrine.sections} >= DocumentTemplate.REQUIRED_SECTION_IDS
+        assert {str(section.id) for section in doctrine.sections} >= REQUIRED_SECTION_IDS
         assert doctrine.get_section("directives") is not None
         assert doctrine.get_section("flexible_standards") is not None
         assert doctrine.require_section("specific_directives") is not None
