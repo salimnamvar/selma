@@ -4,25 +4,17 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.base import require_unique
-from domain.enums import IdentityOperation
-from domain.enums import PriorityCategory
-from domain.enums import ProhibitedField
-from domain.identifiers import SchemaId
-from domain.identifiers import SemanticVersion
+from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
+from domain.identifiers import SchemaId, SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.identity_resolution import IdentityResolution
 from domain.value_objects.lifecycle_definition import LifecycleDefinition
 from domain.value_objects.priority_hierarchy import PriorityHierarchy
-from domain.value_objects.sections import DIRECTIVES_CHILD_IDS
-from domain.value_objects.sections import REQUIRED_SECTION_IDS
-from domain.value_objects.sections import Section
+from domain.value_objects.sections import DIRECTIVES_CHILD_IDS, REQUIRED_SECTION_IDS, Section
 from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 

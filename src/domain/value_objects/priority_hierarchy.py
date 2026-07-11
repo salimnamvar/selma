@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.enums import PriorityCategory
 

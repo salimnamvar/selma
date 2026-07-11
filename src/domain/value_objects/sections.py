@@ -5,11 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Annotated, ClassVar, Self
 
-from pydantic import BaseModel
-from pydantic import BeforeValidator
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from domain.base import none_as_empty
 from domain.enums import ContentType

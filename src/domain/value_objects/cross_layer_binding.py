@@ -21,10 +21,7 @@ class ConflictResolutionBinding(BaseModel):
 class FieldLegality(BaseModel):
     """Defines what each layer may contain."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     policy_layer: str = Field(min_length=1, description="What the policy layer may contain")
     schema_layer: str = Field(min_length=1, description="What the schema layer may contain")
@@ -34,10 +31,7 @@ class FieldLegality(BaseModel):
 class CrossLayerBinding(BaseModel):
     """Structural relationship between policy, schema, and specification layers."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     normative_source: str = Field(min_length=1, description="The authoritative behavioral source")
     policy_purpose: str = Field(min_length=1, description="Purpose of the policy (this) layer")
