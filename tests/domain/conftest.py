@@ -44,7 +44,7 @@ def doctrine(doctrine_document: Dict[str, Any]) -> PolicyDoctrine:
     Returns:
         PolicyDoctrine: Validated doctrine aggregate.
     """
-    result: PolicyDoctrine = PolicyDoctrine.from_document(doctrine_document)
+    result: PolicyDoctrine = PolicyDoctrine.from_dict(doctrine_document)
     return result
 
 

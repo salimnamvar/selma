@@ -3,8 +3,10 @@
 Shared immutable base, protocols, mixins, and small validation helpers.
 
 Construction and serialization use Pydantic v2 natively:
-    - model_validate / model_validate_json
-    - model_dump / model_dump_json
+    - from_dict / to_dict   (dict roundtrip)
+    - from_json / to_json   (JSON string roundtrip)
+    - from_str  / to_str    (string-parseable VOs)
+    - from_tuple / to_tuple (collection roundtrip)
 """
 
 from __future__ import annotations
@@ -52,6 +54,24 @@ class DomainValueObject(BaseModel):
         ignored_types=(cached_property,),
     )
 
+    @classmethod
+    def from_dict(cls, a_data: dict[str, Any]) -> DomainValueObject:
+        """Build an instance from a dict."""
+        return cls.model_validate(a_data)
+
+    @classmethod
+    def from_json(cls, a_json: str) -> DomainValueObject:
+        """Build an instance from a JSON string."""
+        return cls.model_validate_json(a_json)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a dict."""
+        return self.model_dump()
+
+    def to_json(self) -> str:
+        """Serialize to a JSON string."""
+        return self.model_dump_json()
+
 
 class StringCoercibleVO(DomainValueObject):
     """Value object that can be constructed from a formatted string.
@@ -73,6 +93,15 @@ class StringCoercibleVO(DomainValueObject):
         """Parse a string into a dict of field values. Override in subclasses."""
         msg = f"{cls.__name__} must implement _parse_string"
         raise NotImplementedError(msg)
+
+    @classmethod
+    def from_str(cls, a_string: str) -> StringCoercibleVO:
+        """Build an instance from a formatted string."""
+        return cls.model_validate(a_string)
+
+    def to_str(self) -> str:
+        """Serialize to a formatted string."""
+        return str(self)
 
 
 class EnumGuidedVO(DomainValueObject):

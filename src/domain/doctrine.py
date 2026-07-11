@@ -52,26 +52,26 @@ class PolicyDoctrine(DomainValueObject):
         return self
 
     @classmethod
-    def from_document(cls, a_document: dict[str, Any]) -> PolicyDoctrine:
-        """Build a doctrine aggregate from a policy_doctrine document mapping.
+    def from_dict(cls, a_data: dict[str, Any]) -> PolicyDoctrine:
+        """Build a doctrine aggregate from a dict mapping.
 
         The normative YAML nests metadata under a top-level ``doctrine`` key.
         This factory flattens that shape into the flat field layout expected by
         the model; type coercion and field validation are handled by Pydantic.
         """
-        if "doctrine" not in a_document:
+        if "doctrine" not in a_data:
             raise ValueError("Document must contain a top-level 'doctrine' metadata block")
 
-        meta = a_document["doctrine"]
+        meta = a_data["doctrine"]
         payload: dict[str, Any] = {
             **meta,
-            "cross_layer_binding": a_document["cross_layer_binding"],
-            "identity_resolution": a_document["identity_resolution"],
-            "identity_lifecycle_intent": a_document["identity_lifecycle_intent"],
-            "contamination_guard": a_document["contamination_guard"],
-            "writing_principles": a_document["writing_principles"],
-            "priority_hierarchy": a_document["priority_hierarchy"],
-            "versioning_strategy": a_document["versioning_strategy"],
-            "sections": a_document["sections"],
+            "cross_layer_binding": a_data["cross_layer_binding"],
+            "identity_resolution": a_data["identity_resolution"],
+            "identity_lifecycle_intent": a_data["identity_lifecycle_intent"],
+            "contamination_guard": a_data["contamination_guard"],
+            "writing_principles": a_data["writing_principles"],
+            "priority_hierarchy": a_data["priority_hierarchy"],
+            "versioning_strategy": a_data["versioning_strategy"],
+            "sections": a_data["sections"],
         }
         return cls.model_validate(payload)

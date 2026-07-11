@@ -44,6 +44,15 @@ class IdentifiedCollection[TId: Hashable, TItem](RootModel[tuple[TItem, ...]]):
 
     root: tuple[TItem, ...] = Field(min_length=1)
 
+    @classmethod
+    def from_tuple(cls, a_items: tuple[TItem, ...]) -> IdentifiedCollection[TId, TItem]:
+        """Build a collection from a tuple of items."""
+        return cls(a_items)
+
+    def to_tuple(self) -> tuple[TItem, ...]:
+        """Serialize to a tuple of items."""
+        return self.root
+
     def _item_id(self, a_item: TItem) -> TId:
         """Extract the identifier from a collection item."""
         return a_item.id  # type: ignore[attr-defined]

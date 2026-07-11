@@ -31,7 +31,7 @@ class TestPolicyDoctrineInvariants:
 
         # Act / Assert
         with pytest.raises(ValidationError, match="MAJOR version mismatch"):
-            PolicyDoctrine.from_document(doctrine_document_copy)
+            PolicyDoctrine.from_dict(doctrine_document_copy)
 
 
 @pytest.mark.integration
