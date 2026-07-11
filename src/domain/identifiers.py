@@ -5,7 +5,10 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
 from domain.base import VO_CONFIG
 
@@ -37,7 +40,10 @@ type SchemaId = Annotated[
 class SemanticVersion(BaseModel):
     """Three-component semantic version (MAJOR.MINOR.PATCH)."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     major: int = Field(ge=0, description="MAJOR version component")
     minor: int = Field(ge=0, description="MINOR version component")

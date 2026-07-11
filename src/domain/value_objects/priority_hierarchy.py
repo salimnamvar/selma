@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
-from domain.base import VO_CONFIG
 from domain.enums import PriorityCategory
 from domain.identifiers import GovernanceText
 
@@ -14,7 +16,10 @@ from domain.identifiers import GovernanceText
 class Level(BaseModel):
     """One entry in the policy_doctrine.yaml ``priority_hierarchy.levels`` collection."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     category: PriorityCategory = Field(description="Unique rank identifier")
     rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
@@ -26,24 +31,26 @@ class Level(BaseModel):
 class CrossLayerPrecedence(BaseModel):
     """Declarative precedence intent across layers (not an algorithm)."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     precedence_algorithm: GovernanceText = Field(
         description="Where the normative resolution algorithm is defined (reference only)"
     )
-    structural_override: GovernanceText = Field(
-        description="Schema-level override mechanism for conflict resolution"
-    )
+    structural_override: GovernanceText = Field(description="Schema-level override mechanism for conflict resolution")
     policy_role: GovernanceText = Field(description="Policy layer's role in precedence")
-    order: GovernanceText = Field(
-        description="Precedence chain order as governance prose (not executable)"
-    )
+    order: GovernanceText = Field(description="Precedence chain order as governance prose (not executable)")
 
 
 class PriorityHierarchy(BaseModel):
     """Declares authority levels and conflict-resolution intent."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     description: GovernanceText = Field(description="How priority hierarchy works")
     levels: tuple[Level, ...] = Field(min_length=1, description="Ordered authority levels")
@@ -69,9 +76,7 @@ class PriorityHierarchy(BaseModel):
             raise ValueError(f"Duplicate priority categories found: {set(categories)}")
         missing = set(PriorityCategory) - set(categories)
         if missing:
-            raise ValueError(
-                f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}"
-            )
+            raise ValueError(f"Priority hierarchy missing categories: {sorted(c.value for c in missing)}")
         return self
 
     def get_levels(self, category: PriorityCategory) -> Level | None:

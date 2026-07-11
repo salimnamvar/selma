@@ -6,13 +6,6 @@ from collections import Counter
 from collections.abc import Hashable, Sequence
 from typing import Any
 
-from pydantic import ConfigDict
-
-VO_CONFIG = ConfigDict(
-    frozen=True,
-    extra="forbid",
-)
-
 
 def require_unique(ids: Sequence[Hashable], *, label: str) -> None:
     """Raise ValueError when ``ids`` contains duplicates."""

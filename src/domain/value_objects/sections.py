@@ -5,9 +5,13 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import Annotated, ClassVar, Self
 
-from pydantic import BaseModel, BeforeValidator, Field, model_validator
+from pydantic import BaseModel
+from pydantic import BeforeValidator
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
-from domain.base import VO_CONFIG, none_as_empty
+from domain.base import none_as_empty
 from domain.enums import ContentType
 from domain.identifiers import GovernanceText
 
@@ -32,7 +36,10 @@ DIRECTIVES_CHILD_IDS: frozenset[str] = frozenset(
 class Section(BaseModel):
     """One entry in the policy_doctrine.yaml ``sections`` collection."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     MAX_DEPTH: ClassVar[int] = 3
     _TABULAR_CONTENT_TYPES: ClassVar[frozenset[ContentType]] = frozenset(
@@ -67,13 +74,9 @@ class Section(BaseModel):
     @model_validator(mode="after")
     def _validate_content(self) -> Self:
         if self.columns and self.content_type not in self._TABULAR_CONTENT_TYPES:
-            raise ValueError(
-                f"Section '{self.id}': columns require tabular content type, got {self.content_type}"
-            )
+            raise ValueError(f"Section '{self.id}': columns require tabular content type, got {self.content_type}")
         if self.max_depth() > self.MAX_DEPTH:
-            raise ValueError(
-                f"Section '{self.id}' has depth {self.max_depth()}, exceeds maximum {self.MAX_DEPTH}"
-            )
+            raise ValueError(f"Section '{self.id}' has depth {self.max_depth()}, exceeds maximum {self.MAX_DEPTH}")
         return self
 
     def traverse(self) -> Iterator[Section]:

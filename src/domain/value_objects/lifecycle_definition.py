@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
-from domain.base import VO_CONFIG
 from domain.enums import IdentityOperation
 from domain.identifiers import GovernanceText
 
@@ -12,7 +13,10 @@ from domain.identifiers import GovernanceText
 class LifecycleDefinition(BaseModel):
     """Direct mapping of policy_doctrine.yaml ``lifecycle_definition`` field names."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     revision: GovernanceText = Field(description="When to use revision")
     fork: GovernanceText = Field(description="When to use fork")

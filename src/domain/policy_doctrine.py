@@ -4,17 +4,26 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import ConfigDict
+from pydantic import model_validator
 
-from domain.base import VO_CONFIG, require_unique
-from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
-from domain.identifiers import GovernanceText, SchemaId, SemanticVersion
+from domain.base import require_unique
+from domain.enums import IdentityOperation
+from domain.enums import PriorityCategory
+from domain.enums import ProhibitedField
+from domain.identifiers import GovernanceText
+from domain.identifiers import SchemaId
+from domain.identifiers import SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.identity_resolution import IdentityResolution
 from domain.value_objects.lifecycle_definition import LifecycleDefinition
 from domain.value_objects.priority_hierarchy import PriorityHierarchy
-from domain.value_objects.sections import DIRECTIVES_CHILD_IDS, REQUIRED_SECTION_IDS, Section
+from domain.value_objects.sections import DIRECTIVES_CHILD_IDS
+from domain.value_objects.sections import REQUIRED_SECTION_IDS
+from domain.value_objects.sections import Section
 from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 
@@ -27,7 +36,10 @@ class PolicyDoctrine(BaseModel):
     from the normative nested YAML document shape.
     """
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
@@ -43,9 +55,7 @@ class PolicyDoctrine(BaseModel):
         min_length=1,
         description="Authoring principles",
     )
-    priority_hierarchy: PriorityHierarchy = Field(
-        description="Authority levels and conflict-resolution intent"
-    )
+    priority_hierarchy: PriorityHierarchy = Field(description="Authority levels and conflict-resolution intent")
     version_strategy: VersionStrategy = Field(description="Versioning intent")
     sections: tuple[Section, ...] = Field(
         min_length=1,
@@ -56,14 +66,9 @@ class PolicyDoctrine(BaseModel):
     def _validate_aggregate(self) -> Self:
         """Enforce cross-field invariants across doctrine sections."""
         if not self.version.is_compatible(self.spec_version):
-            raise ValueError(
-                f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}"
-            )
+            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} vs spec={self.spec_version}")
         if not self.version.is_compatible(self.schema_version):
-            raise ValueError(
-                f"MAJOR version mismatch: doctrine={self.version} "
-                f"vs schema={self.schema_version}"
-            )
+            raise ValueError(f"MAJOR version mismatch: doctrine={self.version} " f"vs schema={self.schema_version}")
 
         require_unique(
             [str(principle.id) for principle in self.writing_principles],
@@ -82,9 +87,7 @@ class PolicyDoctrine(BaseModel):
             child_ids = {str(child.id) for child in directives.children}
             missing_children = DIRECTIVES_CHILD_IDS - child_ids
             if missing_children:
-                raise ValueError(
-                    f"Directives section missing expected children: {sorted(missing_children)}"
-                )
+                raise ValueError(f"Directives section missing expected children: {sorted(missing_children)}")
         return self
 
     def is_compatible_with(

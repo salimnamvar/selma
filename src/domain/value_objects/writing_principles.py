@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
-from domain.base import VO_CONFIG
 from domain.identifiers import GovernanceText
 
 
 class WritingPrinciple(BaseModel):
     """One entry in the policy_doctrine.yaml ``writing_principles`` collection."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     id: str = Field(
         pattern=r"^WP-\d{3}$",

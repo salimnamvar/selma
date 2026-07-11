@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
-from domain.base import VO_CONFIG
+from pydantic import ConfigDict
 from domain.enums import ProhibitedField
 from domain.identifiers import GovernanceText
 
@@ -14,7 +15,10 @@ from domain.identifiers import GovernanceText
 class ContaminationGuard(BaseModel):
     """Defines what is prohibited and allowed in the policy layer."""
 
-    model_config = VO_CONFIG
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+    )
 
     prohibited_fields: frozenset[ProhibitedField] = Field(
         min_length=1,
@@ -24,9 +28,7 @@ class ContaminationGuard(BaseModel):
         min_length=1,
         description="How Machine IDs may appear in policy",
     )
-    metadata_constraints: GovernanceText = Field(
-        description="Constraints on schema metadata in policy"
-    )
+    metadata_constraints: GovernanceText = Field(description="Constraints on schema metadata in policy")
 
     def is_prohibited(self, field: str | ProhibitedField) -> bool:
         """Return True when ``field`` is listed in ``prohibited_fields``."""
