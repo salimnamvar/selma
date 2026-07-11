@@ -1,0 +1,131 @@
+"""Unit and contract tests for the PolicyDoctrine aggregate root."""
+
+from __future__ import annotations
+
+from typing import Any, Dict
+
+import pytest
+from pydantic import ValidationError
+
+from domain import (
+    DocumentSection,
+    DocumentStructure,
+    IdentityOperation,
+    PolicyDoctrine,
+    PriorityCategory,
+    ProhibitedField,
+)
+
+
+@pytest.mark.unit
+@pytest.mark.domain
+class TestPolicyDoctrineInvariants:
+    """Cross-field invariants owned by the aggregate root."""
+
+    def test_major_mismatch_rejected(
+        self,
+        doctrine_document_copy: Dict[str, Any],
+    ) -> None:
+        # Arrange
+        doctrine_document_copy["doctrine"]["spec_version"] = "9.0.0"
+
+        # Act / Assert
+        with pytest.raises(ValidationError, match="MAJOR version mismatch"):
+            PolicyDoctrine.from_document(doctrine_document_copy)
+
+
+@pytest.mark.integration
+@pytest.mark.domain
+class TestPolicyDoctrineYamlContract:
+    """Contract tests: normative policy_doctrine.yaml must load and map cleanly.
+
+    These tests pin domain behavior to the governance document under
+    docs/Regulation/policy_doctrine.yaml.
+    """
+
+    def test_loads_normative_document(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.name == "universal-policy-doctrine"
+        assert str(doctrine.version) == "8.2.4"
+        assert doctrine.rule_contract_id == "universal-rule-schema"
+
+    def test_version_compatibility(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.version.is_compatible_with(doctrine.spec_version)
+        assert doctrine.version.is_compatible_with(doctrine.rule_contract_version)
+
+    def test_cross_layer_binding_aliases(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.cross_layer_binding.policy_layer_purpose
+        assert doctrine.cross_layer_binding.conflict_resolution_binding.schema_layer
+
+    def test_conflict_resolution_binding_fields(self, doctrine: PolicyDoctrine) -> None:
+        binding = doctrine.cross_layer_binding.conflict_resolution_binding
+        data = binding.model_dump()
+        assert set(data) == {"policy", "schema_layer", "spec", "precedence"}
+
+    def test_cross_layer_precedence(self, doctrine: PolicyDoctrine) -> None:
+        precedence = doctrine.priority_hierarchy.cross_layer_precedence
+        assert "SPECIFICATION.md" in precedence.normative_algorithm
+        assert precedence.policy_role
+        assert precedence.order
+
+    def test_machine_id_exclusions_alias(self, doctrine: PolicyDoctrine) -> None:
+        exclusions = doctrine.identity_resolution.machine_id_semantics.exclusions
+        assert "execution ID" in exclusions
+        assert "runtime lookup key" in exclusions
+
+    def test_identity_lifecycle_operations(self, doctrine: PolicyDoctrine) -> None:
+        lifecycle = doctrine.identity_lifecycle
+        assert lifecycle.supported_operations() == frozenset(IdentityOperation)
+        assert "two distinct" in lifecycle.guidance_for(IdentityOperation.FORK).lower()
+        assert "combine" in lifecycle.guidance_for(IdentityOperation.MERGE).lower()
+
+    def test_versioning_intent_nested(self, doctrine: PolicyDoctrine) -> None:
+        intent = doctrine.versioning_strategy.intent
+        assert "breaking" in intent.major.lower()
+        assert intent.minor
+        assert intent.patch
+
+    def test_writing_principles(self, doctrine: PolicyDoctrine) -> None:
+        assert len(doctrine.writing_principles) == 5
+        principle = doctrine.get_writing_principle("WP-001")
+        assert principle is not None
+        assert "Precision" in principle.title
+
+    def test_sections_and_lookups(self, doctrine: PolicyDoctrine) -> None:
+        assert {section.id for section in doctrine.sections} >= DocumentStructure.REQUIRED_SECTION_IDS
+        assert doctrine.get_section("directives") is not None
+        assert doctrine.get_section("flexible_standards") is not None
+        assert doctrine.get_section("specific_directives") is not None
+
+    def test_contamination_guard(self, doctrine: PolicyDoctrine) -> None:
+        guard = doctrine.contamination_guard
+        assert guard.is_prohibited(ProhibitedField.PARAMETERS)
+        assert guard.is_prohibited("evaluator_hint")
+        assert not guard.is_prohibited("machine_id")
+        assert ProhibitedField.LINEAGE in guard.prohibited_fields
+
+    def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
+        assert doctrine.priority_hierarchy.outranks(
+            PriorityCategory.CONSTITUTIONAL,
+            PriorityCategory.OPERATIONAL,
+        )
+        level = doctrine.get_priority_level(PriorityCategory.STATUTORY)
+        assert level is not None
+        assert level.level == 2
+
+    def test_identity_field_paths(self, doctrine: PolicyDoctrine) -> None:
+        resolution = doctrine.identity_resolution
+        assert resolution.schema_lineage_location.field == "lineage_id"
+        assert resolution.schema_execution_location.field == "id"
+
+    def test_schema_encoding_is_authoring_guidance(
+        self,
+        doctrine: PolicyDoctrine,
+    ) -> None:
+        flexible = doctrine.get_section("flexible_standards")
+        assert flexible is not None
+        assert flexible.schema_encoding is not None
+        assert isinstance(flexible.schema_encoding, str)
+
+    def test_section_depth_within_limit(self, doctrine: PolicyDoctrine) -> None:
+        for section in doctrine.sections:
+            assert section.max_depth() <= DocumentSection.MAX_DEPTH

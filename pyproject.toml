@@ -126,21 +126,40 @@ line-ending = "lf"
 docstring-code-format = true
 
 [tool.pytest.ini_options]
+minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["src"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--strict-markers -v"
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--import-mode=importlib",
+  "-v",
+]
+filterwarnings = [
+  "error",
+]
 markers = [
-  "unit: Fast, isolated unit tests (no database)",
-  "integration: Integration tests using real in-memory SQLite",
-  "slow: Slow-running tests",
-  "domain: Domain layer tests (entities, policies, business logic)",
+  "unit: Fast, isolated unit tests with no I/O",
+  "integration: Tests that load real project artifacts (YAML, schema, etc.)",
+  "slow: Slow-running tests (deselect with -m 'not slow')",
+  "domain: Domain layer tests (entities, value objects, aggregates)",
   "repository: Repository layer tests",
   "api: API layer tests",
   "service: Service layer tests",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["domain"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 0
 
 [tool.pyright]
 typeCheckingMode = "strict"

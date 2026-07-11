@@ -1,38 +1,36 @@
-"""Shared pytest fixtures for the domain layer."""
+"""Root pytest fixtures shared across the entire suite.
+
+Keep this file thin: path helpers and session-wide read-only resources only.
+Package-specific fixtures live in nested conftest.py files.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
 
 import pytest
-import yaml
-
-from domain import PolicyDoctrine
 
 
 @pytest.fixture(scope="session")
-def doctrine_document() -> Dict[str, Any]:
-    """Raw policy_doctrine.yaml as a mapping.
+def repo_root() -> Path:
+    """Return the repository root directory.
 
     Returns:
-        Dict[str, Any]: Parsed YAML document.
+        Path: Absolute path to the project root.
     """
-    repo_root: Path = Path(__file__).resolve().parents[1]
-    doctrine_yaml: Path = repo_root / "docs" / "Regulation" / "policy_doctrine.yaml"
-    result: Dict[str, Any] = yaml.safe_load(doctrine_yaml.read_text(encoding="utf-8"))
+    result: Path = Path(__file__).resolve().parents[1]
     return result
 
 
 @pytest.fixture(scope="session")
-def doctrine(doctrine_document: Dict[str, Any]) -> PolicyDoctrine:
-    """PolicyDoctrine aggregate loaded from the normative YAML document.
+def policy_doctrine_yaml_path(repo_root: Path) -> Path:
+    """Return the path to the normative policy doctrine YAML.
 
     Args:
-        doctrine_document (Dict[str, Any]): Parsed YAML document.
+        repo_root (Path): Repository root.
 
     Returns:
-        PolicyDoctrine: Validated doctrine aggregate.
+        Path: Absolute path to policy_doctrine.yaml.
     """
-    result: PolicyDoctrine = PolicyDoctrine.from_document(doctrine_document)
+    result: Path = repo_root / "docs" / "Regulation" / "policy_doctrine.yaml"
     return result
