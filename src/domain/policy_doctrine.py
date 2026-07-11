@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Self
 
 from pydantic import BaseModel
-from pydantic import Field
 from pydantic import ConfigDict
+from pydantic import Field
 from pydantic import model_validator
 
 from domain.base import require_unique
@@ -36,10 +36,7 @@ class PolicyDoctrine(BaseModel):
     from the normative nested YAML document shape.
     """
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str = Field(min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
@@ -100,7 +97,11 @@ class PolicyDoctrine(BaseModel):
 
     def is_field_allowed(self, field: str | ProhibitedField) -> bool:
         """Return True when ``field`` may appear in policy-layer prose."""
-        return not self.contamination_guard.is_prohibited(field)
+        try:
+            prohibited_field = field if isinstance(field, ProhibitedField) else ProhibitedField(field)
+        except ValueError:
+            return True
+        return prohibited_field not in self.contamination_guard.prohibited_fields
 
     def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
         """Return True when ``left`` has higher authority than ``right``."""

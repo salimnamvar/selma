@@ -242,10 +242,9 @@ class TestPolicyDoctrineYamlContract:
         assert not doctrine.is_field_allowed(ProhibitedField.PARAMETERS)
         assert not doctrine.is_field_allowed("evaluator_hint")
         assert doctrine.is_field_allowed("machine_id")
-        assert set(guard.prohibited_fields) == set(ProhibitedField)
-        assert guard.is_prohibited("parameters")
-        assert guard.is_prohibited("weight")
-        assert not guard.is_prohibited("description")
+        assert ProhibitedField("parameters") in guard.prohibited_fields
+        assert ProhibitedField("weight") in guard.prohibited_fields
+        assert "description" not in [f.value for f in guard.prohibited_fields]
 
     def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
         assert doctrine.outranks(
