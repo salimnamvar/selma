@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from domain.enums import ContentType
+
+class ContentType(StrEnum):
+    """Content formats permitted in document sections."""
+
+    PROSE = "prose"
+    TABLE = "table"
+    PROSE_OR_TABLE = "prose_or_table"
+    MIXED = "mixed"
 
 
 class Section(BaseModel):

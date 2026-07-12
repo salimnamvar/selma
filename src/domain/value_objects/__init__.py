@@ -15,13 +15,14 @@ from domain.value_objects.priority_hierarchy import (
     Level,
     PriorityHierarchy,
 )
-from domain.value_objects.sections import Section
+from domain.value_objects.sections import ContentType, Section
 from domain.value_objects.version_strategy import Intent, VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 
 __all__ = [
     "ConflictResolutionBinding",
     "ContaminationGuard",
+    "ContentType",
     "CrossLayerBinding",
     "CrossLayerPrecedence",
     "FieldLegality",

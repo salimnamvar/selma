@@ -6,7 +6,7 @@ YAML 1:1 field mapping, native tuples for collections, aggregate-root validation
 from __future__ import annotations
 
 from domain.base import require_unique
-from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
+from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
     MachineId,
     SchemaId,
@@ -14,6 +14,7 @@ from domain.identifiers import (
 )
 from domain.policy_doctrine import PolicyDoctrine
 from domain.value_objects import (
+    ContentType,
     ConflictResolutionBinding,
     ContaminationGuard,
     CrossLayerBinding,
