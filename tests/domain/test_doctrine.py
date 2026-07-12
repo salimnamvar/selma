@@ -10,7 +10,6 @@ from pydantic import BaseModel, ValidationError
 
 from domain import (
     REQUIRED_SECTION_IDS,
-    IdentityOperation,
     PolicyDoctrine,
     PriorityCategory,
     ProhibitedField,
@@ -212,10 +211,6 @@ class TestPolicyDoctrineYamlContract:
         exclusions = doctrine.identity_resolution.machine_id_semantics.exclusions
         assert "execution ID" in exclusions
         assert "runtime lookup key" in exclusions
-
-    def test_lifecycle_definition_operations(self, doctrine: PolicyDoctrine) -> None:
-        assert "two distinct" in doctrine.get_lifecycle_definition(IdentityOperation.FORK).lower()
-        assert "combine" in doctrine.get_lifecycle_definition(IdentityOperation.MERGE).lower()
 
     def test_version_strategy_nested(self, doctrine: PolicyDoctrine) -> None:
         intent = doctrine.version_strategy.intent

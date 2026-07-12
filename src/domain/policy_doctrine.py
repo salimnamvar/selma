@@ -7,7 +7,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.base import require_unique
-from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
+from domain.enums import PriorityCategory, ProhibitedField
 from domain.identifiers import SchemaId, SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
@@ -121,6 +121,4 @@ class PolicyDoctrine(BaseModel):
             None,
         )
 
-    def get_lifecycle_definition(self, operation: IdentityOperation) -> str:
-        """Return the ``lifecycle_definition`` text for an identity operation."""
-        return self.lifecycle_definition.get_lifecycle_definition(operation)
+

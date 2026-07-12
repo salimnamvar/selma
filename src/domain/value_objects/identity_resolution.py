@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class MachineIdSemantics(BaseModel):
     """Defines the semantics of the Machine ID concept."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     definition: str = Field(min_length=1, description="What Machine ID represents")
     exclusions: tuple[str, ...] = Field(min_length=1, description="What Machine ID is not")
@@ -22,10 +21,7 @@ class MachineIdSemantics(BaseModel):
 class IdentityResolution(BaseModel):
     """How identities map across policy, schema, and specification layers."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     canonical_field: str = Field(min_length=1, description="The canonical identity field name")
     policy_location: str = Field(min_length=1, description="Where identity appears in policy")
