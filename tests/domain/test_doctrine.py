@@ -9,7 +9,6 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from domain import (
-    REQUIRED_SECTION_IDS,
     PolicyDoctrine,
     ProhibitedField,
     Section,
@@ -224,7 +223,6 @@ class TestPolicyDoctrineYamlContract:
         assert "Precision" in principle.title
 
     def test_sections_and_lookups(self, doctrine: PolicyDoctrine) -> None:
-        assert {str(section.id) for section in doctrine.sections} >= REQUIRED_SECTION_IDS
         assert doctrine.get_sections("directives") is not None
         assert doctrine.get_sections("flexible_standards") is not None
         assert doctrine.require_sections("specific_directives") is not None

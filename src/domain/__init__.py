@@ -14,8 +14,6 @@ from domain.identifiers import (
 )
 from domain.policy_doctrine import PolicyDoctrine
 from domain.value_objects import (
-    DIRECTIVES_CHILD_IDS,
-    REQUIRED_SECTION_IDS,
     ConflictResolutionBinding,
     ContaminationGuard,
     CrossLayerBinding,
@@ -33,8 +31,6 @@ from domain.value_objects import (
 )
 
 __all__ = [
-    "DIRECTIVES_CHILD_IDS",
-    "REQUIRED_SECTION_IDS",
     "ConflictResolutionBinding",
     "ContaminationGuard",
     "ContentType",

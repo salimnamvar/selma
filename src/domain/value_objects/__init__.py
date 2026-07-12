@@ -15,17 +15,11 @@ from domain.value_objects.priority_hierarchy import (
     Level,
     PriorityHierarchy,
 )
-from domain.value_objects.sections import (
-    DIRECTIVES_CHILD_IDS,
-    REQUIRED_SECTION_IDS,
-    Section,
-)
+from domain.value_objects.sections import Section
 from domain.value_objects.version_strategy import Intent, VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 
 __all__ = [
-    "DIRECTIVES_CHILD_IDS",
-    "REQUIRED_SECTION_IDS",
     "ConflictResolutionBinding",
     "ContaminationGuard",
     "CrossLayerBinding",

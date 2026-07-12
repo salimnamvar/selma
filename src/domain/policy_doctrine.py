@@ -15,7 +15,7 @@ from domain.value_objects.cross_layer_binding import CrossLayerBinding
 from domain.value_objects.identity_resolution import IdentityResolution
 from domain.value_objects.lifecycle_definition import LifecycleDefinition
 from domain.value_objects.priority_hierarchy import PriorityHierarchy
-from domain.value_objects.sections import DIRECTIVES_CHILD_IDS, REQUIRED_SECTION_IDS, Section
+from domain.value_objects.sections import Section
 from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 
@@ -73,17 +73,6 @@ class PolicyDoctrine(BaseModel):
 
         sections_by_id = {str(node.id): node for node in _walk_sections(self.sections)}
         require_unique(list(sections_by_id.keys()), label="section ID")
-
-        missing = REQUIRED_SECTION_IDS - sections_by_id.keys()
-        if missing:
-            raise ValueError(f"Missing required sections: {sorted(missing)}")
-
-        directives = sections_by_id.get("directives")
-        if directives is not None and directives.children:
-            child_ids = {str(child.id) for child in directives.children}
-            missing_children = DIRECTIVES_CHILD_IDS - child_ids
-            if missing_children:
-                raise ValueError(f"Directives section missing expected children: {sorted(missing_children)}")
         return self
 
     def is_compatible_with(

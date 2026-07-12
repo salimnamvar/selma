@@ -12,23 +12,6 @@ from pydantic import Field
 from domain.base import none_as_empty
 from domain.enums import ContentType
 
-REQUIRED_SECTION_IDS: frozenset[str] = frozenset(
-    {
-        "preamble",
-        "governance",
-        "definitions",
-        "principles",
-        "directives",
-        "sanctions",
-    }
-)
-DIRECTIVES_CHILD_IDS: frozenset[str] = frozenset(
-    {
-        "specific_directives",
-        "flexible_standards",
-    }
-)
-
 
 class Section(BaseModel):
     """One entry in the policy_doctrine.yaml ``sections`` collection."""
