@@ -5,38 +5,15 @@ Fixtures here apply to tests under tests/domain/ only.
 
 from __future__ import annotations
 
-from copy import deepcopy
-from pathlib import Path
 from typing import Any, Callable
 
 import pytest
-import yaml
 
-from domain import (
+from domain.policy import (
     ContentType,
-    PolicyDoctrine,
     PriorityCategory,
     Section,
 )
-from infrastructure.yaml_adapter import load_doctrine
-
-
-@pytest.fixture(scope="session")
-def doctrine_document(policy_doctrine_yaml_path: Path) -> dict[str, Any]:
-    """Load the normative policy_doctrine.yaml once per session."""
-    return yaml.safe_load(policy_doctrine_yaml_path.read_text(encoding="utf-8"))
-
-
-@pytest.fixture(scope="session")
-def doctrine(doctrine_document: dict[str, Any]) -> PolicyDoctrine:
-    """Build PolicyDoctrine from the normative YAML once per session."""
-    return load_doctrine(doctrine_document)
-
-
-@pytest.fixture
-def doctrine_document_copy(doctrine_document: dict[str, Any]) -> dict[str, Any]:
-    """Return a deep copy of the doctrine document for mutation tests."""
-    return deepcopy(doctrine_document)
 
 
 @pytest.fixture

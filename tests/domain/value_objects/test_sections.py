@@ -7,7 +7,7 @@ from typing import Callable
 import pytest
 from pydantic import ValidationError
 
-from domain import ContentType, Section
+from domain.policy import ContentType, Section
 
 
 @pytest.mark.unit
