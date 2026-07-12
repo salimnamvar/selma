@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -17,6 +18,13 @@ from domain.value_objects.priority_hierarchy import PriorityHierarchy
 from domain.value_objects.sections import DIRECTIVES_CHILD_IDS, REQUIRED_SECTION_IDS, Section
 from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
+
+
+def _walk_sections(sections: tuple[Section, ...]) -> Iterator[Section]:
+    """Yield every section in pre-order from a collection of root sections."""
+    for section in sections:
+        yield section
+        yield from _walk_sections(section.children)
 
 
 class PolicyDoctrine(BaseModel):
@@ -63,7 +71,7 @@ class PolicyDoctrine(BaseModel):
             label="IDs",
         )
 
-        sections_by_id = {str(node.id): node for section in self.sections for node in section.traverse()}
+        sections_by_id = {str(node.id): node for node in _walk_sections(self.sections)}
         require_unique(list(sections_by_id.keys()), label="section ID")
 
         missing = REQUIRED_SECTION_IDS - sections_by_id.keys()
@@ -99,7 +107,7 @@ class PolicyDoctrine(BaseModel):
     def get_sections(self, id: str) -> Section | None:
         """Return a ``sections`` entry by ``id`` (tree-wide), or None."""
         return next(
-            (node for section in self.sections for node in section.traverse() if str(node.id) == id),
+            (node for node in _walk_sections(self.sections) if str(node.id) == id),
             None,
         )
 

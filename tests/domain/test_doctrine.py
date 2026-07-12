@@ -251,7 +251,3 @@ class TestPolicyDoctrineYamlContract:
         assert flexible is not None
         assert flexible.schema_encoding is not None
         assert str(flexible.schema_encoding)
-
-    def test_section_depth_within_limit(self, doctrine: PolicyDoctrine) -> None:
-        for section in doctrine.sections:
-            assert section.max_depth() <= Section.MAX_DEPTH

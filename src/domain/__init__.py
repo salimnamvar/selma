@@ -5,7 +5,7 @@ YAML 1:1 field mapping, native tuples for collections, aggregate-root validation
 
 from __future__ import annotations
 
-from domain.base import VO_CONFIG, require_unique
+from domain.base import require_unique
 from domain.enums import ContentType, IdentityOperation, PriorityCategory, ProhibitedField
 from domain.identifiers import (
     MachineId,
@@ -35,7 +35,6 @@ from domain.value_objects import (
 __all__ = [
     "DIRECTIVES_CHILD_IDS",
     "REQUIRED_SECTION_IDS",
-    "VO_CONFIG",
     "ConflictResolutionBinding",
     "ContaminationGuard",
     "ContentType",
