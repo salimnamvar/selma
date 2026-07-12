@@ -7,7 +7,7 @@ from typing import Annotated
 import pytest
 from pydantic import Field, TypeAdapter, ValidationError
 
-from domain.value_objects.version_strategy import SemanticVersion
+from domain.policy.version_strategy import SemanticVersion
 
 MachineId = Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9]+-[0-9]+$")]
 

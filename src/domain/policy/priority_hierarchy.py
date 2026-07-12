@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class PriorityCategory(StrEnum):
@@ -18,7 +20,7 @@ class PriorityCategory(StrEnum):
 
 
 class Level(BaseModel):
-    """One entry in the policy_doctrine.yaml ``priority_hierarchy.levels`` collection."""
+    """One authority level in the priority hierarchy."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

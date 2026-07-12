@@ -19,7 +19,7 @@ class ContentType(StrEnum):
 
 
 class Section(BaseModel):
-    """One entry in the policy_doctrine.yaml ``sections`` collection."""
+    """Universal document section structure."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

@@ -1,4 +1,4 @@
-"""Writing principles — authoring guidance entries (policy_doctrine.yaml: writing_principles)."""
+"""Writing principles — authoring guidance entries."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pydantic import Field
 
 
 class WritingPrinciple(BaseModel):
-    """One entry in the policy_doctrine.yaml ``writing_principles`` collection."""
+    """Writing principle entry."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

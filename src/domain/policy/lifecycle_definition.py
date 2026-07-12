@@ -8,7 +8,7 @@ from pydantic import Field
 
 
 class LifecycleDefinition(BaseModel):
-    """Direct mapping of policy_doctrine.yaml ``lifecycle_definition`` field names."""
+    """Direct mapping of lifecycle definition field names."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

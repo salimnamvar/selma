@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from domain.value_objects.contamination_guard import ContaminationGuard
-from domain.value_objects.cross_layer_binding import CrossLayerBinding
-from domain.value_objects.identity_resolution import IdentityResolution
-from domain.value_objects.lifecycle_definition import LifecycleDefinition
-from domain.value_objects.priority_hierarchy import PriorityHierarchy
-from domain.value_objects.sections import Section
-from domain.value_objects.version_strategy import SemanticVersion, VersionStrategy
-from domain.value_objects.writing_principles import WritingPrinciple
+from domain.policy.contamination_guard import ContaminationGuard
+from domain.policy.cross_layer_binding import CrossLayerBinding
+from domain.policy.identity_resolution import IdentityResolution
+from domain.policy.lifecycle_definition import LifecycleDefinition
+from domain.policy.priority_hierarchy import PriorityHierarchy
+from domain.policy.sections import Section
+from domain.policy.version_strategy import SemanticVersion, VersionStrategy
+from domain.policy.writing_principles import WritingPrinciple
 
 
 class PolicyDoctrine(BaseModel):

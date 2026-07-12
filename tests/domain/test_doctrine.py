@@ -9,19 +9,19 @@ import pytest
 from pydantic import BaseModel
 
 from domain import PolicyDoctrine
-from domain.policy_doctrine import PolicyDoctrine as PolicyDoctrineClass
-from domain.value_objects.contamination_guard import ContaminationGuard
-from domain.value_objects.cross_layer_binding import (
+from domain.policy.policy_doctrine import PolicyDoctrine as PolicyDoctrineClass
+from domain.policy.contamination_guard import ContaminationGuard
+from domain.policy.cross_layer_binding import (
     ConflictResolutionBinding,
     CrossLayerBinding,
     FieldLegality,
 )
-from domain.value_objects.identity_resolution import IdentityResolution, MachineIdSemantics
-from domain.value_objects.lifecycle_definition import LifecycleDefinition
-from domain.value_objects.priority_hierarchy import CrossLayerPrecedence, Level, PriorityHierarchy
-from domain.value_objects.sections import Section as SectionModel
-from domain.value_objects.version_strategy import Intent, SemanticVersion, VersionStrategy
-from domain.value_objects.writing_principles import WritingPrinciple
+from domain.policy.identity_resolution import IdentityResolution, MachineIdSemantics
+from domain.policy.lifecycle_definition import LifecycleDefinition
+from domain.policy.priority_hierarchy import CrossLayerPrecedence, Level, PriorityHierarchy
+from domain.policy.sections import Section as SectionModel
+from domain.policy.version_strategy import Intent, SemanticVersion, VersionStrategy
+from domain.policy.writing_principles import WritingPrinciple
 from infrastructure.yaml_adapter import flatten_doctrine_document
 
 
