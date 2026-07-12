@@ -20,8 +20,10 @@ from domain.value_objects.version_strategy import VersionStrategy
 from domain.value_objects.writing_principles import WritingPrinciple
 
 
-def _walk_sections(sections: tuple[Section, ...]) -> Iterator[Section]:
+def _walk_sections(sections: tuple[Section, ...] | None) -> Iterator[Section]:
     """Yield every section in pre-order from a collection of root sections."""
+    if not sections:
+        return
     for section in sections:
         yield section
         yield from _walk_sections(section.children)

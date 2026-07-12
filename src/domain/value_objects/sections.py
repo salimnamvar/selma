@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated
-
 from pydantic import BaseModel
-from pydantic import BeforeValidator
 from pydantic import ConfigDict
 from pydantic import Field
 
-from domain.base import none_as_empty
 from domain.enums import ContentType
 
 
@@ -23,12 +19,8 @@ class Section(BaseModel):
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
     guidance: str | None = Field(default=None, min_length=1, description="Authoring guidance")
-    columns: Annotated[tuple[str, ...], BeforeValidator(none_as_empty)] = Field(
-        default=(), min_length=1, description="Table column headers"
-    )
-    children: Annotated[tuple[Section, ...], BeforeValidator(none_as_empty)] = Field(
-        default=(), description="Subsections"
-    )
+    columns: tuple[str, ...] | None = Field(default=None, description="Table column headers")
+    children: tuple[Section, ...] | None = Field(default=None, description="Subsections")
     schema_encoding: str | None = Field(
         default=None, min_length=1, description="Authoring guidance for schema mapping (descriptive only)"
     )
