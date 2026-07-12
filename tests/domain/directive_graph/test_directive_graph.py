@@ -5,11 +5,12 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.1
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-from tests.domain.directive_graph.conftest import make_directive_payload, make_graph_payload
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_graph_payload
 
 
 @pytest.mark.unit
@@ -32,9 +33,7 @@ class TestDirectiveGraphConstruction:
 
     def test_rejects_invalid_policy_contract_id(self) -> None:
         with pytest.raises(ValidationError):
-            DirectiveGraph.model_validate(
-                make_graph_payload(policy_contract_id="wrong-policy")
-            )
+            DirectiveGraph.model_validate(make_graph_payload(policy_contract_id="wrong-policy"))
 
     def test_empty_rules_raises(self) -> None:
         with pytest.raises(ValidationError):

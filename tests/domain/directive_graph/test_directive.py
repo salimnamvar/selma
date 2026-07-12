@@ -5,15 +5,15 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.2
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
-from domain.directive_graph.enums import DeonticType, DirectiveStatus, EvaluatorType
-from tests.domain.directive_graph.conftest import (
-    make_active_directive_payload,
-    make_directive,
-    make_directive_payload,
-)
+from domain.directive_graph.enums import DeonticType
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import EvaluatorType
+from tests.domain.directive_graph.conftest import make_active_directive_payload
+from tests.domain.directive_graph.conftest import make_directive
+from tests.domain.directive_graph.conftest import make_directive_payload
 
 
 @pytest.mark.unit
@@ -32,6 +32,7 @@ class TestDirectiveConstruction:
 
     def test_evaluator_config_is_populated(self) -> None:
         from domain.directive_graph.evaluators import RegexEvaluator
+
         d = make_directive()
         assert isinstance(d.evaluator_config, RegexEvaluator)
         assert d.evaluator_config.pattern == "^test$"
@@ -106,6 +107,7 @@ class TestDirectiveInvariants:
 class TestDirectiveJsonRoundTrip:
     def test_round_trip_minimal(self) -> None:
         from domain.directive_graph.directive import Directive
+
         d = make_directive()
         dumped = d.model_dump(mode="json")
         restored = Directive.model_validate(dumped)
@@ -116,6 +118,7 @@ class TestDirectiveJsonRoundTrip:
     def test_schema_format_parses_correctly(self) -> None:
         """Ensure JSON schema format (separate evaluator_type) is accepted."""
         from domain.directive_graph.directive import Directive
+
         raw = {
             "lineage_id": "AUTH-001",
             "id": "AUTH-001",
@@ -128,5 +131,6 @@ class TestDirectiveJsonRoundTrip:
         }
         d = Directive.model_validate(raw)
         from domain.directive_graph.evaluators import FieldCheckEvaluator
+
         assert isinstance(d.evaluator_config, FieldCheckEvaluator)
         assert d.evaluator_config.field == "role"

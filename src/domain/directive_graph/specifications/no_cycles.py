@@ -114,7 +114,4 @@ class NoDeferToCyclesSpec:
         cyclic = _has_cycle(adjacency)
         if not cyclic:
             return []
-        return [
-            f"Cycle detected in defer_to graph involving directive id {nid!r}"
-            for nid in cyclic
-        ]
+        return [f"Cycle detected in defer_to graph involving directive id {nid!r}" for nid in cyclic]

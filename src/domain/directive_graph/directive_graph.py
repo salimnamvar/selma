@@ -14,15 +14,15 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.1, §3
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 from domain.directive_graph.directive import Directive
-from domain.directive_graph.scalars import (
-    ExecutionId,
-    LineageId,
-    PolicyContractId,
-    SemanticVersion,
-)
+from domain.directive_graph.scalars import ExecutionId
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import PolicyContractId
+from domain.directive_graph.scalars import SemanticVersion
 from domain.directive_graph.value_objects.metadata import DatasetMetadata
 
 
@@ -44,7 +44,7 @@ class DirectiveGraph(BaseModel):
         directives (tuple[Directive, ...]): Ordered collection of directives.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     version: SemanticVersion
     policy_contract_version: SemanticVersion
@@ -55,8 +55,6 @@ class DirectiveGraph(BaseModel):
         alias="rules",
         description="Ordered collection of directives (JSON: rules[]).",
     )
-
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     # ------------------------------------------------------------------
     # Read-only accessors

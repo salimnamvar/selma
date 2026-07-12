@@ -21,7 +21,8 @@ from dataclasses import dataclass
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.enums import ConflictStrategy, PRIORITY_RANK
+from domain.directive_graph.enums import ConflictStrategy
+from domain.directive_graph.enums import PRIORITY_RANK
 from domain.directive_graph.services.specificity_calculator import SpecificityCalculator
 
 
@@ -97,18 +98,14 @@ class ConflictResolver:
         rank_a = PRIORITY_RANK[directive_a.priority]
         rank_b = PRIORITY_RANK[directive_b.priority]
         if rank_a != rank_b:
-            winner, loser = (
-                (directive_a, directive_b) if rank_a < rank_b else (directive_b, directive_a)
-            )
+            winner, loser = (directive_a, directive_b) if rank_a < rank_b else (directive_b, directive_a)
             return ConflictResolutionResult(winner=winner, loser=loser, method="priority")
 
         # Step 4: Specificity
         score_a = self._specificity.compute(directive_a)
         score_b = self._specificity.compute(directive_b)
         if score_a != score_b:
-            winner, loser = (
-                (directive_a, directive_b) if score_a > score_b else (directive_b, directive_a)
-            )
+            winner, loser = (directive_a, directive_b) if score_a > score_b else (directive_b, directive_a)
             return ConflictResolutionResult(winner=winner, loser=loser, method="specificity")
 
         # Step 5: Recency (newer created_at wins; lexicographic ISO 8601 comparison)
@@ -139,9 +136,7 @@ class ConflictResolver:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _check_explicit_overrides(
-        self, a: Directive, b: Directive
-    ) -> ConflictResolutionResult | None:
+    def _check_explicit_overrides(self, a: Directive, b: Directive) -> ConflictResolutionResult | None:
         """Handle always_wins / never_wins for either directive.
 
         Incompatible dual-always_wins is escalated to a Conflict Artifact
@@ -171,10 +166,7 @@ class ConflictResolver:
                 artifact=ConflictArtifact(
                     directive_a_id=a.id,
                     directive_b_id=b.id,
-                    reason=(
-                        "Both directives declare always_wins; "
-                        "incompatible overrides require human review."
-                    ),
+                    reason=("Both directives declare always_wins; " "incompatible overrides require human review."),
                 ),
             )
 
@@ -192,9 +184,7 @@ class ConflictResolver:
 
         return None
 
-    def _check_defer_to(
-        self, a: Directive, b: Directive, graph: DirectiveGraph
-    ) -> ConflictResolutionResult | None:
+    def _check_defer_to(self, a: Directive, b: Directive, graph: DirectiveGraph) -> ConflictResolutionResult | None:
         """Handle defer_to references.
 
         Args:

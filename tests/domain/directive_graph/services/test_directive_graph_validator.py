@@ -8,11 +8,10 @@ from __future__ import annotations
 import pytest
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.services.directive_graph_validator import (
-    DirectiveGraphValidator,
-    ValidationResult,
-)
-from tests.domain.directive_graph.conftest import make_directive_payload, make_graph_payload
+from domain.directive_graph.services.directive_graph_validator import DirectiveGraphValidator
+from domain.directive_graph.services.directive_graph_validator import ValidationResult
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_graph_payload
 
 
 @pytest.fixture
@@ -65,9 +64,7 @@ class TestUniqueIdViolations:
 class TestCrossReferenceViolations:
     def test_dangling_depends_on_produces_error(self, validator: DirectiveGraphValidator) -> None:
         g = DirectiveGraph.model_validate(
-            make_graph_payload(
-                rules=[make_directive_payload(depends_on=["UNKNOWN-999"])]
-            )
+            make_graph_payload(rules=[make_directive_payload(depends_on=["UNKNOWN-999"])])
         )
         result = validator.validate(g)
         assert result.is_valid is False
@@ -75,9 +72,7 @@ class TestCrossReferenceViolations:
 
     def test_dangling_conflicts_with_produces_error(self, validator: DirectiveGraphValidator) -> None:
         g = DirectiveGraph.model_validate(
-            make_graph_payload(
-                rules=[make_directive_payload(conflicts_with=["GHOST-001"])]
-            )
+            make_graph_payload(rules=[make_directive_payload(conflicts_with=["GHOST-001"])])
         )
         result = validator.validate(g)
         assert result.is_valid is False
@@ -120,6 +115,7 @@ class TestEvaluatorComplexityViolations:
     def _make_deep_composite(self, depth: int) -> dict:
         """Build a composite evaluator nested ``depth`` levels deep."""
         from domain.directive_graph.enums import EvaluatorType
+
         inner: dict = {"evaluator_type": "regex", "pattern": "^x$"}
         for _ in range(depth):
             inner = {"evaluator_type": "composite", "logic": "and", "sub_evaluators": [inner]}
@@ -129,14 +125,13 @@ class TestEvaluatorComplexityViolations:
         composite = self._make_deep_composite(depth=5)
         payload = make_directive_payload(
             evaluator_type="composite",
-            evaluator_config=composite.get("sub_evaluators", [composite])[0]
-            if "sub_evaluators" in composite else composite,
+            evaluator_config=(
+                composite.get("sub_evaluators", [composite])[0] if "sub_evaluators" in composite else composite
+            ),
         )
         # Build using full composite at top level
         payload["evaluator_type"] = composite["evaluator_type"]
-        payload["evaluator_config"] = {
-            k: v for k, v in composite.items() if k != "evaluator_type"
-        }
+        payload["evaluator_config"] = {k: v for k, v in composite.items() if k != "evaluator_type"}
         g = DirectiveGraph.model_validate(make_graph_payload(rules=[payload]))
         result = validator.validate(g)
         depth_errors = [e for e in result.errors if "depth" in e.lower()]

@@ -41,8 +41,5 @@ class ActiveDirectiveRequiresAuthorSpec:
                 continue
             authored_by = d.metadata and d.metadata.audit and d.metadata.audit.authored_by
             if not authored_by:
-                messages.append(
-                    f"Directive {d.id!r} is ACTIVE but has no "
-                    f"metadata.audit.authored_by"
-                )
+                messages.append(f"Directive {d.id!r} is ACTIVE but has no " f"metadata.audit.authored_by")
         return messages

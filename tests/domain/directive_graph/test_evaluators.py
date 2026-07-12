@@ -5,22 +5,19 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.4
 
 from __future__ import annotations
 
+from pydantic import TypeAdapter
+from pydantic import ValidationError
 import pytest
-from pydantic import TypeAdapter, ValidationError
 
-from domain.directive_graph.enums import (
-    CompositeLogic,
-    EvaluatorType,
-    FieldCheckOperator,
-    ThresholdOperator,
-)
-from domain.directive_graph.evaluators import (
-    CompositeEvaluator,
-    Evaluator,
-    FieldCheckEvaluator,
-    RegexEvaluator,
-    ThresholdEvaluator,
-)
+from domain.directive_graph.enums import CompositeLogic
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import FieldCheckOperator
+from domain.directive_graph.enums import ThresholdOperator
+from domain.directive_graph.evaluators import CompositeEvaluator
+from domain.directive_graph.evaluators import Evaluator
+from domain.directive_graph.evaluators import FieldCheckEvaluator
+from domain.directive_graph.evaluators import RegexEvaluator
+from domain.directive_graph.evaluators import ThresholdEvaluator
 
 _adapter = TypeAdapter(Evaluator)
 
@@ -98,6 +95,7 @@ class TestThresholdEvaluator:
 
     def test_rejects_nan_threshold(self) -> None:
         import math
+
         with pytest.raises(ValidationError):
             ThresholdEvaluator(
                 evaluator_type=EvaluatorType.THRESHOLD,
@@ -108,6 +106,7 @@ class TestThresholdEvaluator:
 
     def test_rejects_inf_threshold(self) -> None:
         import math
+
         with pytest.raises(ValidationError):
             ThresholdEvaluator(
                 evaluator_type=EvaluatorType.THRESHOLD,
@@ -192,15 +191,11 @@ class TestEvaluatorDiscriminatedUnion:
         assert isinstance(ev, RegexEvaluator)
 
     def test_routes_field_check(self) -> None:
-        ev = _adapter.validate_python(
-            {"evaluator_type": "field_check", "field": "f", "operator": "eq", "value": 1}
-        )
+        ev = _adapter.validate_python({"evaluator_type": "field_check", "field": "f", "operator": "eq", "value": 1})
         assert isinstance(ev, FieldCheckEvaluator)
 
     def test_routes_threshold(self) -> None:
-        ev = _adapter.validate_python(
-            {"evaluator_type": "threshold", "field": "f", "operator": "gt", "threshold": 0.5}
-        )
+        ev = _adapter.validate_python({"evaluator_type": "threshold", "field": "f", "operator": "gt", "threshold": 0.5})
         assert isinstance(ev, ThresholdEvaluator)
 
     def test_routes_composite(self) -> None:

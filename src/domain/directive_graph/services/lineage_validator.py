@@ -67,10 +67,7 @@ class LineageValidator:
                     violations.append(
                         LineageViolation(
                             directive_id=d.id,
-                            message=(
-                                f"Lineage parent_lineage_id {pid!r} does not "
-                                f"exist in the graph"
-                            ),
+                            message=(f"Lineage parent_lineage_id {pid!r} does not " f"exist in the graph"),
                         )
                     )
             for pid in d.lineage.parent_execution_ids:
@@ -78,10 +75,7 @@ class LineageValidator:
                     violations.append(
                         LineageViolation(
                             directive_id=d.id,
-                            message=(
-                                f"Lineage parent_execution_id {pid!r} does not "
-                                f"exist in the graph"
-                            ),
+                            message=(f"Lineage parent_execution_id {pid!r} does not " f"exist in the graph"),
                         )
                     )
         return violations
@@ -111,10 +105,7 @@ class LineageValidator:
                 violations.append(
                     LineageViolation(
                         directive_id=d.id,
-                        message=(
-                            f"Lineage ancestry depth {depth} exceeds "
-                            f"maximum {MAX_ANCESTRY_DEPTH}"
-                        ),
+                        message=(f"Lineage ancestry depth {depth} exceeds " f"maximum {MAX_ANCESTRY_DEPTH}"),
                     )
                 )
         return violations
@@ -141,6 +132,4 @@ class LineageValidator:
         if not parents:
             return 0
         visited = visited | {node_id}
-        return 1 + max(
-            self._measure_depth(pid, parent_map, visited) for pid in parents
-        )
+        return 1 + max(self._measure_depth(pid, parent_map, visited) for pid in parents)

@@ -43,9 +43,7 @@ class UniqueLineageIdsSpec:
             if d.lineage_id in seen:
                 duplicates.add(d.lineage_id)
             seen.add(d.lineage_id)
-        return [
-            f"Duplicate lineage_id: {lid!r}" for lid in sorted(duplicates)
-        ]
+        return [f"Duplicate lineage_id: {lid!r}" for lid in sorted(duplicates)]
 
 
 class UniqueExecutionIdsSpec:
@@ -78,6 +76,4 @@ class UniqueExecutionIdsSpec:
             if d.id in seen:
                 duplicates.add(d.id)
             seen.add(d.id)
-        return [
-            f"Duplicate execution id: {eid!r}" for eid in sorted(duplicates)
-        ]
+        return [f"Duplicate execution id: {eid!r}" for eid in sorted(duplicates)]

@@ -23,16 +23,19 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import BaseModel
+from pydantic import BeforeValidator
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
-from domain.directive_graph.enums import (
-    CompositeLogic,
-    EvaluatorType,
-    FieldCheckOperator,
-    ThresholdOperator,
-)
-from domain.directive_graph.scalars import FiniteFloat, RegexFlags, RegexPattern
-
+from domain.directive_graph.enums import CompositeLogic
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import FieldCheckOperator
+from domain.directive_graph.enums import ThresholdOperator
+from domain.directive_graph.scalars import FiniteFloat
+from domain.directive_graph.scalars import RegexFlags
+from domain.directive_graph.scalars import RegexPattern
 
 # ---------------------------------------------------------------------------
 # BeforeValidator — normalises the sub-evaluator JSON Schema format

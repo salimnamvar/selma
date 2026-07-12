@@ -18,23 +18,23 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import field_validator
+from pydantic import model_validator
 
-from domain.directive_graph.enums import (
-    DirectiveStatus,
-    DeonticType,
-    EvaluatorType,
-    PriorityLevel,
-    SeverityWeight,
-)
+from domain.directive_graph.enums import DeonticType
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import PriorityLevel
+from domain.directive_graph.enums import SeverityWeight
 from domain.directive_graph.evaluators import Evaluator
-from domain.directive_graph.scalars import (
-    AnchorReference,
-    DirectiveReference,
-    ExecutionId,
-    LineageId,
-    UtcTimestamp,
-)
+from domain.directive_graph.scalars import AnchorReference
+from domain.directive_graph.scalars import DirectiveReference
+from domain.directive_graph.scalars import ExecutionId
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import UtcTimestamp
 from domain.directive_graph.value_objects.conflict_resolution import ConflictResolution
 from domain.directive_graph.value_objects.lineage import Lineage
 from domain.directive_graph.value_objects.metadata import DirectiveMetadata
@@ -140,11 +140,7 @@ class Directive(BaseModel):
             return data
         ev_type = data.get("evaluator_type")
         ev_config = data.get("evaluator_config")
-        if (
-            ev_type is not None
-            and isinstance(ev_config, dict)
-            and "evaluator_type" not in ev_config
-        ):
+        if ev_type is not None and isinstance(ev_config, dict) and "evaluator_type" not in ev_config:
             data = dict(data)
             data["evaluator_config"] = {"evaluator_type": ev_type, **ev_config}
             del data["evaluator_type"]
@@ -186,15 +182,9 @@ class Directive(BaseModel):
             ValueError: If status is ACTIVE and authored_by is absent.
         """
         if self.status == DirectiveStatus.ACTIVE:
-            authored_by = (
-                self.metadata
-                and self.metadata.audit
-                and self.metadata.audit.authored_by
-            )
+            authored_by = self.metadata and self.metadata.audit and self.metadata.audit.authored_by
             if not authored_by:
-                raise ValueError(
-                    "Active directives require metadata.audit.authored_by to be set"
-                )
+                raise ValueError("Active directives require metadata.audit.authored_by to be set")
         return self
 
     @model_validator(mode="after")
@@ -209,8 +199,7 @@ class Directive(BaseModel):
         """
         if self.expires_at is not None and self.expires_at <= self.created_at:
             raise ValueError(
-                f"expires_at ({self.expires_at!r}) must be strictly after "
-                f"created_at ({self.created_at!r})"
+                f"expires_at ({self.expires_at!r}) must be strictly after " f"created_at ({self.created_at!r})"
             )
         return self
 

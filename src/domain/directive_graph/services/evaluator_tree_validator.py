@@ -11,11 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.specifications.evaluator_complexity import (
-    MAX_COMPOSITE_DEPTH,
-    MAX_EVALUATOR_NODES,
-    _walk_evaluator,
-)
+from domain.directive_graph.specifications.evaluator_complexity import _walk_evaluator
+from domain.directive_graph.specifications.evaluator_complexity import MAX_COMPOSITE_DEPTH
+from domain.directive_graph.specifications.evaluator_complexity import MAX_EVALUATOR_NODES
 
 
 @dataclass(frozen=True)
@@ -58,8 +56,7 @@ class EvaluatorTreeValidator:
                     EvaluatorTreeViolation(
                         directive_id=directive.id,
                         message=(
-                            f"Evaluator composite depth {max_depth} exceeds "
-                            f"maximum {MAX_COMPOSITE_DEPTH - 1}"
+                            f"Evaluator composite depth {max_depth} exceeds " f"maximum {MAX_COMPOSITE_DEPTH - 1}"
                         ),
                     )
                 )
@@ -67,10 +64,7 @@ class EvaluatorTreeValidator:
                 violations.append(
                     EvaluatorTreeViolation(
                         directive_id=directive.id,
-                        message=(
-                            f"Evaluator node count {node_count} exceeds "
-                            f"maximum {MAX_EVALUATOR_NODES}"
-                        ),
+                        message=(f"Evaluator node count {node_count} exceeds " f"maximum {MAX_EVALUATOR_NODES}"),
                     )
                 )
         return violations

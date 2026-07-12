@@ -8,7 +8,8 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.9
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 
 from domain.directive_graph.directive_graph import DirectiveGraph
 

@@ -39,19 +39,14 @@ class ValidCrossReferencesSpec:
         for d in graph.directives:
             for ref in d.depends_on:
                 if ref not in known_ids:
-                    messages.append(
-                        f"Directive {d.id!r}: depends_on references unknown id {ref!r}"
-                    )
+                    messages.append(f"Directive {d.id!r}: depends_on references unknown id {ref!r}")
             for ref in d.conflicts_with:
                 if ref not in known_ids:
-                    messages.append(
-                        f"Directive {d.id!r}: conflicts_with references unknown id {ref!r}"
-                    )
+                    messages.append(f"Directive {d.id!r}: conflicts_with references unknown id {ref!r}")
             if d.conflict_resolution and d.conflict_resolution.defer_to:
                 ref = d.conflict_resolution.defer_to
                 if ref not in known_ids:
                     messages.append(
-                        f"Directive {d.id!r}: conflict_resolution.defer_to "
-                        f"references unknown id {ref!r}"
+                        f"Directive {d.id!r}: conflict_resolution.defer_to " f"references unknown id {ref!r}"
                     )
         return messages

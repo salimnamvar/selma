@@ -5,7 +5,9 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import model_validator
 
 from domain.directive_graph.enums import ConflictStrategy
 from domain.directive_graph.scalars import DirectiveReference
@@ -41,12 +43,9 @@ class ConflictResolution(BaseModel):
                 present for a non-defer_to strategy.
         """
         if self.strategy == ConflictStrategy.DEFER_TO and self.defer_to is None:
-            raise ValueError(
-                "defer_to is required when strategy is 'defer_to'"
-            )
+            raise ValueError("defer_to is required when strategy is 'defer_to'")
         if self.strategy != ConflictStrategy.DEFER_TO and self.defer_to is not None:
             raise ValueError(
-                f"defer_to must be None when strategy is '{self.strategy}'; "
-                f"only valid with strategy='defer_to'"
+                f"defer_to must be None when strategy is '{self.strategy}'; " f"only valid with strategy='defer_to'"
             )
         return self

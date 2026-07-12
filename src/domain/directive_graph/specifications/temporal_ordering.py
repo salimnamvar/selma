@@ -39,7 +39,6 @@ class ExpiresAfterCreatedSpec:
         for d in graph.directives:
             if d.expires_at is not None and d.expires_at <= d.created_at:
                 messages.append(
-                    f"Directive {d.id!r}: expires_at ({d.expires_at!r}) is not "
-                    f"after created_at ({d.created_at!r})"
+                    f"Directive {d.id!r}: expires_at ({d.expires_at!r}) is not " f"after created_at ({d.created_at!r})"
                 )
         return messages

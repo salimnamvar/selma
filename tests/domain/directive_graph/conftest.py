@@ -12,16 +12,13 @@ import pytest
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.enums import (
-    DeonticType,
-    DirectiveStatus,
-    EvaluatorType,
-    PriorityLevel,
-)
+from domain.directive_graph.enums import DeonticType
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import PriorityLevel
 from domain.directive_graph.scalars import SemanticVersion
 from domain.directive_graph.value_objects.audit import AuditTrail
 from domain.directive_graph.value_objects.metadata import DirectiveMetadata
-
 
 # ---------------------------------------------------------------------------
 # Minimal valid directive payload (JSON schema format)
@@ -52,9 +49,7 @@ def make_directive_payload(**overrides: Any) -> dict[str, Any]:
 def make_active_directive_payload(**overrides: Any) -> dict[str, Any]:
     """Return a minimal valid ACTIVE directive dictionary."""
     payload = make_directive_payload(status="active")
-    payload["metadata"] = {
-        "audit": {"authored_by": "alice"}
-    }
+    payload["metadata"] = {"audit": {"authored_by": "alice"}}
     payload.update(overrides)
     return payload
 
@@ -72,6 +67,7 @@ def make_active_directive(**overrides: Any) -> Directive:
 # ---------------------------------------------------------------------------
 # Minimal valid graph payload
 # ---------------------------------------------------------------------------
+
 
 def make_graph_payload(**overrides: Any) -> dict[str, Any]:
     """Return a minimal valid DirectiveGraph dict (rules[] format)."""
@@ -93,6 +89,7 @@ def make_graph(**overrides: Any) -> DirectiveGraph:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def minimal_directive() -> Directive:

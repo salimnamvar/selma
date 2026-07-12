@@ -5,26 +5,20 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.7
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 
 from domain.directive_graph.directive_graph import DirectiveGraph
 from domain.directive_graph.services.evaluator_tree_validator import EvaluatorTreeValidator
 from domain.directive_graph.services.lineage_validator import LineageValidator
-from domain.directive_graph.specifications.audit_completeness import (
-    ActiveDirectiveRequiresAuthorSpec,
-)
-from domain.directive_graph.specifications.evaluator_complexity import (
-    EvaluatorTreeComplexitySpec,
-)
-from domain.directive_graph.specifications.no_cycles import (
-    NoDeferToCyclesSpec,
-    NoDependencyCyclesSpec,
-)
+from domain.directive_graph.specifications.audit_completeness import ActiveDirectiveRequiresAuthorSpec
+from domain.directive_graph.specifications.evaluator_complexity import EvaluatorTreeComplexitySpec
+from domain.directive_graph.specifications.metadata_size import MetadataSizeSpec
+from domain.directive_graph.specifications.no_cycles import NoDeferToCyclesSpec
+from domain.directive_graph.specifications.no_cycles import NoDependencyCyclesSpec
 from domain.directive_graph.specifications.temporal_ordering import ExpiresAfterCreatedSpec
-from domain.directive_graph.specifications.unique_ids import (
-    UniqueExecutionIdsSpec,
-    UniqueLineageIdsSpec,
-)
+from domain.directive_graph.specifications.unique_ids import UniqueExecutionIdsSpec
+from domain.directive_graph.specifications.unique_ids import UniqueLineageIdsSpec
 from domain.directive_graph.specifications.valid_references import ValidCrossReferencesSpec
 
 
@@ -61,6 +55,7 @@ class DirectiveGraphValidator:
             EvaluatorTreeComplexitySpec(),
             ActiveDirectiveRequiresAuthorSpec(),
             ExpiresAfterCreatedSpec(),
+            MetadataSizeSpec(),
         ]
         self._evaluator_tree_validator = EvaluatorTreeValidator()
         self._lineage_validator = LineageValidator()

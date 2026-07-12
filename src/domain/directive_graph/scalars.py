@@ -11,9 +11,10 @@ from __future__ import annotations
 import math
 from typing import Annotated
 
-from pydantic import ConfigDict, Field, RootModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import RootModel
 from pydantic.functional_validators import AfterValidator
-
 
 # ---------------------------------------------------------------------------
 # Internal validators

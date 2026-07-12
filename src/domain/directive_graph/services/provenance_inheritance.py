@@ -22,9 +22,7 @@ from domain.directive_graph.scalars import ActorId
 class ProvenanceInheritanceService:
     """Computes creator_provenance across the lineage chain for a directive."""
 
-    def compute_provenance(
-        self, directive: Directive, graph: DirectiveGraph
-    ) -> frozenset[ActorId]:
+    def compute_provenance(self, directive: Directive, graph: DirectiveGraph) -> frozenset[ActorId]:
         """Return the set of all actors in the directive's full lineage.
 
         Args:
@@ -57,11 +55,7 @@ class ProvenanceInheritanceService:
         visited = visited | {directive.id}
 
         actors: set[ActorId] = set()
-        authored_by = (
-            directive.metadata
-            and directive.metadata.audit
-            and directive.metadata.audit.authored_by
-        )
+        authored_by = directive.metadata and directive.metadata.audit and directive.metadata.audit.authored_by
         if authored_by:
             actors.add(authored_by)
 
