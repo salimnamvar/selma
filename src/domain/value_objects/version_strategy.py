@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class Intent(BaseModel):
     """When to increment each semantic version component."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     major: str = Field(min_length=1, description="When to increment MAJOR version")
     minor: str = Field(min_length=1, description="When to increment MINOR version")
@@ -21,10 +20,7 @@ class Intent(BaseModel):
 class VersionStrategy(BaseModel):
     """Versioning intent for doctrine, schema, and specification documents."""
 
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-    )
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     description: str = Field(min_length=1, description="Versioning strategy overview")
     version_format: str = Field(min_length=1, description="Version format pattern")
