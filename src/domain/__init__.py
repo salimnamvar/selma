@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from . import policy
+from . import policy_doctrine
 
-__all__ = ["policy"]
+__all__ = ["policy_doctrine"]

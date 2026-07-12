@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from domain.policy.version_strategy import SemanticVersion
+from domain.policy_doctrine.version_strategy import SemanticVersion
 
 
 @pytest.mark.unit

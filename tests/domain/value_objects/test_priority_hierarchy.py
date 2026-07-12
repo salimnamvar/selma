@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from domain.policy import PriorityHierarchy
+from domain.policy_doctrine import PriorityHierarchy
 
 
 @pytest.mark.unit

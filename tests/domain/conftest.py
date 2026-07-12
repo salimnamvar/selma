@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 import pytest
 
-from domain.policy import (
+from domain.policy_doctrine import (
     ContentType,
     PriorityCategory,
     Section,

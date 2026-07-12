@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from domain.policy import WritingPrinciple
+from domain.policy_doctrine import WritingPrinciple
 
 
 @pytest.mark.unit
