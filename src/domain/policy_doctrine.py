@@ -7,7 +7,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.base import require_unique
-from domain.enums import PriorityCategory, ProhibitedField
+from domain.enums import ProhibitedField
 from domain.identifiers import SchemaId, SemanticVersion
 from domain.value_objects.contamination_guard import ContaminationGuard
 from domain.value_objects.cross_layer_binding import CrossLayerBinding
@@ -95,10 +95,6 @@ class PolicyDoctrine(BaseModel):
         except ValueError:
             pass
         return result
-
-    def outranks(self, left: PriorityCategory, right: PriorityCategory) -> bool:
-        """Return True when ``left`` has higher authority than ``right``."""
-        return self.priority_hierarchy.outranks(left, right)
 
     def get_sections(self, id: str) -> Section | None:
         """Return a ``sections`` entry by ``id`` (tree-wide), or None."""

@@ -11,7 +11,6 @@ from pydantic import BaseModel, ValidationError
 from domain import (
     REQUIRED_SECTION_IDS,
     PolicyDoctrine,
-    PriorityCategory,
     ProhibitedField,
     Section,
 )
@@ -238,15 +237,6 @@ class TestPolicyDoctrineYamlContract:
         assert ProhibitedField("parameters") in guard.prohibited_fields
         assert ProhibitedField("weight") in guard.prohibited_fields
         assert "description" not in [f.value for f in guard.prohibited_fields]
-
-    def test_priority_outranks(self, doctrine: PolicyDoctrine) -> None:
-        assert doctrine.outranks(
-            PriorityCategory.CONSTITUTIONAL,
-            PriorityCategory.OPERATIONAL,
-        )
-        levels_entry = doctrine.priority_hierarchy.get_levels(PriorityCategory.STATUTORY)
-        assert levels_entry is not None
-        assert levels_entry.rank == 2
 
     def test_identity_locations_are_governance_text(self, doctrine: PolicyDoctrine) -> None:
         resolution = doctrine.identity_resolution
