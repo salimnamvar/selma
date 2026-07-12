@@ -28,7 +28,7 @@ class Section(BaseModel):
     required: bool = Field(default=True, description="Whether this section must be present")
     content_type: ContentType = Field(description="Expected content format")
     guidance: str | None = Field(default=None, min_length=1, description="Authoring guidance")
-    columns: tuple[str, ...] | None = Field(default=None, description="Table column headers")
+    columns: tuple[str, ...] | None = Field(default=None, min_length=1, description="Table column headers")
     children: tuple[Section, ...] | None = Field(default=None, description="Subsections")
     schema_encoding: str | None = Field(
         default=None, min_length=1, description="Authoring guidance for schema mapping (descriptive only)"

@@ -19,7 +19,9 @@ class PolicyDoctrine(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str = Field(min_length=1, description="Unique doctrine identifier")
+    name: str = Field(
+        pattern=r"^[a-z][a-z0-9-]*$", min_length=1, description="Unique doctrine identifier"
+    )
     version: SemanticVersion = Field(description="Doctrine version")
     description: str = Field(min_length=1, description="Human-readable purpose statement")
     spec_version: SemanticVersion = Field(description="Compatible specification version")

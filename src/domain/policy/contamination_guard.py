@@ -32,7 +32,7 @@ class ContaminationGuard(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     prohibited_fields: frozenset[ProhibitedField] = Field(
-        min_length=1, description="Schema fields that must not appear in policy prose"
+        min_length=14, description="Schema fields that must not appear in policy prose"
     )
     allowed_machine_references: tuple[str, ...] = Field(
         min_length=1, description="How Machine IDs may appear in policy"

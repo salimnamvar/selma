@@ -25,10 +25,10 @@ class Level(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     category: PriorityCategory = Field(description="Unique rank identifier")
-    rank: int = Field(ge=1, description="Numeric authority rank (1 = highest)")
+    rank: int = Field(ge=1, le=5, description="Numeric authority rank (1 = highest)")
     title: str = Field(min_length=1, description="Human-readable rank name")
     description: str = Field(min_length=1, description="Scope and authority of this rank")
-    examples: tuple[str, ...] = Field(default=(), description="Typical rules")
+    examples: tuple[str, ...] = Field(min_length=1, description="Typical rules")
 
 
 class CrossLayerPrecedence(BaseModel):

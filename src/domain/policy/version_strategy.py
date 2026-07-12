@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -37,7 +39,7 @@ class VersionStrategy(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     description: str = Field(min_length=1, description="Versioning strategy overview")
-    version_format: str = Field(min_length=1, description="Version format pattern")
+    version_format: Literal["MAJOR.MINOR.PATCH"] = Field(description="Version format pattern")
     intent: Intent = Field(description="Version increment intent per component")
     migration_intent: str = Field(min_length=1, description="Migration rules when crossing MAJOR version boundaries")
     synchronization_intent: str = Field(min_length=1, description="How versions synchronize across documents")
