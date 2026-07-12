@@ -2,19 +2,33 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class Intent(BaseModel):
-    """When to increment each semantic version component."""
+class VersionFields[T](BaseModel):
+    """Shared major/minor/patch shape for version-related models."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    major: T
+    minor: T
+    patch: T
+
+
+class Intent(VersionFields[str]):
+    """When to increment each semantic version component."""
 
     major: str = Field(min_length=1, description="When to increment MAJOR version")
     minor: str = Field(min_length=1, description="When to increment MINOR version")
     patch: str = Field(min_length=1, description="When to increment PATCH version")
+
+
+class SemanticVersion(VersionFields[int]):
+    """Three-component semantic version (MAJOR.MINOR.PATCH)."""
+
+    major: int = Field(ge=0)
+    minor: int = Field(ge=0)
+    patch: int = Field(ge=0)
 
 
 class VersionStrategy(BaseModel):

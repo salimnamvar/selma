@@ -5,18 +5,11 @@ YAML 1:1 field mapping, native tuples for collections, aggregate-root validation
 
 from __future__ import annotations
 
-from domain.base import require_unique
-from domain.enums import IdentityOperation, PriorityCategory, ProhibitedField
-from domain.identifiers import (
-    MachineId,
-    SchemaId,
-    SemanticVersion,
-)
 from domain.policy_doctrine import PolicyDoctrine
 from domain.value_objects import (
-    ContentType,
     ConflictResolutionBinding,
     ContaminationGuard,
+    ContentType,
     CrossLayerBinding,
     CrossLayerPrecedence,
     FieldLegality,
@@ -25,8 +18,11 @@ from domain.value_objects import (
     Level,
     LifecycleDefinition,
     MachineIdSemantics,
+    PriorityCategory,
     PriorityHierarchy,
+    ProhibitedField,
     Section,
+    SemanticVersion,
     VersionStrategy,
     WritingPrinciple,
 )
@@ -38,21 +34,17 @@ __all__ = [
     "CrossLayerBinding",
     "CrossLayerPrecedence",
     "FieldLegality",
-    "IdentityOperation",
     "IdentityResolution",
     "Intent",
     "Level",
     "LifecycleDefinition",
-    "MachineId",
     "MachineIdSemantics",
     "PolicyDoctrine",
     "PriorityCategory",
     "PriorityHierarchy",
     "ProhibitedField",
-    "SchemaId",
     "Section",
     "SemanticVersion",
     "VersionStrategy",
     "WritingPrinciple",
-    "require_unique",
 ]

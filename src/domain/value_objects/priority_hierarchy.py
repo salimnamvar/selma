@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, ConfigDict, Field
 
-from domain.enums import PriorityCategory
+
+class PriorityCategory(StrEnum):
+    """Authority levels in the governance priority hierarchy."""
+
+    CONSTITUTIONAL = "constitutional"
+    STATUTORY = "statutory"
+    REGULATORY = "regulatory"
+    OPERATIONAL = "operational"
+    ADVISORY = "advisory"
 
 
 class Level(BaseModel):
@@ -47,5 +57,3 @@ class PriorityHierarchy(BaseModel):
     cross_layer_precedence: CrossLayerPrecedence = Field(
         description="How precedence maps across policy/schema/spec layers"
     )
-
-

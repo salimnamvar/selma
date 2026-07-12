@@ -2,11 +2,28 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from enum import StrEnum
 
-from domain.enums import ProhibitedField
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class ProhibitedField(StrEnum):
+    """Machine-executable schema fields that must never appear in policy prose."""
+
+    PARAMETERS = "parameters"
+    CONDITIONS = "conditions"
+    EVALUATOR_HINT = "evaluator_hint"
+    EVALUATOR_TYPE = "evaluator_type"
+    EVALUATOR_CONFIG = "evaluator_config"
+    WEIGHT = "weight"
+    DEPENDS_ON = "depends_on"
+    CONFLICTS_WITH = "conflicts_with"
+    STATUS = "status"
+    CREATED_AT = "created_at"
+    EXPIRES_AT = "expires_at"
+    REMEDIATION = "remediation"
+    TARGET = "target"
+    LINEAGE = "lineage"
 
 
 class ContaminationGuard(BaseModel):
