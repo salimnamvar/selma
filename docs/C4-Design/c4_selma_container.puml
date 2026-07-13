@@ -88,7 +88,7 @@ Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "RES
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(regulated_systems, selma_app, "supplies inspection targets conforming to target schema", "HTTPS / API")
+Rel(selma_app, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD")
 Rel(selma_app, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
 Rel(selma_app, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")

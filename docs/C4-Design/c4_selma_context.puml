@@ -46,7 +46,7 @@ Rel(compliance_rep, selma, "submits targets for inspection; acknowledges finding
 Rel(selma, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
 
-Rel(regulated_systems, selma, "supplies inspection targets conforming to target schema", "HTTPS / API")
+Rel(selma, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 
 Rel(audit_platform, selma, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable,async")
 Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
