@@ -68,13 +68,13 @@ Container_Boundary(selma_app, "Selma Application") {
 
     Component(hermetic_compiler, "Hermetic Compiler", "Python", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
 
-    Component(inspector, "Inspector", "Python", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
+    Component(rule_inspector, "Rule Inspector", "Python", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
 
     Component(conflict_resolver, "Conflict Resolver", "Python", "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review.")
 
     Component(lifecycle_finder, "Lifecycle Finder", "Python", "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store.")
 
-    Component(analyzer, "Analyzer", "Python", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
+    Component(finding_analyzer, "Finding Analyzer", "Python", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
 
     Component(architectural_auditor, "Architectural Auditor", "Python", "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts.")
 
@@ -113,10 +113,10 @@ Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webh
 
 Rel(api_gateway, directives_adapter, "directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
 Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal", $tags="compile_only")
-Rel(api_gateway, inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
+Rel(api_gateway, rule_inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
 Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
-Rel(api_gateway, analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
+Rel(api_gateway, finding_analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
 Rel(api_gateway, architectural_auditor, "triggers architectural certification on CI/CD request", "Internal", $tags="validation_only")
 Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
 
@@ -131,14 +131,14 @@ Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping a
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Inspector
+'  RELATIONSHIPS -- Rule Inspector
 ' ============================================================
 
-Rel(inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal")
-Rel(inspector, analyzer, "fetches historical finding summaries for inspection context", "Internal")
-Rel(inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal")
-Rel(inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal")
-Rel(inspector, snapshots_adapter, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal")
+Rel(rule_inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal")
+Rel(rule_inspector, finding_analyzer, "fetches historical finding summaries for inspection context", "Internal")
+Rel(rule_inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal")
+Rel(rule_inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal")
+Rel(rule_inspector, snapshots_adapter, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal")
 
 
 ' ============================================================
@@ -160,11 +160,11 @@ Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution perm
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Analyzer (Read-Only)
+'  RELATIONSHIPS -- Finding Analyzer (Read-Only)
 ' ============================================================
 
-Rel(analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal")
-Rel(analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal")
+Rel(finding_analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal")
+Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal")
 
 
 ' ============================================================
