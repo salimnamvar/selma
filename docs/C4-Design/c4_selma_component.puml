@@ -68,25 +68,25 @@ Container_Boundary(selma_app, "Selma Application") {
 
     Component(api_gateway, "API Gateway", "FastAPI", "Single entry point for all actors. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store.")
 
-    Component(hermetic_compilation, "Hermetic Compilation", "Python", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
+    Component(hermetic_compiler, "Hermetic Compiler", "Python", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
 
-    Component(inspection, "Inspection", "Python", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
+    Component(inspector, "Inspector", "Python", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
 
-    Component(conflict_resolution, "Conflict Resolution", "Python", "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review.")
+    Component(conflict_resolver, "Conflict Resolver", "Python", "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review.")
 
-    Component(finding_fsm, "Finding FSM", "Python", "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store.")
+    Component(lifecycle_finder, "Lifecycle Finder", "Python", "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store.")
 
-    Component(analytics, "Analytics", "Python", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
+    Component(analyzer, "Analyzer", "Python", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
 
-    Component(architectural_audit, "Architectural Audit", "Python", "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts.")
+    Component(architectural_auditor, "Architectural Auditor", "Python", "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts.")
 
-    Component(directives_manager, "Directives Manager", "Python", "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition, lineage identity resolution, and triggers compilation after mutations.")
+    Component(directives_adapter, "Directives Adapter", "Python", "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition, lineage identity resolution, and triggers compilation after mutations.")
 
-    Component(compiled_rules_manager, "Compiled Rules Manager", "Python", "Manages content-addressed storage of compiled rule snapshots. Handles publish, load, deduplication, and incremental reuse of snapshots.")
+    Component(compiled_rules_adapter, "Compiled Rules Adapter", "Python", "Manages content-addressed storage of compiled rule snapshots. Handles publish, load, deduplication, and incremental reuse of snapshots.")
 
-    Component(findings_audit_manager, "Findings & Audit Trail Manager", "Python", "Manages append-only event streams for finding lifecycle events and security denial records. Handles event appending, hash chain integrity, and replication to the external Audit Platform.")
+    Component(findings_audit_adapter, "Findings & Audit Trail Adapter", "Python", "Manages append-only event streams for finding lifecycle events and security denial records. Handles event appending, hash chain integrity, and replication to the external Audit Platform.")
 
-    Component(snapshots_manager, "Inspection Snapshots Manager", "Python", "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform.")
+    Component(snapshots_adapter, "Inspection Snapshots Adapter", "Python", "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform.")
 
 }
 
@@ -104,7 +104,7 @@ Rel(compliance_rep, api_gateway, "inspection submissions, finding acknowledgemen
 ' ============================================================
 
 Rel(api_gateway, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
-Rel(api_gateway, findings_audit_manager, "appends denied-request records", "Append-Only", $tags="immutable")
+Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
 
 
 ' ============================================================
@@ -112,92 +112,92 @@ Rel(api_gateway, findings_audit_manager, "appends denied-request records", "Appe
 ' ============================================================
 
 Rel(regulated_systems, api_gateway, "submits inspection targets conforming to target schema", "HTTPS / API")
-Rel(cicd, hermetic_compilation, "triggers compilation and static analysis for governance access verification", "CI/CD", $tags="compile_only")
-Rel(cicd, architectural_audit, "triggers architectural certification and runtime compliance checks", "CI/CD")
-Rel(hermetic_compilation, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
-Rel(finding_fsm, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated,async")
+Rel(cicd, hermetic_compiler, "triggers compilation and static analysis for governance access verification", "CI/CD", $tags="compile_only")
+Rel(cicd, architectural_auditor, "triggers architectural certification and runtime compliance checks", "CI/CD")
+Rel(hermetic_compiler, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
+Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated,async")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- API Gateway -> Components
 ' ============================================================
 
-Rel(api_gateway, directives_manager, "directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
-Rel(api_gateway, hermetic_compilation, "triggers compilation on directive change", "Internal", $tags="compile_only")
-Rel(api_gateway, inspection, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
-Rel(api_gateway, finding_fsm, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
-Rel(api_gateway, conflict_resolution, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
-Rel(api_gateway, analytics, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
+Rel(api_gateway, directives_adapter, "directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
+Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change", "Internal", $tags="compile_only")
+Rel(api_gateway, inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
+Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
+Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
+Rel(api_gateway, analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Hermetic Compilation
+'  RELATIONSHIPS -- Hermetic Compiler
 ' ============================================================
 
-Rel(hermetic_compilation, directive_store, "reads directive revisions and lineage state under read-lock", "SQL", $tags="compile_only")
-Rel(hermetic_compilation, compiled_rules_manager, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
-Rel(hermetic_compilation, conflict_resolution, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Inspection
-' ============================================================
-
-Rel(inspection, compiled_rules_manager, "loads frozen rule snapshot for evaluation", "Internal")
-Rel(inspection, analytics, "fetches historical finding summaries for inspection context", "Internal")
-Rel(inspection, conflict_resolution, "applies pre-computed conflict resolution when multiple rules fire", "Internal")
-Rel(inspection, finding_fsm, "emits new findings after evaluation completes", "Internal")
-Rel(inspection, snapshots_manager, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal")
+Rel(hermetic_compiler, directive_store, "reads directive revisions and lineage state under read-lock", "SQL", $tags="compile_only")
+Rel(hermetic_compiler, compiled_rules_adapter, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
+Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Finding FSM
+'  RELATIONSHIPS -- Inspector
 ' ============================================================
 
-Rel(finding_fsm, findings_audit_manager, "appends finding lifecycle events", "Internal", $tags="immutable")
-Rel(finding_fsm, compiled_rules_manager, "reads provenance data for segregation-of-duties enforcement", "Internal")
-Rel(finding_fsm, findings_audit_manager, "appends permission denial and segregation-of-duties records", "Internal", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Conflict Resolution
-' ============================================================
-
-Rel(conflict_resolution, compiled_rules_manager, "reads frozen rule metadata for specificity scoring and priority comparison", "Internal")
-Rel(conflict_resolution, snapshots_manager, "stores and reads conflict artifacts pending human resolution", "Internal", $tags="immutable")
-Rel(conflict_resolution, findings_audit_manager, "appends conflict resolution permission denial records", "Internal", $tags="immutable")
+Rel(inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal")
+Rel(inspector, analyzer, "fetches historical finding summaries for inspection context", "Internal")
+Rel(inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal")
+Rel(inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal")
+Rel(inspector, snapshots_adapter, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Analytics (Read-Only)
+'  RELATIONSHIPS -- Lifecycle Finder
 ' ============================================================
 
-Rel(analytics, findings_audit_manager, "reads finding events for aggregates, trends, and views", "Internal")
-Rel(analytics, compiled_rules_manager, "reads compiled rule nodes for directive views and causal explanations", "Internal")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Architectural Audit
-' ============================================================
-
-Rel(architectural_audit, snapshots_manager, "writes certification artifacts with pass/fail evidence", "Internal", $tags="immutable")
+Rel(lifecycle_finder, findings_audit_adapter, "appends finding lifecycle events", "Internal", $tags="immutable")
+Rel(lifecycle_finder, compiled_rules_adapter, "reads provenance data for segregation-of-duties enforcement", "Internal")
+Rel(lifecycle_finder, findings_audit_adapter, "appends permission denial and segregation-of-duties records", "Internal", $tags="immutable")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Manager -> Data Store
+'  RELATIONSHIPS -- Conflict Resolver
 ' ============================================================
 
-Rel(directives_manager, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
-Rel(compiled_rules_manager, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS")
-Rel(findings_audit_manager, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
-Rel(snapshots_manager, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write")
+Rel(conflict_resolver, compiled_rules_adapter, "reads frozen rule metadata for specificity scoring and priority comparison", "Internal")
+Rel(conflict_resolver, snapshots_adapter, "stores and reads conflict artifacts pending human resolution", "Internal", $tags="immutable")
+Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution permission denial records", "Internal", $tags="immutable")
+
+
+' ============================================================
+'  RELATIONSHIPS -- Analyzer (Read-Only)
+' ============================================================
+
+Rel(analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal")
+Rel(analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal")
+
+
+' ============================================================
+'  RELATIONSHIPS -- Architectural Auditor
+' ============================================================
+
+Rel(architectural_auditor, snapshots_adapter, "writes certification artifacts with pass/fail evidence", "Internal", $tags="immutable")
+
+
+' ============================================================
+'  RELATIONSHIPS -- Adapter -> Data Store
+' ============================================================
+
+Rel(directives_adapter, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
+Rel(compiled_rules_adapter, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS")
+Rel(findings_audit_adapter, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
+Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(findings_audit_manager, audit_platform, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
-Rel(snapshots_manager, audit_platform, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
+Rel(findings_audit_adapter, audit_platform, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
+Rel(snapshots_adapter, audit_platform, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
 
 @enduml
