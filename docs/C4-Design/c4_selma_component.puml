@@ -100,8 +100,7 @@ Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "R
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(regulated_systems, api_gateway, "submits inspection targets conforming to target schema", "HTTPS / API")
-Rel(api_gateway, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
+Rel(regulated_systems, api_gateway, "supplies inspection targets conforming to target schema", "HTTPS / API")
 Rel(cicd, api_gateway, "triggers compilation, certification, and runtime compliance checks", "CI/CD")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
 Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated,async")
