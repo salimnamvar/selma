@@ -12,4 +12,14 @@ skinparam defaultFontSize 12
 skinparam shadowing false
 skinparam roundCorner 5
 skinparam monochrome false
+
+skinparam responseMessageBelowArrow true
+skinparam arrowThickness 1.5
+skinparam packageBorderColor #333333
+skinparam componentBorderColor #333333
+skinparam rectangleBorderColor #333333
+skinparam databaseBorderColor #333333
+skinparam wrapWidth 250
+skinparam nodesep 60
+skinparam ranksep 80
 @enduml

@@ -64,27 +64,27 @@ ContainerDb_Ext(artifact_store, "Inspection Snapshots", "Object Store", "Immutab
 
 Container_Boundary(selma_app, "Selma Application") {
 
-    Component(api_gateway, "API Gateway", "REST API", "Single entry point for all requests. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store.")
+    Component(api_gateway, "API Gateway", "FastAPI / Pydantic", "Single entry point for all requests. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store.")
 
-    Component(hermetic_compiler, "Hermetic Compiler", "Python", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
+    Component(hermetic_compiler, "Hermetic Compiler", "Python / JSON Schema / SHA-256", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
 
-    Component(rule_inspector, "Rule Inspector", "Python", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
+    Component(rule_inspector, "Rule Inspector", "Python / RE2 Regex / SHA-256", "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots.")
 
-    Component(conflict_resolver, "Conflict Resolver", "Python", "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review.")
+    Component(conflict_resolver, "Conflict Resolver", "Python / Pydantic", "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review.")
 
-    Component(lifecycle_finder, "Lifecycle Finder", "Python", "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store.")
+    Component(lifecycle_finder, "Lifecycle Finder", "Python / Pydantic", "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store.")
 
-    Component(finding_analyzer, "Finding Analyzer", "Python", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
+    Component(finding_analyzer, "Finding Analyzer", "Python / Pydantic", "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes.")
 
     Component(architectural_auditor, "Architectural Auditor", "Python", "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts.")
 
-    Component(directives_adapter, "Directives Adapter", "Python", "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition, lineage identity resolution, and triggers compilation after mutations.")
+    Component(directives_adapter, "Directives Adapter", "Python / SQLAlchemy / PostgreSQL", "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition, lineage identity resolution, and triggers compilation after mutations.")
 
-    Component(compiled_rules_adapter, "Compiled Rules Adapter", "Python", "Manages content-addressed storage of compiled rule snapshots. Handles publish, load, deduplication, and incremental reuse of snapshots.")
+    Component(compiled_rules_adapter, "Compiled Rules Adapter", "Python / SHA-256 / Content-Addressed Storage", "Manages content-addressed storage of compiled rule snapshots. Handles publish, load, deduplication, and incremental reuse of snapshots.")
 
-    Component(findings_audit_adapter, "Findings & Audit Trail Adapter", "Python", "Manages append-only event streams for finding lifecycle events and security denial records. Handles event appending, hash chain integrity, and replication to the external Audit Platform.")
+    Component(findings_audit_adapter, "Findings & Audit Trail Adapter", "Python / SHA-256 / Append-Only Log", "Manages append-only event streams for finding lifecycle events and security denial records. Handles event appending, hash chain integrity, and replication to the external Audit Platform.")
 
-    Component(snapshots_adapter, "Inspection Snapshots Adapter", "Python", "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform.")
+    Component(snapshots_adapter, "Inspection Snapshots Adapter", "Python / Object Store", "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform.")
 
 }
 
