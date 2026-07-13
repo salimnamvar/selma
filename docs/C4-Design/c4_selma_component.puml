@@ -190,6 +190,6 @@ Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, con
 
 Rel(findings_audit_adapter, api_gateway, "exposes finding events and security denial records for audit replication", "Internal")
 Rel(snapshots_adapter, api_gateway, "exposes inspection snapshots, traces, and certification artifacts for audit replication", "Internal")
-Rel(api_gateway, audit_platform, "replicates finding events, security audit records, inspection snapshots, and certification artifacts", "append-only", $tags="immutable,async")
+Rel(audit_platform, api_gateway, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable,async")
 
 @enduml

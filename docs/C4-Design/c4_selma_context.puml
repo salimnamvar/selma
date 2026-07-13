@@ -49,8 +49,7 @@ Rel(cicd, selma, "triggers architectural certification and runtime compliance ch
 Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(selma, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
 
-Rel(audit_platform, selma, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
-Rel(audit_platform, selma, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
+Rel(audit_platform, selma, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable,async")
 Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
 
 @enduml
