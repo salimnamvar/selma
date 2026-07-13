@@ -2,7 +2,7 @@
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma Rule Regularity Platform
 ' Purpose:   White-box view: one deployable application service
-'            (selma_app) and five data stores, carrying forward
+'            (selma_app) and four data stores, carrying forward
 '            actors and external systems from the Context Diagram.
 ' Contract:  8.2.4
 ' Diagram:   8.2.4
@@ -30,9 +30,7 @@ AddRelTag("async",               $legendText="asynchronous / eventually consiste
 
 Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition.")
 
-Person(compliance_rep, "Compliance Representative", "Human or system acting for the regulated entity. Submits inspection targets, acknowledges findings, and submits remediation evidence.")
-
-Person_Ext(system_actor, "Automated Service Account", "Programmatic service account with the narrowest capability set: inspection submission, finding viewing, and analytics viewing only. Used by pipelines integrating compliance checks without governance rights.")
+Person(compliance_rep, "Compliance Representative", "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics.")
 
 
 ' ============================================================
@@ -62,9 +60,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     ContainerDb(cgir_store, "CG-IR Store", "Content-Addressed Storage", "Immutable store for compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.")
 
-    ContainerDb(finding_event_store, "Finding Event Store", "Append-Only Log", "Immutable, ordered event stream of all finding lifecycle events. Each event is chained with a hash for tamper evidence. Source of truth for finding state and disposition history.")
-
-    ContainerDb(audit_event_store, "Audit Event Store", "Append-Only Log", "Immutable, append-only stream of security denial records: who tried what action, what permission was missing, and why it was denied. Kept strictly separate from finding events.")
+    ContainerDb(event_store, "Event Store", "Append-Only Log", "Immutable, append-only log of finding lifecycle events and security denial records. Each event is chained with a hash for tamper evidence. Source of truth for finding state, disposition history, and audit trail. Finding events and security denials stored as separate logical streams.")
 
     ContainerDb(artifact_store, "Execution Artifact Store", "Object Store", "Immutable object store for inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.")
 
@@ -76,8 +72,7 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 ' ============================================================
 
 Rel(regulatory_official, selma_app, "authors and governs directives; resolves findings; views analytics", "HTTPS", $tags="capability_enforced")
-Rel(compliance_rep, selma_app, "submits targets for inspection; acknowledges findings; submits remediation evidence", "HTTPS", $tags="capability_enforced")
-Rel(system_actor, selma_app, "submits inspections programmatically; views findings and analytics", "HTTPS", $tags="capability_enforced")
+Rel(compliance_rep, selma_app, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS", $tags="capability_enforced")
 
 
 ' ============================================================
@@ -97,8 +92,7 @@ Rel(selma_app, remediation_systems, "emits finding events and status changes", "
 
 Rel(selma_app, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
 Rel(selma_app, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS")
-Rel(selma_app, finding_event_store, "appends finding lifecycle events; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
-Rel(selma_app, audit_event_store, "appends security denial records", "Append-Only", $tags="immutable")
+Rel(selma_app, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
 Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write")
 
 
@@ -106,8 +100,7 @@ Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict ar
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(finding_event_store, audit_platform, "replicates finding event stream for long-term retention", "append-only", $tags="immutable,async")
-Rel(audit_event_store, audit_platform, "replicates security denial stream for long-term retention", "append-only", $tags="immutable,async")
+Rel(event_store, audit_platform, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
 Rel(artifact_store, audit_platform, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
 
 @enduml

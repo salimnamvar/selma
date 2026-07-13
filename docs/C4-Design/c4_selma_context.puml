@@ -1,10 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   Black-box view of the two governance actors, the
-'            automated service account, and the five external
-'            systems Selma compiles against, certifies, and
-'            streams findings and security audit records into.
+' Purpose:   Black-box view of the two governance actors and the
+'            five external systems Selma compiles against, certifies,
+'            and streams findings and security audit records into.
 ' Contract:  8.2.4
 ' Diagram:   8.2.4 (Phase B AIP alignment)
 ' ============================================================
@@ -27,9 +26,7 @@ AddRelTag("async",        $legendText="asynchronous / eventually consistent deli
 
 Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition.")
 
-Person(compliance_rep, "Compliance Representative", "Human or system acting for the regulated entity. Submits inspection targets, acknowledges findings, and submits remediation evidence.")
-
-Person_Ext(system_actor, "Automated Service Account", "Programmatic service account with the narrowest capability set: inspection submission, finding viewing, and analytics viewing only. Used by pipelines integrating compliance checks without governance rights.")
+Person(compliance_rep, "Compliance Representative", "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics.")
 
 System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations.")
 
@@ -44,8 +41,7 @@ System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-ter
 System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows for remediation: ticketing systems, RPA platforms, and regulatory portals. Selma sends finding notifications only — it never directly modifies external remediation state.")
 
 Rel(regulatory_official, selma, "authors and governs directives; resolves findings; views analytics", "HTTPS")
-Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; submits remediation evidence", "HTTPS")
-Rel(system_actor, selma, "submits inspections programmatically; views findings and analytics", "HTTPS")
+Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS")
 
 Rel(selma, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
