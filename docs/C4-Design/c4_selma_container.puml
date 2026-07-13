@@ -1,9 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma Rule Regularity Platform
-' Purpose:   White-box view: one deployable application service
-'            (selma_app) and four data stores, carrying forward
-'            actors and external systems from the Context Diagram.
+' Purpose:   White-box view: Selma Interface, Selma Application,
+'            and four data stores, carrying forward actors and
+'            external systems from the Context Diagram.
 ' Contract:  8.2.4
 ' Diagram:   8.2.4
 ' ============================================================
@@ -54,7 +54,9 @@ System_Ext(remediation_systems, "Remediation & Case Management", "Operational wo
 
 System_Boundary(selma, "Selma Rule Regularity Platform") {
 
-    Container(selma_app, "Selma Application", "FastAPI / Python", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime.")
+    Container(selma_interface, "Selma Interface", "CLI / WebApp / DesktopApp / MobileApp", "User-facing interface across all delivery channels. Authenticates users, renders the UI, and translates user actions into REST API calls to the Selma Application.")
+
+    Container(selma_app, "Selma Application", "REST API / Python", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime.")
 
     ContainerDb(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.")
 
@@ -68,11 +70,18 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Actor Ingress (verbatim from Context Diagram)
+'  RELATIONSHIPS -- Actor Ingress
 ' ============================================================
 
-Rel(regulatory_official, selma_app, "authors and governs directives; resolves findings; views analytics", "HTTPS", $tags="capability_enforced")
-Rel(compliance_rep, selma_app, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS", $tags="capability_enforced")
+Rel(regulatory_official, selma_interface, "directive management, finding disposition, conflict resolution, analytics", "HTTPS", $tags="capability_enforced")
+Rel(compliance_rep, selma_interface, "inspection submissions, finding acknowledgement, evidence submission", "HTTPS", $tags="capability_enforced")
+
+
+' ============================================================
+'  RELATIONSHIPS -- Interface -> Application
+' ============================================================
+
+Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "REST / HTTPS", $tags="capability_enforced")
 
 
 ' ============================================================
@@ -100,7 +109,7 @@ Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict ar
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(selma_app, audit_platform, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
-Rel(selma_app, audit_platform, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
+Rel(audit_platform, selma_app, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
+Rel(audit_platform, selma_app, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
 
 @enduml

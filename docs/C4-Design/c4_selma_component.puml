@@ -1,9 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Component Diagram
 ' Boundary:  Selma Application (selma_app)
-' Purpose:   Internal components of selma_app. Data stores from
-'            the Container Diagram appear as external systems.
-'            No modules — components only.
+' Purpose:   Internal components of selma_app. Selma Interface,
+'            data stores, and external systems from the Container
+'            Diagram appear as external. No modules — components only.
 ' Contract:  8.2.4
 ' ============================================================
 @startuml c4_selma_component
@@ -24,15 +24,6 @@ AddRelTag("async",               $legendText="asynchronous / eventually consiste
 
 
 ' ============================================================
-'  ACTORS (verbatim from Context Diagram)
-' ============================================================
-
-Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition.")
-
-Person(compliance_rep, "Compliance Representative", "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics.")
-
-
-' ============================================================
 '  EXTERNAL SYSTEMS (verbatim from Context Diagram)
 ' ============================================================
 
@@ -45,6 +36,13 @@ System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnos
 System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives finding events, security audit records, inspection snapshots, and certification artifacts. Supports external auditors and compliance reporting.")
 
 System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows for remediation: ticketing systems, RPA platforms, and regulatory portals. Selma sends finding notifications only — it never directly modifies external remediation state.")
+
+
+' ============================================================
+'  SELMA INTERFACE (from Container Diagram, now external)
+' ============================================================
+
+Container_Ext(selma_interface, "Selma Interface", "CLI / WebApp / DesktopApp / MobileApp", "User-facing interface across all delivery channels. Authenticates users, renders the UI, and translates user actions into REST API calls to the Selma Application.")
 
 
 ' ============================================================
@@ -66,7 +64,7 @@ ContainerDb_Ext(artifact_store, "Inspection Snapshots", "Object Store", "Immutab
 
 Container_Boundary(selma_app, "Selma Application") {
 
-    Component(api_gateway, "API Gateway", "FastAPI", "Single entry point for all actors. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store.")
+    Component(api_gateway, "API Gateway", "REST API", "Single entry point for all requests. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store.")
 
     Component(hermetic_compiler, "Hermetic Compiler", "Python", "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup.")
 
@@ -92,19 +90,10 @@ Container_Boundary(selma_app, "Selma Application") {
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Actor Ingress
+'  RELATIONSHIPS -- Interface -> API Gateway
 ' ============================================================
 
-Rel(regulatory_official, api_gateway, "directive management, finding disposition, conflict resolution, analytics", "HTTPS", $tags="capability_enforced")
-Rel(compliance_rep, api_gateway, "inspection submissions, finding acknowledgement, evidence submission", "HTTPS", $tags="capability_enforced")
-
-
-' ============================================================
-'  RELATIONSHIPS -- API Gateway
-' ============================================================
-
-Rel(api_gateway, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
-Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
+Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "REST / HTTPS", $tags="capability_enforced")
 
 
 ' ============================================================
@@ -112,6 +101,7 @@ Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Appe
 ' ============================================================
 
 Rel(regulated_systems, api_gateway, "submits inspection targets conforming to target schema", "HTTPS / API")
+Rel(api_gateway, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
 Rel(cicd, hermetic_compiler, "triggers compilation and static analysis for governance access verification", "CI/CD", $tags="compile_only")
 Rel(cicd, architectural_auditor, "triggers architectural certification and runtime compliance checks", "CI/CD")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
@@ -128,6 +118,7 @@ Rel(api_gateway, inspector, "routes inspection submissions with target payload",
 Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
 Rel(api_gateway, analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
+Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
 
 
 ' ============================================================
@@ -197,7 +188,7 @@ Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, con
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(findings_audit_adapter, audit_platform, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
-Rel(snapshots_adapter, audit_platform, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
+Rel(audit_platform, findings_audit_adapter, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
+Rel(audit_platform, snapshots_adapter, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
 
 @enduml
