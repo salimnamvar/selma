@@ -2,10 +2,9 @@
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma Rule Regularity Platform
 ' Purpose:   Black-box view of the two governance actors, the
-'            automated service account, and the six external
-'            systems Selma compiles against, enforces capability
-'            through, certifies, and streams findings and
-'            security audit records into.
+'            automated service account, and the five external
+'            systems Selma compiles against, certifies, and
+'            streams findings and security audit records into.
 ' Contract:  8.2.4
 ' Diagram:   8.2.4 (Phase B AIP alignment)
 ' ============================================================
@@ -36,8 +35,6 @@ System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles human
 
 System_Ext(governance_contracts, "Governance Contracts", "Authoring artifacts that define the rules: the normative specification, structural schema, governance policy, and behavioral contracts. Consumed exclusively at compile time — never accessed at runtime.")
 
-System_Ext(iam, "Identity & Access Management", "Authentication and capability authority for all actor types. Provides identity tokens and permission assertions Selma validates at every action gate.")
-
 System_Ext(cicd, "CI/CD Pipeline", "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime.")
 
 System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other.")
@@ -51,7 +48,6 @@ Rel(compliance_rep, selma, "submits targets for inspection; acknowledges finding
 Rel(system_actor, selma, "submits inspections programmatically; views findings and analytics", "HTTPS")
 
 Rel(selma, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
-Rel(selma, iam, "validates identity and permissions for every action", "OAuth 2.0 / OIDC")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
 
 Rel(regulated_systems, selma, "submits inspection targets conforming to target schema", "HTTPS / API")
