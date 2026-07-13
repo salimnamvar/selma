@@ -56,13 +56,13 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     Container(selma_app, "Selma Application", "FastAPI / Python", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime.")
 
-    ContainerDb(directive_store, "Directive Store", "PostgreSQL", "Mutable, versioned database storing human-authored directives. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.")
+    ContainerDb(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.")
 
-    ContainerDb(cgir_store, "CG-IR Store", "Content-Addressed Storage", "Immutable store for compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.")
+    ContainerDb(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.")
 
-    ContainerDb(event_store, "Event Store", "Append-Only Log", "Immutable, append-only log of finding lifecycle events and security denial records. Each event is chained with a hash for tamper evidence. Source of truth for finding state, disposition history, and audit trail. Finding events and security denials stored as separate logical streams.")
+    ContainerDb(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.")
 
-    ContainerDb(artifact_store, "Execution Artifact Store", "Object Store", "Immutable object store for inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.")
+    ContainerDb(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.")
 
 }
 
