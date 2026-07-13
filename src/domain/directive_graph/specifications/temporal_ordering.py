@@ -1,10 +1,8 @@
-"""Temporal ordering specification.
+"""Temporal ordering specification (reporting aid).
 
-``expires_at``, when present, must be strictly after ``created_at``.
-This is enforced at the entity level by ``model_validator`` and here at
-the graph level for audit reporting.
-
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.8
+``expires_at`` vs ``created_at`` is enforced at the entity level.
+This graph-level specification remains available for audit reporting only;
+it is not registered in ``DirectiveGraphValidator`` to avoid duplication.
 """
 
 from __future__ import annotations
@@ -16,25 +14,11 @@ class ExpiresAfterCreatedSpec:
     """Directives with expires_at must have it strictly after created_at."""
 
     def is_satisfied_by(self, graph: DirectiveGraph) -> bool:
-        """Return True iff all temporal orderings are valid.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            bool: True when satisfied.
-        """
+        """Return True iff all temporal orderings are valid."""
         return len(self.violations(graph)) == 0
 
     def violations(self, graph: DirectiveGraph) -> list[str]:
-        """Return violation messages for invalid temporal orderings.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            list[str]: Human-readable violation descriptions.
-        """
+        """Return violation messages for invalid temporal orderings."""
         messages: list[str] = []
         for d in graph.directives:
             if d.expires_at is not None and d.expires_at <= d.created_at:

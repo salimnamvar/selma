@@ -2,6 +2,9 @@
 
 Provides minimal valid directive and graph factories used across all
 directive_graph test modules.
+
+Wire-format payloads go through ``DirectiveGraphMapper`` (ACL) so domain
+tests never depend on schema shape-normalisation living inside domain types.
 """
 
 from __future__ import annotations
@@ -12,22 +15,13 @@ import pytest
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.enums import DeonticType
-from domain.directive_graph.enums import DirectiveStatus
-from domain.directive_graph.enums import EvaluatorType
-from domain.directive_graph.enums import PriorityLevel
-from domain.directive_graph.scalars import SemanticVersion
-from domain.directive_graph.value_objects.audit import AuditTrail
-from domain.directive_graph.value_objects.metadata import DirectiveMetadata
+from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
+
+_mapper = DirectiveGraphMapper()
 
 # ---------------------------------------------------------------------------
-# Minimal valid directive payload (JSON schema format)
+# Minimal valid directive payload (JSON schema / wire format)
 # ---------------------------------------------------------------------------
-
-MINIMAL_REGEX_EVALUATOR = {
-    "evaluator_type": "regex",
-    "evaluator_config": {"pattern": "^test$"},
-}
 
 
 def make_directive_payload(**overrides: Any) -> dict[str, Any]:
@@ -55,13 +49,13 @@ def make_active_directive_payload(**overrides: Any) -> dict[str, Any]:
 
 
 def make_directive(**overrides: Any) -> Directive:
-    """Construct a minimal valid Directive instance."""
-    return Directive.model_validate(make_directive_payload(**overrides))
+    """Construct a minimal valid Directive instance via the ACL mapper."""
+    return _mapper.directive_to_domain(make_directive_payload(**overrides))
 
 
 def make_active_directive(**overrides: Any) -> Directive:
-    """Construct a minimal valid ACTIVE Directive instance."""
-    return Directive.model_validate(make_active_directive_payload(**overrides))
+    """Construct a minimal valid ACTIVE Directive instance via the ACL mapper."""
+    return _mapper.directive_to_domain(make_active_directive_payload(**overrides))
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +64,7 @@ def make_active_directive(**overrides: Any) -> Directive:
 
 
 def make_graph_payload(**overrides: Any) -> dict[str, Any]:
-    """Return a minimal valid DirectiveGraph dict (rules[] format)."""
+    """Return a minimal valid DirectiveGraph dict (rules[] wire format)."""
     payload: dict[str, Any] = {
         "version": "1.0.0",
         "policy_contract_version": "1.0.0",
@@ -82,13 +76,34 @@ def make_graph_payload(**overrides: Any) -> dict[str, Any]:
 
 
 def make_graph(**overrides: Any) -> DirectiveGraph:
-    """Construct a minimal valid DirectiveGraph instance."""
-    return DirectiveGraph.model_validate(make_graph_payload(**overrides))
+    """Construct a minimal valid DirectiveGraph instance via the ACL mapper."""
+    return _mapper.to_domain(make_graph_payload(**overrides))
+
+
+def make_domain_directive_payload(**overrides: Any) -> dict[str, Any]:
+    """Return a domain-shaped directive dict (flat evaluator_config)."""
+    payload: dict[str, Any] = {
+        "lineage_id": "RULE-001",
+        "id": "RULE-001",
+        "type": "obligation",
+        "message": "Test directive",
+        "evaluator_config": {"evaluator_type": "regex", "pattern": "^test$"},
+        "status": "draft",
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    payload.update(overrides)
+    return payload
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mapper() -> DirectiveGraphMapper:
+    """Return a DirectiveGraphMapper instance."""
+    return DirectiveGraphMapper()
 
 
 @pytest.fixture

@@ -5,11 +5,9 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
-from domain.directive_graph.scalars import ActorId
-from domain.directive_graph.scalars import UtcTimestamp
+from domain.directive_graph.scalars import ActorId, UtcTimestamp
 
 
 class AuditTrail(BaseModel):

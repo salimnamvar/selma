@@ -1,16 +1,48 @@
-"""Tests for ConflictResolver domain service."""
+"""Tests for ConflictResolver domain service (SPEC §2.15)."""
 
 from __future__ import annotations
 
 import pytest
 
-from domain.directive_graph.enums import ConflictStrategy
-from domain.directive_graph.enums import PriorityLevel
-from domain.directive_graph.services.conflict_resolver import ConflictResolutionResult
 from domain.directive_graph.services.conflict_resolver import ConflictResolver
-from domain.directive_graph.value_objects.conflict_resolution import ConflictResolution
-from tests.domain.directive_graph.conftest import make_directive
 from tests.domain.directive_graph.conftest import make_graph
+
+
+def _pair(
+    *,
+    a_overrides: dict | None = None,
+    b_overrides: dict | None = None,
+):
+    """Build a two-directive graph and return (a, b, graph)."""
+    a_payload = {
+        "lineage_id": "RULE-001",
+        "id": "RULE-001",
+        "type": "obligation",
+        "message": "a",
+        "evaluator_type": "regex",
+        "evaluator_config": {"pattern": "^test$"},
+        "status": "draft",
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    b_payload = {
+        "lineage_id": "RULE-002",
+        "id": "RULE-002",
+        "type": "obligation",
+        "message": "b",
+        "evaluator_type": "regex",
+        "evaluator_config": {"pattern": "^test$"},
+        "status": "draft",
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    if a_overrides:
+        a_payload.update(a_overrides)
+    if b_overrides:
+        b_payload.update(b_overrides)
+    g = make_graph(rules=[a_payload, b_payload])
+    a = g.get_by_id("RULE-001")
+    b = g.get_by_id("RULE-002")
+    assert a is not None and b is not None
+    return a, b, g
 
 
 @pytest.fixture
@@ -22,50 +54,66 @@ def resolver() -> ConflictResolver:
 @pytest.mark.domain
 class TestExplicitOverrides:
     def test_always_wins(self, resolver: ConflictResolver) -> None:
-        a = make_directive(
-            lineage_id="RULE-001",
-            id="RULE-001",
-            conflict_resolution={"strategy": "always_wins"},
-        )
-        b = make_directive(lineage_id="RULE-002", id="RULE-002")
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
+        a, b, g = _pair(a_overrides={"conflict_resolution": {"strategy": "always_wins"}})
         result = resolver.resolve(a, b, g)
         assert result.winner is not None
         assert result.winner.id == "RULE-001"
         assert result.method == "explicit_always_wins"
 
     def test_never_wins(self, resolver: ConflictResolver) -> None:
-        a = make_directive(
-            lineage_id="RULE-001",
-            id="RULE-001",
-            conflict_resolution={"strategy": "never_wins"},
-        )
-        b = make_directive(lineage_id="RULE-002", id="RULE-002")
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
+        a, b, g = _pair(a_overrides={"conflict_resolution": {"strategy": "never_wins"}})
         result = resolver.resolve(a, b, g)
         assert result.winner is not None
         assert result.winner.id == "RULE-002"
         assert result.method == "explicit_never_wins"
+
+    def test_compatible_always_never(self, resolver: ConflictResolver) -> None:
+        a, b, g = _pair(
+            a_overrides={"conflict_resolution": {"strategy": "always_wins"}},
+            b_overrides={"conflict_resolution": {"strategy": "never_wins"}},
+        )
+        result = resolver.resolve(a, b, g)
+        assert result.winner is not None
+        assert result.winner.id == "RULE-001"
+        assert result.method == "compatible_always_never"
+
+    def test_dual_never_wins_unresolvable(self, resolver: ConflictResolver) -> None:
+        a, b, g = _pair(
+            a_overrides={"conflict_resolution": {"strategy": "never_wins"}},
+            b_overrides={"conflict_resolution": {"strategy": "never_wins"}},
+        )
+        result = resolver.resolve(a, b, g)
+        assert result.method == "unresolvable"
+        assert result.artifact is not None
+
+    def test_always_wins_plus_defer_to_unresolvable(self, resolver: ConflictResolver) -> None:
+        a, b, g = _pair(
+            a_overrides={"conflict_resolution": {"strategy": "always_wins"}},
+            b_overrides={"conflict_resolution": {"strategy": "defer_to", "defer_to": "RULE-001"}},
+        )
+        result = resolver.resolve(a, b, g)
+        assert result.method == "unresolvable"
 
 
 @pytest.mark.unit
 @pytest.mark.domain
 class TestPriorityResolution:
     def test_constitutional_beats_advisory(self, resolver: ConflictResolver) -> None:
-        a = make_directive(lineage_id="RULE-001", id="RULE-001", priority="constitutional")
-        b = make_directive(lineage_id="RULE-002", id="RULE-002", priority="advisory")
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
+        a, b, g = _pair(
+            a_overrides={"priority": "constitutional"},
+            b_overrides={"priority": "advisory"},
+        )
         result = resolver.resolve(a, b, g)
         assert result.winner is not None
         assert result.winner.id == "RULE-001"
         assert result.method == "priority"
 
     def test_equal_priority_falls_through_to_next(self, resolver: ConflictResolver) -> None:
-        a = make_directive(lineage_id="RULE-001", id="RULE-001", priority="operational")
-        b = make_directive(lineage_id="RULE-002", id="RULE-002", priority="operational")
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
+        a, b, g = _pair(
+            a_overrides={"priority": "operational"},
+            b_overrides={"priority": "operational"},
+        )
         result = resolver.resolve(a, b, g)
-        # Falls through to specificity then recency
         assert result.method in ("specificity", "recency", "unresolvable")
 
 
@@ -73,17 +121,10 @@ class TestPriorityResolution:
 @pytest.mark.domain
 class TestRecencyResolution:
     def test_newer_wins(self, resolver: ConflictResolver) -> None:
-        a = make_directive(
-            lineage_id="RULE-001",
-            id="RULE-001",
-            created_at="2026-12-01T00:00:00Z",
+        a, b, g = _pair(
+            a_overrides={"created_at": "2026-12-01T00:00:00Z"},
+            b_overrides={"created_at": "2026-01-01T00:00:00Z"},
         )
-        b = make_directive(
-            lineage_id="RULE-002",
-            id="RULE-002",
-            created_at="2026-01-01T00:00:00Z",
-        )
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
         result = resolver.resolve(a, b, g)
         assert result.winner is not None
         assert result.winner.id == "RULE-001"
@@ -94,17 +135,10 @@ class TestRecencyResolution:
 @pytest.mark.domain
 class TestUnresolvable:
     def test_both_always_wins_produces_artifact(self, resolver: ConflictResolver) -> None:
-        a = make_directive(
-            lineage_id="RULE-001",
-            id="RULE-001",
-            conflict_resolution={"strategy": "always_wins"},
+        a, b, g = _pair(
+            a_overrides={"conflict_resolution": {"strategy": "always_wins"}},
+            b_overrides={"conflict_resolution": {"strategy": "always_wins"}},
         )
-        b = make_directive(
-            lineage_id="RULE-002",
-            id="RULE-002",
-            conflict_resolution={"strategy": "always_wins"},
-        )
-        g = make_graph(rules=[a.model_dump(mode="json"), b.model_dump(mode="json")])
         result = resolver.resolve(a, b, g)
         assert result.method == "unresolvable"
         assert result.artifact is not None

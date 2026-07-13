@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from domain.directive_graph.enums import LineageOperation
 from domain.directive_graph.value_objects.lineage import Lineage

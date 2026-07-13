@@ -1,6 +1,9 @@
 """Metadata value objects — per-directive and dataset-level.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
+Domain-shaped only: unknown extension keys must already be folded into
+``extensions`` by the anti-corruption layer before construction.
+
+Reference: SPECIFICATION.md §7.1, §2.2.4
 """
 
 from __future__ import annotations
@@ -8,15 +11,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from domain.directive_graph.enums import LineagePreservation
-from domain.directive_graph.enums import SemanticWeightType
-from domain.directive_graph.scalars import LineageId
-from domain.directive_graph.scalars import UtcTimestamp
+from domain.directive_graph.enums import LineagePreservation, SemanticWeightType
+from domain.directive_graph.scalars import LineageId, UtcTimestamp
 from domain.directive_graph.value_objects.audit import AuditTrail
 
 # Pattern matches keys that would introduce executable logic into metadata.
@@ -28,10 +26,10 @@ def _check_extensions(extensions: dict[str, Any]) -> dict[str, Any]:
     """Raise ValueError if any extension key matches the prohibited pattern.
 
     Args:
-        extensions (dict[str, Any]): Extension key-value pairs to check.
+        extensions: Extension key-value pairs to check.
 
     Returns:
-        dict[str, Any]: The unchanged extensions dict.
+        The unchanged extensions dict.
 
     Raises:
         ValueError: If any key matches the executable-hint prohibition pattern.
@@ -49,9 +47,9 @@ class NonSurvivingParent(BaseModel):
     """A single non-surviving parent entry in a merge provenance record.
 
     Attributes:
-        lineage_id (LineageId): Lineage ID of the non-surviving parent.
-        semantic_weight (SemanticWeightType | None): Importance classification.
-        context (str | None): What this parent contributed.
+        lineage_id: Lineage ID of the non-surviving parent.
+        semantic_weight: Importance classification.
+        context: What this parent contributed.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -68,9 +66,9 @@ class MergeProvenance(BaseModel):
     weight and context of each non-surviving parent.
 
     Attributes:
-        non_surviving_parents (tuple[NonSurvivingParent, ...]): Non-surviving entries.
-        merged_at (UtcTimestamp | None): Timestamp of the merge.
-        merge_notes (str | None): Additional context about the merge.
+        non_surviving_parents: Non-surviving entries.
+        merged_at: Timestamp of the merge.
+        merge_notes: Additional context about the merge.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -81,16 +79,19 @@ class MergeProvenance(BaseModel):
 
 
 class MigrationInfo(BaseModel):
-    """Records dataset migration context and lineage handling.
+    """Records migration context and lineage handling.
+
+    On a per-directive metadata object, ``superseded_by`` binds a superseded
+    rule to its successor (SPECIFICATION.md §2.2.4).
 
     Attributes:
-        superseded_by (str | None): Version that superseded this dataset.
-        migration_notes (str | None): Human-readable migration description.
-        upgrade_from (str | None): Previous dataset version migrated from.
-        upgrade_to (str | None): Target version for next migration.
-        migration_required (bool | None): Whether manual steps are needed.
-        lineage_preservation (LineagePreservation | None): How lineage IDs are handled.
-        merge_provenance (MergeProvenance | None): Non-surviving parent documentation.
+        superseded_by: Execution ID (or dataset version) that superseded this.
+        migration_notes: Human-readable migration description.
+        upgrade_from: Previous dataset version migrated from.
+        upgrade_to: Target version for next migration.
+        migration_required: Whether manual steps are needed.
+        lineage_preservation: How lineage IDs are handled.
+        merge_provenance: Non-surviving parent documentation.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -104,10 +105,6 @@ class MigrationInfo(BaseModel):
     merge_provenance: MergeProvenance | None = None
 
 
-# Keys explicitly defined as named fields on DirectiveMetadata.
-_DIRECTIVE_METADATA_KNOWN_KEYS: frozenset[str] = frozenset({"audit", "extensions"})
-
-
 class DirectiveMetadata(BaseModel):
     """Per-directive metadata container.
 
@@ -115,47 +112,20 @@ class DirectiveMetadata(BaseModel):
     ``metadata.audit.authored_by`` is compiled to ``creator_provenance``
     for segregation enforcement (SPECIFICATION.md §3.2).
 
-    The JSON Schema allows arbitrary additional properties on the metadata
-    object (``additionalProperties: true``).  Any top-level key that is not
-    a named field is collected into ``extensions`` by the before-validator.
+    Domain-shaped: arbitrary extension keys live only under ``extensions``.
+    Wire-format scooping of unknown top-level keys is the ACL's job.
 
     Attributes:
-        audit (AuditTrail | None): Authorship and approval metadata.
-        extensions (dict[str, Any]): Arbitrary additional properties
-            (contamination-guarded).
+        audit: Authorship and approval metadata.
+        migration: Supersession / migration provenance.
+        extensions: Arbitrary additional properties (contamination-guarded).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     audit: AuditTrail | None = None
+    migration: MigrationInfo | None = None
     extensions: dict[str, Any] = Field(default_factory=dict)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _collect_unknown_keys(cls, data: Any) -> Any:
-        """Collect unrecognised top-level metadata keys into ``extensions``.
-
-        The JSON Schema uses ``additionalProperties: true`` on the metadata
-        object; unknown keys arrive as top-level keys in the raw dict and
-        must be routed to the ``extensions`` field so that Pydantic's
-        ``extra='forbid'`` constraint is not violated.
-
-        Args:
-            data (Any): Raw input dictionary.
-
-        Returns:
-            Any: Normalised dict with unknown keys folded into ``extensions``.
-        """
-        if not isinstance(data, dict):
-            return data
-        unknowns = {k: v for k, v in data.items() if k not in _DIRECTIVE_METADATA_KNOWN_KEYS}
-        if unknowns:
-            data = dict(data)
-            existing = data.get("extensions") or {}
-            data["extensions"] = {**unknowns, **(existing if isinstance(existing, dict) else {})}
-            for k in unknowns:
-                del data[k]
-        return data
 
     @model_validator(mode="after")
     def _check_no_executable_hints(self) -> DirectiveMetadata:
@@ -168,31 +138,22 @@ class DirectiveMetadata(BaseModel):
         return self
 
 
-# Keys explicitly defined as named fields on DatasetMetadata.
-_DATASET_METADATA_KNOWN_KEYS: frozenset[str] = frozenset(
-    {"audit", "vendor", "author", "migration", "domain", "jurisdiction", "project", "extensions"}
-)
-
-
 class DatasetMetadata(BaseModel):
     """Dataset-level metadata container.
 
     Informational only — MUST NOT contain executable hints.
 
-    The JSON Schema allows arbitrary additional properties on the metadata
-    object (``additionalProperties: true``).  Any top-level key that is not
-    a named field is collected into ``extensions`` by the before-validator.
+    Domain-shaped: arbitrary extension keys live only under ``extensions``.
 
     Attributes:
-        audit (AuditTrail | None): Dataset-level audit trail.
-        vendor (dict[str, str] | None): Vendor-specific string annotations.
-        author (dict[str, str] | None): Author-specific string annotations.
-        domain (str | None): Regulatory or business domain.
-        jurisdiction (str | None): Legal or operational jurisdiction.
-        project (str | None): Project identifier.
-        migration (MigrationInfo | None): Migration provenance information.
-        extensions (dict[str, Any]): Arbitrary additional properties
-            (contamination-guarded).
+        audit: Dataset-level audit trail.
+        vendor: Vendor-specific string annotations.
+        author: Author-specific string annotations.
+        domain: Regulatory or business domain.
+        jurisdiction: Legal or operational jurisdiction.
+        project: Project identifier.
+        migration: Migration provenance information.
+        extensions: Arbitrary additional properties (contamination-guarded).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -205,28 +166,6 @@ class DatasetMetadata(BaseModel):
     project: str | None = None
     migration: MigrationInfo | None = None
     extensions: dict[str, Any] = Field(default_factory=dict)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _collect_unknown_keys(cls, data: Any) -> Any:
-        """Collect unrecognised top-level metadata keys into ``extensions``.
-
-        Args:
-            data (Any): Raw input dictionary.
-
-        Returns:
-            Any: Normalised dict with unknown keys folded into ``extensions``.
-        """
-        if not isinstance(data, dict):
-            return data
-        unknowns = {k: v for k, v in data.items() if k not in _DATASET_METADATA_KNOWN_KEYS}
-        if unknowns:
-            data = dict(data)
-            existing = data.get("extensions") or {}
-            data["extensions"] = {**unknowns, **(existing if isinstance(existing, dict) else {})}
-            for k in unknowns:
-                del data[k]
-        return data
 
     @model_validator(mode="after")
     def _check_no_executable_hints(self) -> DatasetMetadata:

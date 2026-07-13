@@ -7,12 +7,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from domain.directive_graph.enums import FilterOperator
-from domain.directive_graph.enums import TargetType
+from domain.directive_graph.enums import FilterOperator, TargetType
 
 
 class ScopeFilter(BaseModel):

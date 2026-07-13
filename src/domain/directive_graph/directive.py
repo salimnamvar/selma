@@ -4,40 +4,25 @@ The ``Directive`` is the single entity inside the ``DirectiveGraph`` aggregate.
 It has dual identity (``lineage_id`` + ``id``), a defined lifecycle, and owns
 its evaluation contract.
 
-JSON format mapping
--------------------
-The JSON Schema separates ``evaluator_type`` (at directive level) from
-``evaluator_config`` (the config object).  A ``model_validator(mode="before")``
-merges them so that the domain field ``evaluator_config: Evaluator`` is a
-fully self-contained discriminated union value.
+Domain shape only: wire-format normalisation (``evaluator_type`` merge, etc.)
+is performed by the anti-corruption layer before construction.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.2, §3
+Reference: SPECIFICATION.md §2.2, §2.2.4
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import field_validator
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from domain.directive_graph.enums import DeonticType
-from domain.directive_graph.enums import DirectiveStatus
-from domain.directive_graph.enums import EvaluatorType
-from domain.directive_graph.enums import PriorityLevel
-from domain.directive_graph.enums import SeverityWeight
+from domain.directive_graph.enums import DeonticType, DirectiveStatus, EvaluatorType, PriorityLevel, SeverityWeight
 from domain.directive_graph.evaluators import Evaluator
-from domain.directive_graph.scalars import AnchorReference
-from domain.directive_graph.scalars import DirectiveReference
-from domain.directive_graph.scalars import ExecutionId
-from domain.directive_graph.scalars import LineageId
-from domain.directive_graph.scalars import UtcTimestamp
+from domain.directive_graph.exceptions import InvalidLifecycleTransitionError
+from domain.directive_graph.scalars import AnchorReference, DirectiveReference, ExecutionId, LineageId, UtcTimestamp
 from domain.directive_graph.value_objects.conflict_resolution import ConflictResolution
 from domain.directive_graph.value_objects.lineage import Lineage
-from domain.directive_graph.value_objects.metadata import DirectiveMetadata
+from domain.directive_graph.value_objects.metadata import DirectiveMetadata, MigrationInfo
 from domain.directive_graph.value_objects.scope import Scope
 
 
@@ -53,44 +38,41 @@ class Directive(BaseModel):
     Lifecycle
     ---------
     ``draft`` → ``active`` → ``deprecated`` / ``superseded``.
-
-    Mutation
-    --------
-    This model is **not** frozen.  Use ``directive.model_copy(update={...})``
-    for mutations; never assign fields directly.
+    Prefer lifecycle methods (``activate``, ``retire``, ``supersede``) over
+    raw field assignment.
 
     Attributes:
-        lineage_id (LineageId): Immutable root identity.
-        id (ExecutionId): Active execution identity.
-        type (DeonticType): Deontic force (obligation / prohibition / permission).
-        message (str): Human-readable directive text.
-        status (DirectiveStatus): Current lifecycle state.
-        evaluator_config (Evaluator): Polymorphic evaluation logic.
-        created_at (UtcTimestamp): Creation timestamp (immutable).
-        scope (Scope | None): Structured applicability context.
-        priority (PriorityLevel): Authority rank; defaults to ``operational``.
-        weight (SeverityWeight | None): Violation severity classification.
-        conflict_resolution (ConflictResolution | None): Explicit conflict override.
-        lineage (Lineage | None): Lineage operation record (fork/merge/split only).
-        depends_on (list[DirectiveReference]): IDs of directives evaluated first.
-        conflicts_with (list[DirectiveReference]): IDs of conflicting directives.
-        metadata (DirectiveMetadata | None): Informational metadata.
-        expires_at (UtcTimestamp | None): Optional expiry timestamp.
-        anchor_ref (AnchorReference | None): Link to policy document.
-        directive_revision (str | None): Revision identifier (e.g. ``"v3"``).
-        control_version (str | None): Evaluation-logic version string.
-        rationale (str | None): Why this directive exists.
-        remediation (str | None): Corrective action description.
-        parameters (dict[str, Any] | None): Evaluator configuration parameters.
-        target (str | None): Deprecated bare target string.
+        lineage_id: Immutable root identity.
+        id: Active execution identity.
+        type: Deontic force (obligation / prohibition / permission).
+        message: Human-readable directive text.
+        status: Current lifecycle state.
+        evaluator_config: Polymorphic evaluation logic (domain-shaped).
+        created_at: Creation timestamp (immutable).
+        scope: Structured applicability context.
+        priority: Authority rank; defaults to ``operational``.
+        weight: Violation severity classification.
+        conflict_resolution: Explicit conflict override.
+        lineage: Lineage operation record (fork/merge/split only).
+        depends_on: IDs of directives evaluated first.
+        conflicts_with: IDs of conflicting directives.
+        metadata: Informational metadata.
+        expires_at: Optional expiry timestamp.
+        anchor_ref: Link to policy document.
+        directive_revision: Revision identifier (e.g. ``"v3"``).
+        control_version: Evaluation-logic version string.
+        rationale: Why this directive exists.
+        remediation: Corrective action description.
+        parameters: Optional free-form parameter bag (schema escape hatch).
+        target: Deprecated bare target string; prefer ``scope``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     # --- Required identity and classification fields ---
     lineage_id: LineageId
-    id: ExecutionId  # noqa: A003  (shadows builtin; intentional schema alignment)
-    type: DeonticType  # noqa: A003  (shadows builtin; intentional schema alignment)
+    id: ExecutionId
+    type: DeonticType
     message: str = Field(min_length=1)
     status: DirectiveStatus
     evaluator_config: Evaluator
@@ -117,36 +99,6 @@ class Directive(BaseModel):
     target: str | None = None  # deprecated; prefer scope
 
     # ------------------------------------------------------------------
-    # Parsing normalisation
-    # ------------------------------------------------------------------
-
-    @model_validator(mode="before")
-    @classmethod
-    def _merge_evaluator_type_into_config(cls, data: Any) -> Any:
-        """Merge top-level ``evaluator_type`` into ``evaluator_config``.
-
-        The JSON Schema stores ``evaluator_type`` as a separate directive-level
-        field and ``evaluator_config`` as the config object without a type tag.
-        This validator injects ``evaluator_type`` into the config dict so the
-        discriminated union on ``evaluator_config`` can route correctly.
-
-        Args:
-            data (Any): Raw input dictionary.
-
-        Returns:
-            Any: Transformed data with evaluator_type embedded in evaluator_config.
-        """
-        if not isinstance(data, dict):
-            return data
-        ev_type = data.get("evaluator_type")
-        ev_config = data.get("evaluator_config")
-        if ev_type is not None and isinstance(ev_config, dict) and "evaluator_type" not in ev_config:
-            data = dict(data)
-            data["evaluator_config"] = {"evaluator_type": ev_type, **ev_config}
-            del data["evaluator_type"]
-        return data
-
-    # ------------------------------------------------------------------
     # Field-level validators
     # ------------------------------------------------------------------
 
@@ -156,10 +108,10 @@ class Directive(BaseModel):
         """Ensure reference lists contain no duplicate IDs.
 
         Args:
-            values (list[DirectiveReference]): The reference list.
+            values: The reference list.
 
         Returns:
-            list[DirectiveReference]: The unchanged list if unique.
+            The unchanged list if unique.
 
         Raises:
             ValueError: If duplicate IDs are found.
@@ -203,6 +155,21 @@ class Directive(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _validate_superseded_has_successor(self) -> Directive:
+        """Enforce that superseded directives declare a successor id.
+
+        Raises:
+            ValueError: If status is SUPERSEDED without migration.superseded_by.
+        """
+        if self.status == DirectiveStatus.SUPERSEDED:
+            successor = self.metadata and self.metadata.migration and self.metadata.migration.superseded_by
+            if not successor:
+                raise ValueError(
+                    "Superseded directives require metadata.migration.superseded_by to be set"
+                )
+        return self
+
     # ------------------------------------------------------------------
     # Convenience accessors
     # ------------------------------------------------------------------
@@ -212,6 +179,111 @@ class Directive(BaseModel):
         """Return the evaluator type from the config discriminator.
 
         Returns:
-            EvaluatorType: The type of this directive's evaluator.
+            The type of this directive's evaluator.
         """
         return EvaluatorType(self.evaluator_config.evaluator_type)
+
+    @property
+    def is_active_for_resolution(self) -> bool:
+        """Return True if this directive participates as an active resolution target.
+
+        Draft compiles as active per SPECIFICATION.md §2.8.1 / §2.15.
+        """
+        return self.status in (DirectiveStatus.ACTIVE, DirectiveStatus.DRAFT)
+
+    # ------------------------------------------------------------------
+    # Lifecycle methods (return new instances)
+    # ------------------------------------------------------------------
+
+    def activate(self) -> Directive:
+        """Transition draft → active.
+
+        Returns:
+            A new Directive with status ACTIVE.
+
+        Raises:
+            InvalidLifecycleTransitionError: If current status is not DRAFT or
+                authored_by is missing.
+        """
+        if self.status != DirectiveStatus.DRAFT:
+            raise InvalidLifecycleTransitionError(
+                f"Cannot activate directive {self.id!r} from status {self.status!r}; " "expected 'draft'"
+            )
+        authored_by = self.metadata and self.metadata.audit and self.metadata.audit.authored_by
+        if not authored_by:
+            raise InvalidLifecycleTransitionError(
+                f"Cannot activate directive {self.id!r}: metadata.audit.authored_by is required"
+            )
+        return self.model_copy(update={"status": DirectiveStatus.ACTIVE})
+
+    def retire(self) -> Directive:
+        """Transition active → deprecated (retire).
+
+        Returns:
+            A new Directive with status DEPRECATED.
+
+        Raises:
+            InvalidLifecycleTransitionError: If current status is not ACTIVE.
+        """
+        if self.status != DirectiveStatus.ACTIVE:
+            raise InvalidLifecycleTransitionError(
+                f"Cannot retire directive {self.id!r} from status {self.status!r}; " "expected 'active'"
+            )
+        return self.model_copy(update={"status": DirectiveStatus.DEPRECATED})
+
+    def supersede(self, successor_id: ExecutionId) -> Directive:
+        """Transition active → superseded with a successor binding.
+
+        Args:
+            successor_id: Execution ID of the replacing directive.
+
+        Returns:
+            A new Directive with status SUPERSEDED and migration.superseded_by set.
+
+        Raises:
+            InvalidLifecycleTransitionError: If current status is not ACTIVE.
+        """
+        if self.status != DirectiveStatus.ACTIVE:
+            raise InvalidLifecycleTransitionError(
+                f"Cannot supersede directive {self.id!r} from status {self.status!r}; " "expected 'active'"
+            )
+        migration = MigrationInfo(superseded_by=successor_id)
+        if self.metadata is None:
+            new_meta = DirectiveMetadata(migration=migration)
+        else:
+            new_meta = self.metadata.model_copy(update={"migration": migration})
+        return self.model_copy(update={"status": DirectiveStatus.SUPERSEDED, "metadata": new_meta})
+
+    def with_message(self, message: str) -> Directive:
+        """Return a copy with an updated human-readable message (rename).
+
+        Args:
+            message: Non-empty directive text.
+
+        Returns:
+            A new Directive with the updated message.
+        """
+        if not message:
+            raise ValueError("message must be non-empty")
+        return self.model_copy(update={"message": message})
+
+    def with_revision(self, revision: str, **field_updates: Any) -> Directive:
+        """Return a revised copy (same identity; lineage field not required).
+
+        Args:
+            revision: New directive_revision value.
+            **field_updates: Optional additional field updates (not identity).
+
+        Returns:
+            A new Directive with updated revision and optional fields.
+
+        Raises:
+            ValueError: If identity fields are included in field_updates.
+        """
+        forbidden = {"lineage_id", "id", "status"}
+        bad = forbidden.intersection(field_updates)
+        if bad:
+            raise ValueError(f"Revision must not change identity/status fields: {sorted(bad)}")
+        updates = dict(field_updates)
+        updates["directive_revision"] = revision
+        return self.model_copy(update=updates)

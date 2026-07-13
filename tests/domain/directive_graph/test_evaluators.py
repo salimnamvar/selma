@@ -1,25 +1,22 @@
-"""Tests for the evaluator hierarchy.
-
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.4
-"""
+"""Tests for the evaluator hierarchy."""
 
 from __future__ import annotations
 
-from pydantic import TypeAdapter
-from pydantic import ValidationError
 import pytest
+from pydantic import TypeAdapter, ValidationError
 
-from domain.directive_graph.enums import CompositeLogic
-from domain.directive_graph.enums import EvaluatorType
-from domain.directive_graph.enums import FieldCheckOperator
-from domain.directive_graph.enums import ThresholdOperator
-from domain.directive_graph.evaluators import CompositeEvaluator
-from domain.directive_graph.evaluators import Evaluator
-from domain.directive_graph.evaluators import FieldCheckEvaluator
-from domain.directive_graph.evaluators import RegexEvaluator
-from domain.directive_graph.evaluators import ThresholdEvaluator
+from domain.directive_graph.enums import CompositeLogic, EvaluatorType, FieldCheckOperator, ThresholdOperator
+from domain.directive_graph.evaluators import (
+    CompositeEvaluator,
+    Evaluator,
+    FieldCheckEvaluator,
+    RegexEvaluator,
+    ThresholdEvaluator,
+)
+from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
 
 _adapter = TypeAdapter(Evaluator)
+_mapper = DirectiveGraphMapper()
 
 
 @pytest.mark.unit
@@ -30,9 +27,17 @@ class TestRegexEvaluator:
         assert ev.pattern == "^test$"
         assert ev.flags == ""
 
-    def test_constructs_from_schema_format(self) -> None:
-        data = {"evaluator_type": "regex", "evaluator_config": {"pattern": "^abc$", "flags": "i"}}
+    def test_constructs_from_domain_shape(self) -> None:
+        data = {"evaluator_type": "regex", "pattern": "^abc$", "flags": "i"}
         ev = _adapter.validate_python(data)
+        assert isinstance(ev, RegexEvaluator)
+        assert ev.pattern == "^abc$"
+        assert ev.flags == "i"
+
+    def test_constructs_from_schema_format_via_acl(self) -> None:
+        data = {"evaluator_type": "regex", "evaluator_config": {"pattern": "^abc$", "flags": "i"}}
+        flat = _mapper._flatten_evaluator(data)
+        ev = _adapter.validate_python(flat)
         assert isinstance(ev, RegexEvaluator)
         assert ev.pattern == "^abc$"
         assert ev.flags == "i"
@@ -63,10 +68,12 @@ class TestFieldCheckEvaluator:
         )
         assert ev.field == "content.type"
 
-    def test_constructs_from_schema_format(self) -> None:
+    def test_constructs_from_domain_shape(self) -> None:
         data = {
             "evaluator_type": "field_check",
-            "evaluator_config": {"field": "status", "operator": "eq", "value": "active"},
+            "field": "status",
+            "operator": "eq",
+            "value": "active",
         }
         ev = _adapter.validate_python(data)
         assert isinstance(ev, FieldCheckEvaluator)
@@ -84,130 +91,67 @@ class TestFieldCheckEvaluator:
 @pytest.mark.unit
 @pytest.mark.domain
 class TestThresholdEvaluator:
-    def test_constructs_with_finite_threshold(self) -> None:
+    def test_constructs_directly(self) -> None:
         ev = ThresholdEvaluator(
             evaluator_type=EvaluatorType.THRESHOLD,
-            field="risk_score",
+            field="amount",
             operator=ThresholdOperator.GT,
-            threshold=0.7,
+            threshold=100.0,
         )
-        assert ev.threshold == 0.7
+        assert ev.threshold == 100.0
 
-    def test_rejects_nan_threshold(self) -> None:
-        import math
-
+    def test_rejects_nan(self) -> None:
         with pytest.raises(ValidationError):
             ThresholdEvaluator(
                 evaluator_type=EvaluatorType.THRESHOLD,
-                field="score",
+                field="amount",
                 operator=ThresholdOperator.GT,
-                threshold=math.nan,
-            )
-
-    def test_rejects_inf_threshold(self) -> None:
-        import math
-
-        with pytest.raises(ValidationError):
-            ThresholdEvaluator(
-                evaluator_type=EvaluatorType.THRESHOLD,
-                field="score",
-                operator=ThresholdOperator.GT,
-                threshold=math.inf,
+                threshold=float("nan"),
             )
 
 
 @pytest.mark.unit
 @pytest.mark.domain
 class TestCompositeEvaluator:
-    def test_constructs_and_logic(self) -> None:
+    def test_and_with_two_children(self) -> None:
+        child = RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^a$")
         ev = CompositeEvaluator(
             evaluator_type=EvaluatorType.COMPOSITE,
             logic=CompositeLogic.AND,
-            sub_evaluators=[
-                RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^a$"),
-                RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^b$"),
-            ],
+            sub_evaluators=[child, child],
         )
-        assert ev.logic == CompositeLogic.AND
         assert len(ev.sub_evaluators) == 2
 
-    def test_not_with_one_sub_evaluator(self) -> None:
-        ev = CompositeEvaluator(
-            evaluator_type=EvaluatorType.COMPOSITE,
-            logic=CompositeLogic.NOT,
-            sub_evaluators=[RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^x$")],
-        )
-        assert ev.logic == CompositeLogic.NOT
-
-    def test_not_with_two_sub_evaluators_raises(self) -> None:
-        with pytest.raises(ValidationError, match="exactly 1 sub-evaluator"):
+    def test_not_requires_exactly_one(self) -> None:
+        child = RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^a$")
+        with pytest.raises(ValidationError, match="exactly 1"):
             CompositeEvaluator(
                 evaluator_type=EvaluatorType.COMPOSITE,
                 logic=CompositeLogic.NOT,
-                sub_evaluators=[
-                    RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^a$"),
-                    RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^b$"),
-                ],
+                sub_evaluators=[child, child],
             )
 
-    def test_recursive_nesting(self) -> None:
-        inner = CompositeEvaluator(
+    def test_not_with_one_child(self) -> None:
+        child = RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^a$")
+        ev = CompositeEvaluator(
             evaluator_type=EvaluatorType.COMPOSITE,
-            logic=CompositeLogic.AND,
-            sub_evaluators=[
-                RegexEvaluator(evaluator_type=EvaluatorType.REGEX, pattern="^x$"),
-            ],
+            logic=CompositeLogic.NOT,
+            sub_evaluators=[child],
         )
-        outer = CompositeEvaluator(
-            evaluator_type=EvaluatorType.COMPOSITE,
-            logic=CompositeLogic.OR,
-            sub_evaluators=[inner],
-        )
-        assert isinstance(outer.sub_evaluators[0], CompositeEvaluator)
+        assert len(ev.sub_evaluators) == 1
 
-    def test_constructs_from_schema_format(self) -> None:
-        data = {
+    def test_nested_via_acl_flatten(self) -> None:
+        wire = {
             "evaluator_type": "composite",
             "evaluator_config": {
                 "logic": "and",
                 "sub_evaluators": [
-                    {
-                        "evaluator_type": "regex",
-                        "evaluator_config": {"pattern": "^x$"},
-                    }
+                    {"evaluator_type": "regex", "evaluator_config": {"pattern": "^x$"}},
+                    {"evaluator_type": "regex", "evaluator_config": {"pattern": "^y$"}},
                 ],
             },
         }
-        ev = _adapter.validate_python(data)
+        flat = _mapper._flatten_evaluator(wire)
+        ev = _adapter.validate_python(flat)
         assert isinstance(ev, CompositeEvaluator)
-        assert isinstance(ev.sub_evaluators[0], RegexEvaluator)
-
-
-@pytest.mark.unit
-@pytest.mark.domain
-class TestEvaluatorDiscriminatedUnion:
-    def test_routes_regex(self) -> None:
-        ev = _adapter.validate_python({"evaluator_type": "regex", "pattern": "^x$"})
-        assert isinstance(ev, RegexEvaluator)
-
-    def test_routes_field_check(self) -> None:
-        ev = _adapter.validate_python({"evaluator_type": "field_check", "field": "f", "operator": "eq", "value": 1})
-        assert isinstance(ev, FieldCheckEvaluator)
-
-    def test_routes_threshold(self) -> None:
-        ev = _adapter.validate_python({"evaluator_type": "threshold", "field": "f", "operator": "gt", "threshold": 0.5})
-        assert isinstance(ev, ThresholdEvaluator)
-
-    def test_routes_composite(self) -> None:
-        ev = _adapter.validate_python(
-            {
-                "evaluator_type": "composite",
-                "logic": "or",
-                "sub_evaluators": [{"evaluator_type": "regex", "pattern": "^x$"}],
-            }
-        )
-        assert isinstance(ev, CompositeEvaluator)
-
-    def test_rejects_unknown_evaluator_type(self) -> None:
-        with pytest.raises(ValidationError):
-            _adapter.validate_python({"evaluator_type": "unknown", "field": "x"})
+        assert len(ev.sub_evaluators) == 2

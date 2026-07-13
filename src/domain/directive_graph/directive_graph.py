@@ -9,20 +9,21 @@ complexity budgets) are enforced by domain services via specifications — NOT
 inside this model.  The model enforces only structural validity (Pydantic
 ``Field`` constraints).
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.1, §3
+Lifecycle mutations are provided by ``DirectiveLifecycleFactory`` and return
+new frozen ``DirectiveGraph`` instances plus domain events.
+
+Domain shape only: the JSON ``rules`` array is mapped to ``directives`` by
+the anti-corruption layer.
+
+Reference: SPECIFICATION.md §2.1-2.2
 """
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.directive_graph.directive import Directive
-from domain.directive_graph.scalars import ExecutionId
-from domain.directive_graph.scalars import LineageId
-from domain.directive_graph.scalars import PolicyContractId
-from domain.directive_graph.scalars import SemanticVersion
+from domain.directive_graph.scalars import ExecutionId, LineageId, PolicyContractId, SemanticVersion
 from domain.directive_graph.value_objects.metadata import DatasetMetadata
 
 
@@ -30,21 +31,18 @@ class DirectiveGraph(BaseModel):
     """Versioned, self-consistent collection of directives.
 
     This is the transactional consistency boundary for the entire directive
-    dataset.  All lineage operations (fork, merge, split) and lifecycle
-    mutations return new ``DirectiveGraph`` instances.
-
-    The JSON root of ``rule_schema.json`` maps to this class; the ``rules``
-    array maps to ``directives``.
+    dataset.  Lifecycle operations (fork, merge, split, retire, …) produce
+    new ``DirectiveGraph`` instances via ``DirectiveLifecycleFactory``.
 
     Attributes:
-        version (SemanticVersion): Semantic version of this dataset.
-        policy_contract_version (SemanticVersion): Paired policy doctrine version.
-        policy_contract_id (PolicyContractId): Always ``"universal-policy-doctrine"``.
-        metadata (DatasetMetadata | None): Dataset-level informational metadata.
-        directives (tuple[Directive, ...]): Ordered collection of directives.
+        version: Semantic version of this dataset.
+        policy_contract_version: Paired policy doctrine version.
+        policy_contract_id: Always ``"universal-policy-doctrine"``.
+        metadata: Dataset-level informational metadata.
+        directives: Ordered collection of directives.
     """
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     version: SemanticVersion
     policy_contract_version: SemanticVersion
@@ -52,8 +50,7 @@ class DirectiveGraph(BaseModel):
     metadata: DatasetMetadata | None = None
     directives: tuple[Directive, ...] = Field(
         min_length=1,
-        alias="rules",
-        description="Ordered collection of directives (JSON: rules[]).",
+        description="Ordered collection of directives.",
     )
 
     # ------------------------------------------------------------------
@@ -64,10 +61,10 @@ class DirectiveGraph(BaseModel):
         """Return the directive with the given execution ID, or ``None``.
 
         Args:
-            execution_id (ExecutionId): The execution ID to look up.
+            execution_id: The execution ID to look up.
 
         Returns:
-            Directive | None: Matching directive, or None if not found.
+            Matching directive, or None if not found.
         """
         for directive in self.directives:
             if directive.id == execution_id:
@@ -78,13 +75,13 @@ class DirectiveGraph(BaseModel):
         """Return all directives sharing the given lineage ID.
 
         After fork or split operations there may be multiple directives with
-        the same ``lineage_id``.
+        the same ``lineage_id`` (SPECIFICATION.md §2.3).
 
         Args:
-            lineage_id (LineageId): The lineage ID to look up.
+            lineage_id: The lineage ID to look up.
 
         Returns:
-            list[Directive]: All matching directives (may be empty).
+            All matching directives (may be empty).
         """
         return [d for d in self.directives if d.lineage_id == lineage_id]
 
@@ -92,7 +89,7 @@ class DirectiveGraph(BaseModel):
         """Return a frozenset of all execution IDs in this graph.
 
         Returns:
-            frozenset[ExecutionId]: Set of all execution IDs.
+            Set of all execution IDs.
         """
         return frozenset(d.id for d in self.directives)
 
@@ -103,6 +100,45 @@ class DirectiveGraph(BaseModel):
         ``len(self.directives)``.
 
         Returns:
-            frozenset[LineageId]: Set of all lineage IDs.
+            Set of all lineage IDs.
         """
         return frozenset(d.lineage_id for d in self.directives)
+
+    # ------------------------------------------------------------------
+    # Structural copy helpers used by lifecycle factory
+    # ------------------------------------------------------------------
+
+    def replace_directive(self, directive: Directive) -> DirectiveGraph:
+        """Return a new graph with the directive of matching ``id`` replaced.
+
+        Args:
+            directive: Replacement directive (must already exist by id).
+
+        Returns:
+            New frozen graph.
+
+        Raises:
+            ValueError: If no directive with the same id exists.
+        """
+        found = False
+        new_directives: list[Directive] = []
+        for d in self.directives:
+            if d.id == directive.id:
+                new_directives.append(directive)
+                found = True
+            else:
+                new_directives.append(d)
+        if not found:
+            raise ValueError(f"Cannot replace unknown directive id {directive.id!r}")
+        return self.model_copy(update={"directives": tuple(new_directives)})
+
+    def with_directives(self, directives: tuple[Directive, ...]) -> DirectiveGraph:
+        """Return a new graph with the given directives collection.
+
+        Args:
+            directives: Full replacement collection (must be non-empty).
+
+        Returns:
+            New frozen graph.
+        """
+        return self.model_copy(update={"directives": directives})

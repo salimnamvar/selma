@@ -5,17 +5,16 @@ that authored any directive in its lineage chain.
 
 Per SPECIFICATION.md §3.2 and x-creator-provenance:
 - create / modify: { authored_by }
-- fork / split: inherited from parent (same set)
-- merge: sorted-set union of both parents' provenances
+- fork / split: inherited from parent (same set, via parent walk)
+- merge: sorted-set union of both parents' provenances (via parent walk)
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.7
+Reference: SPECIFICATION.md §3.2
 """
 
 from __future__ import annotations
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.enums import LineageOperation
 from domain.directive_graph.scalars import ActorId
 
 
@@ -26,11 +25,11 @@ class ProvenanceInheritanceService:
         """Return the set of all actors in the directive's full lineage.
 
         Args:
-            directive (Directive): The directive whose provenance to compute.
-            graph (DirectiveGraph): The graph containing the directive.
+            directive: The directive whose provenance to compute.
+            graph: The graph containing the directive.
 
         Returns:
-            frozenset[ActorId]: All authored_by actors through the lineage.
+            All authored_by actors through the lineage.
         """
         return frozenset(self._collect(directive, graph, visited=set()))
 
@@ -40,16 +39,7 @@ class ProvenanceInheritanceService:
         graph: DirectiveGraph,
         visited: set[str],
     ) -> set[ActorId]:
-        """Recursively collect authored_by actors through ancestry.
-
-        Args:
-            directive (Directive): Current node.
-            graph (DirectiveGraph): The full graph for parent lookups.
-            visited (set[str]): Cycle guard.
-
-        Returns:
-            set[ActorId]: Actors found in this subtree.
-        """
+        """Recursively collect authored_by actors through ancestry."""
         if directive.id in visited:
             return set()
         visited = visited | {directive.id}

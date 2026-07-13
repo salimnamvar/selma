@@ -5,15 +5,10 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from domain.directive_graph.enums import LineageOperation
-from domain.directive_graph.scalars import ExecutionId
-from domain.directive_graph.scalars import LineageId
-from domain.directive_graph.scalars import UtcTimestamp
+from domain.directive_graph.scalars import ExecutionId, LineageId, UtcTimestamp
 
 
 class Lineage(BaseModel):

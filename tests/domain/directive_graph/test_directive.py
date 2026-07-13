@@ -1,19 +1,16 @@
-"""Tests for the Directive entity.
-
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.2
-"""
+"""Tests for the Directive entity."""
 
 from __future__ import annotations
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
+from tests.domain.directive_graph.conftest import make_directive, make_domain_directive_payload
 
-from domain.directive_graph.enums import DeonticType
-from domain.directive_graph.enums import DirectiveStatus
-from domain.directive_graph.enums import EvaluatorType
-from tests.domain.directive_graph.conftest import make_active_directive_payload
-from tests.domain.directive_graph.conftest import make_directive
-from tests.domain.directive_graph.conftest import make_directive_payload
+from domain.directive_graph.directive import Directive
+from domain.directive_graph.enums import DeonticType, DirectiveStatus, EvaluatorType
+from domain.directive_graph.evaluators import FieldCheckEvaluator, RegexEvaluator
+from domain.directive_graph.exceptions import InvalidLifecycleTransitionError
+from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
 
 
 @pytest.mark.unit
@@ -31,8 +28,6 @@ class TestDirectiveConstruction:
         assert d.evaluator_type == EvaluatorType.REGEX
 
     def test_evaluator_config_is_populated(self) -> None:
-        from domain.directive_graph.evaluators import RegexEvaluator
-
         d = make_directive()
         assert isinstance(d.evaluator_config, RegexEvaluator)
         assert d.evaluator_config.pattern == "^test$"
@@ -52,6 +47,10 @@ class TestDirectiveConstruction:
         assert d.expires_at is None
         assert d.anchor_ref is None
         assert d.metadata is None
+
+    def test_domain_shaped_construction(self) -> None:
+        d = Directive.model_validate(make_domain_directive_payload())
+        assert d.id == "RULE-001"
 
 
 @pytest.mark.unit
@@ -104,10 +103,36 @@ class TestDirectiveInvariants:
 
 @pytest.mark.unit
 @pytest.mark.domain
+class TestDirectiveLifecycleMethods:
+    def test_activate_from_draft(self) -> None:
+        d = make_directive(metadata={"audit": {"authored_by": "alice"}})
+        active = d.activate()
+        assert active.status == DirectiveStatus.ACTIVE
+        assert d.status == DirectiveStatus.DRAFT  # original unchanged
+
+    def test_activate_without_author_raises(self) -> None:
+        d = make_directive()
+        with pytest.raises(InvalidLifecycleTransitionError):
+            d.activate()
+
+    def test_retire_from_active(self) -> None:
+        d = make_directive(status="active", metadata={"audit": {"authored_by": "alice"}})
+        retired = d.retire()
+        assert retired.status == DirectiveStatus.DEPRECATED
+
+    def test_supersede_requires_successor(self) -> None:
+        d = make_directive(status="active", metadata={"audit": {"authored_by": "alice"}})
+        superseded = d.supersede("RULE-002")
+        assert superseded.status == DirectiveStatus.SUPERSEDED
+        assert superseded.metadata is not None
+        assert superseded.metadata.migration is not None
+        assert superseded.metadata.migration.superseded_by == "RULE-002"
+
+
+@pytest.mark.unit
+@pytest.mark.domain
 class TestDirectiveJsonRoundTrip:
     def test_round_trip_minimal(self) -> None:
-        from domain.directive_graph.directive import Directive
-
         d = make_directive()
         dumped = d.model_dump(mode="json")
         restored = Directive.model_validate(dumped)
@@ -115,10 +140,8 @@ class TestDirectiveJsonRoundTrip:
         assert restored.id == d.id
         assert restored.evaluator_config == d.evaluator_config
 
-    def test_schema_format_parses_correctly(self) -> None:
-        """Ensure JSON schema format (separate evaluator_type) is accepted."""
-        from domain.directive_graph.directive import Directive
-
+    def test_schema_format_parses_via_acl(self) -> None:
+        """Ensure JSON schema format is accepted through the ACL mapper."""
         raw = {
             "lineage_id": "AUTH-001",
             "id": "AUTH-001",
@@ -129,8 +152,21 @@ class TestDirectiveJsonRoundTrip:
             "status": "draft",
             "created_at": "2026-03-01T00:00:00Z",
         }
-        d = Directive.model_validate(raw)
-        from domain.directive_graph.evaluators import FieldCheckEvaluator
-
+        d = DirectiveGraphMapper().directive_to_domain(raw)
         assert isinstance(d.evaluator_config, FieldCheckEvaluator)
         assert d.evaluator_config.field == "role"
+
+    def test_domain_rejects_wire_split_evaluator_type(self) -> None:
+        """Domain model does not accept top-level evaluator_type without merge."""
+        raw = {
+            "lineage_id": "AUTH-001",
+            "id": "AUTH-001",
+            "type": "prohibition",
+            "message": "No unauthorized access",
+            "evaluator_type": "field_check",
+            "evaluator_config": {"field": "role", "operator": "neq", "value": "admin"},
+            "status": "draft",
+            "created_at": "2026-03-01T00:00:00Z",
+        }
+        with pytest.raises(ValidationError):
+            Directive.model_validate(raw)

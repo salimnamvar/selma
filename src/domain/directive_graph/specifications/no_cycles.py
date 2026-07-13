@@ -26,7 +26,7 @@ def _has_cycle(adjacency: dict[str, list[str]]) -> list[str]:
     all_nodes: set[str] = set(adjacency)
     for neighbours in adjacency.values():
         all_nodes.update(neighbours)
-    colour: dict[str, int] = {node: WHITE for node in all_nodes}
+    colour: dict[str, int] = dict.fromkeys(all_nodes, WHITE)
     cyclic_nodes: set[str] = set()
 
     for start in list(all_nodes):

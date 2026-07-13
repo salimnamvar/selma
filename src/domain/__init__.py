@@ -1,7 +1,13 @@
-"""Policy Doctrine domain model."""
+"""Selma domain layer.
+
+Bounded contexts:
+- ``domain.directive_graph`` — executable Directive Graph (rule_schema projection)
+- ``domain.policy_doctrine`` — governance doctrine (policy_doctrine.yaml projection)
+- ``domain.shared`` — cross-context kernel types (domain events)
+"""
 
 from __future__ import annotations
 
-from . import policy_doctrine
+from domain import directive_graph, policy_doctrine, shared
 
-__all__ = ["policy_doctrine"]
+__all__ = ["directive_graph", "policy_doctrine", "shared"]

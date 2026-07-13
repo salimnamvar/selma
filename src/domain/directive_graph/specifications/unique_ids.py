@@ -1,49 +1,16 @@
-"""Uniqueness specifications for lineage and execution IDs.
+"""Uniqueness specifications for execution IDs.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.8
+Per SPECIFICATION.md §2.3 (Lineage-Uniqueness Refinement):
+- Execution IDs (``id``) MUST be unique within a ruleset.
+- ``lineage_id`` MAY be shared by multiple directives after fork/split.
+- Primary key is ``(lineage_id, id)``; ``id`` alone is also globally unique.
+
+Reference: SPECIFICATION.md §2.3
 """
 
 from __future__ import annotations
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-
-
-class UniqueLineageIdsSpec:
-    """Every lineage_id within a DirectiveGraph must be unique.
-
-    After fork/split, multiple directives may share the same lineage_id —
-    this specification flags that as a violation.  Each lineage root MUST
-    appear exactly once.
-    """
-
-    def is_satisfied_by(self, graph: DirectiveGraph) -> bool:
-        """Return True iff all lineage_ids are unique.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            bool: True when satisfied.
-        """
-        ids = [d.lineage_id for d in graph.directives]
-        return len(ids) == len(set(ids))
-
-    def violations(self, graph: DirectiveGraph) -> list[str]:
-        """Return violation messages for each duplicate lineage_id.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            list[str]: Human-readable violation descriptions.
-        """
-        seen: set[str] = set()
-        duplicates: set[str] = set()
-        for d in graph.directives:
-            if d.lineage_id in seen:
-                duplicates.add(d.lineage_id)
-            seen.add(d.lineage_id)
-        return [f"Duplicate lineage_id: {lid!r}" for lid in sorted(duplicates)]
 
 
 class UniqueExecutionIdsSpec:
@@ -53,10 +20,10 @@ class UniqueExecutionIdsSpec:
         """Return True iff all execution IDs are unique.
 
         Args:
-            graph (DirectiveGraph): The graph to check.
+            graph: The graph to check.
 
         Returns:
-            bool: True when satisfied.
+            True when satisfied.
         """
         ids = [d.id for d in graph.directives]
         return len(ids) == len(set(ids))
@@ -65,10 +32,10 @@ class UniqueExecutionIdsSpec:
         """Return violation messages for each duplicate execution ID.
 
         Args:
-            graph (DirectiveGraph): The graph to check.
+            graph: The graph to check.
 
         Returns:
-            list[str]: Human-readable violation descriptions.
+            Human-readable violation descriptions.
         """
         seen: set[str] = set()
         duplicates: set[str] = set()

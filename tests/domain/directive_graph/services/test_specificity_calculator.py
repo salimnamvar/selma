@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 import pytest
-
-from domain.directive_graph.enums import FilterOperator
-from domain.directive_graph.enums import TargetType
-from domain.directive_graph.services.specificity_calculator import SpecificityCalculator
-from domain.directive_graph.value_objects.scope import Scope
-from domain.directive_graph.value_objects.scope import ScopeFilter
 from tests.domain.directive_graph.conftest import make_directive
+
+from domain.directive_graph.services.specificity_calculator import SpecificityCalculator
 
 
 @pytest.fixture

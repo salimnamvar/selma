@@ -1,43 +1,49 @@
 """Abstract persistence port for DirectiveGraph.
 
-Infrastructure implementations live in ``src/infrastructure/repository.py``.
-The domain only defines the abstract interface.
+Infrastructure implementations live outside the domain package.
+The domain only defines the abstract interface and an opaque identity type.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.9
+Reference: Clean Architecture / Hexagonal ports
 """
 
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from typing import NewType
 
 from domain.directive_graph.directive_graph import DirectiveGraph
 
+# Opaque repository identity — not a filesystem path. Infrastructure maps
+# this token to storage (file, DB row, object key, etc.).
+DirectiveGraphRef = NewType("DirectiveGraphRef", str)
+
 
 class DirectiveGraphRepository(ABC):
-    """Abstract persistence port for loading and saving directive graphs.
-
-    Attributes:
-        None
-    """
+    """Abstract persistence port for loading and saving directive graphs."""
 
     @abstractmethod
-    def load(self, source: str) -> DirectiveGraph:
-        """Load a ``DirectiveGraph`` from the given source.
+    def get(self, ref: DirectiveGraphRef) -> DirectiveGraph:
+        """Load a ``DirectiveGraph`` by opaque repository reference.
 
         Args:
-            source (str): Source path or identifier (format is
-                implementation-defined).
+            ref: Infrastructure-defined identity token.
 
         Returns:
-            DirectiveGraph: The loaded and structurally validated graph.
+            The loaded and structurally validated graph.
+
+        Raises:
+            KeyError: If no graph exists for ``ref`` (implementation-defined).
         """
 
     @abstractmethod
-    def save(self, graph: DirectiveGraph, destination: str) -> None:
-        """Persist a ``DirectiveGraph`` to the given destination.
+    def save(self, graph: DirectiveGraph, ref: DirectiveGraphRef) -> None:
+        """Persist a ``DirectiveGraph`` under the given reference.
 
         Args:
-            graph (DirectiveGraph): The graph to persist.
-            destination (str): Destination path or identifier.
+            graph: The graph to persist.
+            ref: Infrastructure-defined identity token.
         """
+
+    @abstractmethod
+    def exists(self, ref: DirectiveGraphRef) -> bool:
+        """Return True iff a graph is stored under ``ref``."""

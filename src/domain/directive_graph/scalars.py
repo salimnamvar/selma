@@ -3,7 +3,11 @@
 Pattern-only scalars are ``Annotated`` type aliases — no class overhead.
 Behaviour-bearing scalars use ``RootModel[str]`` to expose property methods.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.5
+``SemanticVersion`` here is a string RootModel aligned with rule_schema.json.
+The policy-doctrine context uses a structured major/minor/patch model aligned
+with policy_doctrine.yaml — the two are intentionally not shared.
+
+Reference: SPECIFICATION.md §2.3, rule_schema.json
 """
 
 from __future__ import annotations
@@ -11,9 +15,7 @@ from __future__ import annotations
 import math
 from typing import Annotated
 
-from pydantic import ConfigDict
-from pydantic import Field
-from pydantic import RootModel
+from pydantic import ConfigDict, Field, RootModel
 from pydantic.functional_validators import AfterValidator
 
 # ---------------------------------------------------------------------------
@@ -77,7 +79,7 @@ RegexPattern = Annotated[
         description="Regex pattern string. RE2 compatibility enforced at compile time.",
     ),
 ]
-"""RE2-compatible regex pattern (length 1–4096). RE2 linting is infrastructure."""
+"""RE2-compatible regex pattern (length 1-4096). RE2 linting is infrastructure."""
 
 RegexFlags = Annotated[
     str,
@@ -126,10 +128,10 @@ FiniteFloat = Annotated[
 
 
 class SemanticVersion(RootModel[str]):
-    """Semantic version string with component access (MAJOR.MINOR.PATCH).
+    r"""Semantic version string with component access (MAJOR.MINOR.PATCH).
 
     Attributes:
-        root (str): Raw version string matching ``^\\d+\\.\\d+\\.\\d+$``.
+        root (str): Raw version string matching ``^\d+\.\d+\.\d+$``.
     """
 
     root: str = Field(

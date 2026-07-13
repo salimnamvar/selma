@@ -5,9 +5,7 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
 
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from domain.directive_graph.enums import ConflictStrategy
 from domain.directive_graph.scalars import DirectiveReference

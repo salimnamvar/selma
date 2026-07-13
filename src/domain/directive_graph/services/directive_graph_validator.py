@@ -1,24 +1,23 @@
 """DirectiveGraph validator — orchestrates all cross-directive specifications.
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.7
+Entity-local invariants (active author, expires_at ordering, NOT cardinality)
+are enforced at construction time. This service only runs multi-object rules.
+
+Reference: SPECIFICATION.md §2.2.3, §2.9, §2.15
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.services.evaluator_tree_validator import EvaluatorTreeValidator
 from domain.directive_graph.services.lineage_validator import LineageValidator
-from domain.directive_graph.specifications.audit_completeness import ActiveDirectiveRequiresAuthorSpec
+from domain.directive_graph.specifications.base import Specification
 from domain.directive_graph.specifications.evaluator_complexity import EvaluatorTreeComplexitySpec
 from domain.directive_graph.specifications.metadata_size import MetadataSizeSpec
-from domain.directive_graph.specifications.no_cycles import NoDeferToCyclesSpec
-from domain.directive_graph.specifications.no_cycles import NoDependencyCyclesSpec
-from domain.directive_graph.specifications.temporal_ordering import ExpiresAfterCreatedSpec
+from domain.directive_graph.specifications.no_cycles import NoDeferToCyclesSpec, NoDependencyCyclesSpec
+from domain.directive_graph.specifications.supersession import SupersessionBindingSpec
 from domain.directive_graph.specifications.unique_ids import UniqueExecutionIdsSpec
-from domain.directive_graph.specifications.unique_ids import UniqueLineageIdsSpec
 from domain.directive_graph.specifications.valid_references import ValidCrossReferencesSpec
 
 
@@ -27,9 +26,9 @@ class ValidationResult:
     """Structured result from graph-level validation.
 
     Attributes:
-        is_valid (bool): True iff no errors were found.
-        errors (tuple[str, ...]): Critical violations that must be resolved.
-        warnings (tuple[str, ...]): Non-critical observations.
+        is_valid: True iff no errors were found.
+        errors: Critical violations that must be resolved.
+        warnings: Non-critical observations.
     """
 
     is_valid: bool
@@ -40,46 +39,38 @@ class ValidationResult:
 class DirectiveGraphValidator:
     """Orchestrates all cross-directive invariant checks.
 
-    Runs every registered specification and domain service in order.
+    Runs every registered specification and the lineage domain service.
     Returns a structured ``ValidationResult`` — never raises for validation
     failures (only for programming errors in the caller).
     """
 
     def __init__(self) -> None:
-        self._specs = [
-            UniqueLineageIdsSpec(),
+        """Register default specifications and the lineage validator."""
+        self._specs: list[Specification[DirectiveGraph]] = [
             UniqueExecutionIdsSpec(),
             ValidCrossReferencesSpec(),
             NoDependencyCyclesSpec(),
             NoDeferToCyclesSpec(),
             EvaluatorTreeComplexitySpec(),
-            ActiveDirectiveRequiresAuthorSpec(),
-            ExpiresAfterCreatedSpec(),
             MetadataSizeSpec(),
+            SupersessionBindingSpec(),
         ]
-        self._evaluator_tree_validator = EvaluatorTreeValidator()
         self._lineage_validator = LineageValidator()
 
     def validate(self, graph: DirectiveGraph) -> ValidationResult:
         """Run all specifications and domain services against the graph.
 
         Args:
-            graph (DirectiveGraph): The graph to validate.
+            graph: The graph to validate.
 
         Returns:
-            ValidationResult: Structured result with all errors collected.
+            Structured result with all errors collected.
         """
         errors: list[str] = []
 
-        # Run all registered specifications
         for spec in self._specs:
             errors.extend(spec.violations(graph))
 
-        # Run evaluator tree validator (separate domain service)
-        for violation in self._evaluator_tree_validator.validate(graph):
-            errors.append(f"[{violation.directive_id}] {violation.message}")
-
-        # Run lineage validator
         for violation in self._lineage_validator.validate(graph):
             errors.append(f"[{violation.directive_id}] {violation.message}")
 

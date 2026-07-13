@@ -15,10 +15,7 @@ from __future__ import annotations
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.enums import TargetType
-from domain.directive_graph.evaluators import CompositeEvaluator
-from domain.directive_graph.evaluators import Evaluator
-from domain.directive_graph.evaluators import FieldCheckEvaluator
-from domain.directive_graph.evaluators import ThresholdEvaluator
+from domain.directive_graph.evaluators import CompositeEvaluator, Evaluator, FieldCheckEvaluator, ThresholdEvaluator
 
 
 def _count_field_bindings(evaluator: Evaluator) -> int:

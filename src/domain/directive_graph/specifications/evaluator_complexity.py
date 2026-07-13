@@ -11,8 +11,7 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.8
 from __future__ import annotations
 
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.evaluators import CompositeEvaluator
-from domain.directive_graph.evaluators import Evaluator
+from domain.directive_graph.evaluators import CompositeEvaluator, Evaluator
 
 MAX_COMPOSITE_DEPTH: int = 32
 MAX_EVALUATOR_NODES: int = 256

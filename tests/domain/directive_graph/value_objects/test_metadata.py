@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
-from domain.directive_graph.value_objects.metadata import DatasetMetadata
-from domain.directive_graph.value_objects.metadata import DirectiveMetadata
+from domain.directive_graph.value_objects.metadata import DatasetMetadata, DirectiveMetadata
 
 
 @pytest.mark.unit

@@ -1,11 +1,16 @@
-"""Lineage validator domain service.
+"""Lineage DAG validator domain service.
 
-Validates:
-1. Lineage parent IDs reference directives that exist in the graph.
-2. Lineage ancestry depth does not exceed max_ancestry_depth = 64
-   (SPECIFICATION.md §2.2.3 / x-identity-limits).
+Implements the mechanical validation algorithm from SPECIFICATION.md §2.2.3:
 
-Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.7
+1. Build ancestry graph from parent_lineage_ids → child lineage_id
+2. Detect cycles
+3. Validate parent existence (lineage + execution IDs)
+4. Validate operation consistency (also on Lineage VO)
+5. Validate ancestry depth ≤ 64
+6. Validate no self-reference
+7. Validate temporal ordering (child timestamp ≥ parent timestamps)
+
+Reference: SPECIFICATION.md §2.2.3
 """
 
 from __future__ import annotations
@@ -13,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from domain.directive_graph.directive_graph import DirectiveGraph
+from domain.directive_graph.enums import LineageOperation
 
 MAX_ANCESTRY_DEPTH: int = 64
 
@@ -22,8 +28,8 @@ class LineageViolation:
     """A single lineage constraint violation.
 
     Attributes:
-        directive_id (str): Execution ID of the offending directive.
-        message (str): Human-readable description.
+        directive_id: Execution ID of the offending directive (or ``*``).
+        message: Human-readable description.
     """
 
     directive_id: str
@@ -31,31 +37,53 @@ class LineageViolation:
 
 
 class LineageValidator:
-    """Validates lineage records across the directive graph."""
+    """Validates lineage records across the directive graph per §2.2.3."""
 
     def validate(self, graph: DirectiveGraph) -> list[LineageViolation]:
         """Return all lineage violations for the graph.
 
         Args:
-            graph (DirectiveGraph): The graph to validate.
+            graph: The graph to validate.
 
         Returns:
-            list[LineageViolation]: Empty list iff the graph is valid.
+            Empty list iff the graph is valid.
         """
         violations: list[LineageViolation] = []
+        violations.extend(self._validate_self_references(graph))
         violations.extend(self._validate_parent_references(graph))
+        violations.extend(self._validate_operation_consistency(graph))
+        violations.extend(self._validate_cycles(graph))
+        violations.extend(self._validate_temporal_ordering(graph))
         violations.extend(self._validate_ancestry_depth(graph))
         return violations
 
+    def _validate_self_references(self, graph: DirectiveGraph) -> list[LineageViolation]:
+        """A rule MUST NOT list its own lineage_id or id as a parent."""
+        violations: list[LineageViolation] = []
+        for d in graph.directives:
+            if d.lineage is None:
+                continue
+            if d.lineage_id in d.lineage.parent_lineage_ids:
+                violations.append(
+                    LineageViolation(
+                        directive_id=d.id,
+                        message=(
+                            f"Rule references itself in parent_lineage_ids "
+                            f"(lineage_id={d.lineage_id!r})"
+                        ),
+                    )
+                )
+            if d.id in d.lineage.parent_execution_ids:
+                violations.append(
+                    LineageViolation(
+                        directive_id=d.id,
+                        message=f"Rule references itself in parent_execution_ids (id={d.id!r})",
+                    )
+                )
+        return violations
+
     def _validate_parent_references(self, graph: DirectiveGraph) -> list[LineageViolation]:
-        """Check that every lineage parent_execution_id exists in the graph.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            list[LineageViolation]: Violations for unresolvable parent IDs.
-        """
+        """Every lineage parent ID must reference a directive in the graph."""
         known_ids = graph.execution_ids()
         known_lineage_ids = graph.lineage_ids()
         violations: list[LineageViolation] = []
@@ -80,27 +108,96 @@ class LineageValidator:
                     )
         return violations
 
-    def _validate_ancestry_depth(self, graph: DirectiveGraph) -> list[LineageViolation]:
-        """Check that no lineage ancestry chain exceeds max_ancestry_depth.
-
-        Builds a parent map from lineage records and DFS-measures depth from
-        each directive.
-
-        Args:
-            graph (DirectiveGraph): The graph to check.
-
-        Returns:
-            list[LineageViolation]: Violations for chains exceeding 64 hops.
-        """
-        # Build execution_id → set of parent execution IDs
-        parent_map: dict[str, list[str]] = {d.id: [] for d in graph.directives}
+    def _validate_operation_consistency(self, graph: DirectiveGraph) -> list[LineageViolation]:
+        """fork/split → 1 parent lineage; merge → 2 parent lineages."""
+        violations: list[LineageViolation] = []
         for d in graph.directives:
+            if d.lineage is None:
+                continue
+            op = d.lineage.operation
+            n = len(d.lineage.parent_lineage_ids)
+            if op in (LineageOperation.FORK, LineageOperation.SPLIT) and n != 1:
+                violations.append(
+                    LineageViolation(
+                        directive_id=d.id,
+                        message=f"{op} requires exactly 1 parent_lineage_id; got {n}",
+                    )
+                )
+            elif op == LineageOperation.MERGE and n != 2:
+                violations.append(
+                    LineageViolation(
+                        directive_id=d.id,
+                        message=f"merge requires exactly 2 parent_lineage_ids; got {n}",
+                    )
+                )
+        return violations
+
+    def _validate_cycles(self, graph: DirectiveGraph) -> list[LineageViolation]:
+        """Detect directed cycles in parent_lineage_ids → child lineage_id."""
+        adjacency: dict[str, list[str]] = {}
+        for d in graph.directives:
+            adjacency.setdefault(d.lineage_id, [])
+            if d.lineage is None:
+                continue
+            for parent_id in d.lineage.parent_lineage_ids:
+                adjacency.setdefault(parent_id, [])
+                # edge: parent → child
+                adjacency[parent_id].append(d.lineage_id)
+
+        cyclic = self._cyclic_nodes(adjacency)
+        if not cyclic:
+            return []
+        return [
+            LineageViolation(
+                directive_id="*",
+                message=f"Lineage DAG cycle detected involving lineage_id {nid!r}",
+            )
+            for nid in cyclic
+        ]
+
+    def _validate_temporal_ordering(self, graph: DirectiveGraph) -> list[LineageViolation]:
+        """Child lineage.timestamp MUST be ≥ max(parent lineage timestamps)."""
+        by_exec = {d.id: d for d in graph.directives}
+        violations: list[LineageViolation] = []
+        for d in graph.directives:
+            if d.lineage is None:
+                continue
+            child_ts = d.lineage.timestamp
+            for pid in d.lineage.parent_execution_ids:
+                parent = by_exec.get(pid)
+                if parent is None:
+                    continue
+                if parent.lineage is not None and parent.lineage.timestamp > child_ts:
+                    violations.append(
+                        LineageViolation(
+                            directive_id=d.id,
+                            message=(
+                                f"Parent timestamp violates temporal ordering: "
+                                f"parent {pid!r} lineage.timestamp "
+                                f"{parent.lineage.timestamp!r} > child {child_ts!r}"
+                            ),
+                        )
+                    )
+        return violations
+
+    def _validate_ancestry_depth(self, graph: DirectiveGraph) -> list[LineageViolation]:
+        """Ancestry depth must not exceed max_ancestry_depth (64)."""
+        # Build lineage_id → parent lineage_ids adjacency for depth on lineage roots
+        parent_map: dict[str, list[str]] = {}
+        for d in graph.directives:
+            parent_map.setdefault(d.lineage_id, [])
             if d.lineage is not None:
-                parent_map[d.id] = list(d.lineage.parent_execution_ids)
+                # Prefer the most specific parents recorded for this lineage root
+                parents = list(d.lineage.parent_lineage_ids)
+                if not parent_map[d.lineage_id]:
+                    parent_map[d.lineage_id] = parents
+                else:
+                    # union
+                    parent_map[d.lineage_id] = list(set(parent_map[d.lineage_id]) | set(parents))
 
         violations: list[LineageViolation] = []
         for d in graph.directives:
-            depth = self._measure_depth(d.id, parent_map, visited=set())
+            depth = self._measure_depth(d.lineage_id, parent_map, visited=set())
             if depth > MAX_ANCESTRY_DEPTH:
                 violations.append(
                     LineageViolation(
@@ -116,20 +213,45 @@ class LineageValidator:
         parent_map: dict[str, list[str]],
         visited: set[str],
     ) -> int:
-        """Return the ancestry depth of the given node.
+        """Return ancestry depth of the given lineage node.
 
-        Args:
-            node_id (str): The node whose ancestry depth to measure.
-            parent_map (dict[str, list[str]]): Parent adjacency map.
-            visited (set[str]): Cycle guard (nodes already on the path).
-
-        Returns:
-            int: Maximum ancestry depth (0 = no parents).
+        Cycles return 0 here; cycle violations are reported separately.
         """
         if node_id in visited:
-            return 0  # cycle guard; cycles are caught by NoDependencyCyclesSpec
+            return 0
         parents = parent_map.get(node_id, [])
         if not parents:
             return 0
         visited = visited | {node_id}
         return 1 + max(self._measure_depth(pid, parent_map, visited) for pid in parents)
+
+    @staticmethod
+    def _cyclic_nodes(adjacency: dict[str, list[str]]) -> list[str]:
+        """Return sorted node IDs that participate in at least one cycle."""
+        white, grey, black = 0, 1, 2
+        all_nodes: set[str] = set(adjacency)
+        for neighbours in adjacency.values():
+            all_nodes.update(neighbours)
+        colour: dict[str, int] = dict.fromkeys(all_nodes, white)
+        cyclic_nodes: set[str] = set()
+
+        for start in list(all_nodes):
+            if colour[start] != white:
+                continue
+            stack: list[tuple[str, object]] = [(start, iter(adjacency.get(start, [])))]
+            colour[start] = grey
+            while stack:
+                node, neighbours = stack[-1]
+                try:
+                    nxt = next(neighbours)  # type: ignore[call-overload]
+                    if colour.get(nxt, white) == grey:
+                        cyclic_nodes.update(n for n, _ in stack)
+                        cyclic_nodes.add(nxt)
+                    elif colour.get(nxt, white) == white:
+                        colour[nxt] = grey
+                        stack.append((nxt, iter(adjacency.get(nxt, []))))
+                except StopIteration:
+                    colour[node] = black
+                    stack.pop()
+
+        return sorted(cyclic_nodes)
