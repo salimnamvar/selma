@@ -11,18 +11,10 @@
 title Selma -- Container Diagram
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
-!include ./common/c4_styles.puml
 !theme plain
+!include ./common/c4_styles.puml
 
 LAYOUT_LEFT_RIGHT()
-LAYOUT_WITH_LEGEND()
-
-AddRelTag("compile_only",        $legendText="compile-time only -- runtime access is prohibited")
-AddRelTag("immutable",           $legendText="append-only -- never mutated")
-AddRelTag("mediated",            $legendText="mediated output -- Selma never mutates external state")
-AddRelTag("capability_enforced", $legendText="permission-checked before action")
-AddRelTag("async",               $legendText="asynchronous / eventually consistent delivery")
-
 
 ' ============================================================
 '  ACTORS (verbatim from Context Diagram)
@@ -58,13 +50,13 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 
     Container(selma_app, "Selma Application", "REST API / Python", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime.")
 
-    ContainerDb(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.")
+    ContainerDb(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.", $tags="store")
 
-    ContainerDb(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.")
+    ContainerDb(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.", $tags="store")
 
-    ContainerDb(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.")
+    ContainerDb(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.", $tags="store")
 
-    ContainerDb(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.")
+    ContainerDb(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.", $tags="store")
 
 }
 
@@ -91,7 +83,7 @@ Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "RES
 Rel(selma_app, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD")
 Rel(selma_app, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
-Rel(selma_app, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated,async")
+Rel(selma_app, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated_async")
 
 
 ' ============================================================
@@ -108,6 +100,7 @@ Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict ar
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(audit_platform, selma_app, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable,async")
+Rel(audit_platform, selma_app, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable_async")
 
+SHOW_LEGEND()
 @enduml

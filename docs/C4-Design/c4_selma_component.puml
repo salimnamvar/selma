@@ -10,18 +10,10 @@
 title Selma -- Component Diagram
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
-!include ./common/c4_styles.puml
 !theme plain
+!include ./common/c4_styles.puml
 
 LAYOUT_LEFT_RIGHT()
-LAYOUT_WITH_LEGEND()
-
-AddRelTag("compile_only",        $legendText="compile-time only -- runtime access is prohibited")
-AddRelTag("immutable",           $legendText="append-only -- never mutated")
-AddRelTag("mediated",            $legendText="mediated output -- Selma never mutates external state")
-AddRelTag("capability_enforced", $legendText="permission-checked before action")
-AddRelTag("async",               $legendText="asynchronous / eventually consistent delivery")
-
 
 ' ============================================================
 '  EXTERNAL SYSTEMS (verbatim from Context Diagram)
@@ -49,13 +41,13 @@ Container_Ext(selma_interface, "Selma Interface", "CLI / WebApp / DesktopApp / M
 '  DATA STORES (from Container Diagram)
 ' ============================================================
 
-ContainerDb_Ext(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.")
+ContainerDb_Ext(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.", $tags="store")
 
-ContainerDb_Ext(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.")
+ContainerDb_Ext(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.", $tags="store")
 
-ContainerDb_Ext(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.")
+ContainerDb_Ext(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.", $tags="store")
 
-ContainerDb_Ext(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.")
+ContainerDb_Ext(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.", $tags="store")
 
 
 ' ============================================================
@@ -103,7 +95,7 @@ Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "R
 Rel(rule_inspector, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, api_gateway, "triggers compilation, certification, and runtime compliance checks", "CI/CD")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
-Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated,async")
+Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated_async")
 
 
 ' ============================================================
@@ -189,6 +181,7 @@ Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, con
 
 Rel(findings_audit_adapter, api_gateway, "exposes finding events and security denial records for audit replication", "Internal")
 Rel(snapshots_adapter, api_gateway, "exposes inspection snapshots, traces, and certification artifacts for audit replication", "Internal")
-Rel(audit_platform, api_gateway, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable,async")
+Rel(audit_platform, api_gateway, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable_async")
 
+SHOW_LEGEND()
 @enduml
