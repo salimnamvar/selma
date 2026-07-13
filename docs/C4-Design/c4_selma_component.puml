@@ -102,8 +102,7 @@ Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "R
 
 Rel(regulated_systems, api_gateway, "submits inspection targets conforming to target schema", "HTTPS / API")
 Rel(api_gateway, regulated_systems, "returns inspection results and explanations", "HTTPS / API", $tags="mediated")
-Rel(cicd, hermetic_compiler, "triggers compilation and static analysis for governance access verification", "CI/CD", $tags="compile_only")
-Rel(cicd, architectural_auditor, "triggers architectural certification and runtime compliance checks", "CI/CD")
+Rel(cicd, api_gateway, "triggers compilation, certification, and runtime compliance checks", "CI/CD")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions under hermetic read-lock", "compile-time only", $tags="compile_only")
 Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webhook / events", $tags="mediated,async")
 
@@ -113,11 +112,12 @@ Rel(lifecycle_finder, remediation_systems, "emits finding status changes", "webh
 ' ============================================================
 
 Rel(api_gateway, directives_adapter, "directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
-Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change", "Internal", $tags="compile_only")
+Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal", $tags="compile_only")
 Rel(api_gateway, inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
 Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
 Rel(api_gateway, analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
+Rel(api_gateway, architectural_auditor, "triggers architectural certification on CI/CD request", "Internal", $tags="validation_only")
 Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
 
 
@@ -188,7 +188,8 @@ Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, con
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(audit_platform, findings_audit_adapter, "replicates finding events and security denial records for long-term retention", "append-only", $tags="immutable,async")
-Rel(audit_platform, snapshots_adapter, "replicates inspection snapshots, traces, and certification artifacts", "append-only", $tags="async")
+Rel(findings_audit_adapter, api_gateway, "exposes finding events and security denial records for audit replication", "Internal")
+Rel(snapshots_adapter, api_gateway, "exposes inspection snapshots, traces, and certification artifacts for audit replication", "Internal")
+Rel(api_gateway, audit_platform, "replicates finding events, security audit records, inspection snapshots, and certification artifacts", "append-only", $tags="immutable,async")
 
 @enduml
