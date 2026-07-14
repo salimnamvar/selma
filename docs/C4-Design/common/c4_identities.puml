@@ -89,16 +89,16 @@
 !$DESC_artifact_store = "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation."
 
 ' ------------------------------------------------------------
-' Components (ID = api_gateway | hermetic_compiler |
+' Components (ID = application_service | hermetic_compiler |
 '   rule_inspector | conflict_resolver | lifecycle_finder |
 '   finding_analyzer | architectural_auditor |
 '   directives_adapter | compiled_rules_adapter |
-'   findings_audit_adapter | snapshots_adapter)
+'   findings_audit_adapter | snapshots_adapter | target_adapter)
 ' Layers: Component only
 ' ------------------------------------------------------------
-!$NAME_api_gateway = "API Gateway"
-!$TECH_api_gateway = "FastAPI / Pydantic"
-!$DESC_api_gateway = "Single entry point for all requests. Authenticates, enforces permissions, routes requests to the appropriate component, and appends denied-request records to the Event Store."
+!$NAME_application_service = "Application Service"
+!$TECH_application_service = "FastAPI / Pydantic"
+!$DESC_application_service = "Single entry point for all requests. Authenticates, enforces permissions, validates input, and dispatches to the appropriate component. Orchestrates business workflows including directive mutation sequencing and compilation triggers."
 
 !$NAME_hermetic_compiler = "Hermetic Compiler"
 !$TECH_hermetic_compiler = "Python / JSON Schema / SHA-256"
@@ -126,7 +126,7 @@
 
 !$NAME_directives_adapter = "Directives Adapter"
 !$TECH_directives_adapter = "Python / SQLAlchemy / PostgreSQL"
-!$DESC_directives_adapter = "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition, lineage identity resolution, and triggers compilation after mutations."
+!$DESC_directives_adapter = "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition and lineage identity resolution."
 
 !$NAME_compiled_rules_adapter = "Compiled Rules Adapter"
 !$TECH_compiled_rules_adapter = "Python / SHA-256 / Content-Addressed Storage"
@@ -139,3 +139,7 @@
 !$NAME_snapshots_adapter = "Inspection Snapshots Adapter"
 !$TECH_snapshots_adapter = "Python / Object Store"
 !$DESC_snapshots_adapter = "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform."
+
+!$NAME_target_adapter = "Target Adapter"
+!$TECH_target_adapter = "Python / HTTP Client / Schema Validation"
+!$DESC_target_adapter = "Mediates all outbound communication with external target and regulated entity systems. Handles authentication, transport, retries, schema validation, and response normalization."

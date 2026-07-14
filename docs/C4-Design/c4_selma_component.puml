@@ -50,7 +50,7 @@ ContainerDb_Ext(artifact_store, $NAME_artifact_store, $TECH_artifact_store, $DES
 
 Container_Boundary(selma_app, $NAME_selma_app) {
 
-    Component(api_gateway, $NAME_api_gateway, $TECH_api_gateway, $DESC_api_gateway, $tags="gate")
+    Component(application_service, $NAME_application_service, $TECH_application_service, $DESC_application_service, $tags="gate")
     Component(hermetic_compiler, $NAME_hermetic_compiler, $TECH_hermetic_compiler, $DESC_hermetic_compiler, $tags="hermetic")
     Component(rule_inspector, $NAME_rule_inspector, $TECH_rule_inspector, $DESC_rule_inspector)
     Component(conflict_resolver, $NAME_conflict_resolver, $TECH_conflict_resolver, $DESC_conflict_resolver)
@@ -61,39 +61,40 @@ Container_Boundary(selma_app, $NAME_selma_app) {
     Component(compiled_rules_adapter, $NAME_compiled_rules_adapter, $TECH_compiled_rules_adapter, $DESC_compiled_rules_adapter)
     Component(findings_audit_adapter, $NAME_findings_audit_adapter, $TECH_findings_audit_adapter, $DESC_findings_audit_adapter)
     Component(snapshots_adapter, $NAME_snapshots_adapter, $TECH_snapshots_adapter, $DESC_snapshots_adapter)
+    Component(target_adapter, $NAME_target_adapter, $TECH_target_adapter, $DESC_target_adapter)
 
 }
 
 
 ' ============================================================
-'  RELATIONSHIPS -- Interface -> API Gateway
+'  RELATIONSHIPS -- Interface -> Application Service
 ' ============================================================
 
-Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "REST / HTTPS", $tags="capability_enforced")
+Rel(selma_interface, application_service, "forwards user requests as REST API calls", "REST / HTTPS", $tags="capability_enforced")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(rule_inspector, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-Rel(cicd, api_gateway, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
+Rel(target_adapter, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
+Rel(cicd, application_service, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
 Rel(lifecycle_finder, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- API Gateway -> Components
+'  RELATIONSHIPS -- Application Service -> Components
 ' ============================================================
 
-Rel(api_gateway, directives_adapter, "routes directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
-Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal")
-Rel(api_gateway, rule_inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
-Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
-Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
-Rel(api_gateway, finding_analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
-Rel(api_gateway, architectural_auditor, "triggers architectural certification on CI/CD request", "Internal", $tags="validation_only")
-Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
+Rel(application_service, directives_adapter, "routes directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
+Rel(application_service, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal")
+Rel(application_service, rule_inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
+Rel(application_service, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
+Rel(application_service, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
+Rel(application_service, finding_analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
+Rel(application_service, architectural_auditor, "triggers architectural certification on CI/CD request", "Internal", $tags="validation_only")
+Rel(application_service, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
 
 
 ' ============================================================
@@ -103,13 +104,13 @@ Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Appe
 Rel(hermetic_compiler, directive_store, "reads directive revisions and lineage state under read-lock", "SQL", $tags="compile_only")
 Rel(hermetic_compiler, compiled_rules_adapter, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
 Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
-Rel(directives_adapter, hermetic_compiler, "triggers recompilation after directive mutation", "Internal", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Rule Inspector
 ' ============================================================
 
+Rel(rule_inspector, target_adapter, "requests target retrieval from external systems", "Internal", $tags="mediated")
 Rel(rule_inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal", $tags="validation_only")
 Rel(rule_inspector, finding_analyzer, "fetches historical finding summaries for inspection context", "Internal", $tags="validation_only")
 Rel(rule_inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal", $tags="validation_only")

@@ -104,7 +104,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
         "-i",
         "--input",
         nargs="+",
-        default=["/home/salim/prj/salim/selma/docs"],
+        default=["/home/salim/prj/salim/selma/docs/C4-Design"],
         help="Input directories (one per merge)",
     )
     p.add_argument(
