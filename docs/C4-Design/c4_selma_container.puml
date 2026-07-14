@@ -77,7 +77,7 @@ Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "RES
 ' ============================================================
 
 Rel(selma_app, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD")
+Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
 Rel(selma_app, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
 Rel(selma_app, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
@@ -88,7 +88,7 @@ Rel(selma_app, remediation_systems, "emits finding events and status changes", "
 
 Rel(selma_app, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
 Rel(selma_app, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS", $tags="immutable")
-Rel(selma_app, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
+Rel(selma_app, event_store, "appends finding events and security denial records", "Append-Only", $tags="immutable")
 Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write", $tags="immutable")
 
 
@@ -96,7 +96,7 @@ Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict ar
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(audit_platform, selma_app, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
+Rel(selma_app, audit_platform, "publishes finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
 
 SHOW_LEGEND()
 @enduml

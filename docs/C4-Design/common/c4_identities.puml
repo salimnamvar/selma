@@ -21,10 +21,10 @@
 ' Layers: Context, Container  (Component faces via selma_interface)
 ' ------------------------------------------------------------
 !$NAME_regulatory_official = "Regulatory Official"
-!$DESC_regulatory_official = "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition."
+!$DESC_regulatory_official = "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities — create, modify, retire, fork, merge, restore — Conflict Artifact resolution, finding disposition — dismiss, waive, approve remediation, reject remediation, supersede — analytics, and finding views."
 
 !$NAME_compliance_rep = "Compliance Representative"
-!$DESC_compliance_rep = "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics."
+!$DESC_compliance_rep = "Human, AI agent, or programmatic service acting for the regulated entity. Submits and reinspects targets, acknowledges findings, submits evidence, and views findings and analytics. Cannot create, modify, or retire directives, and cannot waive findings."
 
 ' ------------------------------------------------------------
 ' System in scope (ID = selma)
@@ -46,7 +46,7 @@
 !$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime."
 
 !$NAME_regulated_systems = "Target & Regulated Entity Systems"
-!$DESC_regulated_systems = "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other."
+!$DESC_regulated_systems = "External systems from which Selma pulls targets for inspection. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other. Targets conform to the target schema."
 
 !$NAME_audit_platform = "Audit & Observability Platform"
 !$DESC_audit_platform = "Immutable long-term retention store for regulatory compliance and forensics. Receives finding events, security audit records, inspection snapshots, and certification artifacts. Supports external auditors and compliance reporting."
@@ -63,8 +63,8 @@
 !$DESC_selma_interface = "User-facing interface across all delivery channels. Authenticates users, renders the UI, and translates user actions into REST API calls to the Selma Application."
 
 !$NAME_selma_app = "Selma Application"
-!$TECH_selma_app = "REST API / Python"
-!$DESC_selma_app = "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime."
+!$TECH_selma_app = "REST API / Python / RE2 / JSON Schema / SHA-256"
+!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, and the read-only analytics layer. Reads governance contracts only at compile time — never at runtime."
 
 ' ------------------------------------------------------------
 ' Data stores (ID = directive_store | cgir_store |

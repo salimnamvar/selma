@@ -77,7 +77,7 @@ Rel(selma_interface, api_gateway, "forwards user requests as REST API calls", "R
 ' ============================================================
 
 Rel(rule_inspector, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-Rel(cicd, api_gateway, "triggers architectural certification and runtime compliance checks", "CI/CD")
+Rel(cicd, api_gateway, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
 Rel(lifecycle_finder, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
@@ -87,7 +87,7 @@ Rel(lifecycle_finder, remediation_systems, "emits finding events and status chan
 ' ============================================================
 
 Rel(api_gateway, directives_adapter, "routes directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
-Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal", $tags="compile_only")
+Rel(api_gateway, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal")
 Rel(api_gateway, rule_inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
 Rel(api_gateway, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
 Rel(api_gateway, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
@@ -103,16 +103,17 @@ Rel(api_gateway, findings_audit_adapter, "appends denied-request records", "Appe
 Rel(hermetic_compiler, directive_store, "reads directive revisions and lineage state under read-lock", "SQL", $tags="compile_only")
 Rel(hermetic_compiler, compiled_rules_adapter, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
 Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
+Rel(directives_adapter, hermetic_compiler, "triggers recompilation after directive mutation", "Internal", $tags="compile_only")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Rule Inspector
 ' ============================================================
 
-Rel(rule_inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal")
+Rel(rule_inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal", $tags="validation_only")
 Rel(rule_inspector, finding_analyzer, "fetches historical finding summaries for inspection context", "Internal", $tags="validation_only")
-Rel(rule_inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal")
-Rel(rule_inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal")
+Rel(rule_inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal", $tags="validation_only")
+Rel(rule_inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal", $tags="immutable")
 Rel(rule_inspector, snapshots_adapter, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal", $tags="immutable")
 
 
@@ -120,9 +121,8 @@ Rel(rule_inspector, snapshots_adapter, "stores inspection snapshot, execution tr
 '  RELATIONSHIPS -- Lifecycle Finder
 ' ============================================================
 
-Rel(lifecycle_finder, findings_audit_adapter, "appends finding lifecycle events", "Internal", $tags="immutable")
+Rel(lifecycle_finder, findings_audit_adapter, "appends finding lifecycle, permission denial, and segregation-of-duties events", "Internal", $tags="immutable")
 Rel(lifecycle_finder, compiled_rules_adapter, "reads provenance data for segregation-of-duties enforcement", "Internal", $tags="validation_only")
-Rel(lifecycle_finder, findings_audit_adapter, "appends permission denial and segregation-of-duties records", "Internal", $tags="immutable")
 
 
 ' ============================================================
@@ -146,6 +146,9 @@ Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for dir
 '  RELATIONSHIPS -- Architectural Auditor
 ' ============================================================
 
+Rel(architectural_auditor, compiled_rules_adapter, "inspects compiled rules for evaluator purity, conflict determinism, discriminator completeness, and portability", "Internal", $tags="validation_only")
+Rel(architectural_auditor, findings_audit_adapter, "inspects event stream for segregation-of-duties enforcement evidence", "Internal", $tags="validation_only")
+Rel(architectural_auditor, hermetic_compiler, "inspects compilation assertion output for policy runtime prohibition", "Internal", $tags="validation_only")
 Rel(architectural_auditor, snapshots_adapter, "writes certification artifacts with pass/fail evidence", "Internal", $tags="immutable")
 
 
@@ -153,9 +156,9 @@ Rel(architectural_auditor, snapshots_adapter, "writes certification artifacts wi
 '  RELATIONSHIPS -- Adapter -> Data Store
 ' ============================================================
 
-Rel(directives_adapter, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
+Rel(directives_adapter, directive_store, "reads and writes directives, lineage state, and revision history", "SQL", $tags="capability_enforced")
 Rel(compiled_rules_adapter, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS", $tags="immutable")
-Rel(findings_audit_adapter, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
+Rel(findings_audit_adapter, event_store, "appends finding events and security denial records", "Append-Only", $tags="immutable")
 Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write", $tags="immutable")
 
 
@@ -163,9 +166,8 @@ Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, con
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(findings_audit_adapter, api_gateway, "exposes finding events and security denial records for audit replication", "Internal")
-Rel(snapshots_adapter, api_gateway, "exposes inspection snapshots, traces, and certification artifacts for audit replication", "Internal")
-Rel(audit_platform, api_gateway, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
+Rel(findings_audit_adapter, audit_platform, "publishes finding events and security audit records for long-term retention", "Append-Only", $tags="immutable_async")
+Rel(snapshots_adapter, audit_platform, "publishes inspection snapshots, traces, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
 
 SHOW_LEGEND()
 @enduml
