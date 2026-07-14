@@ -1,11 +1,12 @@
 ' ============================================================
 ' Title:     Selma -- C4 Style Overrides (shared palette)
 ' Purpose:   ONE visual language for Context, Container, and
-'            Component diagrams. Colors, line styles, and legend
-'            entries are defined only here.
+'            Component diagrams. Colors, line styles, labels,
+'            and legend entries are defined only here.
 ' Contract:  8.2.4
 '
 ' Include AFTER C4_Context / C4_Container / C4_Component.
+' Then include ./common/c4_identities.puml (canonical IDs + Names).
 ' End every diagram with SHOW_LEGEND().
 '
 ' ── Element palette (locked) ────────────────────────────────
@@ -17,6 +18,8 @@
 '   External container  grey-blue  #A0A8B0
 '   Component           light blue #85B4F2   (same family as container)
 '   Data store          green      #2C6E49   via $tags="store"
+'   Hermetic unit       amber      #B9770E   via $tags="hermetic"
+'   Capability gate     red        #A93226   via $tags="gate"
 '   System boundary     teal dash  fill #E8F5F3
 '   Container boundary  blue dash  fill #EEF4FC
 '
@@ -34,6 +37,35 @@
 ' Multi-tag edges MUST use a single combined tag (not a+b), so
 ' PlantUML applies one consistent line color:
 '   $tags="immutable_async"   not  $tags="immutable+async"
+'
+' ── Entity format (locked) ──────────────────────────────────
+'   Person / System / Container / Component / *Db macros:
+'     Alias: snake_case, stable across all three diagrams
+'     Name:  Title Case, identical string when the same entity
+'            appears on more than one diagram
+'     Tech:  "Primary / Secondary / Tertiary" with " / " separator
+'            (omit on Context-level Person/System when not needed)
+'     Desc:  one prose sentence (or two short clauses); identical
+'            text when the same entity is carried across levels
+'   Data stores: always ContainerDb / ContainerDb_Ext + $tags="store"
+'   Hermetic compile unit: $tags="hermetic"
+'   Capability/SoD gate entry: $tags="gate"
+'
+' ── Relationship format (locked) ────────────────────────────
+'   Rel(from, to, "description", "technology", $tags="...")
+'   description:
+'     - lowercase intent phrase (no trailing period)
+'     - same semantic edge => same description across diagrams
+'       (lower levels may refine endpoints, not reword intent)
+'   technology (canonical vocabulary — use exactly):
+'     Network:    HTTPS | REST / HTTPS | HTTPS / API | CI/CD
+'     Internal:   Internal
+'     Data I/O:   SQL | CAS | Append-Only | Append-Only / Read-Only
+'                 | Object Write
+'     Semantic:   Compile-Time Only | Append-Only | Mediated / Webhook
+'                 (semantic labels pair with matching $tags)
+'   $tags: apply whenever the edge has that semantic; never leave
+'     a tagged semantic untagged on one diagram and tagged on another
 ' ============================================================
 
 ' ------------------------------------------------------------

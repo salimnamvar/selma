@@ -1,6 +1,6 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
-' Boundary:  Selma Rule Regularity Platform
+' Boundary:  Selma
 ' Purpose:   White-box view: Selma Interface, Selma Application,
 '            and four data stores, carrying forward actors and
 '            external systems from the Context Diagram.
@@ -13,50 +13,46 @@ title Selma -- Container Diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Container.puml
 !theme plain
 !include ./common/c4_styles.puml
+!include ./common/c4_identities.puml
 
 LAYOUT_LEFT_RIGHT()
 
 ' ============================================================
-'  ACTORS (verbatim from Context Diagram)
+'  ACTORS (ID + Name from c4_identities.puml)
 ' ============================================================
 
-Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition.")
-
-Person(compliance_rep, "Compliance Representative", "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics.")
-
-
-' ============================================================
-'  EXTERNAL SYSTEMS (verbatim from Context Diagram)
-' ============================================================
-
-System_Ext(governance_contracts, "Governance Contracts", "Authoring artifacts that define the rules: the normative specification, structural schema, governance policy, and behavioral contracts. Consumed exclusively at compile time — never accessed at runtime.")
-
-System_Ext(cicd, "CI/CD Pipeline", "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime.")
-
-System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other.")
-
-System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives finding events, security audit records, inspection snapshots, and certification artifacts. Supports external auditors and compliance reporting.")
-
-System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows for remediation: ticketing systems, RPA platforms, and regulatory portals. Selma sends finding notifications only — it never directly modifies external remediation state.")
+Person(regulatory_official, $NAME_regulatory_official, $DESC_regulatory_official)
+Person(compliance_rep, $NAME_compliance_rep, $DESC_compliance_rep)
 
 
 ' ============================================================
-'  SELMA SYSTEM BOUNDARY
+'  EXTERNAL SYSTEMS (ID + Name from c4_identities.puml)
 ' ============================================================
 
-System_Boundary(selma, "Selma Rule Regularity Platform") {
+System_Ext(governance_contracts, $NAME_governance_contracts, $DESC_governance_contracts)
+System_Ext(cicd, $NAME_cicd, $DESC_cicd)
+System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
+System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
+System_Ext(remediation_systems, $NAME_remediation_systems, $DESC_remediation_systems)
 
-    Container(selma_interface, "Selma Interface", "CLI / WebApp / DesktopApp / MobileApp", "User-facing interface across all delivery channels. Authenticates users, renders the UI, and translates user actions into REST API calls to the Selma Application.")
 
-    Container(selma_app, "Selma Application", "REST API / Python", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations. Reads governance contracts only at compile time — never at runtime.")
+' ============================================================
+'  SYSTEM BOUNDARY (ID = selma, Name = $NAME_selma — same as Context)
+' ============================================================
 
-    ContainerDb(directive_store, "Directives", "PostgreSQL", "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance.", $tags="store")
+System_Boundary(selma, $NAME_selma) {
 
-    ContainerDb(cgir_store, "Compiled Rules", "Content-Addressed Storage", "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely.", $tags="store")
+    Container(selma_interface, $NAME_selma_interface, $TECH_selma_interface, $DESC_selma_interface)
 
-    ContainerDb(event_store, "Findings & Audit Trail", "Append-Only Log", "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail.", $tags="store")
+    Container(selma_app, $NAME_selma_app, $TECH_selma_app, $DESC_selma_app)
 
-    ContainerDb(artifact_store, "Inspection Snapshots", "Object Store", "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation.", $tags="store")
+    ContainerDb(directive_store, $NAME_directive_store, $TECH_directive_store, $DESC_directive_store, $tags="store")
+
+    ContainerDb(cgir_store, $NAME_cgir_store, $TECH_cgir_store, $DESC_cgir_store, $tags="store")
+
+    ContainerDb(event_store, $NAME_event_store, $TECH_event_store, $DESC_event_store, $tags="store")
+
+    ContainerDb(artifact_store, $NAME_artifact_store, $TECH_artifact_store, $DESC_artifact_store, $tags="store")
 
 }
 
@@ -65,8 +61,8 @@ System_Boundary(selma, "Selma Rule Regularity Platform") {
 '  RELATIONSHIPS -- Actor Ingress
 ' ============================================================
 
-Rel(regulatory_official, selma_interface, "directive management, finding disposition, conflict resolution, analytics", "HTTPS", $tags="capability_enforced")
-Rel(compliance_rep, selma_interface, "inspection submissions, finding acknowledgement, evidence submission", "HTTPS", $tags="capability_enforced")
+Rel(regulatory_official, selma_interface, "authors and governs directives; resolves findings; views analytics", "HTTPS", $tags="capability_enforced")
+Rel(compliance_rep, selma_interface, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS", $tags="capability_enforced")
 
 
 ' ============================================================
@@ -82,25 +78,25 @@ Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "RES
 
 Rel(selma_app, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD")
-Rel(selma_app, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
-Rel(selma_app, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated_async")
+Rel(selma_app, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
+Rel(selma_app, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 
 ' ============================================================
-'  RELATIONSHIPS -- selma_app -> Data Stores
+'  RELATIONSHIPS -- Application -> Data Stores
 ' ============================================================
 
 Rel(selma_app, directive_store, "reads and writes directives, lineage state, and revision history", "SQL")
-Rel(selma_app, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS")
+Rel(selma_app, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS", $tags="immutable")
 Rel(selma_app, event_store, "appends finding events and security denial records; reads for analytics and context", "Append-Only / Read-Only", $tags="immutable")
-Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write")
+Rel(selma_app, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write", $tags="immutable")
 
 
 ' ============================================================
 '  RELATIONSHIPS -- Audit Replication
 ' ============================================================
 
-Rel(audit_platform, selma_app, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable_async")
+Rel(audit_platform, selma_app, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
 
 SHOW_LEGEND()
 @enduml

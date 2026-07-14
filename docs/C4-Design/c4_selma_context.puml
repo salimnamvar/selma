@@ -1,6 +1,6 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
-' Boundary:  Selma Rule Regularity Platform
+' Boundary:  Selma
 ' Purpose:   Black-box view of the two governance actors and the
 '            five external systems Selma compiles against, certifies,
 '            and streams findings and security audit records into.
@@ -13,35 +13,53 @@ title Selma -- Context Diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Context.puml
 !theme plain
 !include ./common/c4_styles.puml
+!include ./common/c4_identities.puml
 
 LAYOUT_LEFT_RIGHT()
 
-Person(regulatory_official, "Regulatory Official", "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities, Conflict Artifact resolution, and finding disposition.")
+' ============================================================
+'  ACTORS
+' ============================================================
 
-Person(compliance_rep, "Compliance Representative", "Human, AI agent, or programmatic service acting for the regulated entity. Submits inspection targets, acknowledges findings, and views findings and analytics.")
+Person(regulatory_official, $NAME_regulatory_official, $DESC_regulatory_official)
+Person(compliance_rep, $NAME_compliance_rep, $DESC_compliance_rep)
 
-System(selma, "Selma", "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations.")
 
-System_Ext(governance_contracts, "Governance Contracts", "Authoring artifacts that define the rules: the normative specification, structural schema, governance policy, and behavioral contracts. Consumed exclusively at compile time — never accessed at runtime.")
+' ============================================================
+'  SYSTEM IN SCOPE
+' ============================================================
 
-System_Ext(cicd, "CI/CD Pipeline", "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime.")
+System(selma, $NAME_selma, $DESC_selma)
 
-System_Ext(regulated_systems, "Target & Regulated Entity Systems", "Domain-agnostic external systems supplying inspection targets conforming to the target schema. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other.")
 
-System_Ext(audit_platform, "Audit & Observability Platform", "Immutable long-term retention store for regulatory compliance and forensics. Receives finding events, security audit records, inspection snapshots, and certification artifacts. Supports external auditors and compliance reporting.")
+' ============================================================
+'  EXTERNAL SYSTEMS
+' ============================================================
 
-System_Ext(remediation_systems, "Remediation & Case Management", "Operational workflows for remediation: ticketing systems, RPA platforms, and regulatory portals. Selma sends finding notifications only — it never directly modifies external remediation state.")
+System_Ext(governance_contracts, $NAME_governance_contracts, $DESC_governance_contracts)
+System_Ext(cicd, $NAME_cicd, $DESC_cicd)
+System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
+System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
+System_Ext(remediation_systems, $NAME_remediation_systems, $DESC_remediation_systems)
 
-Rel(regulatory_official, selma, "authors and governs directives; resolves findings; views analytics", "HTTPS")
-Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS")
 
-Rel(selma, governance_contracts, "reads rule definitions at compile time only", "compile-time only", $tags="compile_only")
+' ============================================================
+'  RELATIONSHIPS -- Actor Ingress
+' ============================================================
+
+Rel(regulatory_official, selma, "authors and governs directives; resolves findings; views analytics", "HTTPS", $tags="capability_enforced")
+Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS", $tags="capability_enforced")
+
+
+' ============================================================
+'  RELATIONSHIPS -- External System Interactions
+' ============================================================
+
+Rel(selma, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
-
 Rel(selma, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-
-Rel(audit_platform, selma, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "append-only", $tags="immutable_async")
-Rel(selma, remediation_systems, "emits finding events and status changes", "mediated / webhook", $tags="mediated_async")
+Rel(audit_platform, selma, "replicates finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
+Rel(selma, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 SHOW_LEGEND()
 @enduml
