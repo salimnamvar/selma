@@ -4,8 +4,8 @@ Merges subdirectories of source files into a single Markdown document.
 """
 
 import argparse
-import sys
 from pathlib import Path
+import sys
 from typing import List, Optional, Set
 
 
@@ -37,7 +37,7 @@ class DocumentMerger:
         self._input_dir: Path = a_input_dir
         self._output_file: Path = a_output_file
         self._exclude: Set[str] = set(a_exclude) if a_exclude else set()
-        self._extensions: Set[str] = a_extensions or {".py", ".md", ".txt", ".rst"}
+        self._extensions: Set[str] = a_extensions or {".py", ".md", ".txt", ".rst", ".puml"}
 
     def merge(self) -> None:
         """Write merged content to the output file."""
@@ -104,7 +104,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
         "-i",
         "--input",
         nargs="+",
-        default=["src/domain"],
+        default=["/home/salim/prj/salim/selma/docs"],
         help="Input directories (one per merge)",
     )
     p.add_argument(
@@ -129,7 +129,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument(
         "--extensions",
         nargs="*",
-        default=[".py", ".md", ".txt", ".rst"],
+        default=[".py", ".md", ".txt", ".rst", ".puml"],
         help="File extensions to include",
     )
     args: argparse.Namespace = p.parse_args(a_argv)
