@@ -8,7 +8,6 @@
 '
 ' Authority: ONLY fully normative FSM in the specification.
 ' Ownership, events, concurrency: docs/state-machine/README.md
-' Decisions: STATE_MACHINE_ARCHITECTURE_REVIEW.md
 ' ============================================================
 
 title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · capability gates · SoD-1/SoD-2 · system-only close</i></size>
@@ -46,7 +45,7 @@ Rejected --> Open : <b>finding.reopen</b>\nactor: Regulatory Official\n[capabili
 Verified --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed
 Waived --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed
 
-Dismissed --> [*]
-Closed --> [*]
+Dismissed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+Closed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

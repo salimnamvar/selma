@@ -45,6 +45,13 @@ plantuml docs/C4-Design/c4_selma_container.puml
 plantuml docs/C4-Design/c4_selma_component.puml
 ```
 
+## Behavioral state machines
+
+C4 describes *structure* (containers, components, adapters).  
+Lifecycle and pipeline *behavior* lives in [`../state-machine/`](../state-machine/README.md) (PlantUML catalog + README).
+
+Ownership of each machine maps to the component inventory above (e.g. Hermetic Compiler ↔ Compilation pipeline, Lifecycle Finder ↔ Finding FSM).
+
 ## Design Principles
 
 - **Compile-time/runtime separation**: Governance contracts never accessed at runtime

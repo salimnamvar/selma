@@ -49,7 +49,7 @@ state "No Advisory" as NoAdvisory #2C6E49 : **entry** no residual cross-lineage 
 
 DetectPair --> NoConflict : <b>no candidate</b>\nactor: System\nevent: ConflictNone
 DetectPair --> ScopeCheck : <b>candidate pair</b>\nactor: System\nevent: ConflictPairDetected
-NoConflict --> [*]
+NoConflict --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 ScopeCheck --> ExplicitOverride : <b>same lineage_id</b>\nactor: System\ncommand: enter binding cascade\nevent: ConflictBindingScope
 ScopeCheck --> AdvisoryCascade : <b>different lineage_id</b>\nactor: System\ncommand: enter advisory cascade\nevent: ConflictAdvisoryScope
@@ -70,18 +70,18 @@ SpecificityCheck --> RecencyCheck : <b>tie</b>\nactor: System\nevent: ConflictFa
 RecencyCheck --> ResolvedBinding : <b>later created_at</b>\nactor: System\nevent: ConflictResolvedBinding
 RecencyCheck --> ArtifactPending : <b>identical timestamp</b>\nactor: System\nevent: ConflictArtifactOpened
 
-ResolvedBinding --> [*]
+ResolvedBinding --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 ArtifactPending --> HumanReview : <b>escalate</b>\nactor: System\ncommand: open human review queue\nevent: ConflictReviewOpened
 HumanReview --> ArtifactResolved : <b>conflict.resolve</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactResolved\naction: decision recorded on frozen snapshot
 HumanReview --> ArtifactRejected : <b>deny / defer</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactRejected\naction: denial audit · artifact stays open
 ArtifactResolved --> ArtifactArchived : <b>archive</b>\nactor: System\nevent: ConflictArtifactArchived
 ArtifactRejected --> HumanReview : <b>reopen review</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictReviewReopened
-ArtifactArchived --> [*]
+ArtifactArchived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 AdvisoryCascade --> AdvisoryArtifact : <b>conflict signal</b>\nactor: System\nevent: ConflictAdvisoryEmitted
 AdvisoryCascade --> NoAdvisory : <b>no residual conflict</b>\nactor: System\nevent: ConflictAdvisoryNone
-AdvisoryArtifact --> [*]
-NoAdvisory --> [*]
+AdvisoryArtifact --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+NoAdvisory --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

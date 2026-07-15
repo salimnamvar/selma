@@ -50,7 +50,7 @@ SnapshotHashComposed --> CheckCAS : <b>CAS lookup</b>\nactor: System\nevent: Cas
 CheckCAS --> PublishedDedup : <b>identical content</b>\nactor: System\nguard: same hash + frozen_env + engine\nevent: CgIrDedupHit
 CheckCAS --> PublishedNew : <b>novel snapshot</b>\nactor: System\nevent: CgIrPublishedNew
 
-PublishedDedup --> [*]
-PublishedNew --> [*]
+PublishedDedup --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+PublishedNew --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

@@ -1,0 +1,55 @@
+@startuml selma_machine_interaction
+' ============================================================
+' Selma — State Machine Interaction Overview
+' Source:  C4 component map + docs/state-machine ownership
+' Contract: 8.2.4
+' Role:    Cross-machine handoff overview (not a lifecycle aggregate)
+' ============================================================
+
+title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · primary machines · detail views · no independent 9th aggregate</i></size>
+
+!include ./common/sm_styles.puml
+
+state "Capability Authorization" as Authz #B9770E : **cross-cutting**\ningress · matrix · SoD · stage\nallow | deny + audit
+state "Directive Lifecycle" as Dir #2C6E49 : Draft · Active\nDeprecated · Superseded\nfork/merge/split → Draft children
+state "Compilation / CG-IR" as Comp #1B7A6E : hermetic gates\nread lock · CAS publish
+state "CG-IR Hash Detail" as Hash #1B7A6E : dual-hash · reuse\n(detail of Comp)
+state "Inspection Execution" as Insp #1B7A6E : six pure stages\npin · evaluate · report
+state "Finding Lifecycle" as Find #3B7DD8 : **normative §3.1**\n10 states · SoD · system close
+state "HLC Detail" as Hlc #3B7DD8 : (pt, lc) advance\n(detail of event envelope)
+state "Conflict Resolution" as Conf #1B7A6E : cascade · artifact\nbinding vs advisory
+state "Architectural Certification" as Cert #B9770E : AA-01..AA-07\nCI/CD only
+state "Artifact Lifecycle" as Art #4A4A4A : write-once · CAS\nreplicate · archive
+
+[*] --> Authz : any mutating request
+Authz --> Dir : allow · directive.*
+Authz --> Insp : allow · inspection.*
+Authz --> Find : allow · finding.* / evidence.*
+Authz --> Conf : allow · conflict.resolve
+Authz --> [*] : deny · DomainUnchanged
+
+Dir --> Comp : publish / identity op\ncompile request
+Comp --> Hash : Hash Nodes zoom
+Hash --> Comp : snapshot hash ready
+Comp --> Art : CgIrPublished
+Dir --> Art : directive records
+
+Insp --> Comp : pin cg_ir_snapshot_hash
+Insp --> Find : Report births findings\nFindingCreated
+Insp --> Art : inspection snapshot + trace
+Insp --> Conf : multi-rule fire on frozen CG-IR
+
+Find --> Hlc : every success event
+Hlc --> Find : tag logical_clock
+Find --> Art : append event_store
+
+Conf --> Art : conflict artifact
+Comp --> Conf : compile-time conflict map
+
+Cert --> Art : certification artifact
+Cert --> Comp : read CG-IR samples
+Cert --> Find : SoD / mediated-feedback tests\n(no production mutation)
+
+Art --> [*] : archived / retained
+
+@enduml

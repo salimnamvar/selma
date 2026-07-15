@@ -384,6 +384,9 @@ Snapshot: `cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], 
 
 **Binding:** S-14a covers approve, S-14b covers reject, S-14c covers reopen. S-25 covers dismiss. S-29 covers waive. Verified → Closed and Waived → Closed are never human actions.
 
+**Canonical PlantUML (implementation contract):** see [`../state-machine/selma_finding_lifecycle.puml`](../state-machine/selma_finding_lifecycle.puml) and the full catalog in [`../state-machine/README.md`](../state-machine/README.md).  
+**Capability note (S-14c):** command is `finding.reopen`; gating capability is `finding.reject_remediation`.
+
 ---
 
 ## Traceability

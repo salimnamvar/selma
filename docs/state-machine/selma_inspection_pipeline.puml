@@ -34,7 +34,7 @@ state "Failed" as Failed #A93226 : **entry** status=failed · fatal CG-IR\n**all
 Submitted --> IngressGranted : <b>grant</b>\nactor: System (Application Service)\n[capability_enforced at ingress]\nevent: InspectionIngressGranted
 Submitted --> RejectedIngress : <b>deny</b>\nactor: System\nevent: InspectionIngressDenied\naction: 403 | SchemaError · no snapshot
 
-RejectedIngress --> [*]
+RejectedIngress --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 IngressGranted --> Normalize : <b>pin system_state inputs</b>\nactor: System (Rule Inspector)\ncommand: pin target_hash + cg_ir + frozen_env + engine\naction: system_state_hash inputs fixed\naction: event stream EXCLUDED from hash (§2.17)\nevent: InspectionPinned
 
@@ -57,8 +57,8 @@ Report --> Completed : <b>seal completed</b>\nactor: System\ncommand: write snap
 Report --> Partial : <b>seal partial</b>\nactor: System\nevent: InspectionPartial\naction: skipped_nodes present
 Report --> Failed : <b>fatal CG-IR corruption</b>\nactor: System\nevent: InspectionFailed
 
-Completed --> [*]
-Partial --> [*]
-Failed --> [*]
+Completed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+Partial --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+Failed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

@@ -32,7 +32,7 @@ state "Rejected\nBuild" as RejectedBuild #A93226 : **entry** validation failed *
 
 Building --> Validated : <b>integrity OK</b>\nactor: System\ncommand: validate hashes / schema\nevent: ArtifactValidated
 Building --> RejectedBuild : <b>integrity FAIL</b>\nactor: System\nevent: ArtifactBuildRejected\naction: no durable artifact
-RejectedBuild --> [*]
+RejectedBuild --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 Validated --> Published : <b>CAS put / write-once</b>\nactor: System (adapter)\ncommand: content-addressed publish\nguard: identical content → idempotent same hash\nevent: ArtifactPublished
 
@@ -42,6 +42,6 @@ ActiveReference --> SupersededReference : <b>supersede selection</b>\nactor: Sys
 ActiveReference --> Replicated : <b>async audit replicate</b>\nactor: System\nevent: ArtifactReplicated
 SupersededReference --> Archived : <b>retention policy</b>\nactor: System\ncommand: apply retention (§3.5 defaults)\nevent: ArtifactArchived
 Replicated --> Archived : <b>retention complete path</b>\nactor: System\nevent: ArtifactArchived
-Archived --> [*]
+Archived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

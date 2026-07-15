@@ -1,14 +1,12 @@
 # Selma — Canonical State Machine Architecture
 
 **Contract version:** 8.2.4  
-**Authority hierarchy:** `SPECIFICATION.md` > C4 architecture > User stories > Agent audit proposals > Architect judgment  
-**Status:** **CONVERGED** (Round-04 · selma-state-machines-v8.2.4) · Q-01…Q-04 resolved · zero notes  
+**Authority hierarchy:** `SPECIFICATION.md` > C4 architecture > User stories > Architect judgment  
 **Constraint:** Zero `note` blocks in any `.puml` file (encode guards/actors on transitions; ownership in this README)
 
 > C4 describes *what boxes exist and how they communicate*.  
 > This directory describes *how state evolves inside those boxes*.  
-> Read both with `docs/spec/SPECIFICATION.md` for the full behavioral contract.  
-> Design rationale and decision log: [`STATE_MACHINE_ARCHITECTURE_REVIEW.md`](./STATE_MACHINE_ARCHITECTURE_REVIEW.md).
+> Read both with `docs/spec/SPECIFICATION.md` for the full behavioral contract.
 
 ---
 
@@ -26,11 +24,19 @@
 | `selma_artifact_lifecycle.puml` | Artifact Lifecycle | §2.1, §2.6, §3.5–§3.6 | Extracted | Snapshots / Compiled Rules / Findings adapters |
 | `selma_hlc_clock.puml` | HLC Event Ordering | §2.14 | **Detail view** | Lifecycle Finder / Event Store (no independent aggregate) |
 | `selma_cgir_hash_chain.puml` | CG-IR Hash & Reuse | §2.6 | **Detail view** | Hermetic Compiler (zoom of Hash Nodes → Publish) |
+| `selma_machine_interaction.puml` | Machine Interaction Overview | C4 + ownership | **Overview** | Cross-machine handoffs (not a lifecycle aggregate) |
 | `common/sm_styles.puml` | Shared theme | — | — | — |
 
 **Normative note:** The specification defines **one** explicit state machine (Finding FSM §3.1). All other machines are *extracted* from normative pipeline prose, capability gates, and concurrency rules. They must not invent behavior that contradicts the spec.
 
-**Detail views** (Round-02 / Q-04): HLC and CG-IR hash chain are **required implementation-readiness diagrams** but **not** peer aggregates. They zoom algorithms already owned by Finding/Event Store and Compilation. Convergence of the eight primary machines does not depend on treating them as independent ownership rows.
+**Detail views:** HLC and CG-IR hash chain zoom algorithms owned by Finding/Event Store and Compilation; they are not independent aggregates.
+
+### Validation
+
+```bash
+python scripts/validate_state_machines.py          # notes + capabilities + catalog
+python scripts/validate_state_machines.py --plantuml  # + PlantUML syntax
+```
 
 ---
 
@@ -337,16 +343,8 @@ grep -rn "^note\|end note" docs/state-machine/*.puml
 5. **No silent failures** — typed findings, denial audits, or explicit abort states.
 6. **Dual identity** — `lineage_id` immutable; `execution_id` changes only on fork/merge/split.
 7. **Humans never close findings** — only System after Verified or Waived.
-8. **No notes in diagrams** — all behavioral contract on states/transitions; rationale in review log.
-9. **No silent conflict resolution** — genuine matrix/spec gaps become open questions.
-
----
-
-## Convergence
-
-**Round-04 stability closeout complete.** Exit criteria met (two consecutive no-material rounds; zero blocking questions; validation gates pass).  
-
-See `STATE_MACHINE_ARCHITECTURE_REVIEW.md` for the full decision log, agent overrule table, and SPEC-01 (only remaining non-blocking spec-amendment track).
+8. **No notes in diagrams** — all behavioral contract on states/transitions; ownership and rationale live in this README.
+9. **No silent capability invention** — transition capabilities must exist in SPEC §3.2 (split uses `directive.fork`; reopen uses `finding.reject_remediation`).
 
 ---
 
@@ -354,6 +352,4 @@ See `STATE_MACHINE_ARCHITECTURE_REVIEW.md` for the full decision log, agent over
 
 - `docs/spec/SPECIFICATION.md` — normative behavior  
 - `docs/spec/User_Stories.md` — story bindings  
-- `docs/c4-model/` — structural architecture  
-- `docs/state-machine/STATE_MACHINE_ARCHITECTURE_REVIEW.md` — rounds, decisions, position matrix, convergence  
-- `.tmp/audit/` · `.tmp/answers/` · `.tmp/answers2/` — multi-agent proposals / Q&A (advisory)  
+- `docs/c4-model/` — structural architecture

@@ -18,6 +18,7 @@ Selma does not: access governance contracts at runtime, modify external remediat
 conda create -n selma python=3.11 -y && conda activate selma
 pip install -e ".[dev]"
 python scripts/validate_contracts.py
+python scripts/validate_state_machines.py --plantuml
 pytest
 ```
 
@@ -25,10 +26,10 @@ pytest
 
 | Path | Description |
 | :--- | :--- |
-| [docs/Regulation/](docs/Regulation/) | Specification, schema, governance doctrine |
-| [docs/User-Story/](docs/User-Story/) | 35 user stories across 7 epics |
-| [docs/C4-Design/](docs/C4-Design/) | Context, container, and component diagrams |
-| [docs/MINDMAP/](docs/MINDMAP/) | Project phases and artifact inventory |
+| [docs/spec/](docs/spec/) | Specification, schema, governance doctrine, user stories |
+| [docs/c4-model/](docs/c4-model/) | Context, container, and component diagrams |
+| [docs/state-machine/](docs/state-machine/) | Canonical FSMs (Finding §3.1 + extracted pipelines), checklist, ADRs |
+| [docs/mindmap/](docs/mindmap/) | Project phases and artifact inventory |
 
 ## License
 

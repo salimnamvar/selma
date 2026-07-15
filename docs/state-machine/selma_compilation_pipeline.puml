@@ -67,9 +67,9 @@ PolicyAssert --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\n
 
 Publish --> ReleaseLockOk : <b>CAS put</b>\nactor: System\ncommand: write-once publish\nevent: CgIrPublished
 ReleaseLockOk --> Completed : <b>release read lock</b>\nactor: System\nevent: CompileLockReleased
-Completed --> [*]
+Completed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 Failed --> ReleaseLockFail : <b>always release lock</b>\nactor: System\nevent: CompileLockReleased
-ReleaseLockFail --> [*]
+ReleaseLockFail --> [*] : <b>terminal abort</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

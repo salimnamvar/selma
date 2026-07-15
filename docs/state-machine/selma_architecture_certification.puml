@@ -61,6 +61,6 @@ Rejected --> RemediationRequired : <b>require remediation</b>\nactor: System\nev
 
 Certified --> Archived : <b>archive</b>\nactor: System\ncommand: retain + async audit_platform replica\nevent: CertificationArchived
 RemediationRequired --> Triggered : <b>new commit / rebuild</b>\nactor: System (CI/CD)\ncommand: new certification run_id\nevent: CertificationRetriggered
-Archived --> [*]
+Archived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

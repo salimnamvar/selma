@@ -12,7 +12,7 @@
 '   execution_id = active node identity (changes on fork/merge/split)
 ' Status enum (schema): draft | active | deprecated | superseded
 ' Ownership / events / concurrency: README.md
-' Decisions: STATE_MACHINE_ARCHITECTURE_REVIEW.md (Q-01: split→fork gate)
+' Split capability: directive.fork (v8.2.4; no directive.split matrix row)
 ' ============================================================
 
 title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · dual-identity ops · parent deprecation · hermetic recompile</i></size>
@@ -49,7 +49,7 @@ ForkChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: material
 MergeResult --> Draft : <b>spawn merged rule</b>\nactor: System\ncommand: materialize merge result\naction: new execution_id · Draft status\nevent: DirectiveChildrenSpawned
 SplitChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
 
-Superseded --> [*]
-Deprecated --> [*] : if not restored
+Superseded --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+Deprecated --> [*] : <b>terminal if not restored</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

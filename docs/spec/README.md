@@ -11,8 +11,9 @@ Formal verification audits MUST include the complete five-document corpus below.
 | [SPECIFICATION.md](SPECIFICATION.md) | Normative behavioral source | 8.2.4 |
 | [rule_schema.json](rule_schema.json) | Structural JSON Schema projection | 8.2.4 |
 | [policy_doctrine.yaml](policy_doctrine.yaml) | Governance intent (authoring only) | 8.2.4 |
-| [User_Stories.md](../User-Story/User_Stories.md) | Behavioral contract | 8.2.4 |
+| [User_Stories.md](User_Stories.md) | Behavioral contract | 8.2.4 |
 | README.md (this file) | Cross-layer binding and compatibility matrix | — |
+| [State machines](../state-machine/README.md) | Canonical behavioral FSMs (Finding §3.1 + extracted pipelines) | 8.2.4 converged |
 
 ## Architecture
 

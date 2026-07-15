@@ -48,6 +48,6 @@ StageGateChecked --> Denied : <b>stage FAIL</b>\nactor: System\nevent: AuthzDeni
 Allowed --> [*] : <b>dispatch domain command</b>\nactor: System\nevent: AuthzDispatched
 Denied --> DenialAudited : <b>record denial</b>\nactor: System\ncommand: append denial audit\nevent: AuthzDenialAudited
 DenialAudited --> DomainUnchanged : <b>hard reject</b>\nactor: System\nevent: AuthzDomainUnchanged
-DomainUnchanged --> [*]
+DomainUnchanged --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml
