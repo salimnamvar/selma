@@ -18,9 +18,12 @@
 '   6. Conflict Artifact → human conflict.resolve
 ' Within-lineage = binding. Cross-lineage = advisory only.
 ' Ownership / events: README.md
+'
+' UML: BindingCascade is a hierarchical composite (steps 1–5).
+' HumanArtifactPath nests review → resolve/reject → archive.
 ' ============================================================
 
-title Selma — Conflict Resolution FSM\n<size:12><i>Deterministic cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>
+title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -30,58 +33,72 @@ state "Detect\nConflicting Pair" as DetectPair #B9770E : **entry** scan conflict
 state "No Conflict" as NoConflict #2C6E49 : **entry** no pair / both Pass\nPass+Fail / same-type Fail\n**allowed** terminal no-op\n**forbidden** artifact creation
 state "Scope Check" as ScopeCheck #1B7A6E : **entry** compare lineage_id\n**allowed** branch binding vs advisory\n**forbidden** cross-lineage bind
 
-state "1. Explicit\nOverride" as ExplicitOverride #1B7A6E : **entry** always_wins | never_wins |\ndefer_to (execution id)\n**allowed** single override win\n**forbidden** self-ref defer_to (fall through)\ncycles (DFS) → ignore all defer_to
-state "2. Compatible\nOverrides" as CompatibleOverrides #1B7A6E : **entry** compatible_overrides()\nsymmetric pairs or identical defer_to\n**allowed** resolve or fall through\n**forbidden** partial bind on dual conflict
-state "3. Priority" as PriorityCheck #1B7A6E : **entry** lower priority_level wins\n1 constitutional … 5 advisory\n**allowed** strict winner or tie advance
-state "4. Specificity" as SpecificityCheck #1B7A6E : **entry** score = scope×100 + bound_fields\n**allowed** strict winner or tie advance
-state "5. Recency" as RecencyCheck #1B7A6E : **entry** newer created_at wins\nfrozen in node_body\n**allowed** strict later or artifact on identical ts
+' ---------- Hierarchical cascade (within-lineage binding) ----------
+state "Binding Cascade" as BindingCascade #1B7A6E {
+  [*] --> ExplicitOverride
+  state "1. Explicit\nOverride" as ExplicitOverride #1B7A6E : **entry** always_wins | never_wins |\ndefer_to (execution id)\n**allowed** single override win\n**forbidden** self-ref defer_to (fall through)\ncycles (DFS) → ignore all defer_to
+  state "2. Compatible\nOverrides" as CompatibleOverrides #1B7A6E : **entry** compatible_overrides()\nsymmetric pairs or identical defer_to\n**allowed** resolve or fall through\n**forbidden** partial bind on dual conflict
+  state "3. Priority" as PriorityCheck #1B7A6E : **entry** lower priority_level wins\n1 constitutional … 5 advisory\n**allowed** strict winner or tie advance
+  state "4. Specificity" as SpecificityCheck #1B7A6E : **entry** score = scope×100 + bound_fields\n**allowed** strict winner or tie advance
+  state "5. Recency" as RecencyCheck #1B7A6E : **entry** newer created_at wins\nfrozen in node_body\n**allowed** strict later or artifact on identical ts
+
+  ExplicitOverride --> CompatibleOverrides : <b>none / dual / ambiguous</b>\nactor: System\n[multi-active post-fork defer_to → Artifact path via cascade]\nevent: ConflictOverrideFallthrough
+  CompatibleOverrides --> PriorityCheck : <b>no override</b>\nactor: System\nevent: ConflictFallthroughPriority
+  PriorityCheck --> SpecificityCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughSpecificity
+  SpecificityCheck --> RecencyCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughRecency
+}
+
 state "Resolved\nBinding" as ResolvedBinding #2C6E49 : **entry** winner recorded · loser adjusted\n**allowed** terminal bind on frozen CG-IR\n**forbidden** rewrite CG-IR nodes
 state "Conflict Artifact\nPending" as ArtifactPending #A93226 : **entry** requires human resolve\n**allowed** escalate to Official\n**forbidden** auto-bind
 
-state "Human Review" as HumanReview #B9770E : **entry** Official reviews artifact\n**allowed** resolve | deny/defer\n**forbidden** unauthenticated resolve
-state "Artifact\nResolved" as ArtifactResolved #2C6E49 : **entry** decision on same frozen snapshot\n**allowed** archive\n**forbidden** silent CG-IR rewrite
-state "Artifact\nRejected" as ArtifactRejected #A93226 : **entry** no change · remains open\n**allowed** reopen review\n**forbidden** partial resolution write
-state "Artifact\nArchived" as ArtifactArchived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** mutate decision
+' ---------- Hierarchical human artifact path ----------
+state "Human Artifact Path" as HumanArtifactPath #B9770E {
+  [*] --> HumanReview
+  state "Human Review" as HumanReview #B9770E : **entry** Official reviews artifact\n**allowed** resolve | deny/defer\n**forbidden** unauthenticated resolve
+  state "Artifact\nResolved" as ArtifactResolved #2C6E49 : **entry** decision on same frozen snapshot\n**allowed** archive\n**forbidden** silent CG-IR rewrite
+  state "Artifact\nRejected" as ArtifactRejected #A93226 : **entry** no change · remains open\n**allowed** reopen review\n**forbidden** partial resolution write
+  state "Artifact\nArchived" as ArtifactArchived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** mutate decision
 
-state "Run Precedence\nRead-Only" as AdvisoryCascade #1B7A6E : **entry** same cascade · no binding mutation\n**allowed** advisory signal only\n**forbidden** finding FSM / CG-IR write
-state "Advisory\nArtifact" as AdvisoryArtifact #B9770E : **entry** binding_status=advisory\nrequires_human_action=true\n**allowed** human directive change → recompile\n**forbidden** auto-mutate findings/CG-IR
-state "No Advisory" as NoAdvisory #2C6E49 : **entry** no residual cross-lineage signal\n**allowed** terminal
+  HumanReview --> ArtifactResolved : <b>conflict.resolve</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactResolved\naction: decision recorded on frozen snapshot
+  HumanReview --> ArtifactRejected : <b>deny / defer</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactRejected\naction: denial audit · artifact stays open
+  ArtifactResolved --> ArtifactArchived : <b>archive</b>\nactor: System\nevent: ConflictArtifactArchived
+  ArtifactRejected --> HumanReview : <b>reopen review</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictReviewReopened
+  ArtifactArchived --> [*]
+}
+
+' ---------- Cross-lineage advisory (read-only cascade abstraction) ----------
+state "Advisory Path" as AdvisoryPath #1B7A6E {
+  [*] --> AdvisoryCascade
+  state "Run Precedence\nRead-Only" as AdvisoryCascade #1B7A6E : **entry** same cascade · no binding mutation\n**allowed** advisory signal only\n**forbidden** finding FSM / CG-IR write
+  state "Advisory\nArtifact" as AdvisoryArtifact #B9770E : **entry** binding_status=advisory\nrequires_human_action=true\n**allowed** human directive change → recompile\n**forbidden** auto-mutate findings/CG-IR
+  state "No Advisory" as NoAdvisory #2C6E49 : **entry** no residual cross-lineage signal\n**allowed** terminal
+
+  AdvisoryCascade --> AdvisoryArtifact : <b>conflict signal</b>\nactor: System\nevent: ConflictAdvisoryEmitted
+  AdvisoryCascade --> NoAdvisory : <b>no residual conflict</b>\nactor: System\nevent: ConflictAdvisoryNone
+  AdvisoryArtifact --> [*]
+  NoAdvisory --> [*]
+}
 
 DetectPair --> NoConflict : <b>no candidate</b>\nactor: System\nevent: ConflictNone
 DetectPair --> ScopeCheck : <b>candidate pair</b>\nactor: System\nevent: ConflictPairDetected
 NoConflict --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
-ScopeCheck --> ExplicitOverride : <b>same lineage_id</b>\nactor: System\ncommand: enter binding cascade\nevent: ConflictBindingScope
-ScopeCheck --> AdvisoryCascade : <b>different lineage_id</b>\nactor: System\ncommand: enter advisory cascade\nevent: ConflictAdvisoryScope
+ScopeCheck --> BindingCascade : <b>same lineage_id</b>\nactor: System\ncommand: enter binding cascade\nevent: ConflictBindingScope
+ScopeCheck --> AdvisoryPath : <b>different lineage_id</b>\nactor: System\ncommand: enter advisory cascade\nevent: ConflictAdvisoryScope
 
+' External exits from cascade substates
 ExplicitOverride --> ResolvedBinding : <b>single override wins</b>\nactor: System\nevent: ConflictResolvedBinding\naction: winner recorded
-ExplicitOverride --> CompatibleOverrides : <b>none / dual / ambiguous</b>\nactor: System\n[multi-active post-fork defer_to → Artifact path via cascade]\nevent: ConflictOverrideFallthrough
-
 CompatibleOverrides --> ResolvedBinding : <b>compatible pair</b>\nactor: System\nevent: ConflictResolvedBinding
 CompatibleOverrides --> ArtifactPending : <b>incompatible dual</b>\nactor: System\nevent: ConflictArtifactOpened
-CompatibleOverrides --> PriorityCheck : <b>no override</b>\nactor: System\nevent: ConflictFallthroughPriority
-
 PriorityCheck --> ResolvedBinding : <b>strict winner</b>\nactor: System\nevent: ConflictResolvedBinding
-PriorityCheck --> SpecificityCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughSpecificity
-
 SpecificityCheck --> ResolvedBinding : <b>strict winner</b>\nactor: System\nevent: ConflictResolvedBinding
-SpecificityCheck --> RecencyCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughRecency
-
 RecencyCheck --> ResolvedBinding : <b>later created_at</b>\nactor: System\nevent: ConflictResolvedBinding
 RecencyCheck --> ArtifactPending : <b>identical timestamp</b>\nactor: System\nevent: ConflictArtifactOpened
 
 ResolvedBinding --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
-ArtifactPending --> HumanReview : <b>escalate</b>\nactor: System\ncommand: open human review queue\nevent: ConflictReviewOpened
-HumanReview --> ArtifactResolved : <b>conflict.resolve</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactResolved\naction: decision recorded on frozen snapshot
-HumanReview --> ArtifactRejected : <b>deny / defer</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactRejected\naction: denial audit · artifact stays open
-ArtifactResolved --> ArtifactArchived : <b>archive</b>\nactor: System\nevent: ConflictArtifactArchived
-ArtifactRejected --> HumanReview : <b>reopen review</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictReviewReopened
-ArtifactArchived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
-
-AdvisoryCascade --> AdvisoryArtifact : <b>conflict signal</b>\nactor: System\nevent: ConflictAdvisoryEmitted
-AdvisoryCascade --> NoAdvisory : <b>no residual conflict</b>\nactor: System\nevent: ConflictAdvisoryNone
-AdvisoryArtifact --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
-NoAdvisory --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+ArtifactPending --> HumanArtifactPath : <b>escalate</b>\nactor: System\ncommand: open human review queue\nevent: ConflictReviewOpened
+HumanArtifactPath --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+AdvisoryPath --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

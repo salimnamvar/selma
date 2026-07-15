@@ -8,9 +8,13 @@
 '
 ' Authority: ONLY fully normative FSM in the specification.
 ' Ownership, events, concurrency: docs/state-machine/README.md
+'
+' UML: InRemediation is a hierarchical composite grouping the
+' acknowledge → evidence → verify path. Normative 10 leaf states
+' unchanged; Open / Dismissed / Waived / Closed remain siblings.
 ' ============================================================
 
-title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · capability gates · SoD-1/SoD-2 · system-only close</i></size>
+title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · hierarchical remediation · SoD-1/SoD-2 · system-only close</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -18,30 +22,34 @@ title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · capabil
 
 state "Created" as Created #3B7DD8 : **entry** born from inspection Report\n**allowed** system auto-open only\n**forbidden** human mutation · dismiss · waive
 state "Open" as Open #3B7DD8 : **entry** disposition=valid decision hub\n**allowed** acknowledge | dismiss | waive\n**forbidden** close · approve · submit evidence\n**mutex** first action is exclusive
-state "Acknowledged\n(In Remedy)" as Acknowledged #3B7DD8 : **entry** remediation accepted\n**allowed** evidence.submit\n**forbidden** dismiss · waive · close
-state "Evidence\nSubmitted" as EvidenceSubmitted #1B7A6E : **entry** evidence actor recorded for SoD-2\n**allowed** system advance only\n**forbidden** human mutation
-state "Pending\nVerification" as PendingVerification #B9770E : **entry** awaits Official decision\n**allowed** approve_remediation | reject_remediation\n**forbidden** evidence resubmit · close
-state "Verified\n(Resolved)" as Verified #2C6E49 : **entry** remediation approved (pre-terminal)\n**allowed** system close only\n**forbidden** human close · reopen
-state "Rejected\n(Reopen)" as Rejected #A93226 : **entry** remediation rejected\n**allowed** reopen + mandatory comments\n**forbidden** approve without reopen
+
+' ---------- Hierarchical composite: remediation path ----------
+state "In Remediation" as InRemediation #3B7DD8 {
+  [*] --> Acknowledged
+  state "Acknowledged\n(In Remedy)" as Acknowledged #3B7DD8 : **entry** remediation accepted\n**allowed** evidence.submit\n**forbidden** dismiss · waive · close
+  state "Evidence\nSubmitted" as EvidenceSubmitted #1B7A6E : **entry** evidence actor recorded for SoD-2\n**allowed** system advance only\n**forbidden** human mutation
+  state "Pending\nVerification" as PendingVerification #B9770E : **entry** awaits Official decision\n**allowed** approve_remediation | reject_remediation\n**forbidden** evidence resubmit · close
+  state "Verified\n(Resolved)" as Verified #2C6E49 : **entry** remediation approved (pre-terminal)\n**allowed** system close only\n**forbidden** human close · reopen
+  state "Rejected\n(Reopen)" as Rejected #A93226 : **entry** remediation rejected\n**allowed** reopen + mandatory comments\n**forbidden** approve without reopen
+
+  Acknowledged --> EvidenceSubmitted : <b>evidence.submit</b>\nactor: Compliance Representative\n[capability: evidence.submit]\naction: record evidence_submitter for SoD-2\nevent: DispositionChanged\nstory: S-13
+  EvidenceSubmitted --> PendingVerification : <b>system automatic</b>\nactor: System\ncommand: on evidence receipt\nevent: DispositionChanged
+  PendingVerification --> Verified : <b>finding.approve_remediation</b>\nactor: Regulatory Official\n[capability: finding.approve_remediation]\n[SoD-2: actor ≠ evidence_submitter]\nevent: DispositionChanged\nstory: S-14a / S-33
+  PendingVerification --> Rejected : <b>finding.reject_remediation</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\nevent: DispositionChanged\nstory: S-14b
+}
+
 state "Dismissed\n(Invalid)" as Dismissed #4A4A4A : **entry** disposition=invalid **terminal**\n**allowed** read-only / analytics\n**forbidden** any transition
 state "Waived\n(Accepted Risk)" as Waived #B9770E : **entry** disposition=waived **pre-terminal**\n**allowed** system close only\n**forbidden** human close · reopen
 state "Closed" as Closed #4A4A4A : **entry** terminal sink\n**allowed** read-only / analytics\n**forbidden** reopen · any mutation
 
 Created --> Open : <b>system automatic</b>\nactor: System\ncommand: auto-open\nevent: DispositionChanged\naction: disposition remains valid
 
-Open --> Acknowledged : <b>finding.acknowledge</b>\nactor: Compliance Representative\n[capability: finding.acknowledge]\nevent: DispositionChanged\nstory: S-12
+Open --> InRemediation : <b>finding.acknowledge</b>\nactor: Compliance Representative\n[capability: finding.acknowledge]\nevent: DispositionChanged\nstory: S-12
 Open --> Dismissed : <b>finding.dismiss</b>\nactor: Regulatory Official\n[capability: finding.dismiss]\naction: disposition := invalid\nevent: DispositionChanged\nstory: S-25
 Open --> Waived : <b>finding.waive</b>\nactor: Regulatory Official\n[capability: finding.waive]\n[SoD-1: actor ∉ creator_provenance(control_id)]\naction: disposition := waived\nevent: DispositionChanged\nstory: S-29 / S-32
 
-Acknowledged --> EvidenceSubmitted : <b>evidence.submit</b>\nactor: Compliance Representative\n[capability: evidence.submit]\naction: record evidence_submitter for SoD-2\nevent: DispositionChanged\nstory: S-13
-
-EvidenceSubmitted --> PendingVerification : <b>system automatic</b>\nactor: System\ncommand: on evidence receipt\nevent: DispositionChanged
-
-PendingVerification --> Verified : <b>finding.approve_remediation</b>\nactor: Regulatory Official\n[capability: finding.approve_remediation]\n[SoD-2: actor ≠ evidence_submitter]\nevent: DispositionChanged\nstory: S-14a / S-33
-PendingVerification --> Rejected : <b>finding.reject_remediation</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\nevent: DispositionChanged\nstory: S-14b
-
+' Exit remediation composite
 Rejected --> Open : <b>finding.reopen</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\n[mandatory comments]\nevent: DispositionChanged\nstory: S-14c
-
 Verified --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed
 Waived --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed
 

@@ -10,9 +10,14 @@
 '             compiled_at excluded from snapshot hash (S-23)
 '             policy_doctrine.yaml never at runtime (AA-02)
 ' Ownership / concurrency: README.md
+'
+' UML hierarchy:
+'   StructuralValidation  — Schema…Lineage (ordered gates)
+'   MaterializeCgIr       — Hash…PolicyAssert (compose path)
+' FAIL from nested gate exits composite → Failed (then release lock).
 ' ============================================================
 
-title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>All-or-nothing publish · content-addressed · no runtime policy dependency</i></size>
+title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>Hierarchical validate → materialize · all-or-nothing CAS · no runtime policy</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -21,16 +26,39 @@ title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>All-or-nothin
 state "Requested" as Requested #B9770E : **entry** request_id assigned\n**allowed** dedup by (graph version + frozen_env)\n**forbidden** partial CG-IR write
 state "Queued" as Queued #B9770E : **entry** FIFO queue\n**allowed** writer-preference scheduling\n**forbidden** skip lock (§3.4)
 state "Acquire\nRead Lock" as AcquireReadLock #B9770E : **entry** seek directive_store read lock\n**allowed** concurrent compiles\n**forbidden** write-lock-while-awaiting-compile
-state "Schema\nValidate" as SchemaValidate #1B7A6E : **entry** JSON Schema Draft-07\n**allowed** structural projection only\n**forbidden** skip complexity pass
-state "Complexity\nValidate" as ComplexityValidate #1B7A6E : **entry** AST walk post-schema\n**allowed** depth≤32 · nodes≤256 · width≤64\nregex≤4096 · metadata≤16384 B\n**forbidden** schema-only conformance claim
-state "Portability\nValidate" as PortabilityValidate #1B7A6E : **entry** RE2 · IEEE 754 finite\nUTC-Z · NFC · flags {i,m,s} only\n**forbidden** engine-specific regex
-state "Discriminator\nValidate" as DiscriminatorValidate #1B7A6E : **entry** evaluator_type ↔ config\nAST discriminator (§2.9)\n**forbidden** weak if/then only
-state "Lineage DAG\nValidate" as LineageValidate #1B7A6E : **entry** acyclicity · depth≤64\nparent existence · op cardinality\n**forbidden** self-reference
-state "Hash Nodes" as HashNodes #1B7A6E : **entry** dual-hash model (§2.6)\nsemantic_hash = SHA-256(semantic_body)\npresentation_hash = SHA-256(presentation_body)\nnode_hash = SHA-256({semantic, presentation})\n**allowed** reuse evaluator subgraph if semantic_hash match\n**forbidden** embed neighbor context · include presentation in semantic_hash
-state "Hash Edges" as HashEdges #1B7A6E : **entry** edge_hash = SHA-256(source, target)\n**allowed** directional depends_on only
-state "Conflict\nMap" as ConflictMap #1B7A6E : **entry** resolve_conflict mapping\nprecedence §2.15\n**forbidden** bind cross-lineage
-state "Snapshot\nHash" as SnapshotHash #1B7A6E : **entry** cg_ir_snapshot_hash =\nSHA-256(sorted node_hashes +\nsorted edge_hashes + provenance)\n**forbidden** include compiled_at (S-23)\nCAS: identical hash → dedup no-op
-state "Policy Runtime\nProhibition Assert" as PolicyAssert #1B7A6E : **entry** AA-02 path assert\n**allowed** policy absent from runtime paths\n**forbidden** load policy_doctrine.yaml
+
+' ---------- Composite: structural validation gates ----------
+state "Structural Validation" as StructuralValidation #1B7A6E {
+  [*] --> SchemaValidate
+  state "Schema\nValidate" as SchemaValidate #1B7A6E : **entry** JSON Schema Draft-07\n**allowed** structural projection only\n**forbidden** skip complexity pass
+  state "Complexity\nValidate" as ComplexityValidate #1B7A6E : **entry** AST walk post-schema\n**allowed** depth≤32 · nodes≤256 · width≤64\nregex≤4096 · metadata≤16384 B\n**forbidden** schema-only conformance claim
+  state "Portability\nValidate" as PortabilityValidate #1B7A6E : **entry** RE2 · IEEE 754 finite\nUTC-Z · NFC · flags {i,m,s} only\n**forbidden** engine-specific regex
+  state "Discriminator\nValidate" as DiscriminatorValidate #1B7A6E : **entry** evaluator_type ↔ config\nAST discriminator (§2.9)\n**forbidden** weak if/then only
+  state "Lineage DAG\nValidate" as LineageValidate #1B7A6E : **entry** acyclicity · depth≤64\nparent existence · op cardinality\n**forbidden** self-reference
+
+  SchemaValidate --> ComplexityValidate : <b>PASS</b>\nactor: System (Hermetic Compiler)\nevent: CompileGatePassed\naction: gate=schema
+  ComplexityValidate --> PortabilityValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=complexity
+  PortabilityValidate --> DiscriminatorValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=portability
+  DiscriminatorValidate --> LineageValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=discriminator
+  LineageValidate --> [*] : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=lineage · lineage_validation recorded
+}
+
+' ---------- Composite: hash / conflict / policy materialization ----------
+state "Materialize CG-IR" as MaterializeCgIr #1B7A6E {
+  [*] --> HashNodes
+  state "Hash Nodes" as HashNodes #1B7A6E : **entry** dual-hash model (§2.6)\nsemantic_hash = SHA-256(semantic_body)\npresentation_hash = SHA-256(presentation_body)\nnode_hash = SHA-256({semantic, presentation})\n**allowed** reuse evaluator subgraph if semantic_hash match\n**forbidden** embed neighbor context · include presentation in semantic_hash
+  state "Hash Edges" as HashEdges #1B7A6E : **entry** edge_hash = SHA-256(source, target)\n**allowed** directional depends_on only
+  state "Conflict\nMap" as ConflictMap #1B7A6E : **entry** resolve_conflict mapping\nprecedence §2.15\n**forbidden** bind cross-lineage
+  state "Snapshot\nHash" as SnapshotHash #1B7A6E : **entry** cg_ir_snapshot_hash =\nSHA-256(sorted node_hashes +\nsorted edge_hashes + provenance)\n**forbidden** include compiled_at (S-23)\nCAS: identical hash → dedup no-op
+  state "Policy Runtime\nProhibition Assert" as PolicyAssert #1B7A6E : **entry** AA-02 path assert\n**allowed** policy absent from runtime paths\n**forbidden** load policy_doctrine.yaml
+
+  HashNodes --> HashEdges : <b>hash nodes</b>\nactor: System\nevent: CompileNodesHashed
+  HashEdges --> ConflictMap : <b>hash edges</b>\nactor: System\nevent: CompileEdgesHashed
+  ConflictMap --> SnapshotHash : <b>map conflicts</b>\nactor: System\naction: unresolved → conflict artifact meta\naction: cross-lineage advisory only\nevent: CompileConflictsMapped
+  SnapshotHash --> PolicyAssert : <b>compose snapshot hash</b>\nactor: System\nevent: CompileSnapshotHashed
+  PolicyAssert --> [*] : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=AA-02
+}
+
 state "Publish CAS" as Publish #2C6E49 : **entry** immutable snapshot write\n**allowed** dedup if hash exists\n**forbidden** in-place mutate
 state "Release Lock\n(Success)" as ReleaseLockOk #2C6E49 : **entry** read lock released after publish\n**allowed** inspections may pin hash
 state "Release Lock\n(Abort)" as ReleaseLockFail #A93226 : **entry** read lock released after fail\n**allowed** Directive Graph unchanged
@@ -39,30 +67,19 @@ state "Failed" as Failed #A93226 : **entry** no partial CG-IR\n**allowed** audit
 
 Requested --> Queued : <b>enqueue</b>\nactor: System\ncommand: schedule compile\nevent: CompileQueued
 Queued --> AcquireReadLock : <b>dequeue</b>\nactor: System\ncommand: grant FIFO slot\nevent: CompileDequeued
-AcquireReadLock --> SchemaValidate : <b>lock granted</b>\nactor: System\ncommand: acquire read lock\nevent: CompileLockAcquired
+AcquireReadLock --> StructuralValidation : <b>lock granted</b>\nactor: System\ncommand: acquire read lock\nevent: CompileLockAcquired
 AcquireReadLock --> Queued : <b>blocked</b>\nactor: System\n[write lock held or write pending]\naction: retry FIFO\nevent: CompileLockDeferred
 
-SchemaValidate --> ComplexityValidate : <b>PASS</b>\nactor: System (Hermetic Compiler)\nevent: CompileGatePassed\naction: gate=schema
+' Composite completion: all structural gates passed
+StructuralValidation --> MaterializeCgIr : <b>validation complete</b>\nactor: System\nevent: CompileStructuralOk
+MaterializeCgIr --> Publish : <b>materialization complete</b>\nactor: System\nevent: CompileMaterialized
+
+' External FAIL exits from nested gates
 SchemaValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: SchemaError · no partial CG-IR
-
-ComplexityValidate --> PortabilityValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=complexity
 ComplexityValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: ComplexityError
-
-PortabilityValidate --> DiscriminatorValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=portability
 PortabilityValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: PortabilityError
-
-DiscriminatorValidate --> LineageValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=discriminator
 DiscriminatorValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: DiscriminatorError
-
-LineageValidate --> HashNodes : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=lineage · lineage_validation recorded
 LineageValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: LineageError
-
-HashNodes --> HashEdges : <b>hash nodes</b>\nactor: System\nevent: CompileNodesHashed
-HashEdges --> ConflictMap : <b>hash edges</b>\nactor: System\nevent: CompileEdgesHashed
-ConflictMap --> SnapshotHash : <b>map conflicts</b>\nactor: System\naction: unresolved → conflict artifact meta\naction: cross-lineage advisory only\nevent: CompileConflictsMapped
-
-SnapshotHash --> PolicyAssert : <b>compose snapshot hash</b>\nactor: System\nevent: CompileSnapshotHashed
-PolicyAssert --> Publish : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=AA-02
 PolicyAssert --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: ArchitecturalAuditError AA-02
 
 Publish --> ReleaseLockOk : <b>CAS put</b>\nactor: System\ncommand: write-once publish\nevent: CgIrPublished

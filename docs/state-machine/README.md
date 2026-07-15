@@ -143,8 +143,14 @@ Any fail → Denied → DenialAudited → DomainUnchanged.
 
 ### 8. Artifact Lifecycle
 
-Building → Validated → Published → Active Reference → Superseded Reference → Archived.  
-**Extended state:** `replicated: bool` (self-transitions on Published / Active / Superseded when async audit replicate fires).  
+Building → Validated → **Durable Artifact** (orthogonal) → Archived.  
+
+| Orthogonal region | Substates |
+| :--- | :--- |
+| **Reference** | Published → Active Reference → Superseded Reference |
+| **Replication** | Not Replicated → Replicated |
+
+Being durable means **both** regions are active (AND-decomposition). Archive exits the composite from Superseded Reference.  
 Reject build → no durable artifact.
 
 ### 9–10. Detail views (Q-04 resolved)
@@ -351,21 +357,51 @@ grep -rn "^note\|end note" docs/state-machine/*.puml
 
 ## UML State Machine Conformance
 
-Catalog machines are **behavioral** UML state machines (entity / process behavior), not protocol state machines. Notation and semantics follow UML statechart conventions:
+Catalog machines are **behavioral** UML state machines (entity / process behavior), not protocol state machines. Notation and semantics follow UML / Harel statechart conventions:
 
 | UML concept | How Selma applies it |
 | :--- | :--- |
 | Directed graph of states + transitions | PlantUML `state` diagrams; rounded states, arrow transitions |
 | Initial pseudostate | Unlabeled `[*] --> …` on every machine (trigger-free start) |
 | Final pseudostate | `… --> [*]` only for true sinks (no further legal edges) |
-| Exactly one active simple state | Flat machines; no dual outgoing concurrency without extended state or regions |
+| Exactly one active simple state **per region** | Leaf XOR states inside composites / regions |
 | Trigger / guard / action | Labels: **trigger**, `[guard]`, `action: …`; capabilities are guards |
 | Entry actions (Moore) | State bodies with `**entry** …` |
 | Transition actions (Mealy) | `action:` / `event:` on edges |
-| Extended state | Quantitative vars (e.g. `retry_count`, `replicated`, SoD provenance) + `[guards]` |
+| Extended state | Quantitative vars (e.g. `retry_count`, SoD provenance) + `[guards]` |
 | Run-to-completion (RTC) | One aggregate processes one command/event to completion before the next |
-| Hierarchical nesting | Used sparingly; pipelines are linear stages (valid flat FSMs) |
-| Orthogonal regions | Prefer **extended state** when aspects co-vary (e.g. audit replication) rather than false XOR states |
+| Hierarchical nesting (OR) | Composite states group related sub-behavior (see table below) |
+| Orthogonal regions (AND) | Concurrent independent aspects inside a composite (see table below) |
+
+### Hierarchical composites (OR-decomposition)
+
+| Machine | Composite | Nested content |
+| :--- | :--- | :--- |
+| Finding Lifecycle | `In Remediation` | Acknowledged → … → Verified \| Rejected |
+| Directive Lifecycle | `Identity Spawn` | Fork / Merge / Split spawn substates |
+| Compilation | `Structural Validation` | Schema → Complexity → Portability → Discriminator → Lineage |
+| Compilation | `Materialize CG-IR` | Hash Nodes → … → Policy Assert |
+| Inspection | `Pure Stages` | Normalize → … → Report |
+| Conflict | `Binding Cascade` | Explicit → … → Recency (steps 1–5) |
+| Conflict | `Human Artifact Path` | Review → Resolved/Rejected → Archived |
+| Conflict | `Advisory Path` | Read-only cross-lineage cascade |
+| Certification | `Validating Gates` | AA-01 → … → AA-07 |
+| Authorization | `Evaluate Access` | Capability → SoD? → Stage → Allowed |
+| Authorization | `Deny Path` | Denied → Audited → DomainUnchanged |
+| CG-IR Hash | `Compose Snapshot` | Node hash → Edge hash → Snapshot hash |
+| HLC | `Tick` | Local send \| Remote receive → Advance \| Increment → Emit |
+| HLC | `Partition Heal` | Partitioned → Reconciling |
+
+**Semantics:** while in a nested substate, the machine is **also** in every enclosing superstate. Common exits (e.g. any AA FAIL → `Failed`) leave the composite without repeating that edge on every leaf in documentation prose.
+
+### Orthogonal regions (AND-decomposition)
+
+| Machine | Composite | Regions (simultaneous) |
+| :--- | :--- | :--- |
+| Artifact Lifecycle | `Durable Artifact` | **Reference** ‖ **Replication** |
+| CG-IR Hash Chain | `Dual Hash` | **Semantic** ‖ **Presentation** |
+
+**Semantics:** being in the composite entails being in **all** regions at once. This avoids Cartesian product states (e.g. Active×Replicated) while keeping independent transitions per region. Completion of all regions enables the composite’s outgoing completion transition (Dual Hash → reuse check).
 
 **Intentionally not pure single-entity FSMs:**
 

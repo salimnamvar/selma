@@ -10,9 +10,13 @@
 ' Six pure stages. Reinspect = NEW inspection_id.
 ' Process FSM (not multi-day durable aggregate).
 ' Ownership / events / concurrency: README.md
+'
+' UML: PureStages is a hierarchical composite (Normalize…Report).
+' Stage faults stay inside and route to Report; terminal outcomes
+' are external (Completed | Partial | Failed).
 ' ============================================================
 
-title Selma — Inspection Execution Pipeline\n<size:12><i>Six-stage pure evaluation · typed faults · immutable snapshot + HLC findings</i></size>
+title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -21,12 +25,34 @@ title Selma — Inspection Execution Pipeline\n<size:12><i>Six-stage pure evalua
 state "Submitted" as Submitted #B9770E : **entry** target payload received\n**allowed** ingress check only\n**forbidden** evaluate without pin
 state "Ingress\nGranted" as IngressGranted #1B7A6E : **entry** capability + schema OK\n**allowed** set point-in-time pins\n**forbidden** mutate prior snapshots\npins: target_hash · cg_ir_snapshot_hash\nfrozen_env_hash · engine_version
 state "Rejected\nIngress" as RejectedIngress #A93226 : **entry** 403 | SchemaError **terminal**\n**allowed** denial audit only\n**forbidden** snapshot · findings
-state "1. Normalize" as Normalize #1B7A6E : **entry** NFC · UTC · IEEE 754\n**allowed** compute target_hash\n**forbidden** evaluator IO
-state "2. Classify" as Classify #1B7A6E : **entry** target_type mapping\n**allowed** context enrichment\n**forbidden** finding birth
-state "3. Select\nControls" as SelectControls #1B7A6E : **entry** scope filter CG-IR\n**allowed** deps ready · severity gate\n**forbidden** cascade on dependency fail
-state "4. Evaluate" as Evaluate #1B7A6E : **entry** topological DAG pure evaluators\n**allowed** Pass|Fail|Partial|NeedsReview\nparallel independent nodes\n**forbidden** IO · randomness · env reads
-state "5. Aggregate" as Aggregate #1B7A6E : **entry** deontic × outcome\n**allowed** conflict apply · severity map\n**forbidden** mutate CG-IR
-state "6. Report" as Report #2C6E49 : **entry** append findings · write snapshot+trace\n**allowed** system_state_hash seal\n**forbidden** modify completed snapshot
+
+' ---------- Hierarchical composite: six pure stages ----------
+state "Pure Stages" as PureStages #1B7A6E {
+  [*] --> Normalize
+  state "1. Normalize" as Normalize #1B7A6E : **entry** NFC · UTC · IEEE 754\n**allowed** compute target_hash\n**forbidden** evaluator IO
+  state "2. Classify" as Classify #1B7A6E : **entry** target_type mapping\n**allowed** context enrichment\n**forbidden** finding birth
+  state "3. Select\nControls" as SelectControls #1B7A6E : **entry** scope filter CG-IR\n**allowed** deps ready · severity gate\n**forbidden** cascade on dependency fail
+  state "4. Evaluate" as Evaluate #1B7A6E : **entry** topological DAG pure evaluators\n**allowed** Pass|Fail|Partial|NeedsReview\nparallel independent nodes\n**forbidden** IO · randomness · env reads
+  state "5. Aggregate" as Aggregate #1B7A6E : **entry** deontic × outcome\n**allowed** conflict apply · severity map\n**forbidden** mutate CG-IR
+  state "6. Report" as Report #2C6E49 : **entry** append findings · write snapshot+trace\n**allowed** system_state_hash seal\n**forbidden** modify completed snapshot
+
+  Normalize --> Classify : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=normalize
+  Normalize --> Report : <b>fault → typed finding</b>\nactor: System\nevent: InspectionStageFault\naction: Schema | Corruption
+
+  Classify --> SelectControls : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=classify
+  Classify --> Report : <b>fault → Schema</b>\nactor: System\nevent: InspectionStageFault\naction: Schema
+
+  SelectControls --> Evaluate : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=select_controls
+  SelectControls --> Report : <b>Dependency skip</b>\nactor: System\nevent: InspectionNodesSkipped\naction: skipped_nodes only · no finding
+
+  Evaluate --> Aggregate : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=evaluate
+  Evaluate --> Evaluate : <b>timeout retry</b>\nactor: System\n[retry_count < max_retries]\naction: infrastructure timeout only · max 3 · default 0\nevent: InspectionEvalRetry
+  Evaluate --> Report : <b>fault findings</b>\nactor: System\nevent: InspectionStageFault\naction: Deterministic | Ambiguous | Timeout | Resource
+
+  Aggregate --> Report : <b>aggregate</b>\nactor: System\ncommand: OK or partial aggregate (always report)\nevent: InspectionAggregated
+  Report --> [*]
+}
+
 state "Completed" as Completed #2C6E49 : **entry** status=completed **terminal**\n**allowed** read-only analytics\n**forbidden** mutate
 state "Partial" as Partial #B9770E : **entry** status=partial · skipped_nodes\n**allowed** read-only · reinspect new id\n**forbidden** backfill skipped into same id
 state "Failed" as Failed #A93226 : **entry** status=failed · fatal CG-IR\n**allowed** audit · reinspect new id\n**forbidden** partial publish as completed
@@ -36,26 +62,12 @@ Submitted --> RejectedIngress : <b>deny</b>\nactor: System\nevent: InspectionIng
 
 RejectedIngress --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
-IngressGranted --> Normalize : <b>pin system_state inputs</b>\nactor: System (Rule Inspector)\ncommand: pin target_hash + cg_ir + frozen_env + engine\naction: system_state_hash inputs fixed\naction: event stream EXCLUDED from hash (§2.17)\nevent: InspectionPinned
+IngressGranted --> PureStages : <b>pin system_state inputs</b>\nactor: System (Rule Inspector)\ncommand: pin target_hash + cg_ir + frozen_env + engine\naction: system_state_hash inputs fixed\naction: event stream EXCLUDED from hash (§2.17)\nevent: InspectionPinned
 
-Normalize --> Classify : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=normalize
-Normalize --> Report : <b>fault → typed finding</b>\nactor: System\nevent: InspectionStageFault\naction: Schema | Corruption
-
-Classify --> SelectControls : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=classify
-Classify --> Report : <b>fault → Schema</b>\nactor: System\nevent: InspectionStageFault\naction: Schema
-
-SelectControls --> Evaluate : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=select_controls
-SelectControls --> Report : <b>Dependency skip</b>\nactor: System\nevent: InspectionNodesSkipped\naction: skipped_nodes only · no finding
-
-Evaluate --> Aggregate : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=evaluate
-Evaluate --> Evaluate : <b>timeout retry</b>\nactor: System\n[retry_count < max_retries]\naction: infrastructure timeout only · max 3 · default 0\nevent: InspectionEvalRetry
-Evaluate --> Report : <b>fault findings</b>\nactor: System\nevent: InspectionStageFault\naction: Deterministic | Ambiguous | Timeout | Resource
-
-Aggregate --> Report : <b>aggregate</b>\nactor: System\ncommand: OK or partial aggregate (always report)\nevent: InspectionAggregated
-
-Report --> Completed : <b>seal completed</b>\nactor: System\ncommand: write snapshot + birth findings\nevent: InspectionCompleted\naction: FindingCreated for Fail|Partial|NeedsReview
-Report --> Partial : <b>seal partial</b>\nactor: System\nevent: InspectionPartial\naction: skipped_nodes present
-Report --> Failed : <b>fatal CG-IR corruption</b>\nactor: System\nevent: InspectionFailed
+' Outcomes after Report completes the composite (discriminated by extended state)
+PureStages --> Completed : <b>seal completed</b>\nactor: System\ncommand: write snapshot + birth findings\n[no skipped_nodes · no fatal corruption]\nevent: InspectionCompleted\naction: FindingCreated for Fail|Partial|NeedsReview
+PureStages --> Partial : <b>seal partial</b>\nactor: System\n[skipped_nodes present]\nevent: InspectionPartial
+PureStages --> Failed : <b>fatal CG-IR corruption</b>\nactor: System\nevent: InspectionFailed
 
 Completed --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 Partial --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none

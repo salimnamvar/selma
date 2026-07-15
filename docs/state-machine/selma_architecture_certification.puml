@@ -10,9 +10,13 @@
 ' Production-grade reference certification requires all AA gates.
 ' Document suite conformance alone does not certify an engine.
 ' Ownership / retention: README.md
+'
+' UML: ValidatingGates is a hierarchical composite (OR-decomposition).
+' Substates AA-01..AA-07 inherit the composite context; any FAIL
+' exits the composite to Failed (external transition).
 ' ============================================================
 
-title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · pass/fail evidence · no runtime policy contamination</i></size>
+title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · hierarchical AA composite · no runtime policy contamination</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -20,14 +24,27 @@ title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate au
 
 state "Triggered" as Triggered #B9770E : **entry** certification run_id assigned\n**allowed** collect evidence\n**forbidden** skip gates
 state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-IR samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory\n**forbidden** mutate domain FSMs
-state "Validating\nGates" as ValidatingGates #1B7A6E : **entry** sequential AA-01..AA-07\n**allowed** ordered gate execution\n**forbidden** partial certify
-state "AA-01\nMediated Feedback" as AA01 #1B7A6E : **entry** analytics has no write path\nto CG-IR / Finding FSM\nmethod: integration (no finding→compile)
-state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** policy_doctrine.yaml absent\nfrom runtime paths\nmethod: static analysis + path assert
-state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
-state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : **entry** waive + approve SoD tests\nmethod: integration SoD corpus
-state "AA-05\nConflict Determinism" as AA05 #1B7A6E : **entry** byte-identical replay\nmethod: conflict replay corpus
-state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : **entry** invalid type/config corpus\nmethod: discriminator rejection set
-state "AA-07\nPortable Serialization" as AA07 #1B7A6E : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
+
+' ---------- Hierarchical composite: sequential AA gates ----------
+state "Validating Gates" as ValidatingGates #1B7A6E {
+  [*] --> AA01
+  state "AA-01\nMediated Feedback" as AA01 #1B7A6E : **entry** analytics has no write path\nto CG-IR / Finding FSM\nmethod: integration (no finding→compile)
+  state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** policy_doctrine.yaml absent\nfrom runtime paths\nmethod: static analysis + path assert
+  state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
+  state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : **entry** waive + approve SoD tests\nmethod: integration SoD corpus
+  state "AA-05\nConflict Determinism" as AA05 #1B7A6E : **entry** byte-identical replay\nmethod: conflict replay corpus
+  state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : **entry** invalid type/config corpus\nmethod: discriminator rejection set
+  state "AA-07\nPortable Serialization" as AA07 #1B7A6E : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
+
+  AA01 --> AA02 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-01
+  AA02 --> AA03 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-02
+  AA03 --> AA04 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-03
+  AA04 --> AA05 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-04
+  AA05 --> AA06 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-05
+  AA06 --> AA07 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-06
+  AA07 --> [*] : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-07
+}
+
 state "Passed" as Passed #2C6E49 : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
 state "Failed" as Failed #A93226 : **entry** one or more gates red\n**allowed** write fail evidence\n**forbidden** certify
 state "Rejected" as Rejected #A93226 : **entry** evidence incomplete\nor non-reproducible run\n**allowed** remediate then re-run\n**forbidden** certify
@@ -39,20 +56,16 @@ Triggered --> CollectingEvidence : <b>begin collect</b>\nactor: System (Architec
 CollectingEvidence --> ValidatingGates : <b>corpus complete</b>\nactor: System\nevent: CertificationEvidenceReady
 CollectingEvidence --> Rejected : <b>missing evidence</b>\nactor: System\nevent: CertificationRejected\naction: incomplete corpus
 
-ValidatingGates --> AA01 : <b>start AA-01</b>\nactor: System\nevent: CertificationGateStarted\naction: gate=AA-01
-AA01 --> AA02 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-01
+' Completion of composite (all AA gates PASS)
+ValidatingGates --> Passed : <b>all gates green</b>\nactor: System\nevent: CertificationGatesComplete
+
+' External exits from nested substates (any FAIL leaves composite)
 AA01 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-01
-AA02 --> AA03 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-02
 AA02 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-02
-AA03 --> AA04 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-03
 AA03 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-03
-AA04 --> AA05 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-04
 AA04 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-04
-AA05 --> AA06 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-05
 AA05 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-05
-AA06 --> AA07 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-06
 AA06 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-06
-AA07 --> Passed : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-07
 AA07 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-07
 
 Passed --> Certified : <b>seal certification artifact</b>\nactor: System\ncommand: write-once pass evidence + gate report\nevent: CertificationSealed

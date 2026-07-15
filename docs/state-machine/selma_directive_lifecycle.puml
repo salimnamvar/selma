@@ -13,9 +13,12 @@
 ' Status enum (schema): draft | active | deprecated | superseded
 ' Ownership / events / concurrency: README.md
 ' Split capability: directive.fork (v8.2.4; no directive.split matrix row)
+'
+' UML: IdentitySpawn is a hierarchical composite for fork/merge/split
+' intermediate materialization before children enter Draft.
 ' ============================================================
 
-title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · dual-identity ops · parent deprecation · hermetic recompile</i></size>
+title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -26,9 +29,12 @@ state "Active" as Active #2C6E49 : **entry** published & operational in CG-IR\n*
 state "Deprecated" as Deprecated #4A4A4A : **entry** retired / absorbed parent\n**allowed** restore only\n**forbidden** fork · merge · split · modify body\nCG-IR nodes marked deprecated
 state "Superseded" as Superseded #4A4A4A : **entry** replaced by successor\n**allowed** read-only audit trail\n**forbidden** restore without successor governance\nmetadata.migration.superseded_by required
 
-state "Fork Children\n(spawn)" as ForkChildren #1B7A6E : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
-state "Merge Result\n(spawn)" as MergeResult #1B7A6E : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
-state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
+' ---------- Hierarchical composite: identity operations ----------
+state "Identity Spawn" as IdentitySpawn #1B7A6E {
+  state "Fork Children\n(spawn)" as ForkChildren #1B7A6E : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
+  state "Merge Result\n(spawn)" as MergeResult #1B7A6E : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
+  state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
+}
 
 ' ---------- Status transitions ----------
 Draft --> Draft : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\naction: lineage_id unchanged · execution_id unchanged\nevent: DirectiveRevised\nstory: S-02
@@ -40,7 +46,7 @@ Active --> Superseded : <b>directive.modify (supersede)</b>\nactor: Regulatory O
 
 Deprecated --> Draft : <b>directive.restore</b>\nactor: Regulatory Official\n[capability: directive.restore]\naction: target revision copied · lineage_id preserved\n[must recompile to re-activate]\nevent: DirectiveRestored\nstory: S-08
 
-' ---------- Identity operations ----------
+' ---------- Enter identity spawn (target specific substate) ----------
 Active --> ForkChildren : <b>directive.fork</b>\nactor: Regulatory Official\n[capability: directive.fork]\naction: parent side-effect Deprecated\nevent: DirectiveForked\nstory: S-19
 Active --> MergeResult : <b>directive.merge</b>\nactor: Regulatory Official\n[capability: directive.merge]\naction: both parents side-effect Deprecated\nevent: DirectiveMerged\nstory: S-20
 Active --> SplitChildren : <b>directive.split</b>\nactor: Regulatory Official\n[capability: directive.fork]\n[N-ary split shares fork gate (v8.2.4)]\naction: parent side-effect Deprecated\nevent: DirectiveSplit\nstory: S-26
@@ -49,8 +55,8 @@ ForkChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: material
 MergeResult --> Draft : <b>spawn merged rule</b>\nactor: System\ncommand: materialize merge result\naction: new execution_id · Draft status\nevent: DirectiveChildrenSpawned
 SplitChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
 
-' Stable sinks (entity records persist). Superseded has no outgoing
-' edges → UML final. Deprecated is not final: restore remains enabled.
+' Stable sink: Superseded has no outgoing edges → UML final.
+' Deprecated is not final: restore remains enabled.
 Superseded --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml
