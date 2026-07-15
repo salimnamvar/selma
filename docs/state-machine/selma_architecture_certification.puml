@@ -4,91 +4,63 @@
 ' Source:  SPECIFICATION.md §9.9 (AA-01 … AA-07)
 '          User_Stories.md S-30
 ' C4:      Architectural Auditor → Snapshots Adapter → artifact_store
-'          reads: Compiled Rules, Event Store, Hermetic Compiler asserts
 '          trigger: CI/CD → Application Service
 ' Contract: 8.2.4
 '
 ' Production-grade reference certification requires all AA gates.
 ' Document suite conformance alone does not certify an engine.
+' Ownership / retention: README.md
 ' ============================================================
 
-title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · pass/fail evidence artifacts · no runtime policy contamination</i></size>
+title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · pass/fail evidence · no runtime policy contamination</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Triggered : <b>CI/CD trigger</b>\ncicd → application_service\n→ architectural_auditor
+[*] --> Triggered : <b>CI/CD trigger</b>\nactor: System (CI/CD)\ncommand: start certification run\naction: cicd → application_service → architectural_auditor\nevent: CertificationTriggered
 
-state "Triggered" as Triggered #B9770E : certification run id assigned
-state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : load CG-IR samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory
-state "Validating\nGates" as ValidatingGates #1B7A6E : sequential AA-01..AA-07
-state "AA-01\nMediated Feedback" as AA01 #1B7A6E : analytics has no write\npath to CG-IR / Finding FSM
-state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : policy_doctrine.yaml\nabsent from runtime paths
-state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : no IO / randomness / env
-state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : waive + approve SoD tests
-state "AA-05\nConflict Determinism" as AA05 #1B7A6E : byte-identical replay
-state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : invalid type/config corpus
-state "AA-07\nPortable Serialization" as AA07 #1B7A6E : RE2 canaries · UTC/NaN
-state "Passed" as Passed #2C6E49 : all gates green
-state "Failed" as Failed #A93226 : one or more gates red
-state "Rejected" as Rejected #A93226 : evidence incomplete\nor non-reproducible run
-state "Certified" as Certified #2C6E49 : certification artifact sealed
-state "Remediation\nRequired" as RemediationRequired #B9770E : engineering fixes needed
-state "Archived" as Archived #4A4A4A : immutable retention\naudit_platform replica
+state "Triggered" as Triggered #B9770E : **entry** certification run_id assigned\n**allowed** collect evidence\n**forbidden** skip gates
+state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-IR samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory\n**forbidden** mutate domain FSMs
+state "Validating\nGates" as ValidatingGates #1B7A6E : **entry** sequential AA-01..AA-07\n**allowed** ordered gate execution\n**forbidden** partial certify
+state "AA-01\nMediated Feedback" as AA01 #1B7A6E : **entry** analytics has no write path\nto CG-IR / Finding FSM\nmethod: integration (no finding→compile)
+state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** policy_doctrine.yaml absent\nfrom runtime paths\nmethod: static analysis + path assert
+state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
+state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : **entry** waive + approve SoD tests\nmethod: integration SoD corpus
+state "AA-05\nConflict Determinism" as AA05 #1B7A6E : **entry** byte-identical replay\nmethod: conflict replay corpus
+state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : **entry** invalid type/config corpus\nmethod: discriminator rejection set
+state "AA-07\nPortable Serialization" as AA07 #1B7A6E : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
+state "Passed" as Passed #2C6E49 : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
+state "Failed" as Failed #A93226 : **entry** one or more gates red\n**allowed** write fail evidence\n**forbidden** certify
+state "Rejected" as Rejected #A93226 : **entry** evidence incomplete\nor non-reproducible run\n**allowed** remediate then re-run\n**forbidden** certify
+state "Certified" as Certified #2C6E49 : **entry** certification artifact sealed\n**allowed** archive · audit_platform replica\n**forbidden** alter gate report
+state "Remediation\nRequired" as RemediationRequired #B9770E : **entry** engineering fixes needed\n**allowed** new commit / rebuild\n**forbidden** mutate CG-IR · Finding FSM · Directive Graph
+state "Archived" as Archived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** rewrite
 
-Triggered --> CollectingEvidence
-CollectingEvidence --> ValidatingGates : corpus complete
-CollectingEvidence --> Rejected : missing evidence
+Triggered --> CollectingEvidence : <b>begin collect</b>\nactor: System (Architectural Auditor)\nevent: CertificationEvidenceCollecting
+CollectingEvidence --> ValidatingGates : <b>corpus complete</b>\nactor: System\nevent: CertificationEvidenceReady
+CollectingEvidence --> Rejected : <b>missing evidence</b>\nactor: System\nevent: CertificationRejected\naction: incomplete corpus
 
-ValidatingGates --> AA01
-AA01 --> AA02 : PASS
-AA01 --> Failed : FAIL
-AA02 --> AA03 : PASS
-AA02 --> Failed : FAIL
-AA03 --> AA04 : PASS
-AA03 --> Failed : FAIL
-AA04 --> AA05 : PASS
-AA04 --> Failed : FAIL
-AA05 --> AA06 : PASS
-AA05 --> Failed : FAIL
-AA06 --> AA07 : PASS
-AA06 --> Failed : FAIL
-AA07 --> Passed : PASS
-AA07 --> Failed : FAIL
+ValidatingGates --> AA01 : <b>start AA-01</b>\nactor: System\nevent: CertificationGateStarted\naction: gate=AA-01
+AA01 --> AA02 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-01
+AA01 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-01
+AA02 --> AA03 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-02
+AA02 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-02
+AA03 --> AA04 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-03
+AA03 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-03
+AA04 --> AA05 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-04
+AA04 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-04
+AA05 --> AA06 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-05
+AA05 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-05
+AA06 --> AA07 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-06
+AA06 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-06
+AA07 --> Passed : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-07
+AA07 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-07
 
-Passed --> Certified : write certification artifact\npass evidence + gate report
-Failed --> RemediationRequired : write fail evidence\ngate-id fail report (S-30)
-Rejected --> RemediationRequired
+Passed --> Certified : <b>seal certification artifact</b>\nactor: System\ncommand: write-once pass evidence + gate report\nevent: CertificationSealed
+Failed --> RemediationRequired : <b>write fail evidence</b>\nactor: System\ncommand: gate-id fail report\nevent: CertificationFailed\nstory: S-30
+Rejected --> RemediationRequired : <b>require remediation</b>\nactor: System\nevent: CertificationRemediationRequired
 
-Certified --> Archived
-RemediationRequired --> Triggered : new commit / rebuild\nnew certification run
+Certified --> Archived : <b>archive</b>\nactor: System\ncommand: retain + async audit_platform replica\nevent: CertificationArchived
+RemediationRequired --> Triggered : <b>new commit / rebuild</b>\nactor: System (CI/CD)\ncommand: new certification run_id\nevent: CertificationRetriggered
 Archived --> [*]
-
-note right of ValidatingGates
-  **Gate methods (§9.9)**
-  AA-01 integration (no finding→compile)
-  AA-02 static analysis + path assert
-  AA-03 AST / sandbox purity
-  AA-04 SoD integration tests
-  AA-05 conflict replay
-  AA-06 discriminator corpus
-  AA-07 RE2 + UTC/NaN portability
-end note
-
-note left of Certified
-  **Ownership**
-  Aggregate: Certification Artifact
-  Authority: Architectural Auditor
-  Persistence: artifact_store (write-once)
-  Replication: audit_platform (async)
-  Concurrency: one cert run per commit SHA;
-  parallel runs isolated by run_id.
-end note
-
-note bottom of RemediationRequired
-  Failed certification does **not** mutate
-  Directive Graph, CG-IR, or Finding FSM.
-  Recovery is always a new CI run after code
-  or contract remediation.
-end note
 
 @enduml

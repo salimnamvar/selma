@@ -4,102 +4,72 @@
 ' Source:  SPECIFICATION.md §2.4, §2.6, §2.7, §2.8, §2.9, §3.4, §3.5
 '          User_Stories.md S-05, S-21..S-24, S-27, S-31
 ' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
-'          (read-lock on directive_store; conflict_resolver at compile)
 ' Contract: 8.2.4
 '
-' Invariants:
-'   · hermetic frozen_env boundary
-'   · any gate fail → no partial CG-IR
-'   · content-addressed SHA-256 snapshot identity
-'   · compiled_at excluded from snapshot hash (S-23)
-'   · policy_doctrine.yaml never required at runtime (AA-02)
+' Invariants: hermetic frozen_env · all-or-nothing · SHA-256 CAS
+'             compiled_at excluded from snapshot hash (S-23)
+'             policy_doctrine.yaml never at runtime (AA-02)
+' Ownership / concurrency: README.md
 ' ============================================================
 
 title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>All-or-nothing publish · content-addressed · no runtime policy dependency</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Requested : <b>compile request</b>\ntrigger: directive change | CI/CD\nrequest_id tracked
+[*] --> Requested : <b>compile request</b>\nactor: System | CI/CD\ncommand: directive change | scheduled compile\nevent: CompileRequested
 
-state "Requested" as Requested #B9770E : queued · dedup by\n(graph version + frozen_env)
-state "Queued" as Queued #B9770E : FIFO · writer-preference\nblocks new readers when\nwrite pending (§3.4)
-state "Acquire\nRead Lock" as AcquireReadLock #B9770E : concurrent compiles OK\nblocks on write lock
-state "Schema\nValidate" as SchemaValidate #1B7A6E : JSON Schema Draft-07\nstructural projection
-state "Complexity\nValidate" as ComplexityValidate #1B7A6E : AST walk\ndepth≤32 · nodes≤256\nwidth≤64 · regex≤4096\nmetadata≤16384 B
-state "Portability\nValidate" as PortabilityValidate #1B7A6E : RE2 · IEEE 754 finite\nUTC-Z · NFC strings\nflags {i,m,s} only
-state "Discriminator\nValidate" as DiscriminatorValidate #1B7A6E : evaluator_type ↔ config\nAST discriminator (§2.9)
-state "Lineage DAG\nValidate" as LineageValidate #1B7A6E : acyclicity · depth≤64\nparent existence\noperation consistency
-state "Hash Nodes" as HashNodes #1B7A6E : semantic_hash +\npresentation_hash → node_hash\nincremental reuse
-state "Hash Edges" as HashEdges #1B7A6E : edge_hash =\nSHA-256(source, target)
-state "Conflict\nMap" as ConflictMap #1B7A6E : resolve_conflict mapping\nprecedence §2.15
-state "Snapshot\nHash" as SnapshotHash #1B7A6E : cg_ir_snapshot_hash =\nSHA-256(sorted node_hashes +\nsorted edge_hashes +\nprovenance)\n**compiled_at excluded**
-state "Policy Runtime\nProhibition Assert" as PolicyAssert #1B7A6E : AA-02 · policy absent\nfrom runtime data paths
-state "Publish CAS" as Publish #2C6E49 : immutable snapshot\ndedup if hash exists
-state "Release Lock\n(Success)" as ReleaseLockOk #2C6E49 : read lock released\nafter successful publish
-state "Release Lock\n(Abort)" as ReleaseLockFail #A93226 : read lock released\nafter gate failure
-state "Completed" as Completed #2C6E49 : snapshot live\ninspections may pin hash
-state "Failed" as Failed #A93226 : **no partial CG-IR**\nDirective Graph unchanged\naudit entry only
+state "Requested" as Requested #B9770E : **entry** request_id assigned\n**allowed** dedup by (graph version + frozen_env)\n**forbidden** partial CG-IR write
+state "Queued" as Queued #B9770E : **entry** FIFO queue\n**allowed** writer-preference scheduling\n**forbidden** skip lock (§3.4)
+state "Acquire\nRead Lock" as AcquireReadLock #B9770E : **entry** seek directive_store read lock\n**allowed** concurrent compiles\n**forbidden** write-lock-while-awaiting-compile
+state "Schema\nValidate" as SchemaValidate #1B7A6E : **entry** JSON Schema Draft-07\n**allowed** structural projection only\n**forbidden** skip complexity pass
+state "Complexity\nValidate" as ComplexityValidate #1B7A6E : **entry** AST walk post-schema\n**allowed** depth≤32 · nodes≤256 · width≤64\nregex≤4096 · metadata≤16384 B\n**forbidden** schema-only conformance claim
+state "Portability\nValidate" as PortabilityValidate #1B7A6E : **entry** RE2 · IEEE 754 finite\nUTC-Z · NFC · flags {i,m,s} only\n**forbidden** engine-specific regex
+state "Discriminator\nValidate" as DiscriminatorValidate #1B7A6E : **entry** evaluator_type ↔ config\nAST discriminator (§2.9)\n**forbidden** weak if/then only
+state "Lineage DAG\nValidate" as LineageValidate #1B7A6E : **entry** acyclicity · depth≤64\nparent existence · op cardinality\n**forbidden** self-reference
+state "Hash Nodes" as HashNodes #1B7A6E : **entry** dual-hash model (§2.6)\nsemantic_hash = SHA-256(semantic_body)\npresentation_hash = SHA-256(presentation_body)\nnode_hash = SHA-256({semantic, presentation})\n**allowed** reuse evaluator subgraph if semantic_hash match\n**forbidden** embed neighbor context · include presentation in semantic_hash
+state "Hash Edges" as HashEdges #1B7A6E : **entry** edge_hash = SHA-256(source, target)\n**allowed** directional depends_on only
+state "Conflict\nMap" as ConflictMap #1B7A6E : **entry** resolve_conflict mapping\nprecedence §2.15\n**forbidden** bind cross-lineage
+state "Snapshot\nHash" as SnapshotHash #1B7A6E : **entry** cg_ir_snapshot_hash =\nSHA-256(sorted node_hashes +\nsorted edge_hashes + provenance)\n**forbidden** include compiled_at (S-23)\nCAS: identical hash → dedup no-op
+state "Policy Runtime\nProhibition Assert" as PolicyAssert #1B7A6E : **entry** AA-02 path assert\n**allowed** policy absent from runtime paths\n**forbidden** load policy_doctrine.yaml
+state "Publish CAS" as Publish #2C6E49 : **entry** immutable snapshot write\n**allowed** dedup if hash exists\n**forbidden** in-place mutate
+state "Release Lock\n(Success)" as ReleaseLockOk #2C6E49 : **entry** read lock released after publish\n**allowed** inspections may pin hash
+state "Release Lock\n(Abort)" as ReleaseLockFail #A93226 : **entry** read lock released after fail\n**allowed** Directive Graph unchanged
+state "Completed" as Completed #2C6E49 : **entry** snapshot live\n**allowed** pin by inspection\n**forbidden** mutate snapshot
+state "Failed" as Failed #A93226 : **entry** no partial CG-IR\n**allowed** audit entry only\n**forbidden** publish · graph mutation
 
-Requested --> Queued
-Queued --> AcquireReadLock
-AcquireReadLock --> SchemaValidate : lock granted
-AcquireReadLock --> Queued : blocked · retry FIFO
+Requested --> Queued : <b>enqueue</b>\nactor: System\ncommand: schedule compile\nevent: CompileQueued
+Queued --> AcquireReadLock : <b>dequeue</b>\nactor: System\ncommand: grant FIFO slot\nevent: CompileDequeued
+AcquireReadLock --> SchemaValidate : <b>lock granted</b>\nactor: System\ncommand: acquire read lock\nevent: CompileLockAcquired
+AcquireReadLock --> Queued : <b>blocked</b>\nactor: System\nguard: write lock held or write pending\naction: retry FIFO\nevent: CompileLockDeferred
 
-SchemaValidate --> ComplexityValidate : PASS
-SchemaValidate --> Failed : FAIL · SchemaError
+SchemaValidate --> ComplexityValidate : <b>PASS</b>\nactor: System (Hermetic Compiler)\nevent: CompileGatePassed\naction: gate=schema
+SchemaValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: SchemaError · no partial CG-IR
 
-ComplexityValidate --> PortabilityValidate : PASS
-ComplexityValidate --> Failed : FAIL · ComplexityError
+ComplexityValidate --> PortabilityValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=complexity
+ComplexityValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: ComplexityError
 
-PortabilityValidate --> DiscriminatorValidate : PASS
-PortabilityValidate --> Failed : FAIL · PortabilityError
+PortabilityValidate --> DiscriminatorValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=portability
+PortabilityValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: PortabilityError
 
-DiscriminatorValidate --> LineageValidate : PASS
-DiscriminatorValidate --> Failed : FAIL · DiscriminatorError
+DiscriminatorValidate --> LineageValidate : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=discriminator
+DiscriminatorValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: DiscriminatorError
 
-LineageValidate --> HashNodes : PASS\nlineage_validation recorded
-LineageValidate --> Failed : FAIL · LineageError
+LineageValidate --> HashNodes : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=lineage · lineage_validation recorded
+LineageValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: LineageError
 
-HashNodes --> HashEdges
-HashEdges --> ConflictMap
-ConflictMap --> SnapshotHash : pairs mapped\n(unresolved → conflict artifact meta;\ncross-lineage advisory only)
+HashNodes --> HashEdges : <b>hash nodes</b>\nactor: System\nevent: CompileNodesHashed
+HashEdges --> ConflictMap : <b>hash edges</b>\nactor: System\nevent: CompileEdgesHashed
+ConflictMap --> SnapshotHash : <b>map conflicts</b>\nactor: System\naction: unresolved → conflict artifact meta\naction: cross-lineage advisory only\nevent: CompileConflictsMapped
 
-SnapshotHash --> PolicyAssert
-PolicyAssert --> Publish : PASS
-PolicyAssert --> Failed : FAIL · ArchitecturalAuditError AA-02
+SnapshotHash --> PolicyAssert : <b>compose snapshot hash</b>\nactor: System\nevent: CompileSnapshotHashed
+PolicyAssert --> Publish : <b>PASS</b>\nactor: System\nevent: CompileGatePassed\naction: gate=AA-02
+PolicyAssert --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: ArchitecturalAuditError AA-02
 
-Publish --> ReleaseLockOk
-ReleaseLockOk --> Completed
+Publish --> ReleaseLockOk : <b>CAS put</b>\nactor: System\ncommand: write-once publish\nevent: CgIrPublished
+ReleaseLockOk --> Completed : <b>release read lock</b>\nactor: System\nevent: CompileLockReleased
 Completed --> [*]
 
-Failed --> ReleaseLockFail : always release lock
+Failed --> ReleaseLockFail : <b>always release lock</b>\nactor: System\nevent: CompileLockReleased
 ReleaseLockFail --> [*]
-
-note left of AcquireReadLock
-  **Concurrency (§3.4)**
-  · Compilation = read lock only
-  · Directive mutation = exclusive write lock
-  · Writer-preference FIFO
-  · No write-lock-while-awaiting-compile
-  · Identical content → same hash → no-op dedup
-end note
-
-note right of SnapshotHash
-  **Hermetic boundary (§2.7)**
-  frozen_env pins engine, toolchain,
-  OS hash, model/prompt/decoder (if any),
-  confidence_severity_cap_threshold.
-  frozen_env_hash excludes itself.
-end note
-
-note bottom of Publish
-  **Immutability**
-  Once published, CG-IR is never mutated.
-  Further directive changes produce a **new**
-  snapshot under a new content hash.
-  Storage: cgir_store (CAS) via Compiled Rules Adapter.
-  Success and abort lock-release paths are
-  distinct states (no ambiguous dual exit).
-end note
 
 @enduml

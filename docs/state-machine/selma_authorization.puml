@@ -11,78 +11,43 @@
 ' Cross-cutting behavioral security model. Applies to humans,
 ' service accounts, and AI agents (same matrix; actor = agent ID).
 ' Delegation is NOT supported in v8.2.x.
+' Ownership / matrix summary: README.md
 ' ============================================================
 
-title Selma — Capability Authorization FSM\n<size:12><i>Request → matrix → SoD → stage gate → allow | deny + audit · hard-reject semantics</i></size>
+title Selma — Capability Authorization FSM\n<size:12><i>Request → matrix → SoD → stage gate → allow | deny + audit · hard-reject</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> RequestReceived : any mutating or gated read
+[*] --> RequestReceived : <b>ingress</b>\nactor: any authenticated or unauthenticated caller\ncommand: any mutating or gated read\nevent: AuthzRequestReceived
 
-state "Request\nReceived" as RequestReceived #B9770E : raw request at interface
-state "Identity\nVerified" as IdentityVerified #1B7A6E : authenticated actor\nrole bound (RO | CR | System | AI)
-state "Capability\nEvaluated" as CapabilityEvaluated #1B7A6E : matrix lookup\nrole × capability
-state "SoD\nEvaluated" as SoDEvaluated #B9770E : only when action is\nfinding.waive or\nfinding.approve_remediation
-state "Stage Gate\nChecked" as StageGateChecked #1B7A6E : enforcement point match
-state "Allowed" as Allowed #2C6E49 : proceed to domain FSM\nor pipeline
-state "Denied" as Denied #A93226 : 403 CapabilityDenied
-state "Denial\nAudited" as DenialAudited #4A4A4A : append-only denial record
-state "Domain State\nUnchanged" as DomainUnchanged #A93226 : no mutation\nno compensating event
+state "Request\nReceived" as RequestReceived #B9770E : **entry** raw request at interface\n**allowed** authenticate\n**forbidden** domain mutation
+state "Identity\nVerified" as IdentityVerified #1B7A6E : **entry** authenticated actor\nrole bound (RO | CR | System | AI)\n**allowed** matrix lookup\n**forbidden** anonymous dispatch
+state "Capability\nEvaluated" as CapabilityEvaluated #1B7A6E : **entry** matrix role × capability\n**allowed** PASS → SoD or stage\n**forbidden** implicit grant\nmatrix: Official directive.* · finding.dismiss/waive/\napprove/reject/supersede · conflict.resolve\nCompliance: inspection.* · acknowledge · evidence\nSystem: inspection.submit · finding.view · analytics.view
+state "SoD\nEvaluated" as SoDEvaluated #B9770E : **entry** only finding.waive or\nfinding.approve_remediation\n**allowed** SoD-1 creator_provenance\nSoD-2 evidence_submitter\n**forbidden** skip SoD on those actions
+state "Stage Gate\nChecked" as StageGateChecked #1B7A6E : **entry** enforcement point match\n1 ingress · 2 directive write lock\n3 inspection entry · 4 Finding FSM\n5 conflict resolution\n**forbidden** bypass stage
+state "Allowed" as Allowed #2C6E49 : **entry** proceed to domain FSM/pipeline\n**allowed** dispatch command\n**forbidden** skip audit on later deny paths (N/A)
+state "Denied" as Denied #A93226 : **entry** 403 CapabilityDenied\n**allowed** audit only\n**forbidden** partial write · compensating success event\n· degraded-mode · auto-escalation
+state "Denial\nAudited" as DenialAudited #4A4A4A : **entry** append-only denial record\n{actor, capability, action,\noutcome:denied, timestamp, reason}\n**allowed** return error to caller\n**forbidden** mutate domain aggregate
+state "Domain State\nUnchanged" as DomainUnchanged #A93226 : **entry** hard reject complete **terminal**\n**allowed** caller decides next action\n**forbidden** silent retry as success
 
-RequestReceived --> IdentityVerified : authenticate
-RequestReceived --> Denied : unauthenticated
+RequestReceived --> IdentityVerified : <b>authenticate</b>\nactor: System (Application Service)\ncommand: bind identity + role\nevent: AuthzIdentityVerified
+RequestReceived --> Denied : <b>unauthenticated</b>\nactor: System\nevent: AuthzDenied\naction: reason=unauthenticated
 
-IdentityVerified --> CapabilityEvaluated : role resolved
-CapabilityEvaluated --> SoDEvaluated : matrix PASS\n(and SoD-relevant action)
-CapabilityEvaluated --> StageGateChecked : matrix PASS\n(non-SoD action)
-CapabilityEvaluated --> Denied : matrix FAIL\ncapability not granted to role
+IdentityVerified --> CapabilityEvaluated : <b>role resolved</b>\nactor: System\ncommand: matrix lookup\nevent: AuthzCapabilityChecked
 
-SoDEvaluated --> StageGateChecked : SoD PASS
-SoDEvaluated --> Denied : SoD FAIL\ncreator_provenance or\nevidence_submitter conflict
+CapabilityEvaluated --> SoDEvaluated : <b>matrix PASS</b>\nactor: System\nguard: action ∈ {finding.waive, finding.approve_remediation}\nevent: AuthzSoDRequired
+CapabilityEvaluated --> StageGateChecked : <b>matrix PASS</b>\nactor: System\nguard: action ∉ SoD set\nevent: AuthzSoDSkipped
+CapabilityEvaluated --> Denied : <b>matrix FAIL</b>\nactor: System\nevent: AuthzDenied\naction: capability not granted to role
 
-StageGateChecked --> Allowed : stage capability OK
-StageGateChecked --> Denied : stage capability FAIL
+SoDEvaluated --> StageGateChecked : <b>SoD PASS</b>\nactor: System\nguard: waive ⇒ actor ∉ creator_provenance\nguard: approve ⇒ actor ≠ evidence_submitter\nevent: AuthzSoDPassed
+SoDEvaluated --> Denied : <b>SoD FAIL</b>\nactor: System\nevent: AuthzDenied\naction: creator_provenance or evidence_submitter conflict
 
-Allowed --> [*] : dispatch domain command
-Denied --> DenialAudited : record\n{actor, capability, action,\noutcome:denied, timestamp, reason}
-DenialAudited --> DomainUnchanged
+StageGateChecked --> Allowed : <b>stage OK</b>\nactor: System\nevent: AuthzAllowed
+StageGateChecked --> Denied : <b>stage FAIL</b>\nactor: System\nevent: AuthzDenied\naction: stage capability mismatch
+
+Allowed --> [*] : <b>dispatch domain command</b>\nactor: System\nevent: AuthzDispatched
+Denied --> DenialAudited : <b>record denial</b>\nactor: System\ncommand: append denial audit\nevent: AuthzDenialAudited
+DenialAudited --> DomainUnchanged : <b>hard reject</b>\nactor: System\nevent: AuthzDomainUnchanged
 DomainUnchanged --> [*]
-
-note right of CapabilityEvaluated
-  **Capability matrix (§3.2) — summary**
-  Official: directive.* · finding.dismiss/waive/
-    approve/reject/supersede · conflict.resolve · views
-  Compliance: inspection.submit/reinspect ·
-    finding.acknowledge · evidence.submit · views
-  System: inspection.submit · finding.view · analytics.view
-  AI agents: same matrix; actor = agent ID
-end note
-
-note left of SoDEvaluated
-  **SoD algorithm (§3.2.1)**
-  finding.waive:
-    DENY if actor ∈ creator_provenance(control_id)
-  finding.approve_remediation:
-    DENY if actor == evidence_submitter(finding_id)
-  All other actions: SoD N/A → skip to stage gate
-end note
-
-note bottom of Denied
-  **Uniform failure semantics**
-  · Hard reject — no partial writes
-  · No compensating success events
-  · No degraded-mode execution
-  · No automatic escalation
-  · Caller receives error; decides next action
-end note
-
-note right of StageGateChecked
-  **Five enforcement points**
-  1. Request ingress (Application Service)
-  2. Directive mutations (before write lock)
-  3. Inspection pipeline entry
-  4. Finding FSM transitions
-  5. Conflict resolution
-end note
 
 @enduml

@@ -7,79 +7,41 @@
 '          Findings & Audit Trail Adapter → event_store (events)
 ' Contract: 8.2.4
 '
-' Models write-once / append-only retention for:
-'   · CG-IR snapshots
-'   · Inspection snapshots + pipeline traces
-'   · Conflict artifacts
-'   · Certification artifacts
-'   · Finding events (append-only stream entries)
+' Write-once / append-only for:
+'   CG-IR snapshots · Inspection snapshots + traces
+'   Conflict artifacts · Certification artifacts
+'   Finding events (append-only stream entries)
+' Retention defaults (README / §3.5): CG-IR & events indefinite;
+'   inspection snapshots 7y; pipeline traces 1y.
 ' ============================================================
 
 title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · append-only retention · audit replication · no silent rewrite</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Building : producer begins materialization
+[*] --> Building : <b>materialize</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: Hermetic Compiler | Rule Inspector |\nConflict Resolver | Architectural Auditor | Lifecycle Finder\nevent: ArtifactBuildStarted
 
-state "Building" as Building #B9770E : transient workspace\n**not** durable truth yet
-state "Validated" as Validated #1B7A6E : integrity checks OK\nhashes computed
-state "Published" as Published #2C6E49 : content-addressed\nor write-once committed
-state "Active\nReference" as ActiveReference #3B7DD8 : referenced by inspections\nor human workflows
-state "Superseded\nReference" as SupersededReference #4A4A4A : newer snapshot supersedes\nfor *selection*; old remains
-state "Archived" as Archived #4A4A4A : long-term retention
-state "Replicated" as Replicated #2C6E49 : audit_platform copy
-state "Rejected\nBuild" as RejectedBuild #A93226 : validation failed\n**no durable artifact**
+state "Building" as Building #B9770E : **entry** transient workspace\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
+state "Validated" as Validated #1B7A6E : **entry** integrity checks OK\nhashes computed\n**allowed** CAS put / write-once\n**forbidden** skip integrity
+state "Published" as Published #2C6E49 : **entry** content-addressed or write-once committed\n**allowed** pin · replicate\n**forbidden** in-place update · delete CG-IR/events
+state "Active\nReference" as ActiveReference #3B7DD8 : **entry** referenced by inspections\nor human workflows\n**allowed** supersede selection · replicate\n**forbidden** mutate bytes
+state "Superseded\nReference" as SupersededReference #4A4A4A : **entry** newer snapshot supersedes selection\nold bytes remain\n**allowed** archive · audit read\n**forbidden** rewrite content
+state "Archived" as Archived #4A4A4A : **entry** long-term retention **terminal-ish**\n**allowed** read-only · audit_platform copy\n**forbidden** delete before retention policy
+state "Replicated" as Replicated #2C6E49 : **entry** audit_platform append-only copy\n**allowed** archive path\n**forbidden** mutate replica as source of truth rewrite
+state "Rejected\nBuild" as RejectedBuild #A93226 : **entry** validation failed **terminal**\n**allowed** producer retry as new build\n**forbidden** durable artifact
 
-Building --> Validated : integrity OK
-Building --> RejectedBuild : integrity FAIL
+Building --> Validated : <b>integrity OK</b>\nactor: System\ncommand: validate hashes / schema\nevent: ArtifactValidated
+Building --> RejectedBuild : <b>integrity FAIL</b>\nactor: System\nevent: ArtifactBuildRejected\naction: no durable artifact
 RejectedBuild --> [*]
 
-Validated --> Published : CAS put / object write-once
+Validated --> Published : <b>CAS put / write-once</b>\nactor: System (adapter)\ncommand: content-addressed publish\nguard: identical content → idempotent same hash\nevent: ArtifactPublished
 
-Published --> ActiveReference : first consumer pin
-Published --> Replicated : async audit replicate
-ActiveReference --> SupersededReference : newer CG-IR / new inspect
-ActiveReference --> Replicated
-SupersededReference --> Archived : retention policy
-Replicated --> Archived : retention complete path
+Published --> ActiveReference : <b>first consumer pin</b>\nactor: System | human workflow\ncommand: reference artifact\nevent: ArtifactReferenced
+Published --> Replicated : <b>async audit replicate</b>\nactor: System\ncommand: append-only copy to audit_platform\nevent: ArtifactReplicated
+ActiveReference --> SupersededReference : <b>supersede selection</b>\nactor: System\ncommand: newer CG-IR / new inspection wins selection\nevent: ArtifactSuperseded
+ActiveReference --> Replicated : <b>async audit replicate</b>\nactor: System\nevent: ArtifactReplicated
+SupersededReference --> Archived : <b>retention policy</b>\nactor: System\ncommand: apply retention (§3.5 defaults)\nevent: ArtifactArchived
+Replicated --> Archived : <b>retention complete path</b>\nactor: System\nevent: ArtifactArchived
 Archived --> [*]
-
-note right of Published
-  **Immutability rules**
-  · No in-place update of content
-  · No delete of CG-IR or finding events
-  · Inspection snapshots never modified
-    after completion (§2.13)
-  · Reinspect / recompile create **new**
-    artifacts under new IDs/hashes
-
-  **Artifact types under this lifecycle**
-  · CG-IR Snapshot — hash identity; indefinite
-  · Inspection Snapshot — default retain 7y
-  · Pipeline Trace — default retain 1y
-  · Conflict Artifact — pending → archived
-  · Certification Artifact — AA gate report
-  · Finding Event — append-only HLC stream
-end note
-
-note left of Building
-  **Producers (C4)**
-  · Hermetic Compiler → CG-IR
-  · Rule Inspector → inspection snapshot + trace
-  · Conflict Resolver → conflict artifact
-  · Architectural Auditor → certification artifact
-  · Lifecycle Finder → finding events
-end note
-
-note bottom of Archived
-  **Retention (§3.5)**
-  CG-IR snapshots / node objects: indefinite
-  Finding events: indefinite
-  Inspection snapshots: configurable (default 7y)
-  Pipeline traces: configurable (default 1y)
-  Replication to audit_platform is append-only async.
-  Concurrency: content-addressed put is idempotent;
-  concurrent identical publishes converge on same hash.
-end note
 
 @enduml

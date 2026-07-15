@@ -165,11 +165,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
         "-i",
         "--input",
         nargs="+",
-        default=[
-            "/home/salim/prj/salim/selma/docs/User-Story",
-            "/home/salim/prj/salim/selma/docs/C4-Design",
-            "/home/salim/prj/salim/selma/docs/Regulation/SPECIFICATION.md",
-        ],
+        default=["/home/salim/prj/salim/selma/docs/state-machine"],
         help="Input paths to merge: files, directories, or nested paths (one or more)",
     )
     p.add_argument(
@@ -185,7 +181,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
     p.add_argument(
         "--mode",
         choices=["separate", "aggregate"],
-        default="aggregate",
+        default="separate",
         help=(
             "Output mode: 'separate' writes one .md per input; "
             "'aggregate' (default) merges all inputs into a single .md file"

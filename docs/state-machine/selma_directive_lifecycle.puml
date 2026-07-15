@@ -11,74 +11,45 @@
 '   lineage_id   = immutable root (Machine ID at creation)
 '   execution_id = active node identity (changes on fork/merge/split)
 ' Status enum (schema): draft | active | deprecated | superseded
+' Ownership / events / concurrency: README.md
+' Decisions: STATE_MACHINE_ARCHITECTURE_REVIEW.md (Q-01: split→fork gate)
 ' ============================================================
 
-title Selma — Directive Lifecycle FSM\n<size:12><i>Status path + dual-identity operations · parent deprecation · hermetic recompile</i></size>
+title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · dual-identity ops · parent deprecation · hermetic recompile</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Draft : <b>directive.create</b>\nactor: Regulatory Official\nlineage_id := Machine ID\nexecution_id := lineage_id (1:1)\nauthored_by := actor\nstory: S-01
+[*] --> Draft : <b>directive.create</b>\nactor: Regulatory Official\n[capability: directive.create]\naction: lineage_id := Machine ID\naction: execution_id := lineage_id\naction: authored_by := actor\nevent: DirectiveCreated\nstory: S-01
 
-state "Draft" as Draft #B9770E : **mutable drafting**\nnot yet binding in production CG-IR\n**allowed** modify · publish\n**forbidden** retire · fork · merge · split
-state "Active" as Active #2C6E49 : **published & operational**\npresent in CG-IR snapshot\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split
-state "Deprecated" as Deprecated #4A4A4A : **retired / absorbed**\naudit trail preserved\nCG-IR nodes marked deprecated\n**allowed** restore only
-state "Superseded" as Superseded #4A4A4A : **replaced by successor**\nmetadata.migration.superseded_by\nMUST reference active or draft id\n**forbidden** restore without\nnew successor governance
+state "Draft" as Draft #B9770E : **entry** mutable drafting\n**allowed** modify · publish compile\n**forbidden** retire · fork · merge · split\n**identity** lineage_id + execution_id fixed
+state "Active" as Active #2C6E49 : **entry** published & operational in CG-IR\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split\n**forbidden** create (new root uses Draft)
+state "Deprecated" as Deprecated #4A4A4A : **entry** retired / absorbed parent\n**allowed** restore only\n**forbidden** fork · merge · split · modify body\nCG-IR nodes marked deprecated
+state "Superseded" as Superseded #4A4A4A : **entry** replaced by successor\n**allowed** read-only audit trail\n**forbidden** restore without successor governance\nmetadata.migration.superseded_by required
+
+state "Fork Children\n(spawn)" as ForkChildren #1B7A6E : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
+state "Merge Result\n(spawn)" as MergeResult #1B7A6E : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
+state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
 
 ' ---------- Status transitions ----------
-Draft --> Active : <b>directive.modify (publish)</b>\n+ hermetic compile success\nnew CG-IR snapshot\nstory: S-01 / S-02
-Draft --> Draft : <b>directive.modify (revision)</b>\nlineage_id unchanged\nexecution_id unchanged\nstory: S-02
+Draft --> Draft : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\naction: lineage_id unchanged · execution_id unchanged\nevent: DirectiveRevised\nstory: S-02
+Draft --> Active : <b>directive.modify (publish)</b>\nactor: Regulatory Official + System\n[capability: directive.modify]\nguard: hermetic compile SUCCESS\naction: new CG-IR snapshot published\nevent: DirectivePublished\nstory: S-01 / S-02
 
-Active --> Active : <b>directive.modify (revision)</b>\nwrite lock · incremental compile\nsame lineage_id + execution_id\nstory: S-02
-Active --> Deprecated : <b>directive.retire</b>\nreason recorded\nCG-IR nodes marked deprecated\nstory: S-03
-Active --> Superseded : <b>supersede</b>\nmetadata.migration.superseded_by set\nsuccessor compile-validated\n§2.2.4
+Active --> Active : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\nguard: exclusive write lock · compile SUCCESS\naction: same lineage_id + execution_id\nevent: DirectiveRevised\nstory: S-02
+Active --> Deprecated : <b>directive.retire</b>\nactor: Regulatory Official\n[capability: directive.retire]\naction: reason recorded · CG-IR nodes deprecated\nevent: DirectiveRetired\nstory: S-03
+Active --> Superseded : <b>directive.modify (supersede)</b>\nactor: Regulatory Official\n[capability: directive.modify]\nguard: superseded_by → active|draft id · successor compile-validated\nevent: DirectiveSuperseded\n§2.2.4
 
-Deprecated --> Draft : <b>directive.restore</b>\ntarget revision copied\nlineage_id preserved\nmust recompile to re-activate\nstory: S-08
+Deprecated --> Draft : <b>directive.restore</b>\nactor: Regulatory Official\n[capability: directive.restore]\naction: target revision copied · lineage_id preserved\nguard: must recompile to re-activate\nevent: DirectiveRestored\nstory: S-08
 
-' ---------- Identity operations (spawn new instances; parent deprecates) ----------
-state "Fork Children\n(new instances)" as ForkChildren #1B7A6E : 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nchildren Draft then Active\nvia hermetic compile
-state "Merge Result\n(new instance)" as MergeResult #1B7A6E : lineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" +\nSHA-256(...)[0:16]\nboth parents Deprecated
-state "Split Children\n(new instances)" as SplitChildren #1B7A6E : N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent Deprecated
+' ---------- Identity operations ----------
+Active --> ForkChildren : <b>directive.fork</b>\nactor: Regulatory Official\n[capability: directive.fork]\naction: parent side-effect Deprecated\nevent: DirectiveForked\nstory: S-19
+Active --> MergeResult : <b>directive.merge</b>\nactor: Regulatory Official\n[capability: directive.merge]\naction: both parents side-effect Deprecated\nevent: DirectiveMerged\nstory: S-20
+Active --> SplitChildren : <b>directive.split</b>\nactor: Regulatory Official\n[capability: directive.fork]\nguard: N-ary split shares fork gate (v8.2.4)\naction: parent side-effect Deprecated\nevent: DirectiveSplit\nstory: S-26
 
-Active --> ForkChildren : <b>directive.fork</b>\n[capability: directive.fork]\nparent becomes Deprecated\nstory: S-19
-Active --> MergeResult : <b>directive.merge</b>\n[capability: directive.merge]\nbinary merge only (v8.2.x)\nstory: S-20
-Active --> SplitChildren : <b>directive.split</b>\n[capability: directive.split]\nparent becomes Deprecated\nstory: S-26
-
-ForkChildren --> Active : children publish compile\n(new execution_id instances)
-MergeResult --> Active : merged rule publish compile\n(new execution_id instance)
-SplitChildren --> Active : children publish compile\n(new execution_id instances)
+ForkChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
+MergeResult --> Draft : <b>spawn merged rule</b>\nactor: System\ncommand: materialize merge result\naction: new execution_id · Draft status\nevent: DirectiveChildrenSpawned
+SplitChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
 
 Superseded --> [*]
 Deprecated --> [*] : if not restored
-
-note left of Draft
-  **Identity contract (§2.3)**
-  · lineage_id assigned once, never reassigned
-  · Machine ID ↔ lineage root bijective at
-    root-assignment level
-  · after fork/split, multiple active rules may
-    share lineage_id with distinct execution_ids
-end note
-
-note right of Active
-  **Lineage DAG gates (compile-time §2.2.3)**
-  · acyclicity (DFS)
-  · parent existence + temporal ordering
-  · fork/split: exactly 1 parent
-  · merge: exactly 2 parents
-  · depth ≤ 64 · no self-reference
-  · creator_provenance inheritance:
-    fork/split inherit; merge = sorted union
-end note
-
-note bottom of MergeResult
-  **Deterministic merge (§2.2.2)**
-  lineage_id := MIN(parent_a, parent_b)
-  Non-surviving parent preserved only in
-  lineage.parent_lineage_ids + optional
-  metadata.migration.merge_provenance.
-  Concurrency: exclusive write lock on
-  Directive Graph (SPEC §3.4); no lock-type
-  inversion with compilation read lock.
-end note
 
 @enduml

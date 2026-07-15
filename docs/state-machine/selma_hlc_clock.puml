@@ -1,0 +1,51 @@
+@startuml selma_hlc_clock
+' ============================================================
+' Selma — Hybrid Logical Clock (HLC) State Machine
+' Source:  SPECIFICATION.md §2.14
+' C4:      Lifecycle Finder / Findings & Audit Trail Adapter
+' Contract: 8.2.4
+'
+' DETAIL VIEW (Round-02): extracted from normative HLC algorithms.
+' Not an independent aggregate — shared event-envelope mechanism
+' for Finding / denial / domain event append paths (§2.14).
+' Per-node tuple (pt, lc) advancement and multi-node reconciliation.
+' Monotonicity: emitted tuple strictly non-decreasing per node_id.
+' Ownership / event envelope: README.md
+' ============================================================
+
+title Selma — Hybrid Logical Clock (Detail View)\n<size:12><i>Per-node tuple advancement · wall-clock regression absorption · partition reconciliation</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Initialized : <b>node startup</b>\nactor: System\ncommand: init HLC node\nevent: HlcInitialized
+
+state "Initialized" as Initialized #B9770E : **entry** pt=0 · lc=0 (cold start)\n**allowed** load persisted state\n**forbidden** emit without advance
+state "Steady" as Steady #3B7DD8 : **entry** persisted tuple (pt, lc)\nlast emitted HLC\n**allowed** local send · remote receive\n**forbidden** decrease pt or lc
+state "Local Send" as LocalSend #1B7A6E : **entry** hlc_send(pt_wall)\n**allowed** advance or increment\n**forbidden** regress pt
+state "Remote Receive" as RemoteReceive #1B7A6E : **entry** hlc_receive(remote_pt, remote_lc, pt_wall)\n**allowed** merge max clocks\n**forbidden** overwrite committed events
+state "Advancing" as Advancing #2C6E49 : **entry** pt strictly advances\nlc resets to 0\n**allowed** emit new tuple
+state "Incrementing" as Incrementing #2C6E49 : **entry** pt unchanged · lc increments\nabsorbs wall regression / concurrency\n**allowed** emit new tuple
+state "Partitioned" as Partitioned #A93226 : **entry** network partition\nlocal stream diverges\n**allowed** buffer · local emit\n**forbidden** assume global order
+state "Reconciling" as Reconciling #B9770E : **entry** merge remote stream\n**allowed** re-sort total order key\n**forbidden** overwrite committed
+state "Event Emitted" as EventEmitted #2C6E49 : **entry** event tagged (pt, lc, node_id)\nevent_hash = SHA-256(canonical_json minus hash)\n**allowed** persist tuple\n**forbidden** emit non-monotonic tuple
+
+Initialized --> Steady : <b>load persisted state</b>\nactor: System\ncommand: restore (pt, lc) from event_store\nevent: HlcStateLoaded
+
+Steady --> LocalSend : <b>local origin event</b>\nactor: System\ncommand: hlc_send\nevent: HlcLocalSend
+Steady --> RemoteReceive : <b>remote event arrives</b>\nactor: System\ncommand: hlc_receive\nevent: HlcRemoteReceive
+Steady --> Partitioned : <b>partition detected</b>\nactor: System\ncommand: heartbeat timeout\nevent: HlcPartitioned
+
+LocalSend --> Advancing : <b>pt_wall > pt</b>\nactor: System\naction: pt_new = pt_wall · lc_new = 0\nevent: HlcAdvanced
+LocalSend --> Incrementing : <b>pt_wall ≤ pt</b>\nactor: System\naction: pt_new = pt · lc_new = lc + 1\nevent: HlcIncremented
+
+RemoteReceive --> Advancing : <b>max(pt, pt_wall, remote_pt) > pt</b>\nactor: System\naction: pt_new = max(...) · lc_new = 0\nevent: HlcAdvanced
+RemoteReceive --> Incrementing : <b>max(...) == pt</b>\nactor: System\naction: pt_new = pt · lc_new = max(lc, remote_lc) + 1\nevent: HlcIncremented
+
+Advancing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
+Incrementing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
+EventEmitted --> Steady : <b>persist</b>\nactor: System\ncommand: store (pt_new, lc_new)\nguard: strictly non-decreasing vs prior\nevent: HlcStatePersisted
+
+Partitioned --> Reconciling : <b>partition healed</b>\nactor: System\ncommand: merge buffered remote events\nevent: HlcReconciling
+Reconciling --> Steady : <b>merge complete</b>\nactor: System\naction: sort physical_time → lc → node_id → event_id\naction: no overwrite of committed\nevent: HlcReconciled
+
+@enduml
