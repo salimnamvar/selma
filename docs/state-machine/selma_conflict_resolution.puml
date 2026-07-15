@@ -1,0 +1,116 @@
+@startuml selma_conflict_resolution
+' ============================================================
+' Selma — Conflict Resolution State Machine
+' Source:  SPECIFICATION.md §2.15, §2.15.1, §2.15.2
+'          User_Stories.md S-05, S-28
+' C4:      Conflict Resolver
+'          artifacts → Snapshots Adapter → artifact_store
+'          denials → Findings & Audit Trail Adapter → event_store
+' Contract: 8.2.4
+'
+' Precedence (normative, lower priority_level wins):
+'   1. Explicit override (always_wins / never_wins / defer_to)
+'   2. Compatible dual overrides (compatible_overrides)
+'   3. Priority: constitutional=1 > statutory=2 > regulatory=3
+'                > operational=4 > advisory=5
+'   4. Specificity (higher score wins)
+'   5. Recency (newer created_at wins; frozen in node_body)
+'   6. Conflict Artifact → human conflict.resolve
+'
+' Within-lineage = binding. Cross-lineage = advisory only.
+' ============================================================
+
+title Selma — Conflict Resolution FSM\n<size:12><i>Deterministic cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> DetectPair : consistency review\nor multi-rule fire\non frozen CG-IR\nstory: S-05 / S-28
+
+state "Detect\nConflicting Pair" as DetectPair #B9770E : declared conflicts_with\nor outcome contradiction\n(same lineage, both Fail,\ncontradictory deontics)
+state "No Conflict" as NoConflict #2C6E49 : no pair / both Pass\nPass+Fail / same-type Fail
+state "Scope Check" as ScopeCheck #1B7A6E : share lineage_id?
+
+DetectPair --> NoConflict : no candidate
+DetectPair --> ScopeCheck : candidate pair
+NoConflict --> [*]
+
+ScopeCheck --> ExplicitOverride : same lineage_id\n**binding cascade**
+ScopeCheck --> AdvisoryCascade : different lineage_id\n**advisory only**
+
+' ---------- Within-lineage binding cascade (flat, no nested exits) ----------
+state "1. Explicit\nOverride" as ExplicitOverride #1B7A6E : always_wins |\nnever_wins |\ndefer_to (execution id)
+state "2. Compatible\nOverrides" as CompatibleOverrides #1B7A6E : compatible_overrides()\nsymmetric pairs or\nidentical defer_to
+state "3. Priority" as PriorityCheck #1B7A6E : lower priority_level wins\n1 constitutional ... 5 advisory
+state "4. Specificity" as SpecificityCheck #1B7A6E : score =\nscope_specificity x 100 +\nbound_fields
+state "5. Recency" as RecencyCheck #1B7A6E : newer created_at\nfrozen in node_body
+state "Resolved\nBinding" as ResolvedBinding #2C6E49 : winner recorded\nloser adjusted
+state "Conflict Artifact\nPending" as ArtifactPending #A93226 : requires human\nconflict.resolve
+
+ExplicitOverride --> ResolvedBinding : single override wins
+ExplicitOverride --> CompatibleOverrides : none / dual / ambiguous
+
+CompatibleOverrides --> ResolvedBinding : compatible pair
+CompatibleOverrides --> ArtifactPending : incompatible dual
+CompatibleOverrides --> PriorityCheck : no override
+
+PriorityCheck --> ResolvedBinding : strict winner
+PriorityCheck --> SpecificityCheck : tie
+
+SpecificityCheck --> ResolvedBinding : strict winner
+SpecificityCheck --> RecencyCheck : tie
+
+RecencyCheck --> ResolvedBinding : later created_at
+RecencyCheck --> ArtifactPending : identical timestamp
+
+ResolvedBinding --> [*]
+
+' ---------- Human artifact lifecycle ----------
+state "Human Review" as HumanReview #B9770E : Official reviews artifact\n[capability: conflict.resolve]
+state "Artifact\nResolved" as ArtifactResolved #2C6E49 : decision recorded\non same frozen snapshot
+state "Artifact\nRejected" as ArtifactRejected #A93226 : no change · remains open
+state "Artifact\nArchived" as ArtifactArchived #4A4A4A : immutable retention
+
+ArtifactPending --> HumanReview : escalate
+HumanReview --> ArtifactResolved : resolve recorded
+HumanReview --> ArtifactRejected : deny / defer
+ArtifactResolved --> ArtifactArchived
+ArtifactRejected --> HumanReview : reopen review
+ArtifactArchived --> [*]
+
+' ---------- Cross-lineage advisory ----------
+state "Run Precedence\nRead-Only" as AdvisoryCascade #1B7A6E : same cascade\nno binding mutation
+state "Advisory\nArtifact" as AdvisoryArtifact #B9770E : binding_status=advisory\nrequires_human_action=true\nMUST NOT modify findings/CG-IR
+state "No Advisory" as NoAdvisory #2C6E49
+
+AdvisoryCascade --> AdvisoryArtifact : conflict signal
+AdvisoryCascade --> NoAdvisory : no residual conflict
+AdvisoryArtifact --> [*]
+NoAdvisory --> [*]
+
+note left of ExplicitOverride
+  **Within-lineage binding (S-28)**
+  identical frozen CG-IR + target
+  => byte-identical outcomes including
+  compatible_overrides pairs.
+  defer_to: self-ref / missing => fall through;
+  multi-active post-fork => Artifact;
+  cycles (DFS) => ignore all defer_to.
+end note
+
+note right of AdvisoryCascade
+  **§2.15.2 invariant**
+  Cross-lineage resolution is advisory.
+  No automatic finding FSM mutation.
+  No CG-IR rewrite.
+  Humans change directives => recompile.
+end note
+
+note bottom of HumanReview
+  **Security**
+  Only Regulatory Official with
+  conflict.resolve. Deny => artifact stays
+  open; denial audit appended; no partial
+  resolution write.
+end note
+
+@enduml

@@ -1,0 +1,86 @@
+@startuml selma_finding_lifecycle
+' ============================================================
+' Selma — Finding Lifecycle State Machine (NORMATIVE)
+' Source:  SPECIFICATION.md §3.1, §3.2, §2.14
+'          User_Stories.md S-11..S-14c, S-25, S-29, S-32, S-33
+' C4:      Lifecycle Finder → Findings & Audit Trail Adapter → event_store
+' Contract: 8.2.4
+'
+' Authority note: This is the ONLY fully normative FSM in the
+' specification. All other machines in this directory are extracted
+' behavioral models that implement pipeline / lifecycle prose.
+' ============================================================
+
+title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state lifecycle · capability gates · SoD guards · append-only events</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Created : <b>FindingCreated</b>\nSystem · Rule Inspector\nevaluator Fail | Partial | NeedsReview
+
+state "Created" as Created #3B7DD8 : **entry** born from inspection\n**allowed** system auto-open only\n**forbidden** human mutation
+state "Open" as Open #3B7DD8 : **decision hub**\ndisposition = valid\n**allowed** acknowledge | dismiss | waive
+state "Acknowledged\n(In Remedy)" as Acknowledged #3B7DD8 : **remediation in progress**\n**allowed** evidence.submit
+state "Evidence\nSubmitted" as EvidenceSubmitted #1B7A6E : **auto-follow**\nevidence actor recorded for SoD-2
+state "Pending\nVerification" as PendingVerification #B9770E : **awaits Official**\n**allowed** approve | reject
+state "Verified\n(Resolved)" as Verified #2C6E49 : **pre-terminal**\n**allowed** system close only
+state "Rejected\n(Reopen)" as Rejected #A93226 : **requires correction**\n**allowed** reopen + comments
+state "Dismissed\n(Invalid)" as Dismissed #4A4A4A : **terminal**\ndisposition = invalid\n**forbidden** any transition
+state "Waived\n(Accepted Risk)" as Waived #4A4A4A : **pre-terminal**\ndisposition = waived
+state "Closed" as Closed #4A4A4A : **terminal**\n**allowed** read-only / analytics
+
+Created --> Open : <b>system automatic</b>\nevent: DispositionChanged\nactor: System
+
+Open --> Acknowledged : <b>finding.acknowledge</b>\nactor: Compliance Representative\n[capability_enforced]\nstory: S-12
+Open --> Dismissed : <b>finding.dismiss</b>\nactor: Regulatory Official\n[capability_enforced]\ndisposition = invalid\nstory: S-25
+Open --> Waived : <b>finding.waive</b>\nactor: Regulatory Official\n[capability_enforced]\n[SoD-1: actor ∉ creator_provenance]\ndisposition = waived\nstory: S-29
+
+Acknowledged --> EvidenceSubmitted : <b>evidence.submit</b>\nactor: Compliance Representative\n[capability_enforced]\nstory: S-13
+
+EvidenceSubmitted --> PendingVerification : <b>system automatic</b>\non evidence receipt
+
+PendingVerification --> Verified : <b>finding.approve_remediation</b>\nactor: Regulatory Official\n[capability_enforced]\n[SoD-2: actor ≠ evidence submitter]\nstory: S-14a
+PendingVerification --> Rejected : <b>finding.reject_remediation</b>\nactor: Regulatory Official\n[capability_enforced]\nstory: S-14b
+
+Rejected --> Open : <b>finding.reopen</b>\nactor: Regulatory Official\nguard: mandatory comments\n[capability_enforced]\nstory: S-14c
+
+Verified --> Closed : <b>system automatic</b>\nevent: FindingClosed
+Waived --> Closed : <b>system automatic</b>\nevent: FindingClosed
+
+Dismissed --> [*]
+Closed --> [*]
+
+note right of Open
+  **Three mutually exclusive first actions**
+  · acknowledge (S-12) — Compliance Rep
+  · dismiss (S-25) — Official → terminal
+  · waive (S-29) — Official + SoD-1
+  Humans never close findings directly.
+end note
+
+note left of Waived
+  **SoD-1 (S-29 / S-32)**
+  DENY if actor ∈ creator_provenance
+  for finding.control_id in active CG-IR.
+  creator_provenance = sorted union of
+  authored_by across fork/merge/split.
+  On deny: 403 · no mutation · denial audit only.
+end note
+
+note bottom of Verified
+  **SoD-2 (S-14a / S-33)**
+  DENY if actor submitted evidence for this finding
+  (from DispositionChanged / evidence.submit actor).
+  Closure is always system-automatic.
+end note
+
+note right of Closed
+  **Event sourcing (SPEC §2.14 / §3.3)**
+  Every successful transition appends an event:
+  FindingCreated | DispositionChanged | FindingClosed
+  with event_hash + HLC total order.
+  Denied capability → FSM unchanged, **no** success event.
+  Concurrency: optimistic version on finding projection;
+  conflict → 409 (retry with current state).
+end note
+
+@enduml

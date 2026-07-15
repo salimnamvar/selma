@@ -1,0 +1,96 @@
+@startuml selma_inspection_pipeline
+' ============================================================
+' Selma — Inspection Execution Pipeline
+' Source:  SPECIFICATION.md §2.10–§2.13, §3.3, §3.6, §3.7
+'          User_Stories.md S-10, S-15, S-16
+' C4:      Rule Inspector → Snapshots Adapter → artifact_store
+'          Rule Inspector → Lifecycle Finder (finding birth)
+' Contract: 8.2.4
+'
+' Six pure stages. Reinspect creates a NEW inspection_id;
+' prior snapshots remain immutable. Process FSM (not a durable
+' multi-day lifecycle aggregate).
+' ============================================================
+
+title Selma — Inspection Execution Pipeline\n<size:12><i>Six-stage pure evaluation · typed faults · immutable snapshot + HLC findings</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Submitted : <b>inspection.submit</b>\nor inspection.reinspect\nactor: Compliance Rep | System\nstory: S-10 / S-15
+
+state "Submitted" as Submitted #B9770E : target payload received
+state "Ingress\nGranted" as IngressGranted #1B7A6E : capability OK\ntarget schema OK\npoint-in-time pins set
+state "Rejected\nIngress" as RejectedIngress #A93226 : 403 | SchemaError\n**no snapshot · no findings**
+state "1. Normalize" as Normalize #1B7A6E : NFC · UTC · IEEE 754\ntarget_hash computed
+state "2. Classify" as Classify #1B7A6E : target_type mapping\ncontext enrichment
+state "3. Select\nControls" as SelectControls #1B7A6E : scope filter CG-IR\ndeps ready · severity gate
+state "4. Evaluate" as Evaluate #1B7A6E : topological DAG\npure evaluators only\nPass|Fail|Partial|NeedsReview
+state "5. Aggregate" as Aggregate #1B7A6E : deontic × outcome\nconflict apply\nseverity mapping
+state "6. Report" as Report #2C6E49 : append findings\nwrite snapshot + trace\nsystem_state_hash
+state "Completed" as Completed #2C6E49 : status=completed
+state "Partial" as Partial #B9770E : status=partial\nskipped_nodes present
+state "Failed" as Failed #A93226 : status=failed\nCG-IR corruption / fatal
+
+Submitted --> IngressGranted : grant\n[capability_enforced]
+Submitted --> RejectedIngress : deny
+
+RejectedIngress --> [*]
+
+IngressGranted --> Normalize : pin\ntarget_hash\ncg_ir_snapshot_hash\nfrozen_env_hash\nengine_version
+
+Normalize --> Classify : OK
+Normalize --> Report : fault → typed finding\nSchema | Corruption
+
+Classify --> SelectControls : OK
+Classify --> Report : fault → Schema
+
+SelectControls --> Evaluate : OK
+SelectControls --> Report : Dependency\nskipped_nodes (no finding)
+
+Evaluate --> Aggregate : OK
+Evaluate --> Evaluate : timeout retry\n0..3 (default 0)
+Evaluate --> Report : fault findings\nDeterministic | Ambiguous\nTimeout | Resource
+
+Aggregate --> Report : OK or partial aggregate\n(always report)
+
+Report --> Completed : full success
+Report --> Partial : partial results\n(skipped_nodes present)
+Report --> Failed : Fatal CG-IR corruption
+
+Completed --> [*]
+Partial --> [*]
+Failed --> [*]
+
+note left of IngressGranted
+  **Point-in-time pin (S-10)**
+  system_state_hash = SHA-256({
+    directive_graph_version,
+    cg_ir_hash,
+    frozen_env_hash,
+    engine_version,
+    target_hash
+  })
+  Event stream ordering is **excluded**
+  from system_state_hash (§2.17).
+end note
+
+note right of Evaluate
+  **Evaluator contract (§2.9)**
+  · pure · deterministic · no IO
+  · no randomness · no env reads
+  · RE2-compatible regex only
+  Parallel independent nodes OK.
+  Dependency-failed nodes → Skipped
+  trace entry only (no cascading finding).
+end note
+
+note bottom of Report
+  **Fault taxonomy (§3.3)**
+  Deterministic · Partial · Ambiguous · Dependency
+  Timeout · Resource · Schema · Corruption
+  Findings born at Report → Lifecycle Finder
+  (Finding FSM Created). Snapshot is write-once
+  in artifact_store. Reinspect = new instance.
+end note
+
+@enduml

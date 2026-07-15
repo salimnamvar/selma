@@ -1,0 +1,105 @@
+@startuml selma_compilation_pipeline
+' ============================================================
+' Selma — Hermetic Compilation / CG-IR Pipeline
+' Source:  SPECIFICATION.md §2.4, §2.6, §2.7, §2.8, §2.9, §3.4, §3.5
+'          User_Stories.md S-05, S-21..S-24, S-27, S-31
+' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
+'          (read-lock on directive_store; conflict_resolver at compile)
+' Contract: 8.2.4
+'
+' Invariants:
+'   · hermetic frozen_env boundary
+'   · any gate fail → no partial CG-IR
+'   · content-addressed SHA-256 snapshot identity
+'   · compiled_at excluded from snapshot hash (S-23)
+'   · policy_doctrine.yaml never required at runtime (AA-02)
+' ============================================================
+
+title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>All-or-nothing publish · content-addressed · no runtime policy dependency</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Requested : <b>compile request</b>\ntrigger: directive change | CI/CD\nrequest_id tracked
+
+state "Requested" as Requested #B9770E : queued · dedup by\n(graph version + frozen_env)
+state "Queued" as Queued #B9770E : FIFO · writer-preference\nblocks new readers when\nwrite pending (§3.4)
+state "Acquire\nRead Lock" as AcquireReadLock #B9770E : concurrent compiles OK\nblocks on write lock
+state "Schema\nValidate" as SchemaValidate #1B7A6E : JSON Schema Draft-07\nstructural projection
+state "Complexity\nValidate" as ComplexityValidate #1B7A6E : AST walk\ndepth≤32 · nodes≤256\nwidth≤64 · regex≤4096\nmetadata≤16384 B
+state "Portability\nValidate" as PortabilityValidate #1B7A6E : RE2 · IEEE 754 finite\nUTC-Z · NFC strings\nflags {i,m,s} only
+state "Discriminator\nValidate" as DiscriminatorValidate #1B7A6E : evaluator_type ↔ config\nAST discriminator (§2.9)
+state "Lineage DAG\nValidate" as LineageValidate #1B7A6E : acyclicity · depth≤64\nparent existence\noperation consistency
+state "Hash Nodes" as HashNodes #1B7A6E : semantic_hash +\npresentation_hash → node_hash\nincremental reuse
+state "Hash Edges" as HashEdges #1B7A6E : edge_hash =\nSHA-256(source, target)
+state "Conflict\nMap" as ConflictMap #1B7A6E : resolve_conflict mapping\nprecedence §2.15
+state "Snapshot\nHash" as SnapshotHash #1B7A6E : cg_ir_snapshot_hash =\nSHA-256(sorted node_hashes +\nsorted edge_hashes +\nprovenance)\n**compiled_at excluded**
+state "Policy Runtime\nProhibition Assert" as PolicyAssert #1B7A6E : AA-02 · policy absent\nfrom runtime data paths
+state "Publish CAS" as Publish #2C6E49 : immutable snapshot\ndedup if hash exists
+state "Release Lock\n(Success)" as ReleaseLockOk #2C6E49 : read lock released\nafter successful publish
+state "Release Lock\n(Abort)" as ReleaseLockFail #A93226 : read lock released\nafter gate failure
+state "Completed" as Completed #2C6E49 : snapshot live\ninspections may pin hash
+state "Failed" as Failed #A93226 : **no partial CG-IR**\nDirective Graph unchanged\naudit entry only
+
+Requested --> Queued
+Queued --> AcquireReadLock
+AcquireReadLock --> SchemaValidate : lock granted
+AcquireReadLock --> Queued : blocked · retry FIFO
+
+SchemaValidate --> ComplexityValidate : PASS
+SchemaValidate --> Failed : FAIL · SchemaError
+
+ComplexityValidate --> PortabilityValidate : PASS
+ComplexityValidate --> Failed : FAIL · ComplexityError
+
+PortabilityValidate --> DiscriminatorValidate : PASS
+PortabilityValidate --> Failed : FAIL · PortabilityError
+
+DiscriminatorValidate --> LineageValidate : PASS
+DiscriminatorValidate --> Failed : FAIL · DiscriminatorError
+
+LineageValidate --> HashNodes : PASS\nlineage_validation recorded
+LineageValidate --> Failed : FAIL · LineageError
+
+HashNodes --> HashEdges
+HashEdges --> ConflictMap
+ConflictMap --> SnapshotHash : pairs mapped\n(unresolved → conflict artifact meta;\ncross-lineage advisory only)
+
+SnapshotHash --> PolicyAssert
+PolicyAssert --> Publish : PASS
+PolicyAssert --> Failed : FAIL · ArchitecturalAuditError AA-02
+
+Publish --> ReleaseLockOk
+ReleaseLockOk --> Completed
+Completed --> [*]
+
+Failed --> ReleaseLockFail : always release lock
+ReleaseLockFail --> [*]
+
+note left of AcquireReadLock
+  **Concurrency (§3.4)**
+  · Compilation = read lock only
+  · Directive mutation = exclusive write lock
+  · Writer-preference FIFO
+  · No write-lock-while-awaiting-compile
+  · Identical content → same hash → no-op dedup
+end note
+
+note right of SnapshotHash
+  **Hermetic boundary (§2.7)**
+  frozen_env pins engine, toolchain,
+  OS hash, model/prompt/decoder (if any),
+  confidence_severity_cap_threshold.
+  frozen_env_hash excludes itself.
+end note
+
+note bottom of Publish
+  **Immutability**
+  Once published, CG-IR is never mutated.
+  Further directive changes produce a **new**
+  snapshot under a new content hash.
+  Storage: cgir_store (CAS) via Compiled Rules Adapter.
+  Success and abort lock-release paths are
+  distinct states (no ambiguous dual exit).
+end note
+
+@enduml

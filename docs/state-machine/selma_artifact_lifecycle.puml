@@ -1,0 +1,85 @@
+@startuml selma_artifact_lifecycle
+' ============================================================
+' Selma — Artifact Lifecycle State Machine
+' Source:  SPECIFICATION.md §2.1 (execution artifacts), §2.6, §3.5, §3.6
+' C4:      Snapshots Adapter → artifact_store → audit_platform
+'          Compiled Rules Adapter → cgir_store (CG-IR snapshots)
+'          Findings & Audit Trail Adapter → event_store (events)
+' Contract: 8.2.4
+'
+' Models write-once / append-only retention for:
+'   · CG-IR snapshots
+'   · Inspection snapshots + pipeline traces
+'   · Conflict artifacts
+'   · Certification artifacts
+'   · Finding events (append-only stream entries)
+' ============================================================
+
+title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · append-only retention · audit replication · no silent rewrite</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Building : producer begins materialization
+
+state "Building" as Building #B9770E : transient workspace\n**not** durable truth yet
+state "Validated" as Validated #1B7A6E : integrity checks OK\nhashes computed
+state "Published" as Published #2C6E49 : content-addressed\nor write-once committed
+state "Active\nReference" as ActiveReference #3B7DD8 : referenced by inspections\nor human workflows
+state "Superseded\nReference" as SupersededReference #4A4A4A : newer snapshot supersedes\nfor *selection*; old remains
+state "Archived" as Archived #4A4A4A : long-term retention
+state "Replicated" as Replicated #2C6E49 : audit_platform copy
+state "Rejected\nBuild" as RejectedBuild #A93226 : validation failed\n**no durable artifact**
+
+Building --> Validated : integrity OK
+Building --> RejectedBuild : integrity FAIL
+RejectedBuild --> [*]
+
+Validated --> Published : CAS put / object write-once
+
+Published --> ActiveReference : first consumer pin
+Published --> Replicated : async audit replicate
+ActiveReference --> SupersededReference : newer CG-IR / new inspect
+ActiveReference --> Replicated
+SupersededReference --> Archived : retention policy
+Replicated --> Archived : retention complete path
+Archived --> [*]
+
+note right of Published
+  **Immutability rules**
+  · No in-place update of content
+  · No delete of CG-IR or finding events
+  · Inspection snapshots never modified
+    after completion (§2.13)
+  · Reinspect / recompile create **new**
+    artifacts under new IDs/hashes
+
+  **Artifact types under this lifecycle**
+  · CG-IR Snapshot — hash identity; indefinite
+  · Inspection Snapshot — default retain 7y
+  · Pipeline Trace — default retain 1y
+  · Conflict Artifact — pending → archived
+  · Certification Artifact — AA gate report
+  · Finding Event — append-only HLC stream
+end note
+
+note left of Building
+  **Producers (C4)**
+  · Hermetic Compiler → CG-IR
+  · Rule Inspector → inspection snapshot + trace
+  · Conflict Resolver → conflict artifact
+  · Architectural Auditor → certification artifact
+  · Lifecycle Finder → finding events
+end note
+
+note bottom of Archived
+  **Retention (§3.5)**
+  CG-IR snapshots / node objects: indefinite
+  Finding events: indefinite
+  Inspection snapshots: configurable (default 7y)
+  Pipeline traces: configurable (default 1y)
+  Replication to audit_platform is append-only async.
+  Concurrency: content-addressed put is idempotent;
+  concurrent identical publishes converge on same hash.
+end note
+
+@enduml

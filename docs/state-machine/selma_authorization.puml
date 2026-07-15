@@ -1,0 +1,88 @@
+@startuml selma_authorization
+' ============================================================
+' Selma — Capability Authorization State Machine
+' Source:  SPECIFICATION.md §3.2, §3.2.1, §9.6
+'          User_Stories.md S-32, S-33, S-34
+' C4:      Application Service (ingress gate)
+'          + Lifecycle Finder / Conflict Resolver (domain gates)
+'          denials → Findings & Audit Trail Adapter → event_store
+' Contract: 8.2.4
+'
+' Cross-cutting behavioral security model. Applies to humans,
+' service accounts, and AI agents (same matrix; actor = agent ID).
+' Delegation is NOT supported in v8.2.x.
+' ============================================================
+
+title Selma — Capability Authorization FSM\n<size:12><i>Request → matrix → SoD → stage gate → allow | deny + audit · hard-reject semantics</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> RequestReceived : any mutating or gated read
+
+state "Request\nReceived" as RequestReceived #B9770E : raw request at interface
+state "Identity\nVerified" as IdentityVerified #1B7A6E : authenticated actor\nrole bound (RO | CR | System | AI)
+state "Capability\nEvaluated" as CapabilityEvaluated #1B7A6E : matrix lookup\nrole × capability
+state "SoD\nEvaluated" as SoDEvaluated #B9770E : only when action is\nfinding.waive or\nfinding.approve_remediation
+state "Stage Gate\nChecked" as StageGateChecked #1B7A6E : enforcement point match
+state "Allowed" as Allowed #2C6E49 : proceed to domain FSM\nor pipeline
+state "Denied" as Denied #A93226 : 403 CapabilityDenied
+state "Denial\nAudited" as DenialAudited #4A4A4A : append-only denial record
+state "Domain State\nUnchanged" as DomainUnchanged #A93226 : no mutation\nno compensating event
+
+RequestReceived --> IdentityVerified : authenticate
+RequestReceived --> Denied : unauthenticated
+
+IdentityVerified --> CapabilityEvaluated : role resolved
+CapabilityEvaluated --> SoDEvaluated : matrix PASS\n(and SoD-relevant action)
+CapabilityEvaluated --> StageGateChecked : matrix PASS\n(non-SoD action)
+CapabilityEvaluated --> Denied : matrix FAIL\ncapability not granted to role
+
+SoDEvaluated --> StageGateChecked : SoD PASS
+SoDEvaluated --> Denied : SoD FAIL\ncreator_provenance or\nevidence_submitter conflict
+
+StageGateChecked --> Allowed : stage capability OK
+StageGateChecked --> Denied : stage capability FAIL
+
+Allowed --> [*] : dispatch domain command
+Denied --> DenialAudited : record\n{actor, capability, action,\noutcome:denied, timestamp, reason}
+DenialAudited --> DomainUnchanged
+DomainUnchanged --> [*]
+
+note right of CapabilityEvaluated
+  **Capability matrix (§3.2) — summary**
+  Official: directive.* · finding.dismiss/waive/
+    approve/reject/supersede · conflict.resolve · views
+  Compliance: inspection.submit/reinspect ·
+    finding.acknowledge · evidence.submit · views
+  System: inspection.submit · finding.view · analytics.view
+  AI agents: same matrix; actor = agent ID
+end note
+
+note left of SoDEvaluated
+  **SoD algorithm (§3.2.1)**
+  finding.waive:
+    DENY if actor ∈ creator_provenance(control_id)
+  finding.approve_remediation:
+    DENY if actor == evidence_submitter(finding_id)
+  All other actions: SoD N/A → skip to stage gate
+end note
+
+note bottom of Denied
+  **Uniform failure semantics**
+  · Hard reject — no partial writes
+  · No compensating success events
+  · No degraded-mode execution
+  · No automatic escalation
+  · Caller receives error; decides next action
+end note
+
+note right of StageGateChecked
+  **Five enforcement points**
+  1. Request ingress (Application Service)
+  2. Directive mutations (before write lock)
+  3. Inspection pipeline entry
+  4. Finding FSM transitions
+  5. Conflict resolution
+end note
+
+@enduml
