@@ -40,7 +40,7 @@ EvidenceSubmitted --> PendingVerification : <b>system automatic</b>\nactor: Syst
 PendingVerification --> Verified : <b>finding.approve_remediation</b>\nactor: Regulatory Official\n[capability: finding.approve_remediation]\n[SoD-2: actor ≠ evidence_submitter]\nevent: DispositionChanged\nstory: S-14a / S-33
 PendingVerification --> Rejected : <b>finding.reject_remediation</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\nevent: DispositionChanged\nstory: S-14b
 
-Rejected --> Open : <b>finding.reopen</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\nguard: mandatory comments\nevent: DispositionChanged\nstory: S-14c
+Rejected --> Open : <b>finding.reopen</b>\nactor: Regulatory Official\n[capability: finding.reject_remediation]\n[mandatory comments]\nevent: DispositionChanged\nstory: S-14c
 
 Verified --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed
 Waived --> Closed : <b>system automatic</b>\nactor: System\ncommand: auto-close\nevent: FindingClosed

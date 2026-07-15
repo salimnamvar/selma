@@ -48,7 +48,7 @@ SelectControls --> Evaluate : <b>OK</b>\nactor: System\nevent: InspectionStagePa
 SelectControls --> Report : <b>Dependency skip</b>\nactor: System\nevent: InspectionNodesSkipped\naction: skipped_nodes only · no finding
 
 Evaluate --> Aggregate : <b>OK</b>\nactor: System\nevent: InspectionStagePassed\naction: stage=evaluate
-Evaluate --> Evaluate : <b>timeout retry</b>\nactor: System\nguard: [retry_count < max_retries]\naction: infrastructure timeout only · max 3 · default 0\nevent: InspectionEvalRetry
+Evaluate --> Evaluate : <b>timeout retry</b>\nactor: System\n[retry_count < max_retries]\naction: infrastructure timeout only · max 3 · default 0\nevent: InspectionEvalRetry
 Evaluate --> Report : <b>fault findings</b>\nactor: System\nevent: InspectionStageFault\naction: Deterministic | Ambiguous | Timeout | Resource
 
 Aggregate --> Report : <b>aggregate</b>\nactor: System\ncommand: OK or partial aggregate (always report)\nevent: InspectionAggregated

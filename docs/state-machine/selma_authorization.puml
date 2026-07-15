@@ -35,11 +35,11 @@ RequestReceived --> Denied : <b>unauthenticated</b>\nactor: System\nevent: Authz
 
 IdentityVerified --> CapabilityEvaluated : <b>role resolved</b>\nactor: System\ncommand: matrix lookup\nevent: AuthzCapabilityChecked
 
-CapabilityEvaluated --> SoDEvaluated : <b>matrix PASS</b>\nactor: System\nguard: action ∈ {finding.waive, finding.approve_remediation}\nevent: AuthzSoDRequired
-CapabilityEvaluated --> StageGateChecked : <b>matrix PASS</b>\nactor: System\nguard: action ∉ SoD set\nevent: AuthzSoDSkipped
+CapabilityEvaluated --> SoDEvaluated : <b>matrix PASS</b>\nactor: System\n[action ∈ {finding.waive, finding.approve_remediation}]\nevent: AuthzSoDRequired
+CapabilityEvaluated --> StageGateChecked : <b>matrix PASS</b>\nactor: System\n[action ∉ SoD set]\nevent: AuthzSoDSkipped
 CapabilityEvaluated --> Denied : <b>matrix FAIL</b>\nactor: System\nevent: AuthzDenied\naction: capability not granted to role
 
-SoDEvaluated --> StageGateChecked : <b>SoD PASS</b>\nactor: System\nguard: waive ⇒ actor ∉ creator_provenance\nguard: approve ⇒ actor ≠ evidence_submitter\nevent: AuthzSoDPassed
+SoDEvaluated --> StageGateChecked : <b>SoD PASS</b>\nactor: System\n[waive ⇒ actor ∉ creator_provenance]\n[approve ⇒ actor ≠ evidence_submitter]\nevent: AuthzSoDPassed
 SoDEvaluated --> Denied : <b>SoD FAIL</b>\nactor: System\nevent: AuthzDenied\naction: creator_provenance or evidence_submitter conflict
 
 StageGateChecked --> Allowed : <b>stage OK</b>\nactor: System\nevent: AuthzAllowed

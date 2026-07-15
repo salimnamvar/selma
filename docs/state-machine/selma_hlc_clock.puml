@@ -43,7 +43,7 @@ RemoteReceive --> Incrementing : <b>max(...) == pt</b>\nactor: System\naction: p
 
 Advancing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
 Incrementing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
-EventEmitted --> Steady : <b>persist</b>\nactor: System\ncommand: store (pt_new, lc_new)\nguard: strictly non-decreasing vs prior\nevent: HlcStatePersisted
+EventEmitted --> Steady : <b>persist</b>\nactor: System\ncommand: store (pt_new, lc_new)\n[strictly non-decreasing vs prior]\nevent: HlcStatePersisted
 
 Partitioned --> Reconciling : <b>partition healed</b>\nactor: System\ncommand: merge buffered remote events\nevent: HlcReconciling
 Reconciling --> Steady : <b>merge complete</b>\nactor: System\naction: sort physical_time → lc → node_id → event_id\naction: no overwrite of committed\nevent: HlcReconciled

@@ -13,6 +13,10 @@
 '   Finding events (append-only stream entries)
 ' Retention defaults (README / §3.5): CG-IR & events indefinite;
 '   inspection snapshots 7y; pipeline traces 1y.
+'
+' UML: qualitative states = reference/retention path.
+' Replication is extended state (replicated: bool), not a mutually
+' exclusive qualitative state — avoids false XOR with ActiveReference.
 ' ============================================================
 
 title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · append-only retention · audit replication · no silent rewrite</i></size>
@@ -21,27 +25,29 @@ title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · append
 
 [*] --> Building : <b>materialize</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: Hermetic Compiler | Rule Inspector |\nConflict Resolver | Architectural Auditor | Lifecycle Finder\nevent: ArtifactBuildStarted
 
-state "Building" as Building #B9770E : **entry** transient workspace\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
+state "Building" as Building #B9770E : **entry** transient workspace\nextended: replicated=false\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
 state "Validated" as Validated #1B7A6E : **entry** integrity checks OK\nhashes computed\n**allowed** CAS put / write-once\n**forbidden** skip integrity
-state "Published" as Published #2C6E49 : **entry** content-addressed or write-once committed\n**allowed** pin · replicate\n**forbidden** in-place update · delete CG-IR/events
-state "Active\nReference" as ActiveReference #3B7DD8 : **entry** referenced by inspections\nor human workflows\n**allowed** supersede selection · replicate\n**forbidden** mutate bytes
-state "Superseded\nReference" as SupersededReference #4A4A4A : **entry** newer snapshot supersedes selection\nold bytes remain\n**allowed** archive · audit read\n**forbidden** rewrite content
-state "Archived" as Archived #4A4A4A : **entry** long-term retention **terminal-ish**\n**allowed** read-only · audit_platform copy\n**forbidden** delete before retention policy
-state "Replicated" as Replicated #2C6E49 : **entry** audit_platform append-only copy\n**allowed** archive path\n**forbidden** mutate replica as source of truth rewrite
+state "Published" as Published #2C6E49 : **entry** content-addressed or write-once committed\n**allowed** pin · async replicate\n**forbidden** in-place update · delete CG-IR/events
+state "Active\nReference" as ActiveReference #3B7DD8 : **entry** referenced by inspections\nor human workflows\n**allowed** supersede selection · async replicate\n**forbidden** mutate bytes
+state "Superseded\nReference" as SupersededReference #4A4A4A : **entry** newer snapshot supersedes selection\nold bytes remain\n**allowed** archive · audit read · async replicate\n**forbidden** rewrite content
+state "Archived" as Archived #4A4A4A : **entry** long-term retention **terminal**\n**allowed** read-only · audit_platform copy\n**forbidden** delete before retention policy
 state "Rejected\nBuild" as RejectedBuild #A93226 : **entry** validation failed **terminal**\n**allowed** producer retry as new build\n**forbidden** durable artifact
 
 Building --> Validated : <b>integrity OK</b>\nactor: System\ncommand: validate hashes / schema\nevent: ArtifactValidated
 Building --> RejectedBuild : <b>integrity FAIL</b>\nactor: System\nevent: ArtifactBuildRejected\naction: no durable artifact
 RejectedBuild --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
-Validated --> Published : <b>CAS put / write-once</b>\nactor: System (adapter)\ncommand: content-addressed publish\nguard: identical content → idempotent same hash\nevent: ArtifactPublished
+Validated --> Published : <b>CAS put / write-once</b>\nactor: System (adapter)\ncommand: content-addressed publish\n[identical content → idempotent same hash]\nevent: ArtifactPublished
 
 Published --> ActiveReference : <b>first consumer pin</b>\nactor: System | human workflow\ncommand: reference artifact\nevent: ArtifactReferenced
-Published --> Replicated : <b>async audit replicate</b>\nactor: System\ncommand: append-only copy to audit_platform\nevent: ArtifactReplicated
 ActiveReference --> SupersededReference : <b>supersede selection</b>\nactor: System\ncommand: newer CG-IR / new inspection wins selection\nevent: ArtifactSuperseded
-ActiveReference --> Replicated : <b>async audit replicate</b>\nactor: System\nevent: ArtifactReplicated
 SupersededReference --> Archived : <b>retention policy</b>\nactor: System\ncommand: apply retention (§3.5 defaults)\nevent: ArtifactArchived
-Replicated --> Archived : <b>retention complete path</b>\nactor: System\nevent: ArtifactArchived
+
+' Extended-state self-transitions: audit replication (independent of reference phase)
+Published --> Published : <b>async audit replicate</b>\nactor: System\ncommand: append-only copy to audit_platform\n[!replicated]\naction: replicated := true\nevent: ArtifactReplicated
+ActiveReference --> ActiveReference : <b>async audit replicate</b>\nactor: System\ncommand: append-only copy to audit_platform\n[!replicated]\naction: replicated := true\nevent: ArtifactReplicated
+SupersededReference --> SupersededReference : <b>async audit replicate</b>\nactor: System\ncommand: append-only copy to audit_platform\n[!replicated]\naction: replicated := true\nevent: ArtifactReplicated
+
 Archived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

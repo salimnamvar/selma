@@ -40,7 +40,7 @@ state "Failed" as Failed #A93226 : **entry** no partial CG-IR\n**allowed** audit
 Requested --> Queued : <b>enqueue</b>\nactor: System\ncommand: schedule compile\nevent: CompileQueued
 Queued --> AcquireReadLock : <b>dequeue</b>\nactor: System\ncommand: grant FIFO slot\nevent: CompileDequeued
 AcquireReadLock --> SchemaValidate : <b>lock granted</b>\nactor: System\ncommand: acquire read lock\nevent: CompileLockAcquired
-AcquireReadLock --> Queued : <b>blocked</b>\nactor: System\nguard: write lock held or write pending\naction: retry FIFO\nevent: CompileLockDeferred
+AcquireReadLock --> Queued : <b>blocked</b>\nactor: System\n[write lock held or write pending]\naction: retry FIFO\nevent: CompileLockDeferred
 
 SchemaValidate --> ComplexityValidate : <b>PASS</b>\nactor: System (Hermetic Compiler)\nevent: CompileGatePassed\naction: gate=schema
 SchemaValidate --> Failed : <b>FAIL</b>\nactor: System\nevent: CompileGateFailed\naction: SchemaError · no partial CG-IR

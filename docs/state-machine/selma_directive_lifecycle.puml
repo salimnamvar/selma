@@ -32,24 +32,25 @@ state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execu
 
 ' ---------- Status transitions ----------
 Draft --> Draft : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\naction: lineage_id unchanged · execution_id unchanged\nevent: DirectiveRevised\nstory: S-02
-Draft --> Active : <b>directive.modify (publish)</b>\nactor: Regulatory Official + System\n[capability: directive.modify]\nguard: hermetic compile SUCCESS\naction: new CG-IR snapshot published\nevent: DirectivePublished\nstory: S-01 / S-02
+Draft --> Active : <b>directive.modify (publish)</b>\nactor: Regulatory Official + System\n[capability: directive.modify]\n[hermetic compile SUCCESS]\naction: new CG-IR snapshot published\nevent: DirectivePublished\nstory: S-01 / S-02
 
-Active --> Active : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\nguard: exclusive write lock · compile SUCCESS\naction: same lineage_id + execution_id\nevent: DirectiveRevised\nstory: S-02
+Active --> Active : <b>directive.modify (revision)</b>\nactor: Regulatory Official\n[capability: directive.modify]\n[exclusive write lock · compile SUCCESS]\naction: same lineage_id + execution_id\nevent: DirectiveRevised\nstory: S-02
 Active --> Deprecated : <b>directive.retire</b>\nactor: Regulatory Official\n[capability: directive.retire]\naction: reason recorded · CG-IR nodes deprecated\nevent: DirectiveRetired\nstory: S-03
-Active --> Superseded : <b>directive.modify (supersede)</b>\nactor: Regulatory Official\n[capability: directive.modify]\nguard: superseded_by → active|draft id · successor compile-validated\nevent: DirectiveSuperseded\n§2.2.4
+Active --> Superseded : <b>directive.modify (supersede)</b>\nactor: Regulatory Official\n[capability: directive.modify]\n[superseded_by → active|draft id · successor compile-validated]\nevent: DirectiveSuperseded\n§2.2.4
 
-Deprecated --> Draft : <b>directive.restore</b>\nactor: Regulatory Official\n[capability: directive.restore]\naction: target revision copied · lineage_id preserved\nguard: must recompile to re-activate\nevent: DirectiveRestored\nstory: S-08
+Deprecated --> Draft : <b>directive.restore</b>\nactor: Regulatory Official\n[capability: directive.restore]\naction: target revision copied · lineage_id preserved\n[must recompile to re-activate]\nevent: DirectiveRestored\nstory: S-08
 
 ' ---------- Identity operations ----------
 Active --> ForkChildren : <b>directive.fork</b>\nactor: Regulatory Official\n[capability: directive.fork]\naction: parent side-effect Deprecated\nevent: DirectiveForked\nstory: S-19
 Active --> MergeResult : <b>directive.merge</b>\nactor: Regulatory Official\n[capability: directive.merge]\naction: both parents side-effect Deprecated\nevent: DirectiveMerged\nstory: S-20
-Active --> SplitChildren : <b>directive.split</b>\nactor: Regulatory Official\n[capability: directive.fork]\nguard: N-ary split shares fork gate (v8.2.4)\naction: parent side-effect Deprecated\nevent: DirectiveSplit\nstory: S-26
+Active --> SplitChildren : <b>directive.split</b>\nactor: Regulatory Official\n[capability: directive.fork]\n[N-ary split shares fork gate (v8.2.4)]\naction: parent side-effect Deprecated\nevent: DirectiveSplit\nstory: S-26
 
 ForkChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
 MergeResult --> Draft : <b>spawn merged rule</b>\nactor: System\ncommand: materialize merge result\naction: new execution_id · Draft status\nevent: DirectiveChildrenSpawned
 SplitChildren --> Draft : <b>spawn children</b>\nactor: System\ncommand: materialize child rules\naction: new execution_id instances · Draft status\nevent: DirectiveChildrenSpawned
 
+' Stable sinks (entity records persist). Superseded has no outgoing
+' edges → UML final. Deprecated is not final: restore remains enabled.
 Superseded --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
-Deprecated --> [*] : <b>terminal if not restored</b>\nactor: System\ncommand: sink\nevent: none
 
 @enduml

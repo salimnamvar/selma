@@ -55,7 +55,7 @@ ScopeCheck --> ExplicitOverride : <b>same lineage_id</b>\nactor: System\ncommand
 ScopeCheck --> AdvisoryCascade : <b>different lineage_id</b>\nactor: System\ncommand: enter advisory cascade\nevent: ConflictAdvisoryScope
 
 ExplicitOverride --> ResolvedBinding : <b>single override wins</b>\nactor: System\nevent: ConflictResolvedBinding\naction: winner recorded
-ExplicitOverride --> CompatibleOverrides : <b>none / dual / ambiguous</b>\nactor: System\nguard: multi-active post-fork defer_to → Artifact path via cascade\nevent: ConflictOverrideFallthrough
+ExplicitOverride --> CompatibleOverrides : <b>none / dual / ambiguous</b>\nactor: System\n[multi-active post-fork defer_to → Artifact path via cascade]\nevent: ConflictOverrideFallthrough
 
 CompatibleOverrides --> ResolvedBinding : <b>compatible pair</b>\nactor: System\nevent: ConflictResolvedBinding
 CompatibleOverrides --> ArtifactPending : <b>incompatible dual</b>\nactor: System\nevent: ConflictArtifactOpened

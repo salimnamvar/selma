@@ -10,6 +10,10 @@
 ' Dual-hash model and incremental reuse decision path.
 ' Canonical linear pipeline remains selma_compilation_pipeline.puml.
 ' Ownership: README.md
+'
+' UML: dual-hash is sequential within one RTC step (semantic then
+' presentation). Independent hashes are not concurrent regions —
+' order is fixed for determinism; both complete before reuse check.
 ' ============================================================
 
 title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Dual-hash model · local node identity · CAS dedup · compiled_at excluded</i></size>
@@ -19,8 +23,8 @@ title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Dual-hash mode
 [*] --> NodeBodyLoaded : <b>compilation begins</b>\nactor: System (Hermetic Compiler)\ncommand: load semantic_body + presentation_body\nevent: HashChainStarted
 
 state "Node Body\nLoaded" as NodeBodyLoaded #B9770E : **entry** semantic_body + presentation_body\n**allowed** dual hash compute\n**forbidden** neighbor embedding
-state "Semantic Hash\nComputed" as SemanticHashComputed #1B7A6E : **entry** SHA-256(canonical_json(semantic_body))\n**allowed** reuse check\n**forbidden** include presentation fields
-state "Presentation Hash\nComputed" as PresentationHashComputed #1B7A6E : **entry** SHA-256(canonical_json(presentation_body))\n**allowed** editorial-only change path\n**forbidden** alter semantic_hash
+state "Semantic Hash\nComputed" as SemanticHashComputed #1B7A6E : **entry** SHA-256(canonical_json(semantic_body))\n**allowed** presentation hash next\n**forbidden** include presentation fields
+state "Presentation Hash\nComputed" as PresentationHashComputed #1B7A6E : **entry** SHA-256(canonical_json(presentation_body))\n**allowed** reuse check\n**forbidden** alter semantic_hash
 state "Check Semantic\nReuse" as CheckSemanticReuse #B9770E : **entry** compare prior snapshot node hashes\n**allowed** reuse or recompute branch\n**forbidden** force full rebuild when semantic matches
 state "Reuse Semantic\nSubgraph" as ReuseSemantic #2C6E49 : **entry** semantic_hash match\neditorial change only\n**allowed** preserve evaluator subgraph\n**forbidden** recompute pure semantic work
 state "Recompute\nEvaluator" as RecomputeEvaluator #1B7A6E : **entry** semantic_hash new or modified\n**allowed** rebuild evaluator materialization
@@ -31,23 +35,22 @@ state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup cgir_store\n
 state "Published\n(Dedup)" as PublishedDedup #2C6E49 : **entry** hash exists · no-op **terminal**\n**allowed** return existing hash\n**forbidden** rewrite bytes
 state "Published\n(New)" as PublishedNew #2C6E49 : **entry** novel snapshot write-once **terminal**\n**allowed** CAS put\n**forbidden** in-place update
 
+' Sequential dual-hash (single active state at a time; RTC-safe)
 NodeBodyLoaded --> SemanticHashComputed : <b>hash semantic</b>\nactor: System\nevent: SemanticHashComputed
-NodeBodyLoaded --> PresentationHashComputed : <b>hash presentation</b>\nactor: System\nevent: PresentationHashComputed
+SemanticHashComputed --> PresentationHashComputed : <b>hash presentation</b>\nactor: System\nevent: PresentationHashComputed
+PresentationHashComputed --> CheckSemanticReuse : <b>both hashes ready</b>\nactor: System\nevent: DualHashReady
 
-SemanticHashComputed --> CheckSemanticReuse : <b>ready</b>\nactor: System\nevent: SemanticHashReady
-PresentationHashComputed --> CheckSemanticReuse : <b>ready</b>\nactor: System\nevent: PresentationHashReady
-
-CheckSemanticReuse --> ReuseSemantic : <b>unchanged semantic_body</b>\nactor: System\nguard: description/editorial edit only\nevent: SemanticSubgraphReused
+CheckSemanticReuse --> ReuseSemantic : <b>unchanged semantic_body</b>\nactor: System\n[description/editorial edit only]\nevent: SemanticSubgraphReused
 CheckSemanticReuse --> RecomputeEvaluator : <b>semantic changed or new</b>\nactor: System\nevent: SemanticSubgraphRecomputed
 
 ReuseSemantic --> NodeHashComposed : <b>compose node_hash</b>\nactor: System\nevent: NodeHashComposed
 RecomputeEvaluator --> NodeHashComposed : <b>compose node_hash</b>\nactor: System\nevent: NodeHashComposed
 
 NodeHashComposed --> EdgeHashComputed : <b>hash edges</b>\nactor: System\ncommand: for each depends_on\nevent: EdgeHashesComputed
-EdgeHashComputed --> SnapshotHashComposed : <b>compose snapshot</b>\nactor: System\nguard: compiled_at EXCLUDED\nevent: SnapshotHashComposed
+EdgeHashComputed --> SnapshotHashComposed : <b>compose snapshot</b>\nactor: System\n[compiled_at EXCLUDED]\nevent: SnapshotHashComposed
 SnapshotHashComposed --> CheckCAS : <b>CAS lookup</b>\nactor: System\nevent: CasLookupStarted
 
-CheckCAS --> PublishedDedup : <b>identical content</b>\nactor: System\nguard: same hash + frozen_env + engine\nevent: CgIrDedupHit
+CheckCAS --> PublishedDedup : <b>identical content</b>\nactor: System\n[same hash + frozen_env + engine]\nevent: CgIrDedupHit
 CheckCAS --> PublishedNew : <b>novel snapshot</b>\nactor: System\nevent: CgIrPublishedNew
 
 PublishedDedup --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none

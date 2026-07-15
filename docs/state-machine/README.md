@@ -143,7 +143,8 @@ Any fail → Denied → DenialAudited → DomainUnchanged.
 
 ### 8. Artifact Lifecycle
 
-Building → Validated → Published → Active Reference → Superseded Reference → Archived (+ Replicated to audit platform).  
+Building → Validated → Published → Active Reference → Superseded Reference → Archived.  
+**Extended state:** `replicated: bool` (self-transitions on Published / Active / Superseded when async audit replicate fires).  
 Reject build → no durable artifact.
 
 ### 9–10. Detail views (Q-04 resolved)
@@ -345,6 +346,45 @@ grep -rn "^note\|end note" docs/state-machine/*.puml
 7. **Humans never close findings** — only System after Verified or Waived.
 8. **No notes in diagrams** — all behavioral contract on states/transitions; ownership and rationale live in this README.
 9. **No silent capability invention** — transition capabilities must exist in SPEC §3.2 (split uses `directive.fork`; reopen uses `finding.reject_remediation`).
+
+---
+
+## UML State Machine Conformance
+
+Catalog machines are **behavioral** UML state machines (entity / process behavior), not protocol state machines. Notation and semantics follow UML statechart conventions:
+
+| UML concept | How Selma applies it |
+| :--- | :--- |
+| Directed graph of states + transitions | PlantUML `state` diagrams; rounded states, arrow transitions |
+| Initial pseudostate | Unlabeled `[*] --> …` on every machine (trigger-free start) |
+| Final pseudostate | `… --> [*]` only for true sinks (no further legal edges) |
+| Exactly one active simple state | Flat machines; no dual outgoing concurrency without extended state or regions |
+| Trigger / guard / action | Labels: **trigger**, `[guard]`, `action: …`; capabilities are guards |
+| Entry actions (Moore) | State bodies with `**entry** …` |
+| Transition actions (Mealy) | `action:` / `event:` on edges |
+| Extended state | Quantitative vars (e.g. `retry_count`, `replicated`, SoD provenance) + `[guards]` |
+| Run-to-completion (RTC) | One aggregate processes one command/event to completion before the next |
+| Hierarchical nesting | Used sparingly; pipelines are linear stages (valid flat FSMs) |
+| Orthogonal regions | Prefer **extended state** when aspects co-vary (e.g. audit replication) rather than false XOR states |
+
+**Intentionally not pure single-entity FSMs:**
+
+| File | Role |
+| :--- | :--- |
+| `selma_machine_interaction.puml` | Cross-machine **overview** (handoffs), not one aggregate lifecycle |
+| `selma_hlc_clock.puml` / `selma_cgir_hash_chain.puml` | **Detail views** of mechanisms owned by Finding/Event Store and Compilation |
+
+**Transition label convention (UML-compatible multi-line form):**
+
+```
+trigger-name
+actor: …
+[capability: …] | [boolean guard]
+action: …
+event: DomainEvent
+```
+
+Guards use square brackets per UML. Same-trigger multi-edges must have non-overlapping guards (e.g. Authorization matrix PASS → SoD vs stage).
 
 ---
 
