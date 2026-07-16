@@ -28,6 +28,8 @@
 '   Event naming paradigm: past-tense (STM-032)
 '   Key invariants: all-or-nothing CAS; no partial CG-IR; always release lock;
 '                   policy never at runtime (AA-02)
+'   STM-031: AcquireReadLock uses CompileLockDeferred re-queue; gate FAILs
+'            exit to Failed then lock release (no indefinite silent wait)
 '   Process note: gate substates are stable wait-points for PASS/FAIL
 '                 completion events (not flowchart method calls — STM-002 intent)
 '

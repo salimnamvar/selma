@@ -28,6 +28,8 @@
 '   Event naming paradigm: past-tense (STM-032)
 '   Key invariants: strictly non-decreasing (pt, lc) per node;
 '                   no overwrite of committed events on reconcile
+'   STM-031: Steady is non-progressing (STM-009). Partition path uses
+'            HlcPartitioned → HlcReconciling → HlcReconciled (no silent stall).
 '
 ' UML: Tick hierarchical (send|receive → advance|inc → emit).
 ' PartitionHeal nests partitioned → reconciling.

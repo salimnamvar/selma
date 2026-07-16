@@ -24,6 +24,8 @@
 '   Event naming paradigm: past-tense (STM-032); capabilities are guards
 '   Key invariants: system-only close; SoD-1 waive; SoD-2 approve;
 '                   no reopen from Closed/Dismissed; identity once at birth
+'   STM-031: PendingVerification has no SPEC SLA timeout; unhandled time
+'            events reject. Recovery via RemediationRejected → ReopenDeclared.
 '
 ' UML: InRemediation hierarchical composite groups acknowledge → verify.
 ' Normative 10 leaf states unchanged; Open/Dismissed/Waived/Closed siblings.

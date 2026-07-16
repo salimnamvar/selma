@@ -40,6 +40,8 @@
 '   Event naming paradigm: past-tense (STM-032)
 '   Key invariants: within-lineage binding only; cross-lineage advisory;
 '                   no CG-IR rewrite on resolve; frozen snapshot decisions
+'   STM-031: HumanReview has no SPEC SLA timeout; unhandled time events
+'            reject. Resolution only via conflict.resolve (capability-gated).
 '
 ' UML: BindingCascade hierarchical (steps 1–5).
 ' HumanArtifactPath nests review → resolve/reject → archive.

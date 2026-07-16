@@ -28,8 +28,9 @@
 '   Event naming paradigm: past-tense (STM-032)
 '   Key invariants: pure evaluators; immutable snapshot; system_state pins;
 '                   timeout retry max 3 default 0; no snapshot on ingress deny
-'   Process note: stage substates are stable wait-points for completion
-'                 events (STM-002 / STM-031 timeout on Evaluate)
+'   STM-031: Evaluate uses internal InspectionEvalRetried; on budget exhaust
+'            → InspectionStageFault → Report (no indefinite stall)
+'   Process note: stage substates are stable wait-points for completion events
 '
 ' UML: PureStages hierarchical composite (Normalize…Report).
 ' Stage faults route to Report; terminals external.

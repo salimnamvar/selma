@@ -57,6 +57,59 @@ Every lifecycle / process diagram in this directory **must** satisfy STM-034 hea
 Project rule: **no** PlantUML `note` / `end note` blocks in catalog `.puml` files.  
 Doctrine STM-036 still applies: invariants are documented in the diagram comment header and this README (companion tables). That is an allowed companion form under STM-051.
 
+### Complexity metrics (STM-052)
+
+Strict hard caps: **≤20 states**, **≤50 transitions**, **≤3 nesting levels**, **≤2 orthogonal regions** per composite.  
+Counts below are produced by `python scripts/validate_state_machines.py --metrics` (authoritative for CI).
+
+| File | Compliance | States | Transitions | Composites | Orth. seps | Nest max |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: |
+| `selma_finding_lifecycle.puml` | Strict | 11 | 15 | 1 | 0 | 1 |
+| `selma_directive_lifecycle.puml` | Strict | 8 | 15 | 1 | 0 | 1 |
+| `selma_compilation_pipeline.puml` | Strict | 20 | 30 | 4 | 0 | 2 |
+| `selma_inspection_pipeline.puml` | Strict | 13 | 23 | 1 | 0 | 1 |
+| `selma_conflict_resolution.puml` | Strict | 20 | 33 | 3 | 0 | 1 |
+| `selma_architecture_certification.puml` | Strict | 16 | 26 | 1 | 0 | 1 |
+| `selma_authorization.puml` | Strict | 11 | 19 | 3 | 0 | 2 |
+| `selma_artifact_lifecycle.puml` | Strict | 12 | 12 | 3 | 1 | 2 |
+| `selma_hlc_clock.puml` | Strict (detail, non-progressing) | 11 | 18 | 2 | 0 | 1 |
+| `selma_cgir_hash_chain.puml` | Strict (detail) | 16 | 20 | 7 | 1 | 2 |
+| `selma_machine_interaction.puml` | Exploratory (overview) | 10 | 24 | 0 | 0 | 0 |
+
+**At-cap machines:** Compilation and Conflict Resolution are at the 20-state Strict ceiling — further leaves require decomposition (STM-029), not silent growth.
+
+### External-wait / timeout disposition (STM-031)
+
+SPEC v8.2.4 does **not** define SLA auto-timeouts for human-gated finding/conflict steps. Catalog policy:
+
+| Machine | Wait / async state | STM-031 disposition |
+| :--- | :--- | :--- |
+| Finding | `Pending Verification` | No auto-timeout edge (YAGNI / SPEC). Unhandled time events → **reject**. Recovery is human `ReopenDeclared` after reject path, not silent stall masking. |
+| Conflict | `Human Review` | Same: human `conflict.resolve` only; no invented `DeadlinePassed` until SPEC adds SLA. |
+| Inspection | `Evaluate` | Explicit `InspectionEvalRetried` internal transition; max retries 3 (default 0); excess → stage fault → Report. |
+| Compilation | `Acquire Read Lock` | `CompileLockDeferred` re-queue path; no indefinite silent wait without event. |
+| Certification | `Remediation Required` | `CertificationRetriggered` on new CI run (justified cycle, STM-037). |
+| HLC | `Steady` / `Partitioned` | Declared **non-progressing** mechanism (STM-009 carve-out). Partition path uses `HlcPartitioned` / `HlcReconciled`. |
+| Authorization / pipelines | Gate steps | Synchronous RTC steps; fail → deny/fail edges, not open-ended waits. |
+
+Do **not** invent timeout transitions that contradict SPEC (STM-008 / product authority).
+
+### Validator coverage (`scripts/validate_state_machines.py`)
+
+| Check | Doctrine IDs |
+| :--- | :--- |
+| Forbidden `note` / `end note` | Project rule; STM-036 companion |
+| STM-034 header keys | STM-034, STM-025 |
+| Named non-initial triggers; no `event: none` | STM-015, STM-024 |
+| Composite initial substates | STM-026 |
+| Capability tokens ⊆ SPEC §3.2 | STM-033 (no invented gates) |
+| Complexity caps (hard if Strict) | STM-052 |
+| README lists every catalog `.puml` | STM-057 companion |
+| Optional `--plantuml` syntax | Tooling (STM-059) |
+| Optional `--metrics` table | STM-052 observability |
+
+Not automated (manual / product SPEC): full reachability proofs, guard mutual-exclusivity SMT, SoD semantic proof, RTC engine conformance.
+
 ---
 
 ## Catalog
@@ -83,8 +136,9 @@ Doctrine STM-036 still applies: invariants are documented in the diagram comment
 ### Validation
 
 ```bash
-python scripts/validate_state_machines.py          # notes + capabilities + catalog
-python scripts/validate_state_machines.py --plantuml  # + PlantUML syntax
+python scripts/validate_state_machines.py              # doctrine authoring gate
+python scripts/validate_state_machines.py --metrics    # + STM-052 complexity table
+python scripts/validate_state_machines.py --plantuml   # + PlantUML syntax
 ```
 
 ---
