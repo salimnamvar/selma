@@ -1,6 +1,11 @@
 """Capability Authorization engine — Request → matrix → SoD → allow|deny.
 
 Reference: docs/state-machine/selma_authorization.puml, SPEC §3.2 / §3.2.1
+
+Design events (past-tense triggers on the catalog FSM): AuthzRequestReceived,
+AuthzIdentityVerified, AuthzCapabilityChecked, AuthzSoDRequired / Skipped /
+Passed, AuthzAllowed / AuthzDispatched, AuthzDenied, AuthzDenialAudited,
+AuthzDomainUnchanged. Unhandled-event policy: reject.
 """
 
 from __future__ import annotations

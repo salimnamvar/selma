@@ -11,16 +11,33 @@
 ' Document suite conformance alone does not certify an engine.
 ' Ownership / retention: README.md
 '
-' UML: ValidatingGates is a hierarchical composite (OR-decomposition).
-' Substates AA-01..AA-07 inherit the composite context; any FAIL
-' exits the composite to Failed (external transition).
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: CI/CD architectural audit AA-01…AA-07
+'   Scope: One certification run_id; no domain mutation
+'   Initial: Triggered
+'   Terminal: Archived
+'   Event set: CertificationTriggered, CertificationEvidenceCollecting,
+'              CertificationEvidenceReady, CertificationRejected,
+'              CertificationGatePassed, CertificationGateFailed,
+'              CertificationGatesComplete, CertificationSealed,
+'              CertificationFailed, CertificationRemediationRequired,
+'              CertificationArchived, CertificationRetriggered, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: no domain FSM mutation; all gates required for Certified;
+'                   remediation loops to new run_id (STM-037 cycle justified)
+'
+' UML: ValidatingGates hierarchical composite (OR-decomposition).
+' Any FAIL exits composite to Failed (external transition).
 ' ============================================================
 
 title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · hierarchical AA composite · no runtime policy contamination</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Triggered : <b>CI/CD trigger</b>\nactor: System (CI/CD)\ncommand: start certification run\naction: cicd → application_service → architectural_auditor\nevent: CertificationTriggered
+[*] --> Triggered : <b>CertificationTriggered</b>\nactor: System (CI/CD)\ncommand: start certification run\n/ routeCicdToAuditor()
 
 state "Triggered" as Triggered #B9770E : **entry** certification run_id assigned\n**allowed** collect evidence\n**forbidden** skip gates
 state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-IR samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory\n**forbidden** mutate domain FSMs
@@ -36,13 +53,13 @@ state "Validating Gates" as ValidatingGates #1B7A6E {
   state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : **entry** invalid type/config corpus\nmethod: discriminator rejection set
   state "AA-07\nPortable Serialization" as AA07 #1B7A6E : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
 
-  AA01 --> AA02 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-01
-  AA02 --> AA03 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-02
-  AA03 --> AA04 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-03
-  AA04 --> AA05 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-04
-  AA05 --> AA06 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-05
-  AA06 --> AA07 : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-06
-  AA07 --> [*] : <b>PASS</b>\nactor: System\nevent: CertificationGatePassed\naction: gate=AA-07
+  AA01 --> AA02 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa01()
+  AA02 --> AA03 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa02()
+  AA03 --> AA04 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa03()
+  AA04 --> AA05 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa04()
+  AA05 --> AA06 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa05()
+  AA06 --> AA07 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa06()
+  AA07 --> [*] : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa07()
 }
 
 state "Passed" as Passed #2C6E49 : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
@@ -52,28 +69,28 @@ state "Certified" as Certified #2C6E49 : **entry** certification artifact sealed
 state "Remediation\nRequired" as RemediationRequired #B9770E : **entry** engineering fixes needed\n**allowed** new commit / rebuild\n**forbidden** mutate CG-IR · Finding FSM · Directive Graph
 state "Archived" as Archived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** rewrite
 
-Triggered --> CollectingEvidence : <b>begin collect</b>\nactor: System (Architectural Auditor)\nevent: CertificationEvidenceCollecting
-CollectingEvidence --> ValidatingGates : <b>corpus complete</b>\nactor: System\nevent: CertificationEvidenceReady
-CollectingEvidence --> Rejected : <b>missing evidence</b>\nactor: System\nevent: CertificationRejected\naction: incomplete corpus
+Triggered --> CollectingEvidence : <b>CertificationEvidenceCollecting</b>\nactor: System (Architectural Auditor)
+CollectingEvidence --> ValidatingGates : <b>CertificationEvidenceReady</b>\nactor: System
+CollectingEvidence --> Rejected : <b>CertificationRejected</b>\nactor: System\n/ incompleteCorpus()
 
 ' Completion of composite (all AA gates PASS)
-ValidatingGates --> Passed : <b>all gates green</b>\nactor: System\nevent: CertificationGatesComplete
+ValidatingGates --> Passed : <b>CertificationGatesComplete</b>\nactor: System
 
 ' External exits from nested substates (any FAIL leaves composite)
-AA01 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-01
-AA02 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-02
-AA03 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-03
-AA04 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-04
-AA05 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-05
-AA06 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-06
-AA07 --> Failed : <b>FAIL</b>\nactor: System\nevent: CertificationGateFailed\naction: gate=AA-07
+AA01 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa01()
+AA02 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa02()
+AA03 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa03()
+AA04 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa04()
+AA05 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa05()
+AA06 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa06()
+AA07 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa07()
 
-Passed --> Certified : <b>seal certification artifact</b>\nactor: System\ncommand: write-once pass evidence + gate report\nevent: CertificationSealed
-Failed --> RemediationRequired : <b>write fail evidence</b>\nactor: System\ncommand: gate-id fail report\nevent: CertificationFailed\nstory: S-30
-Rejected --> RemediationRequired : <b>require remediation</b>\nactor: System\nevent: CertificationRemediationRequired
+Passed --> Certified : <b>CertificationSealed</b>\nactor: System\ncommand: write-once pass evidence + gate report
+Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: S-30
+Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nactor: System
 
-Certified --> Archived : <b>archive</b>\nactor: System\ncommand: retain + async audit_platform replica\nevent: CertificationArchived
-RemediationRequired --> Triggered : <b>new commit / rebuild</b>\nactor: System (CI/CD)\ncommand: new certification run_id\nevent: CertificationRetriggered
-Archived --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async audit_platform replica
+RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (CI/CD)\ncommand: new certification run_id
+Archived --> [*] : <b>Finalized</b>\nactor: System
 
 @enduml

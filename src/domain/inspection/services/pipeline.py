@@ -1,6 +1,11 @@
 """Inspection Execution Pipeline — six pure stages + finding birth.
 
 Reference: docs/state-machine/selma_inspection_pipeline.puml, SPEC §2.10–§2.13
+
+Design events include InspectionSubmitted, InspectionIngressGranted / Denied,
+InspectionPinned, InspectionStagePassed / Fault, InspectionEvalRetried
+(internal), InspectionAggregated, InspectionCompleted / Partial / Failed.
+Stages are stable wait-points for completion events (doctrine process FSM).
 """
 
 from __future__ import annotations

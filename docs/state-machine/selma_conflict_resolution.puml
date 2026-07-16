@@ -19,7 +19,29 @@
 ' Within-lineage = binding. Cross-lineage = advisory only.
 ' Ownership / events: README.md
 '
-' UML: BindingCascade is a hierarchical composite (steps 1–5).
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Deterministic conflict cascade + human artifact path
+'   Scope: One conflicting pair evaluation; binding vs advisory
+'   Initial: DetectPair
+'   Terminal: NoConflict, ResolvedBinding, ArtifactArchived,
+'             AdvisoryArtifact completion, NoAdvisory
+'   Event set: ConflictDetectionStarted, ConflictNone, ConflictPairDetected,
+'              ConflictBindingScope, ConflictAdvisoryScope,
+'              ConflictOverrideFallthrough, ConflictFallthroughPriority,
+'              ConflictFallthroughSpecificity, ConflictFallthroughRecency,
+'              ConflictResolvedBinding, ConflictArtifactOpened,
+'              ConflictReviewOpened, ConflictArtifactResolved,
+'              ConflictArtifactRejected, ConflictReviewReopened,
+'              ConflictArtifactArchived, ConflictAdvisoryEmitted,
+'              ConflictAdvisoryNone, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: within-lineage binding only; cross-lineage advisory;
+'                   no CG-IR rewrite on resolve; frozen snapshot decisions
+'
+' UML: BindingCascade hierarchical (steps 1–5).
 ' HumanArtifactPath nests review → resolve/reject → archive.
 ' ============================================================
 
@@ -27,7 +49,7 @@ title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · bin
 
 !include ./common/sm_styles.puml
 
-[*] --> DetectPair : <b>detect</b>\nactor: System (Compiler | Rule Inspector)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nevent: ConflictDetectionStarted\nstory: S-05 / S-28
+[*] --> DetectPair : <b>ConflictDetectionStarted</b>\nactor: System (Compiler | Rule Inspector)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nstory: S-05 / S-28
 
 state "Detect\nConflicting Pair" as DetectPair #B9770E : **entry** scan conflicts_with or\noutcome contradiction\n(same lineage, both Fail,\ncontradictory deontics)\n**allowed** pair classify only\n**forbidden** mutate findings
 state "No Conflict" as NoConflict #2C6E49 : **entry** no pair / both Pass\nPass+Fail / same-type Fail\n**allowed** terminal no-op\n**forbidden** artifact creation
@@ -42,10 +64,10 @@ state "Binding Cascade" as BindingCascade #1B7A6E {
   state "4. Specificity" as SpecificityCheck #1B7A6E : **entry** score = scope×100 + bound_fields\n**allowed** strict winner or tie advance
   state "5. Recency" as RecencyCheck #1B7A6E : **entry** newer created_at wins\nfrozen in node_body\n**allowed** strict later or artifact on identical ts
 
-  ExplicitOverride --> CompatibleOverrides : <b>none / dual / ambiguous</b>\nactor: System\n[multi-active post-fork defer_to → Artifact path via cascade]\nevent: ConflictOverrideFallthrough
-  CompatibleOverrides --> PriorityCheck : <b>no override</b>\nactor: System\nevent: ConflictFallthroughPriority
-  PriorityCheck --> SpecificityCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughSpecificity
-  SpecificityCheck --> RecencyCheck : <b>tie</b>\nactor: System\nevent: ConflictFallthroughRecency
+  ExplicitOverride --> CompatibleOverrides : <b>ConflictOverrideFallthrough</b>\nactor: System\n[noneOrDualOrAmbiguousOverride]
+  CompatibleOverrides --> PriorityCheck : <b>ConflictFallthroughPriority</b>\nactor: System
+  PriorityCheck --> SpecificityCheck : <b>ConflictFallthroughSpecificity</b>\nactor: System\n[priorityTie]
+  SpecificityCheck --> RecencyCheck : <b>ConflictFallthroughRecency</b>\nactor: System\n[specificityTie]
 }
 
 state "Resolved\nBinding" as ResolvedBinding #2C6E49 : **entry** winner recorded · loser adjusted\n**allowed** terminal bind on frozen CG-IR\n**forbidden** rewrite CG-IR nodes
@@ -59,11 +81,11 @@ state "Human Artifact Path" as HumanArtifactPath #B9770E {
   state "Artifact\nRejected" as ArtifactRejected #A93226 : **entry** no change · remains open\n**allowed** reopen review\n**forbidden** partial resolution write
   state "Artifact\nArchived" as ArtifactArchived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** mutate decision
 
-  HumanReview --> ArtifactResolved : <b>conflict.resolve</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactResolved\naction: decision recorded on frozen snapshot
-  HumanReview --> ArtifactRejected : <b>deny / defer</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictArtifactRejected\naction: denial audit · artifact stays open
-  ArtifactResolved --> ArtifactArchived : <b>archive</b>\nactor: System\nevent: ConflictArtifactArchived
-  ArtifactRejected --> HumanReview : <b>reopen review</b>\nactor: Regulatory Official\n[capability: conflict.resolve]\nevent: ConflictReviewReopened
-  ArtifactArchived --> [*]
+  HumanReview --> ArtifactResolved : <b>ConflictArtifactResolved</b>\nactor: Regulatory Official\ncommand: conflict.resolve\n[capability: conflict.resolve]\n/ recordDecisionOnFrozenSnapshot()
+  HumanReview --> ArtifactRejected : <b>ConflictArtifactRejected</b>\nactor: Regulatory Official\ncommand: deny / defer\n[capability: conflict.resolve]\n/ denialAuditArtifactStaysOpen()
+  ArtifactResolved --> ArtifactArchived : <b>ConflictArtifactArchived</b>\nactor: System
+  ArtifactRejected --> HumanReview : <b>ConflictReviewReopened</b>\nactor: Regulatory Official\n[capability: conflict.resolve]
+  ArtifactArchived --> [*] : <b>Finalized</b>\nactor: System
 }
 
 ' ---------- Cross-lineage advisory (read-only cascade abstraction) ----------
@@ -73,32 +95,32 @@ state "Advisory Path" as AdvisoryPath #1B7A6E {
   state "Advisory\nArtifact" as AdvisoryArtifact #B9770E : **entry** binding_status=advisory\nrequires_human_action=true\n**allowed** human directive change → recompile\n**forbidden** auto-mutate findings/CG-IR
   state "No Advisory" as NoAdvisory #2C6E49 : **entry** no residual cross-lineage signal\n**allowed** terminal
 
-  AdvisoryCascade --> AdvisoryArtifact : <b>conflict signal</b>\nactor: System\nevent: ConflictAdvisoryEmitted
-  AdvisoryCascade --> NoAdvisory : <b>no residual conflict</b>\nactor: System\nevent: ConflictAdvisoryNone
-  AdvisoryArtifact --> [*]
-  NoAdvisory --> [*]
+  AdvisoryCascade --> AdvisoryArtifact : <b>ConflictAdvisoryEmitted</b>\nactor: System
+  AdvisoryCascade --> NoAdvisory : <b>ConflictAdvisoryNone</b>\nactor: System
+  AdvisoryArtifact --> [*] : <b>Finalized</b>\nactor: System
+  NoAdvisory --> [*] : <b>Finalized</b>\nactor: System
 }
 
-DetectPair --> NoConflict : <b>no candidate</b>\nactor: System\nevent: ConflictNone
-DetectPair --> ScopeCheck : <b>candidate pair</b>\nactor: System\nevent: ConflictPairDetected
-NoConflict --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+DetectPair --> NoConflict : <b>ConflictNone</b>\nactor: System
+DetectPair --> ScopeCheck : <b>ConflictPairDetected</b>\nactor: System
+NoConflict --> [*] : <b>Finalized</b>\nactor: System
 
-ScopeCheck --> BindingCascade : <b>same lineage_id</b>\nactor: System\ncommand: enter binding cascade\nevent: ConflictBindingScope
-ScopeCheck --> AdvisoryPath : <b>different lineage_id</b>\nactor: System\ncommand: enter advisory cascade\nevent: ConflictAdvisoryScope
+ScopeCheck --> BindingCascade : <b>ConflictBindingScope</b>\nactor: System\ncommand: enter binding cascade\n[sameLineageId]
+ScopeCheck --> AdvisoryPath : <b>ConflictAdvisoryScope</b>\nactor: System\ncommand: enter advisory cascade\n[differentLineageId]
 
 ' External exits from cascade substates
-ExplicitOverride --> ResolvedBinding : <b>single override wins</b>\nactor: System\nevent: ConflictResolvedBinding\naction: winner recorded
-CompatibleOverrides --> ResolvedBinding : <b>compatible pair</b>\nactor: System\nevent: ConflictResolvedBinding
-CompatibleOverrides --> ArtifactPending : <b>incompatible dual</b>\nactor: System\nevent: ConflictArtifactOpened
-PriorityCheck --> ResolvedBinding : <b>strict winner</b>\nactor: System\nevent: ConflictResolvedBinding
-SpecificityCheck --> ResolvedBinding : <b>strict winner</b>\nactor: System\nevent: ConflictResolvedBinding
-RecencyCheck --> ResolvedBinding : <b>later created_at</b>\nactor: System\nevent: ConflictResolvedBinding
-RecencyCheck --> ArtifactPending : <b>identical timestamp</b>\nactor: System\nevent: ConflictArtifactOpened
+ExplicitOverride --> ResolvedBinding : <b>ConflictResolvedBinding</b>\nactor: System\n/ winnerRecorded()
+CompatibleOverrides --> ResolvedBinding : <b>ConflictResolvedBinding</b>\nactor: System
+CompatibleOverrides --> ArtifactPending : <b>ConflictArtifactOpened</b>\nactor: System
+PriorityCheck --> ResolvedBinding : <b>ConflictResolvedBinding</b>\nactor: System
+SpecificityCheck --> ResolvedBinding : <b>ConflictResolvedBinding</b>\nactor: System
+RecencyCheck --> ResolvedBinding : <b>ConflictResolvedBinding</b>\nactor: System
+RecencyCheck --> ArtifactPending : <b>ConflictArtifactOpened</b>\nactor: System
 
-ResolvedBinding --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+ResolvedBinding --> [*] : <b>Finalized</b>\nactor: System
 
-ArtifactPending --> HumanArtifactPath : <b>escalate</b>\nactor: System\ncommand: open human review queue\nevent: ConflictReviewOpened
-HumanArtifactPath --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
-AdvisoryPath --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+ArtifactPending --> HumanArtifactPath : <b>ConflictReviewOpened</b>\nactor: System\ncommand: open human review queue
+HumanArtifactPath --> [*] : <b>Finalized</b>\nactor: System
+AdvisoryPath --> [*] : <b>Finalized</b>\nactor: System
 
 @enduml

@@ -1,9 +1,28 @@
 """Finding Lifecycle engine — normative §3.1 transitions + Authz + SoD.
 
 Reference:
-  - docs/state-machine/selma_finding_lifecycle.puml
-  - docs/state-machine/FINDING_FSM_TEST_SCENARIOS.md
-  - SPECIFICATION.md §3.1, §3.2
+  - docs/state-machine/selma_finding_lifecycle.puml  (design triggers)
+  - docs/state-machine/README.md  (design-event ↔ command matrix)
+  - SPECIFICATION.md §3.1, §3.2, §2.14
+
+Design-event vocabulary (doctrine STM-032 past-tense triggers) vs this API:
+
+  Design event              Command / method              Stream event
+  -----------------------   ---------------------------   -------------------
+  FindingCreated            create_from_inspection        FindingCreated
+  Opened                    (auto in create_from_inspection) DispositionChanged
+  AcknowledgementAccepted   acknowledge                   DispositionChanged
+  DismissalDeclared         dismiss                       DispositionChanged
+  WaiverGranted             waive                         DispositionChanged
+  EvidenceAccepted          submit_evidence (edge 1)      DispositionChanged
+  VerificationRequested     submit_evidence (edge 2 auto) DispositionChanged
+  RemediationApproved       approve_remediation           DispositionChanged
+  RemediationRejected       reject_remediation            DispositionChanged
+  ReopenDeclared            reopen                        DispositionChanged
+  FindingClosed             system auto after verify/waive FindingClosed
+  Finalized                 terminal sink (no stream)     —
+
+Unhandled design events are rejected (STM-025 policy: reject).
 """
 
 from __future__ import annotations
@@ -71,7 +90,7 @@ class FindingLifecycle:
         reasoning: str = "",
         finding_id: str | None = None,
     ) -> TransitionResult:
-        """Birth finding from Fail|Partial|NeedsReview and auto-open."""
+        """Birth finding (FindingCreated) then system Opened auto-transition."""
         outcome_s = outcome if isinstance(outcome, str) else outcome.value
         if outcome_s not in {
             EvaluatorOutcome.FAIL.value,
@@ -133,7 +152,7 @@ class FindingLifecycle:
         role_capabilities: frozenset[str] | None = None,
         expected_version: int | None = None,
     ) -> TransitionResult:
-        """Open → Acknowledged."""
+        """Open → Acknowledged (design: AcknowledgementAccepted)."""
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.OPEN)
         self._enforce(actor, role, "finding.acknowledge", role_capabilities)
@@ -150,7 +169,7 @@ class FindingLifecycle:
         expected_version: int | None = None,
         reason: str | None = None,
     ) -> TransitionResult:
-        """Open → Dismissed (terminal)."""
+        """Open → Dismissed terminal (design: DismissalDeclared)."""
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.OPEN)
         self._enforce(actor, role, "finding.dismiss", role_capabilities)
@@ -173,7 +192,7 @@ class FindingLifecycle:
         expected_version: int | None = None,
         reason: str | None = None,
     ) -> TransitionResult:
-        """Open → Waived → Closed; SoD-1."""
+        """Open → Waived → Closed; SoD-1 (design: WaiverGranted + FindingClosed)."""
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.OPEN)
         self._enforce(
@@ -211,7 +230,10 @@ class FindingLifecycle:
         expected_version: int | None = None,
         reason: str | None = None,
     ) -> TransitionResult:
-        """Acknowledged → Evidence Submitted → Pending Verification."""
+        """Acknowledged → Evidence Submitted → Pending Verification.
+
+        Design: EvidenceAccepted then system VerificationRequested.
+        """
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.ACKNOWLEDGED)
         self._enforce(actor, role, "evidence.submit", role_capabilities)
@@ -240,7 +262,10 @@ class FindingLifecycle:
         expected_version: int | None = None,
         reason: str | None = None,
     ) -> TransitionResult:
-        """Pending Verification → Verified → Closed; SoD-2."""
+        """Pending Verification → Verified → Closed; SoD-2.
+
+        Design: RemediationApproved then system FindingClosed.
+        """
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.PENDING_VERIFICATION)
         self._enforce(
@@ -273,7 +298,7 @@ class FindingLifecycle:
         expected_version: int | None = None,
         reason: str | None = None,
     ) -> TransitionResult:
-        """Pending Verification → Rejected."""
+        """Pending Verification → Rejected (design: RemediationRejected)."""
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.PENDING_VERIFICATION)
         self._enforce(actor, role, "finding.reject_remediation", role_capabilities)
@@ -290,7 +315,10 @@ class FindingLifecycle:
         role_capabilities: frozenset[str] | None = None,
         expected_version: int | None = None,
     ) -> TransitionResult:
-        """Rejected → Open; capability finding.reject_remediation (S-14c)."""
+        """Rejected → Open; capability finding.reject_remediation (S-14c).
+
+        Design: ReopenDeclared.
+        """
         self._guard_version(finding, expected_version)
         self._require_state(finding, FsmState.REJECTED)
         if not comments or not comments.strip():

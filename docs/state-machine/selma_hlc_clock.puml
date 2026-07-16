@@ -5,14 +5,31 @@
 ' C4:      Lifecycle Finder / Findings & Audit Trail Adapter
 ' Contract: 8.2.4
 '
-' DETAIL VIEW (Round-02): extracted from normative HLC algorithms.
+' DETAIL VIEW: extracted from normative HLC algorithms.
 ' Not an independent aggregate — shared event-envelope mechanism
 ' for Finding / denial / domain event append paths (§2.14).
 ' Per-node tuple (pt, lc) advancement and multi-node reconciliation.
 ' Monotonicity: emitted tuple strictly non-decreasing per node_id.
 ' Ownership / event envelope: README.md
 '
-' UML: Tick is a hierarchical composite (send|receive → advance|inc → emit).
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Detail view of HLC (pt, lc) advance / receive / heal
+'   Scope: One node_id clock; mechanism not a durable business aggregate
+'   Initial: Initialized
+'   Terminal: none (Steady is ongoing; non-progressing mechanism — STM-009)
+'   Declared non-progressing: yes (long-lived clock service)
+'   Event set: HlcInitialized, HlcStateLoaded, HlcLocalSend, HlcRemoteReceive,
+'              HlcPartitioned, HlcAdvanced, HlcIncremented, HlcTupleEmitted,
+'              HlcStatePersisted, HlcReconciling, HlcReconciled, TickCompleted,
+'              HealCompleted
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: strictly non-decreasing (pt, lc) per node;
+'                   no overwrite of committed events on reconcile
+'
+' UML: Tick hierarchical (send|receive → advance|inc → emit).
 ' PartitionHeal nests partitioned → reconciling.
 ' ============================================================
 
@@ -20,26 +37,28 @@ title Selma — Hybrid Logical Clock (Detail View)\n<size:12><i>Hierarchical tic
 
 !include ./common/sm_styles.puml
 
-[*] --> Initialized : <b>node startup</b>\nactor: System\ncommand: init HLC node\nevent: HlcInitialized
+[*] --> Initialized : <b>HlcInitialized</b>\nactor: System\ncommand: init HLC node
 
 state "Initialized" as Initialized #B9770E : **entry** pt=0 · lc=0 (cold start)\n**allowed** load persisted state\n**forbidden** emit without advance
 state "Steady" as Steady #3B7DD8 : **entry** persisted tuple (pt, lc)\nlast emitted HLC\n**allowed** local send · remote receive\n**forbidden** decrease pt or lc
 
 ' ---------- Hierarchical: single HLC tick (RTC step) ----------
 state "Tick" as Tick #1B7A6E {
+  ' Initial required (STM-026); deep targets LocalSend / RemoteReceive override
+  [*] --> LocalSend
   state "Local Send" as LocalSend #1B7A6E : **entry** hlc_send(pt_wall)\n**allowed** advance or increment\n**forbidden** regress pt
   state "Remote Receive" as RemoteReceive #1B7A6E : **entry** hlc_receive(remote_pt, remote_lc, pt_wall)\n**allowed** merge max clocks\n**forbidden** overwrite committed events
   state "Advancing" as Advancing #2C6E49 : **entry** pt strictly advances\nlc resets to 0\n**allowed** emit new tuple
   state "Incrementing" as Incrementing #2C6E49 : **entry** pt unchanged · lc increments\nabsorbs wall regression / concurrency\n**allowed** emit new tuple
   state "Event Emitted" as EventEmitted #2C6E49 : **entry** event tagged (pt, lc, node_id)\nevent_hash = SHA-256(canonical_json minus hash)\n**allowed** persist tuple\n**forbidden** emit non-monotonic tuple
 
-  LocalSend --> Advancing : <b>pt_wall > pt</b>\nactor: System\naction: pt_new = pt_wall · lc_new = 0\nevent: HlcAdvanced
-  LocalSend --> Incrementing : <b>pt_wall ≤ pt</b>\nactor: System\naction: pt_new = pt · lc_new = lc + 1\nevent: HlcIncremented
-  RemoteReceive --> Advancing : <b>max(pt, pt_wall, remote_pt) > pt</b>\nactor: System\naction: pt_new = max(...) · lc_new = 0\nevent: HlcAdvanced
-  RemoteReceive --> Incrementing : <b>max(...) == pt</b>\nactor: System\naction: pt_new = pt · lc_new = max(lc, remote_lc) + 1\nevent: HlcIncremented
-  Advancing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
-  Incrementing --> EventEmitted : <b>emit tuple</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)\nevent: HlcTupleEmitted
-  EventEmitted --> [*]
+  LocalSend --> Advancing : <b>HlcAdvanced</b>\nactor: System\n[ptWallGreaterThanPt]\n/ ptNewEqualsWallLcZero()
+  LocalSend --> Incrementing : <b>HlcIncremented</b>\nactor: System\n[ptWallLessOrEqualPt]\n/ ptUnchangedLcPlusOne()
+  RemoteReceive --> Advancing : <b>HlcAdvanced</b>\nactor: System\n[maxClocksGreaterThanPt]\n/ ptNewEqualsMaxLcZero()
+  RemoteReceive --> Incrementing : <b>HlcIncremented</b>\nactor: System\n[maxClocksEqualPt]\n/ ptUnchangedLcMaxPlusOne()
+  Advancing --> EventEmitted : <b>HlcTupleEmitted</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)
+  Incrementing --> EventEmitted : <b>HlcTupleEmitted</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)
+  EventEmitted --> [*] : <b>TickCompleted</b>\nactor: System
 }
 
 ' ---------- Hierarchical: partition heal ----------
@@ -47,17 +66,17 @@ state "Partition Heal" as PartitionHeal #A93226 {
   [*] --> Partitioned
   state "Partitioned" as Partitioned #A93226 : **entry** network partition\nlocal stream diverges\n**allowed** buffer · local emit\n**forbidden** assume global order
   state "Reconciling" as Reconciling #B9770E : **entry** merge remote stream\n**allowed** re-sort total order key\n**forbidden** overwrite committed
-  Partitioned --> Reconciling : <b>partition healed</b>\nactor: System\ncommand: merge buffered remote events\nevent: HlcReconciling
-  Reconciling --> [*]
+  Partitioned --> Reconciling : <b>HlcReconciling</b>\nactor: System\ncommand: merge buffered remote events
+  Reconciling --> [*] : <b>HealCompleted</b>\nactor: System
 }
 
-Initialized --> Steady : <b>load persisted state</b>\nactor: System\ncommand: restore (pt, lc) from event_store\nevent: HlcStateLoaded
+Initialized --> Steady : <b>HlcStateLoaded</b>\nactor: System\ncommand: restore (pt, lc) from event_store
 
-Steady --> LocalSend : <b>local origin event</b>\nactor: System\ncommand: hlc_send\nevent: HlcLocalSend
-Steady --> RemoteReceive : <b>remote event arrives</b>\nactor: System\ncommand: hlc_receive\nevent: HlcRemoteReceive
-Steady --> PartitionHeal : <b>partition detected</b>\nactor: System\ncommand: heartbeat timeout\nevent: HlcPartitioned
+Steady --> LocalSend : <b>HlcLocalSend</b>\nactor: System\ncommand: hlc_send
+Steady --> RemoteReceive : <b>HlcRemoteReceive</b>\nactor: System\ncommand: hlc_receive
+Steady --> PartitionHeal : <b>HlcPartitioned</b>\nactor: System\ncommand: heartbeat timeout
 
-Tick --> Steady : <b>persist</b>\nactor: System\ncommand: store (pt_new, lc_new)\n[strictly non-decreasing vs prior]\nevent: HlcStatePersisted
-PartitionHeal --> Steady : <b>merge complete</b>\nactor: System\naction: sort physical_time → lc → node_id → event_id\naction: no overwrite of committed\nevent: HlcReconciled
+Tick --> Steady : <b>HlcStatePersisted</b>\nactor: System\ncommand: store (pt_new, lc_new)\n[strictlyNonDecreasingVsPrior]
+PartitionHeal --> Steady : <b>HlcReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ noOverwriteCommitted()
 
 @enduml

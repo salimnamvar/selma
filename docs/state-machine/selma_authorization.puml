@@ -13,6 +13,22 @@
 ' Delegation is NOT supported in v8.2.x.
 ' Ownership / matrix summary: README.md
 '
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Cross-cutting capability + SoD + stage gate before mutation
+'   Scope: One authorization request; not a durable aggregate
+'   Initial: RequestReceived
+'   Terminal: Allowed (dispatch), DomainUnchanged (deny complete)
+'   Event set: AuthzRequestReceived, AuthzIdentityVerified,
+'              AuthzCapabilityChecked, AuthzSoDRequired, AuthzSoDSkipped,
+'              AuthzSoDPassed, AuthzAllowed, AuthzDispatched, AuthzDenied,
+'              AuthzDenialAudited, AuthzDomainUnchanged, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: hard deny (no partial write); denial audit always;
+'                   matrix only source of grants (no invented rows)
+'
 ' UML: EvaluateAccess hierarchical composite groups matrix → SoD → stage.
 ' DenyPath composite groups Denied → audit → DomainUnchanged.
 ' ============================================================
@@ -21,7 +37,7 @@ title Selma — Capability Authorization FSM\n<size:12><i>Hierarchical evaluate 
 
 !include ./common/sm_styles.puml
 
-[*] --> RequestReceived : <b>ingress</b>\nactor: any authenticated or unauthenticated caller\ncommand: any mutating or gated read\nevent: AuthzRequestReceived
+[*] --> RequestReceived : <b>AuthzRequestReceived</b>\nactor: any authenticated or unauthenticated caller\ncommand: any mutating or gated read
 
 state "Request\nReceived" as RequestReceived #B9770E : **entry** raw request at interface\n**allowed** authenticate\n**forbidden** domain mutation
 state "Identity\nVerified" as IdentityVerified #1B7A6E : **entry** authenticated actor\nrole bound (RO | CR | System | AI)\n**allowed** matrix lookup\n**forbidden** anonymous dispatch
@@ -34,11 +50,11 @@ state "Evaluate Access" as EvaluateAccess #1B7A6E {
   state "Stage Gate\nChecked" as StageGateChecked #1B7A6E : **entry** enforcement point match\n1 ingress · 2 directive write lock\n3 inspection entry · 4 Finding FSM\n5 conflict resolution\n**forbidden** bypass stage
   state "Allowed" as Allowed #2C6E49 : **entry** proceed to domain FSM/pipeline\n**allowed** dispatch command\n**forbidden** skip audit on later deny paths (N/A)
 
-  CapabilityEvaluated --> SoDEvaluated : <b>matrix PASS</b>\nactor: System\n[action ∈ {finding.waive, finding.approve_remediation}]\nevent: AuthzSoDRequired
-  CapabilityEvaluated --> StageGateChecked : <b>matrix PASS</b>\nactor: System\n[action ∉ SoD set]\nevent: AuthzSoDSkipped
-  SoDEvaluated --> StageGateChecked : <b>SoD PASS</b>\nactor: System\n[waive ⇒ actor ∉ creator_provenance]\n[approve ⇒ actor ≠ evidence_submitter]\nevent: AuthzSoDPassed
-  StageGateChecked --> Allowed : <b>stage OK</b>\nactor: System\nevent: AuthzAllowed
-  Allowed --> [*]
+  CapabilityEvaluated --> SoDEvaluated : <b>AuthzSoDRequired</b>\nactor: System\n[actionInSodSet]\naction ∈ {finding.waive, finding.approve_remediation}
+  CapabilityEvaluated --> StageGateChecked : <b>AuthzSoDSkipped</b>\nactor: System\n[actionNotInSodSet]
+  SoDEvaluated --> StageGateChecked : <b>AuthzSoDPassed</b>\nactor: System\n[waiveImpliesActorNotCreator]\n[approveImpliesActorNotEvidenceSubmitter]
+  StageGateChecked --> Allowed : <b>AuthzAllowed</b>\nactor: System
+  Allowed --> [*] : <b>AuthzDispatched</b>\nactor: System
 }
 
 ' ---------- Hierarchical: hard-deny path ----------
@@ -48,22 +64,22 @@ state "Deny Path" as DenyPath #A93226 {
   state "Denial\nAudited" as DenialAudited #4A4A4A : **entry** append-only denial record\n{actor, capability, action,\noutcome:denied, timestamp, reason}\n**allowed** return error to caller\n**forbidden** mutate domain aggregate
   state "Domain State\nUnchanged" as DomainUnchanged #A93226 : **entry** hard reject complete **terminal**\n**allowed** caller decides next action\n**forbidden** silent retry as success
 
-  Denied --> DenialAudited : <b>record denial</b>\nactor: System\ncommand: append denial audit\nevent: AuthzDenialAudited
-  DenialAudited --> DomainUnchanged : <b>hard reject</b>\nactor: System\nevent: AuthzDomainUnchanged
-  DomainUnchanged --> [*]
+  Denied --> DenialAudited : <b>AuthzDenialAudited</b>\nactor: System\ncommand: append denial audit
+  DenialAudited --> DomainUnchanged : <b>AuthzDomainUnchanged</b>\nactor: System
+  DomainUnchanged --> [*] : <b>Finalized</b>\nactor: System
 }
 
-RequestReceived --> IdentityVerified : <b>authenticate</b>\nactor: System (Application Service)\ncommand: bind identity + role\nevent: AuthzIdentityVerified
-RequestReceived --> DenyPath : <b>unauthenticated</b>\nactor: System\nevent: AuthzDenied\naction: reason=unauthenticated
+RequestReceived --> IdentityVerified : <b>AuthzIdentityVerified</b>\nactor: System (Application Service)\ncommand: bind identity + role
+RequestReceived --> DenyPath : <b>AuthzDenied</b>\nactor: System\n/ reasonUnauthenticated()
 
-IdentityVerified --> EvaluateAccess : <b>role resolved</b>\nactor: System\ncommand: matrix lookup\nevent: AuthzCapabilityChecked
+IdentityVerified --> EvaluateAccess : <b>AuthzCapabilityChecked</b>\nactor: System\ncommand: matrix lookup
 
 ' External FAIL exits from evaluation substates into DenyPath
-CapabilityEvaluated --> Denied : <b>matrix FAIL</b>\nactor: System\nevent: AuthzDenied\naction: capability not granted to role
-SoDEvaluated --> Denied : <b>SoD FAIL</b>\nactor: System\nevent: AuthzDenied\naction: creator_provenance or evidence_submitter conflict
-StageGateChecked --> Denied : <b>stage FAIL</b>\nactor: System\nevent: AuthzDenied\naction: stage capability mismatch
+CapabilityEvaluated --> Denied : <b>AuthzDenied</b>\nactor: System\n/ capabilityNotGrantedToRole()
+SoDEvaluated --> Denied : <b>AuthzDenied</b>\nactor: System\n/ sodConflict()
+StageGateChecked --> Denied : <b>AuthzDenied</b>\nactor: System\n/ stageCapabilityMismatch()
 
-EvaluateAccess --> [*] : <b>dispatch domain command</b>\nactor: System\nevent: AuthzDispatched
-DenyPath --> [*] : <b>terminal</b>\nactor: System\ncommand: sink\nevent: none
+EvaluateAccess --> [*] : <b>AuthzDispatched</b>\nactor: System
+DenyPath --> [*] : <b>Finalized</b>\nactor: System
 
 @enduml

@@ -4,6 +4,27 @@
 ' Source:  C4 component map + docs/state-machine ownership
 ' Contract: 8.2.4
 ' Role:    Cross-machine handoff overview (not a lifecycle aggregate)
+'
+' Doctrine compliance (STM-034):
+'   Compliance: Exploratory (overview diagram; not a single lifecycle)
+'   Documentation tier: Minimal
+'   Purpose: Cross-machine handoffs between catalog machines
+'   Scope: Collaboration overview only — STM-010 exempt (not one lifecycle)
+'   Initial: Authz (ingress)
+'   Terminal: DomainUnchanged deny path; Artifact archived sink
+'   Event set: MutatingRequestReceived, AuthzAllowedDirective,
+'              AuthzAllowedInspection, AuthzAllowedFinding,
+'              AuthzAllowedConflict, AuthzDenied,
+'              CompileRequested, HashDetailEntered, HashDetailReturned,
+'              CgIrPublished, DirectiveRecorded, CgIrPinned,
+'              FindingsBirthed, InspectionArtifactPublished,
+'              ConflictDetected, FindingEventAppended, HlcTagged,
+'              ConflictArtifactPublished, CertificationArtifactPublished,
+'              CertificationSamplesRead, ArtifactRetained
+'   Unhandled-event policy: ignore (overview; no aggregate authority)
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: no 9th independent aggregate; detail views nest
+'                   under Finding/Compilation owners
 ' ============================================================
 
 title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · primary machines · detail views · no independent 9th aggregate</i></size>
@@ -21,35 +42,35 @@ state "Conflict Resolution" as Conf #1B7A6E : cascade · artifact\nbinding vs ad
 state "Architectural Certification" as Cert #B9770E : AA-01..AA-07\nCI/CD only
 state "Artifact Lifecycle" as Art #4A4A4A : write-once · CAS\nreplicate · archive
 
-[*] --> Authz : any mutating request
-Authz --> Dir : allow · directive.*
-Authz --> Insp : allow · inspection.*
-Authz --> Find : allow · finding.* / evidence.*
-Authz --> Conf : allow · conflict.resolve
-Authz --> [*] : deny · DomainUnchanged
+[*] --> Authz : <b>MutatingRequestReceived</b>
+Authz --> Dir : <b>AuthzAllowedDirective</b>\n[capability directive.*]
+Authz --> Insp : <b>AuthzAllowedInspection</b>\n[capability inspection.*]
+Authz --> Find : <b>AuthzAllowedFinding</b>\n[capability finding.* | evidence.*]
+Authz --> Conf : <b>AuthzAllowedConflict</b>\n[capability conflict.resolve]
+Authz --> [*] : <b>AuthzDenied</b>\nDomainUnchanged
 
-Dir --> Comp : publish / identity op\ncompile request
-Comp --> Hash : Hash Nodes zoom
-Hash --> Comp : snapshot hash ready
-Comp --> Art : CgIrPublished
-Dir --> Art : directive records
+Dir --> Comp : <b>CompileRequested</b>\npublish / identity op
+Comp --> Hash : <b>HashDetailEntered</b>\nHash Nodes zoom
+Hash --> Comp : <b>HashDetailReturned</b>\nsnapshot hash ready
+Comp --> Art : <b>CgIrPublished</b>
+Dir --> Art : <b>DirectiveRecorded</b>
 
-Insp --> Comp : pin cg_ir_snapshot_hash
-Insp --> Find : Report births findings\nFindingCreated
-Insp --> Art : inspection snapshot + trace
-Insp --> Conf : multi-rule fire on frozen CG-IR
+Insp --> Comp : <b>CgIrPinned</b>\npin cg_ir_snapshot_hash
+Insp --> Find : <b>FindingsBirthed</b>\nFindingCreated on Report
+Insp --> Art : <b>InspectionArtifactPublished</b>\nsnapshot + trace
+Insp --> Conf : <b>ConflictDetected</b>\nmulti-rule fire on frozen CG-IR
 
-Find --> Hlc : every success event
-Hlc --> Find : tag logical_clock
-Find --> Art : append event_store
+Find --> Hlc : <b>FindingEventAppended</b>\nevery success event
+Hlc --> Find : <b>HlcTagged</b>\ntag logical_clock
+Find --> Art : <b>FindingEventAppended</b>\nappend event_store
 
-Conf --> Art : conflict artifact
-Comp --> Conf : compile-time conflict map
+Conf --> Art : <b>ConflictArtifactPublished</b>
+Comp --> Conf : <b>ConflictDetected</b>\ncompile-time conflict map
 
-Cert --> Art : certification artifact
-Cert --> Comp : read CG-IR samples
-Cert --> Find : SoD / mediated-feedback tests\n(no production mutation)
+Cert --> Art : <b>CertificationArtifactPublished</b>
+Cert --> Comp : <b>CertificationSamplesRead</b>\nread CG-IR samples
+Cert --> Find : <b>CertificationSamplesRead</b>\nSoD / mediated-feedback tests\n(no production mutation)
 
-Art --> [*] : archived / retained
+Art --> [*] : <b>ArtifactRetained</b>\narchived / retained
 
 @enduml

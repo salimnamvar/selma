@@ -1,6 +1,10 @@
 """Enumerations for the Finding Lifecycle bounded context.
 
 Reference: SPECIFICATION.md §3.1, docs/state-machine/selma_finding_lifecycle.puml
+
+``FsmState`` values are the ten normative *business states*. Transition
+*design events* (e.g. AcknowledgementAccepted) are distinct from state names
+per doctrine STM-032 / notation preference — see README Finding matrix.
 """
 
 from __future__ import annotations

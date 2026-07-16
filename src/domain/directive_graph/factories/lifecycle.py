@@ -2,6 +2,12 @@
 
 Encapsulates identity rules from SPECIFICATION.md §2.2 / §2.2.2 and returns
 new immutable graphs plus domain events.
+
+Catalog FSM: docs/state-machine/selma_directive_lifecycle.puml
+Design events (STM-032): DirectiveCreated, DirectiveRevised (internal on
+Draft/Active — STM-018/035), DirectivePublished, DirectiveRetired,
+DirectiveSuperseded, DirectiveRestored, DirectiveForked / Merged / Split,
+DirectiveChildrenSpawned, Finalized. Unhandled-event policy: reject.
 """
 
 from __future__ import annotations

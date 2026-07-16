@@ -1,6 +1,11 @@
 """Domain events for the Finding Event Stream (§2.14 / §3.1).
 
-Normative event types: FindingCreated, DispositionChanged, FindingClosed.
+Normative stream types: FindingCreated, DispositionChanged, FindingClosed.
+
+These are *persisted stream* event types. Catalog design triggers
+(Opened, AcknowledgementAccepted, DismissalDeclared, …) map onto
+DispositionChanged edges (or FindingCreated / FindingClosed) as documented
+in docs/state-machine/README.md and FindingLifecycle.
 """
 
 from __future__ import annotations

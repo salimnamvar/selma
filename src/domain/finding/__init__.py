@@ -2,6 +2,10 @@
 
 Implements the canonical state machine in
 ``docs/state-machine/selma_finding_lifecycle.puml``.
+
+Public methods are *commands*; diagram edges use past-tense *design events*
+(STM-032). Stream types remain FindingCreated / DispositionChanged /
+FindingClosed (§2.14). See ``FindingLifecycle`` module docstring for the map.
 """
 
 from __future__ import annotations

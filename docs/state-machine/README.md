@@ -2,11 +2,60 @@
 
 **Contract version:** 8.2.4  
 **Authority hierarchy:** `SPECIFICATION.md` > C4 architecture > User stories > Architect judgment  
-**Constraint:** Zero `note` blocks in any `.puml` file (encode guards/actors on transitions; ownership in this README)
+**Design governance:** `.nasim/rules/state-machine-policy-doctrine.md` (v1.2.1)  
+**Execution semantics:** `.nasim/rules/state-machine-specification.md` (v1.0.3)  
+**Notation standard:** `.nasim/rules/state-machine-notation.md` (v1.0.3)  
+**Constraint:** Zero `note` blocks in any `.puml` file (STM-036 invariants live in diagram headers + this README companion)
 
 > C4 describes *what boxes exist and how they communicate*.  
 > This directory describes *how state evolves inside those boxes*.  
 > Read both with `docs/spec/SPECIFICATION.md` for the full behavioral contract.
+
+---
+
+## Doctrine compliance (catalog obligations)
+
+Every lifecycle / process diagram in this directory **must** satisfy STM-034 header fields (encoded as comment headers in each `.puml`):
+
+| Field | Requirement |
+| :--- | :--- |
+| Compliance | `Strict` or `Exploratory` |
+| Documentation tier | Minimal / Standard / Full (STM-051) |
+| Purpose · Scope | Single lifecycle (or declared overview exception) |
+| Initial · Terminal | Explicit business terminals (STM-024) |
+| Event set | Closed set of named events (STM-025) |
+| Unhandled-event policy | `ignore` \| `reject` \| `error` \| `defer` (STM-025) |
+| Event naming paradigm | **past-tense** default (STM-032); capabilities are **guards** |
+| Key invariants | 1–3 design invariants (STM-036 via header/README, not `note`) |
+
+### Unhandled-event policy by machine
+
+| Machine | Policy | Rationale |
+| :--- | :--- | :--- |
+| Finding Lifecycle | `reject` | Normative governance FSM; illegal transitions must surface |
+| Directive Lifecycle | `reject` | Identity mutations are capability-gated |
+| Compilation / CG-IR | `reject` | All-or-nothing hermetic compile |
+| Inspection Execution | `reject` | Typed outcomes only |
+| Conflict Resolution | `reject` | Deterministic cascade |
+| Architectural Certification | `reject` | Certification gates must not skip |
+| Capability Authorization | `reject` | Security path; open-world grant forbidden |
+| Artifact Lifecycle | `reject` | Write-once integrity |
+| HLC (detail) | `reject` | Monotonicity must not silently drop ticks |
+| CG-IR Hash (detail) | `reject` | Hash path must not invent branches |
+| Machine Interaction (overview) | `ignore` | Non-lifecycle collaboration sketch |
+
+### Event naming (STM-032)
+
+- **Primary trigger** on each non-initial edge is a **past-tense** occurrence (`Acknowledged`, `CompileGatePassed`, `Finalized`).
+- **Commands / capabilities** appear as annotations and `[guards]`, never as the sole unlabeled trigger.
+- **Stream event types** (e.g. `DispositionChanged`) may be listed as `stream:` for implementers; they do not replace the design-level trigger name.
+- Edges into Final `[*]` carry a named event (typically `Finalized`) — never `event: none` (STM-015 / STM-024).
+- **Internal transitions** (PlantUML `State : Event …`) are required for in-state revise/retry when entry must not re-fire (STM-018 / STM-035).
+
+### Notes vs companion docs (STM-036)
+
+Project rule: **no** PlantUML `note` / `end note` blocks in catalog `.puml` files.  
+Doctrine STM-036 still applies: invariants are documented in the diagram comment header and this README (companion tables). That is an allowed companion form under STM-051.
 
 ---
 
@@ -70,20 +119,21 @@ python scripts/validate_state_machines.py --plantuml  # + PlantUML syntax
 
 ### 1. Finding Lifecycle (normative §3.1)
 
-| From | To | Command | Actor | Capability / Guard | Event |
+| From | To | Design event | Command / actor | Capability / Guard | Stream event |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[*]` | Created | evaluation outcome Fail/Partial/NeedsReview | System (Rule Inspector) | — | `FindingCreated` |
-| Created | Open | automatic | System | — | `DispositionChanged` |
-| Open | Acknowledged | `finding.acknowledge` | Compliance Representative | `finding.acknowledge` | `DispositionChanged` |
-| Open | Dismissed | `finding.dismiss` | Regulatory Official | `finding.dismiss` | `DispositionChanged` (invalid) |
-| Open | Waived | `finding.waive` | Regulatory Official | `finding.waive` + **SoD-1** | `DispositionChanged` (waived) |
-| Acknowledged | Evidence Submitted | `evidence.submit` | Compliance Representative | `evidence.submit` | `DispositionChanged` |
-| Evidence Submitted | Pending Verification | automatic | System | — | `DispositionChanged` |
-| Pending Verification | Verified | `finding.approve_remediation` | Regulatory Official | `finding.approve_remediation` + **SoD-2** | `DispositionChanged` |
-| Pending Verification | Rejected | `finding.reject_remediation` | Regulatory Official | `finding.reject_remediation` | `DispositionChanged` |
-| Rejected | Open | `finding.reopen` (+ comments) | Regulatory Official | **`finding.reject_remediation`** (S-14c binding) | `DispositionChanged` |
-| Verified | Closed | automatic | System | — | `FindingClosed` |
-| Waived | Closed | automatic | System | — | `FindingClosed` |
+| `[*]` | Created | `FindingCreated` | evaluation Fail/Partial/NeedsReview · System | — | `FindingCreated` |
+| Created | Open | `Opened` | system auto-open · System | — | `DispositionChanged` |
+| Open | Acknowledged | `AcknowledgementAccepted` | `finding.acknowledge` · Compliance | `finding.acknowledge` | `DispositionChanged` |
+| Open | Dismissed | `DismissalDeclared` | `finding.dismiss` · Official | `finding.dismiss` | `DispositionChanged` (invalid) |
+| Open | Waived | `WaiverGranted` | `finding.waive` · Official | `finding.waive` + **SoD-1** | `DispositionChanged` (waived) |
+| Acknowledged | Evidence Submitted | `EvidenceAccepted` | `evidence.submit` · Compliance | `evidence.submit` | `DispositionChanged` |
+| Evidence Submitted | Pending Verification | `VerificationRequested` | system · System | — | `DispositionChanged` |
+| Pending Verification | Verified | `RemediationApproved` | `finding.approve_remediation` · Official | + **SoD-2** | `DispositionChanged` |
+| Pending Verification | Rejected | `RemediationRejected` | `finding.reject_remediation` · Official | `finding.reject_remediation` | `DispositionChanged` |
+| Rejected | Open | `ReopenDeclared` | `finding.reopen` (+ comments) · Official | **`finding.reject_remediation`** (S-14c) | `DispositionChanged` |
+| Verified | Closed | `FindingClosed` | system auto-close · System | — | `FindingClosed` |
+| Waived | Closed | `FindingClosed` | system auto-close · System | — | `FindingClosed` |
+| Dismissed / Closed | `[*]` | `Finalized` | system sink · System | — | — |
 
 **Terminal:** `Dismissed`, `Closed`  
 **Pre-terminal:** `Verified`, `Waived` (system auto-close only)  
@@ -344,32 +394,36 @@ grep -rn "^note\|end note" docs/state-machine/*.puml
 ## Design Principles
 
 1. **Specification dominance** — agent diagrams are proposals; §3.1 Finding FSM is non-negotiable.
-2. **Compile-time / runtime separation** — policy and governance contracts never load at inspection/FSM/conflict runtime.
-3. **Immutability** — CG-IR, finding events, inspection snapshots are append-only / write-once.
-4. **Capability + SoD before mutation** — every human edge is gated.
-5. **No silent failures** — typed findings, denial audits, or explicit abort states.
-6. **Dual identity** — `lineage_id` immutable; `execution_id` changes only on fork/merge/split.
-7. **Humans never close findings** — only System after Verified or Waived.
-8. **No notes in diagrams** — all behavioral contract on states/transitions; ownership and rationale live in this README.
-9. **No silent capability invention** — transition capabilities must exist in SPEC §3.2 (split uses `directive.fork`; reopen uses `finding.reject_remediation`).
+2. **Doctrine conformance** — catalog diagrams obey STM-001…STM-062 design rules; product SPEC overrides only where it names a machine (§3.1).
+3. **Compile-time / runtime separation** — policy and governance contracts never load at inspection/FSM/conflict runtime.
+4. **Immutability** — CG-IR, finding events, inspection snapshots are append-only / write-once.
+5. **Capability + SoD before mutation** — every human edge is gated (`[capability: …]` guards).
+6. **No silent failures** — typed findings, denial audits, or explicit abort states; declared unhandled-event policy (STM-025).
+7. **Dual identity** — `lineage_id` immutable; `execution_id` changes only on fork/merge/split.
+8. **Humans never close findings** — only System after Verified or Waived.
+9. **No notes in diagrams** — behavioral contract on states/transitions; STM-036 via headers + this README.
+10. **No silent capability invention** — transition capabilities must exist in SPEC §3.2 (split uses `directive.fork`; reopen uses `finding.reject_remediation`).
+11. **Past-tense events** — primary triggers are occurrences; commands are annotations (STM-032).
+12. **Internal vs external self-transitions** — revise / retry use internal transitions when entry must not re-fire (STM-018 / STM-035).
 
 ---
 
 ## UML State Machine Conformance
 
-Catalog machines are **behavioral** UML state machines (entity / process behavior), not protocol state machines. Notation and semantics follow UML / Harel statechart conventions:
+Catalog machines are **behavioral** UML state machines (entity / process behavior), not protocol state machines. Notation follows `.nasim/rules/state-machine-notation.md`; RTC / entry-exit order follow `.nasim/rules/state-machine-specification.md`.
 
-| UML concept | How Selma applies it |
+| UML / doctrine concept | How Selma applies it |
 | :--- | :--- |
 | Directed graph of states + transitions | PlantUML `state` diagrams; rounded states, arrow transitions |
-| Initial pseudostate | Unlabeled `[*] --> …` on every machine (trigger-free start) |
-| Final pseudostate | `… --> [*]` only for true sinks (no further legal edges) |
+| Initial pseudostate | `[*] --> …` on every machine; may carry birth event label |
+| Final pseudostate | `… --> [*] : Finalized` (or named completion) — **never** unlabeled / `event: none` (STM-015) |
 | Exactly one active simple state **per region** | Leaf XOR states inside composites / regions |
-| Trigger / guard / action | Labels: **trigger**, `[guard]`, `action: …`; capabilities are guards |
+| Trigger / guard / action | Past-tense **trigger**, `[guard]`, `/ action()`; capabilities are guards |
 | Entry actions (Moore) | State bodies with `**entry** …` |
-| Transition actions (Mealy) | `action:` / `event:` on edges |
+| Transition actions (Mealy) | `/ action()` on edges; stream types as `stream:` annotations |
+| Internal transition | `State : Event …` (no exit/entry) for revise / timeout retry |
 | Extended state | Quantitative vars (e.g. `retry_count`, SoD provenance) + `[guards]` |
-| Run-to-completion (RTC) | One aggregate processes one command/event to completion before the next |
+| Run-to-completion (RTC) | One aggregate processes one event to completion before the next (spec §3) |
 | Hierarchical nesting (OR) | Composite states group related sub-behavior (see table below) |
 | Orthogonal regions (AND) | Concurrent independent aspects inside a composite (see table below) |
 
@@ -410,22 +464,44 @@ Catalog machines are **behavioral** UML state machines (entity / process behavio
 | `selma_machine_interaction.puml` | Cross-machine **overview** (handoffs), not one aggregate lifecycle |
 | `selma_hlc_clock.puml` / `selma_cgir_hash_chain.puml` | **Detail views** of mechanisms owned by Finding/Event Store and Compilation |
 
-**Transition label convention (UML-compatible multi-line form):**
+**Transition label convention (doctrine-aligned multi-line form):**
 
 ```
-trigger-name
+PastTenseEvent
 actor: …
-[capability: …] | [boolean guard]
-action: …
-event: DomainEvent
+command: optionalCommandName
+[capability: …] | [booleanGuard]
+/ actionName()
+stream: OptionalDomainStreamEvent
 ```
 
-Guards use square brackets per UML. Same-trigger multi-edges must have non-overlapping guards (e.g. Authorization matrix PASS → SoD vs stage).
+Guards use square brackets per UML (STM-016: mutually exclusive when competing).  
+Same-trigger multi-edges must have non-overlapping guards (e.g. Authorization SoD vs stage).
+
+**Finding transition matrix (commands remain implementer binding; diagram triggers are past-tense):**
+
+| From | To | Design event (trigger) | Command / system | Capability guard |
+| :--- | :--- | :--- | :--- | :--- |
+| `[*]` | Created | `FindingCreated` | evaluation Fail/Partial/NeedsReview | — |
+| Created | Open | `Opened` | system auto-open | — |
+| Open | In Remediation | `AcknowledgementAccepted` | `finding.acknowledge` | `finding.acknowledge` |
+| Open | Dismissed | `DismissalDeclared` | `finding.dismiss` | `finding.dismiss` |
+| Open | Waived | `WaiverGranted` | `finding.waive` | `finding.waive` + SoD-1 |
+| Acknowledged | Evidence Submitted | `EvidenceAccepted` | `evidence.submit` | `evidence.submit` |
+| Evidence Submitted | Pending Verification | `VerificationRequested` | system | — |
+| Pending Verification | Verified | `RemediationApproved` | `finding.approve_remediation` | + SoD-2 |
+| Pending Verification | Rejected | `RemediationRejected` | `finding.reject_remediation` | `finding.reject_remediation` |
+| Rejected | Open | `ReopenDeclared` | `finding.reopen` | `finding.reject_remediation` (S-14c) |
+| Verified / Waived | Closed | `FindingClosed` | system auto-close | — |
+| Dismissed / Closed | `[*]` | `Finalized` | system sink | — |
 
 ---
 
 ## Related Documents
 
-- `docs/spec/SPECIFICATION.md` — normative behavior  
+- `docs/spec/SPECIFICATION.md` — SELMA product normative behavior  
 - `docs/spec/User_Stories.md` — story bindings  
-- `docs/c4-model/` — structural architecture
+- `docs/c4-model/` — structural architecture  
+- `.nasim/rules/state-machine-policy-doctrine.md` — organization-wide design doctrine (intent)  
+- `.nasim/rules/state-machine-specification.md` — organization-wide execution semantics (RTC, guards, entry/exit, orthogonal merge)  
+- `.nasim/rules/state-machine-notation.md` — PlantUML authoring conventions

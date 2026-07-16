@@ -2,6 +2,14 @@
 ' Selma — Shared State Machine Theme
 ' Contract: SPECIFICATION.md 8.2.4
 ' Usage:    !include ./common/sm_styles.puml
+'
+' Governance:
+'   Doctrine:      .nasim/rules/state-machine-policy-doctrine.md
+'   Specification: .nasim/rules/state-machine-specification.md
+'   Notation:      .nasim/rules/state-machine-notation.md
+'
+' Notes are FORBIDDEN in state-machine .puml files (project rule).
+' STM-036 invariants live in diagram headers + README companion.
 ' ============================================================
 
 skinparam defaultFontName       "Arial"
