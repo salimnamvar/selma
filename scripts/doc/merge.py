@@ -165,7 +165,7 @@ def parse_args(a_argv: Optional[List[str]] = None) -> argparse.Namespace:
         "-i",
         "--input",
         nargs="+",
-        default=["/home/salim/prj/salim/selma/docs/state-machine"],
+        default=["/home/salim/prj/salim/selma/.nasim/rules/doc"],
         help="Input paths to merge: files, directories, or nested paths (one or more)",
     )
     p.add_argument(

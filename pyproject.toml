@@ -127,21 +127,45 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-    "ARG001",
-    "ARG002",
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D106",
-    "D107",
-    "D415",
+    "ANN",     # type annotations not required in tests
+    "ARG001",  # unused argument — mock callbacks
+    "ARG002",  # unused argument — mock callbacks
+    "ARG005",  # unused lambda argument — mock callbacks
+    "B017",    # blind exception assert — validation tests
+    "BLE001",  # blind exception — test mocks
+    "C901",    # complexity — test helpers
+    "D100",    # missing module docstring — tests
+    "D101",    # missing class docstring — tests
+    "D102",    # missing method docstring — tests
+    "D103",    # missing function docstring — tests
+    "D104",    # missing package docstring — tests
+    "D106",    # missing nested class docstring — tests
+    "D107",    # missing __init__ docstring — tests
+    "D415",    # docstring first line punctuation — tests
+    "FBT001",  # boolean positional — test helpers
+    "FBT002",  # boolean default — test helpers
+    "PLC0415", # import not at top level — test isolation
+    "PLR2004", # magic values in comparisons — common in tests
+    "PT011",   # pytest.raises too broad — validation tests
+    "PT017",   # assertion on exception — test pattern
+    "S101",    # assert usage — expected in tests
+    "S104",    # binding to all interfaces — test config
+    "S105",    # hardcoded password — test fixtures
+    "S108",    # insecure temp files — test data
+    "S608",    # SQL injection — test queries
+    "SLF001",  # private member access — testing internals
+    "T201",    # print statement — allowed in tests
 ]
-"**/__init__.py" = ["F401"]
+"**/__init__.py" = ["F401", "TID252"]
+"scripts/**/*.py" = [
+    "ANN",     # type annotations not required in scripts
+    "T201",    # print statement — allowed in scripts
+]
 
 [tool.ruff.lint.isort]
-known-first-party = ["domain", "infrastructure"]
+known-first-party = ["selma"]
+force-single-line = true  # Google style: one import per line
+force-sort-within-sections = true  # Alphabetical within each group
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -151,6 +175,12 @@ ignore-variadic-names = true
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10  # Google recommends simple functions
 
 [tool.ruff.format]
 quote-style = "double"
@@ -198,5 +228,6 @@ fail_under = 0
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 pythonPlatform = "Linux"
-extraPaths = ["src", "tests"]
+include = ["src"]
+extraPaths = ["src"]
 reportMissingTypeStubs = false
