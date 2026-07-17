@@ -1,0 +1,97 @@
+@startuml selma_cgir_hash_chain
+' ============================================================
+' Selma — CG-IR Hash Composition & Incremental Reuse
+' Source:  SPECIFICATION.md §2.6, §3.5
+' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
+' Contract: 8.2.4
+'
+' DETAIL VIEW: zoom of Compilation Hash Nodes → Publish.
+' Not an independent aggregate — sub-stages of Hermetic Compiler (§2.6).
+' Dual-hash model and incremental reuse decision path.
+' Canonical linear pipeline remains selma_compilation_pipeline.puml.
+' Ownership: README.md
+'
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Detail view of dual-hash, reuse, snapshot hash, CAS dedup
+'   Scope: One node/snapshot hash composition path inside compilation
+'   Initial: NodeBodyLoaded
+'   Terminal: PublishedDedup, PublishedNew
+'   Event set: HashChainStarted, DualHashStarted, DualHashReady,
+'              SemanticHashReady, PresentationHashReady,
+'              SemanticSubgraphReused, SemanticSubgraphRecomputed,
+'              NodeHashComposeStarted, EdgeHashesComputed,
+'              SnapshotHashComposed, ComposeCompleted, CasLookupStarted,
+'              CgIrDedupHit, CgIrPublishedNew, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: semantic_hash excludes presentation; node_hash local
+'                   only; compiled_at excluded from snapshot hash
+'
+' UML: DualHash orthogonal regions (semantic ‖ presentation).
+' Completion transition fires when both regions finish.
+' ============================================================
+
+title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Orthogonal dual-hash · local node identity · CAS dedup · compiled_at excluded</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (Hermetic Compiler)\ncommand: load semantic_body + presentation_body
+
+state "Node Body\nLoaded" as NodeBodyLoaded #B9770E : **entry** semantic_body + presentation_body\n**allowed** enter DualHash\n**forbidden** neighbor embedding
+
+' ---------- Orthogonal dual-hash (AND-decomposition) ----------
+state "Dual Hash" as DualHash #1B7A6E {
+  state "Semantic Region" as SemRegion {
+    [*] --> SemanticHashComputed
+    state "Semantic Hash\nComputed" as SemanticHashComputed #1B7A6E : **entry** SHA-256(canonical_json(semantic_body))\n**forbidden** include presentation fields
+    SemanticHashComputed --> [*] : <b>SemanticHashReady</b>\nactor: System
+  }
+  --
+  state "Presentation Region" as PresRegion {
+    [*] --> PresentationHashComputed
+    state "Presentation Hash\nComputed" as PresentationHashComputed #1B7A6E : **entry** SHA-256(canonical_json(presentation_body))\n**forbidden** alter semantic_hash
+    PresentationHashComputed --> [*] : <b>PresentationHashReady</b>\nactor: System
+  }
+}
+
+state "Check Semantic\nReuse" as CheckSemanticReuse #B9770E : **entry** compare prior snapshot node hashes\n**allowed** reuse or recompute branch\n**forbidden** force full rebuild when semantic matches
+state "Reuse Semantic\nSubgraph" as ReuseSemantic #2C6E49 : **entry** semantic_hash match\neditorial change only\n**allowed** preserve evaluator subgraph\n**forbidden** recompute pure semantic work
+state "Recompute\nEvaluator" as RecomputeEvaluator #1B7A6E : **entry** semantic_hash new or modified\n**allowed** rebuild evaluator materialization
+
+' ---------- Compose & publish (sequential) ----------
+state "Compose Snapshot" as ComposeSnapshot #3B7DD8 {
+  [*] --> NodeHashComposed
+  state "Node Hash\nComposed" as NodeHashComposed #3B7DD8 : **entry** SHA-256({semantic_hash, presentation_hash})\n**allowed** local node identity only\n**forbidden** embed graph neighbors
+  state "Edge Hash\nComputed" as EdgeHashComputed #1B7A6E : **entry** per depends_on:\nSHA-256({source, target})\n**allowed** directional edges
+  state "Snapshot Hash\nComposed" as SnapshotHashComposed #3B7DD8 : **entry** SHA-256({sorted node_hashes,\nsorted edge_hashes, provenance})\n**forbidden** include compiled_at
+  NodeHashComposed --> EdgeHashComputed : <b>EdgeHashesComputed</b>\nactor: System\ncommand: for each depends_on
+  EdgeHashComputed --> SnapshotHashComposed : <b>SnapshotHashComposed</b>\nactor: System\n[compiledAtExcluded]
+  SnapshotHashComposed --> [*] : <b>ComposeCompleted</b>\nactor: System
+}
+
+state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup cgir_store\n**allowed** dedup or new write
+state "Published\n(Dedup)" as PublishedDedup #2C6E49 : **entry** hash exists · no-op **terminal**\n**allowed** return existing hash\n**forbidden** rewrite bytes
+state "Published\n(New)" as PublishedNew #2C6E49 : **entry** novel snapshot write-once **terminal**\n**allowed** CAS put\n**forbidden** in-place update
+
+NodeBodyLoaded --> DualHash : <b>DualHashStarted</b>\nactor: System
+
+' Completion of both orthogonal regions → reuse check
+DualHash --> CheckSemanticReuse : <b>DualHashReady</b>\nactor: System
+
+CheckSemanticReuse --> ReuseSemantic : <b>SemanticSubgraphReused</b>\nactor: System\n[descriptionOrEditorialEditOnly]
+CheckSemanticReuse --> RecomputeEvaluator : <b>SemanticSubgraphRecomputed</b>\nactor: System
+
+ReuseSemantic --> ComposeSnapshot : <b>NodeHashComposeStarted</b>\nactor: System
+RecomputeEvaluator --> ComposeSnapshot : <b>NodeHashComposeStarted</b>\nactor: System
+
+ComposeSnapshot --> CheckCAS : <b>CasLookupStarted</b>\nactor: System
+
+CheckCAS --> PublishedDedup : <b>CgIrDedupHit</b>\nactor: System\n[sameHashAndFrozenEnvAndEngine]
+CheckCAS --> PublishedNew : <b>CgIrPublishedNew</b>\nactor: System
+
+PublishedDedup --> [*] : <b>Finalized</b>\nactor: System
+PublishedNew --> [*] : <b>Finalized</b>\nactor: System
+
+@enduml

@@ -1,0 +1,82 @@
+@startuml selma_directive_lifecycle
+' ============================================================
+' Selma — Directive Lifecycle State Machine
+' Source:  SPECIFICATION.md §2.2, §2.2.4, §2.3, §2.5
+'          User_Stories.md S-01, S-02, S-03, S-08, S-19, S-20, S-26
+' C4:      Application Service + Directives Adapter → directive_store
+'          Hermetic Compiler on every publish / identity op
+' Contract: 8.2.4
+'
+' Dual identity:
+'   lineage_id   = immutable root (Machine ID at creation)
+'   execution_id = active node identity (changes on fork/merge/split)
+' Status enum (schema): draft | active | deprecated | superseded
+' Ownership / events / concurrency: README.md
+' Split capability: directive.fork (v8.2.4; no directive.split matrix row)
+'
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Directive identity status + identity-spawn ops
+'   Scope: Single directive execution path; children are new instances
+'   Initial: Draft
+'   Terminal: Superseded (business terminal → final)
+'             Deprecated is non-terminal (restore enabled)
+'   Event set: DirectiveCreated, DirectiveRevised, DirectivePublished,
+'              DirectiveRetired, DirectiveSuperseded, DirectiveRestored,
+'              DirectiveForked, DirectiveMerged, DirectiveSplit,
+'              DirectiveChildrenSpawned, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032); capabilities are guards
+'   Key invariants: lineage assigned once at create (STM-035);
+'                   revise/rename are internal (STM-018); dual identity
+'
+' UML: IdentitySpawn hierarchical composite for fork/merge/split
+' materialization before children enter Draft.
+' ============================================================
+
+title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Draft : <b>DirectiveCreated</b>\nactor: Regulatory Official\ncommand: directive.create\n[capability: directive.create]\n/ assignLineageId()\n/ executionIdEqualsLineage()\n/ authoredByActor()\nstory: S-01
+
+state "Draft" as Draft #B9770E : **entry** mutable drafting\n**allowed** modify · publish compile\n**forbidden** retire · fork · merge · split\n**identity** lineage_id + execution_id fixed
+state "Active" as Active #2C6E49 : **entry** published & operational in CG-IR\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split\n**forbidden** create (new root uses Draft)
+state "Deprecated" as Deprecated #4A4A4A : **entry** retired / absorbed parent\n**allowed** restore only\n**forbidden** fork · merge · split · modify body\nCG-IR nodes marked deprecated
+state "Superseded" as Superseded #4A4A4A : **entry** replaced by successor\n**allowed** read-only audit trail\n**forbidden** restore without successor governance\nmetadata.migration.superseded_by required
+
+' ---------- Hierarchical composite: identity operations ----------
+state "Identity Spawn" as IdentitySpawn #1B7A6E {
+  ' Initial required (STM-026); deep targets Fork/Merge/Split override on entry
+  [*] --> ForkChildren
+  state "Fork Children\n(spawn)" as ForkChildren #1B7A6E : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
+  state "Merge Result\n(spawn)" as MergeResult #1B7A6E : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
+  state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
+}
+
+' ---------- Internal revisions (STM-018 / STM-035: no re-entry) ----------
+Draft : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n/ recordRevision()\n/ idsUnchanged()\nstory: S-02
+Active : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n[exclusiveWriteLockAndCompileSuccess]\n/ recordRevision()\n/ idsUnchanged()\nstory: S-02
+
+' ---------- Status transitions ----------
+Draft --> Active : <b>DirectivePublished</b>\nactor: Regulatory Official + System\ncommand: directive.modify (publish)\n[capability: directive.modify]\n[hermeticCompileSuccess]\n/ publishCgIrSnapshot()\nstory: S-01 / S-02
+
+Active --> Deprecated : <b>DirectiveRetired</b>\nactor: Regulatory Official\ncommand: directive.retire\n[capability: directive.retire]\n/ recordReason()\n/ markCgIrDeprecated()\nstory: S-03
+Active --> Superseded : <b>DirectiveSuperseded</b>\nactor: Regulatory Official\ncommand: directive.modify (supersede)\n[capability: directive.modify]\n[supersededByActiveOrDraftId]\n[successorCompileValidated]\n§2.2.4
+
+Deprecated --> Draft : <b>DirectiveRestored</b>\nactor: Regulatory Official\ncommand: directive.restore\n[capability: directive.restore]\n/ copyTargetRevision()\n/ preserveLineageId()\n[must recompile to re-activate]\nstory: S-08
+
+' ---------- Enter identity spawn (target specific substate) ----------
+Active --> ForkChildren : <b>DirectiveForked</b>\nactor: Regulatory Official\ncommand: directive.fork\n[capability: directive.fork]\n/ parentSideEffectDeprecated()\nstory: S-19
+Active --> MergeResult : <b>DirectiveMerged</b>\nactor: Regulatory Official\ncommand: directive.merge\n[capability: directive.merge]\n/ bothParentsSideEffectDeprecated()\nstory: S-20
+Active --> SplitChildren : <b>DirectiveSplit</b>\nactor: Regulatory Official\ncommand: directive.split\n[capability: directive.fork]\n[nArySplitSharesForkGate]\n/ parentSideEffectDeprecated()\nstory: S-26
+
+ForkChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncommand: materialize child rules\n/ newExecutionIdInstances()\n/ draftStatus()
+MergeResult --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncommand: materialize merge result\n/ newExecutionId()\n/ draftStatus()
+SplitChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncommand: materialize child rules\n/ newExecutionIdInstances()\n/ draftStatus()
+
+' Stable sink: Superseded has no outgoing business edges → Final (STM-024)
+Superseded --> [*] : <b>Finalized</b>\nactor: System
+
+@enduml

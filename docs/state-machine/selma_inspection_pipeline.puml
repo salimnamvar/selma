@@ -1,0 +1,97 @@
+@startuml selma_inspection_pipeline
+' ============================================================
+' Selma — Inspection Execution Pipeline
+' Source:  SPECIFICATION.md §2.10–§2.13, §3.3, §3.6, §3.7
+'          User_Stories.md S-10, S-15, S-16
+' C4:      Rule Inspector → Snapshots Adapter → artifact_store
+'          Rule Inspector → Lifecycle Finder (finding birth)
+' Contract: 8.2.4
+'
+' Six pure stages. Reinspect = NEW inspection_id.
+' Process FSM (not multi-day durable aggregate).
+' Ownership / events / concurrency: README.md
+'
+' Doctrine compliance (STM-034):
+'   Compliance: Strict
+'   Documentation tier: Standard
+'   Purpose: Point-in-time inspection evaluation through sealed outcomes
+'   Scope: One inspection_id; reinspect is a new instance
+'   Initial: Submitted
+'   Terminal: RejectedIngress, Completed, Partial, Failed
+'   Event set: InspectionSubmitted, InspectionIngressGranted,
+'              InspectionIngressDenied, InspectionPinned,
+'              InspectionStagePassed, InspectionStageFault,
+'              InspectionNodesSkipped, InspectionEvalRetried,
+'              InspectionAggregated, InspectionCompleted,
+'              InspectionPartial, InspectionFailed, Finalized
+'   Unhandled-event policy: reject
+'   Event naming paradigm: past-tense (STM-032)
+'   Key invariants: pure evaluators; immutable snapshot; system_state pins;
+'                   timeout retry max 3 default 0; no snapshot on ingress deny
+'   STM-031: Evaluate uses internal InspectionEvalRetried; on budget exhaust
+'            → InspectionStageFault → Report (no indefinite stall)
+'   Process note: stage substates are stable wait-points for completion events
+'
+' UML: PureStages hierarchical composite (Normalize…Report).
+' Stage faults route to Report; terminals external.
+' ============================================================
+
+title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>
+
+!include ./common/sm_styles.puml
+
+[*] --> Submitted : <b>InspectionSubmitted</b>\nactor: Compliance Representative | System\ncommand: inspection.submit | reinspect\n[capability: inspection.submit | inspection.reinspect]\nstory: S-10 / S-15
+
+state "Submitted" as Submitted #B9770E : **entry** target payload received\n**allowed** ingress check only\n**forbidden** evaluate without pin
+state "Ingress\nGranted" as IngressGranted #1B7A6E : **entry** capability + schema OK\n**allowed** set point-in-time pins\n**forbidden** mutate prior snapshots\npins: target_hash · cg_ir_snapshot_hash\nfrozen_env_hash · engine_version
+state "Rejected\nIngress" as RejectedIngress #A93226 : **entry** 403 | SchemaError **terminal**\n**allowed** denial audit only\n**forbidden** snapshot · findings
+
+' ---------- Hierarchical composite: six pure stages ----------
+state "Pure Stages" as PureStages #1B7A6E {
+  [*] --> Normalize
+  state "1. Normalize" as Normalize #1B7A6E : **entry** NFC · UTC · IEEE 754\n**allowed** compute target_hash\n**forbidden** evaluator IO
+  state "2. Classify" as Classify #1B7A6E : **entry** target_type mapping\n**allowed** context enrichment\n**forbidden** finding birth
+  state "3. Select\nControls" as SelectControls #1B7A6E : **entry** scope filter CG-IR\n**allowed** deps ready · severity gate\n**forbidden** cascade on dependency fail
+  state "4. Evaluate" as Evaluate #1B7A6E : **entry** topological DAG pure evaluators\n**allowed** Pass|Fail|Partial|NeedsReview\nparallel independent nodes\n**forbidden** IO · randomness · env reads
+  state "5. Aggregate" as Aggregate #1B7A6E : **entry** deontic × outcome\n**allowed** conflict apply · severity map\n**forbidden** mutate CG-IR
+  state "6. Report" as Report #2C6E49 : **entry** append findings · write snapshot+trace\n**allowed** system_state_hash seal\n**forbidden** modify completed snapshot
+
+  Normalize --> Classify : <b>InspectionStagePassed</b>\nactor: System\n/ stageNormalize()
+  Normalize --> Report : <b>InspectionStageFault</b>\nactor: System\n/ schemaOrCorruption()
+
+  Classify --> SelectControls : <b>InspectionStagePassed</b>\nactor: System\n/ stageClassify()
+  Classify --> Report : <b>InspectionStageFault</b>\nactor: System\n/ schemaFault()
+
+  SelectControls --> Evaluate : <b>InspectionStagePassed</b>\nactor: System\n/ stageSelectControls()
+  SelectControls --> Report : <b>InspectionNodesSkipped</b>\nactor: System\n/ skippedNodesOnlyNoFinding()
+
+  Evaluate --> Aggregate : <b>InspectionStagePassed</b>\nactor: System\n/ stageEvaluate()
+  ' Internal retry: do not re-fire entry side effects (STM-018)
+  Evaluate : <b>InspectionEvalRetried</b>\nactor: System\n[retryCountLessThanMaxRetries]\n/ infrastructureTimeoutOnly()\n/ maxRetries3Default0()
+  Evaluate --> Report : <b>InspectionStageFault</b>\nactor: System\n/ deterministicOrAmbiguousOrTimeoutOrResource()
+
+  Aggregate --> Report : <b>InspectionAggregated</b>\nactor: System\ncommand: OK or partial aggregate (always report)
+  Report --> [*] : <b>ReportSealed</b>\nactor: System
+}
+
+state "Completed" as Completed #2C6E49 : **entry** status=completed **terminal**\n**allowed** read-only analytics\n**forbidden** mutate
+state "Partial" as Partial #B9770E : **entry** status=partial · skipped_nodes\n**allowed** read-only · reinspect new id\n**forbidden** backfill skipped into same id
+state "Failed" as Failed #A93226 : **entry** status=failed · fatal CG-IR\n**allowed** audit · reinspect new id\n**forbidden** partial publish as completed
+
+Submitted --> IngressGranted : <b>InspectionIngressGranted</b>\nactor: System (Application Service)\n[capabilityEnforcedAtIngress]
+Submitted --> RejectedIngress : <b>InspectionIngressDenied</b>\nactor: System\n/ status403OrSchemaErrorNoSnapshot()
+
+RejectedIngress --> [*] : <b>Finalized</b>\nactor: System
+
+IngressGranted --> PureStages : <b>InspectionPinned</b>\nactor: System (Rule Inspector)\ncommand: pin target_hash + cg_ir + frozen_env + engine\n/ fixSystemStateHashInputs()\n/ excludeEventStreamFromHash()
+
+' Outcomes after Report completes the composite
+PureStages --> Completed : <b>InspectionCompleted</b>\nactor: System\ncommand: write snapshot + birth findings\n[noSkippedNodesAndNoFatalCorruption]\n/ birthFindingsForFailPartialNeedsReview()
+PureStages --> Partial : <b>InspectionPartial</b>\nactor: System\n[skippedNodesPresent]
+PureStages --> Failed : <b>InspectionFailed</b>\nactor: System
+
+Completed --> [*] : <b>Finalized</b>\nactor: System
+Partial --> [*] : <b>Finalized</b>\nactor: System
+Failed --> [*] : <b>Finalized</b>\nactor: System
+
+@enduml
