@@ -1,0 +1,168 @@
+' ============================================================
+' Title:     Selma -- C4 Style Overrides (shared palette)
+' Purpose:   ONE visual language for Context, Container, and
+'            Component diagrams. Colors, line styles, labels,
+'            and legend entries are defined only here.
+' Contract:  8.2.4
+'
+' Include AFTER C4_Context / C4_Container / C4_Component.
+' Then include ./common/c4_identities.puml (canonical IDs + Names).
+' End every diagram with SHOW_LEGEND().
+'
+' ── Element palette (locked) ────────────────────────────────
+'   Person              indigo     #4A6FA5
+'   External person     muted blue #8B9BB4
+'   System (in scope)   teal       #1B7A6E   e.g. Selma
+'   External system     grey       #8A9199
+'   Container           blue       #3B7DD8
+'   External container  grey-blue  #A0A8B0
+'   Component           light blue #85B4F2   (same family as container)
+'   Data store          green      #2C6E49   via $tags="store"
+'   Hermetic unit       amber      #B9770E   via $tags="hermetic"
+'   Capability gate     red        #A93226   via $tags="gate"
+'   System boundary     teal dash  fill #E8F5F3
+'   Container boundary  blue dash  fill #EEF4FC
+'
+' ── Relationship palette (locked) ───────────────────────────
+'   (default)              solid grey     ordinary path
+'   capability_enforced    solid red      permission gate
+'   compile_only           dashed amber   hermetic / runtime-prohibited
+'   immutable              solid green    append-only
+'   mediated               dashed purple  no external mutation
+'   async                  dotted blue    eventually consistent
+'   validation_only        dashed teal    read/inspect only
+'   immutable_async        dotted green   append-only + async
+'   mediated_async         dotted purple  mediated + async
+'
+' Multi-tag edges MUST use a single combined tag (not a+b), so
+' PlantUML applies one consistent line color:
+'   $tags="immutable_async"   not  $tags="immutable+async"
+'
+' ── Entity format (locked) ──────────────────────────────────
+'   Person / System / Container / Component / *Db macros:
+'     Alias: snake_case, stable across all three diagrams
+'     Name:  Title Case, identical string when the same entity
+'            appears on more than one diagram
+'     Tech:  "Primary / Secondary / Tertiary" with " / " separator
+'            (omit on Context-level Person/System when not needed)
+'     Desc:  one prose sentence (or two short clauses); identical
+'            text when the same entity is carried across levels
+'   Data stores: always ContainerDb / ContainerDb_Ext + $tags="store"
+'   Hermetic compile unit: $tags="hermetic"
+'   Capability/SoD gate entry: $tags="gate"
+'
+' ── Relationship format (locked) ────────────────────────────
+'   Rel(from, to, "description", "technology", $tags="...")
+'   description:
+'     - lowercase intent phrase (no trailing period)
+'     - same semantic edge => same description across diagrams
+'       (lower levels may refine endpoints, not reword intent)
+'   technology (canonical vocabulary — use exactly):
+'     Network:    HTTPS | REST / HTTPS | HTTPS / API | CI/CD
+'     Internal:   Internal
+'     Data I/O:   SQL | CAS | Append-Only | Append-Only / Read-Only
+'                 | Object Write
+'     Semantic:   Compile-Time Only | Append-Only | Mediated / Webhook
+'                 (semantic labels pair with matching $tags)
+'   $tags: apply whenever the edge has that semantic; never leave
+'     a tagged semantic untagged on one diagram and tagged on another
+' ============================================================
+
+' ------------------------------------------------------------
+' C4 label-break knobs (assignment wins over C4 defaults)
+' ------------------------------------------------------------
+!$DEFAULT_WRAP_WIDTH = 160
+!$MAX_MESSAGE_SIZE = 90
+!$REL_DESCR_MAX_CHAR_WIDTH = 24
+!$REL_TECHN_MAX_CHAR_WIDTH = 16
+!$BOUNDARY_DESCR_MAX_CHAR_WIDTH = 28
+
+' ------------------------------------------------------------
+' Layout & typography
+' ------------------------------------------------------------
+skinparam linetype polyline
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam defaultTextAlignment center
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam monochrome false
+skinparam handwritten false
+
+skinparam backgroundColor #FAFBFC
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #1A2332
+
+skinparam wrapWidth 160
+skinparam maxMessageSize 90
+skinparam nodesep 160
+skinparam ranksep 180
+
+skinparam responseMessageBelowArrow true
+skinparam arrowThickness 1.5
+skinparam arrowFontSize 9
+
+skinparam packageBorderColor #2C3E50
+skinparam packageFontColor #2C3E50
+skinparam packageFontStyle bold
+skinparam componentBorderColor #2C3E50
+skinparam rectangleBorderColor #2C3E50
+skinparam databaseBorderColor #2C3E50
+skinparam personBorderColor #2C3E50
+
+skinparam legendBackgroundColor #FFFFFF
+skinparam legendBorderColor #D0D7DE
+skinparam legendFontSize 9
+
+' ------------------------------------------------------------
+' Element palette -- identical on every C4 level
+' ------------------------------------------------------------
+!if %function_exists("C4Version")
+
+' Actors
+UpdateElementStyle("person", $bgColor="#4A6FA5", $fontColor="#FFFFFF", $borderColor="#2F4A73", $shadowing="false", $legendText="person / actor")
+UpdateElementStyle("external_person", $bgColor="#8B9BB4", $fontColor="#FFFFFF", $borderColor="#6B7A90", $shadowing="false", $legendText="external person")
+
+' Systems
+UpdateElementStyle("system", $bgColor="#1B7A6E", $fontColor="#FFFFFF", $borderColor="#0F4F47", $shadowing="false", $borderThickness="2", $legendText="system (in scope)")
+UpdateElementStyle("external_system", $bgColor="#8A9199", $fontColor="#FFFFFF", $borderColor="#5C636A", $shadowing="false", $legendText="external system")
+
+' Containers (runtime units) -- same blue on Container + Component diagrams
+UpdateElementStyle("container", $bgColor="#3B7DD8", $fontColor="#FFFFFF", $borderColor="#1F5BB5", $shadowing="false", $legendText="container")
+UpdateElementStyle("external_container", $bgColor="#A0A8B0", $fontColor="#FFFFFF", $borderColor="#7A828A", $shadowing="false", $legendText="external container")
+
+' Components -- lighter tint of container blue (nested under container)
+UpdateElementStyle("component", $bgColor="#85B4F2", $fontColor="#0D2137", $borderColor="#3B7DD8", $shadowing="false", $borderThickness="1", $legendText="component")
+
+' Default relationship (untagged)
+UpdateRelStyle("#3D4F5F", "#5A6B7A")
+
+' Boundaries match their element family
+UpdateBoundaryStyle("", $bgColor="#F0F4F8", $fontColor="#1A2332", $borderColor="#34495E", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $legendText="boundary")
+UpdateBoundaryStyle("system", $bgColor="#E8F5F3", $fontColor="#0F4F47", $borderColor="#1B7A6E", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="System", $legendText="system boundary")
+UpdateBoundaryStyle("container", $bgColor="#EEF4FC", $fontColor="#1F5BB5", $borderColor="#3B7DD8", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="Container", $legendText="container boundary")
+
+' Data stores -- apply with $tags="store" on ContainerDb / ContainerDb_Ext
+' so green is identical on Container and Component diagrams
+AddElementTag("store", $bgColor="#2C6E49", $fontColor="#FFFFFF", $borderColor="#1B4332", $shadowing="false", $legendText="data store (DB / CAS / log)")
+
+' Optional annotation tags (same everywhere)
+AddElementTag("hermetic", $bgColor="#B9770E", $fontColor="#FFFFFF", $borderColor="#7D4E00", $borderStyle="dashed", $borderThickness="2", $legendText="hermetic compile boundary")
+AddElementTag("gate", $bgColor="#A93226", $fontColor="#FFFFFF", $borderColor="#641E16", $legendText="capability / SoD gate")
+
+' ------------------------------------------------------------
+' Relationship tags -- identical line colors on every diagram
+' ------------------------------------------------------------
+AddRelTag("capability_enforced", $textColor="#922B21", $lineColor="#C0392B", $lineStyle="solid", $lineThickness="2", $legendText="capability-enforced\npermission gate before action")
+AddRelTag("compile_only", $textColor="#9A5B00", $lineColor="#E67E22", $lineStyle="dashed", $lineThickness="2", $legendText="compile-time only\nruntime access prohibited")
+AddRelTag("immutable", $textColor="#0B5E3C", $lineColor="#1B8A5A", $lineStyle="solid", $lineThickness="2", $legendText="append-only / immutable\nnever mutated")
+AddRelTag("mediated", $textColor="#5B2C6F", $lineColor="#8E44AD", $lineStyle="dashed", $lineThickness="2", $legendText="mediated output\nno external state mutation")
+AddRelTag("async", $textColor="#1A5276", $lineColor="#2980B9", $lineStyle="dotted", $lineThickness="2", $legendText="asynchronous\neventually consistent")
+AddRelTag("validation_only", $textColor="#0E6655", $lineColor="#16A085", $lineStyle="dashed", $lineThickness="2", $legendText="validation only\nread/inspect, no mutation")
+
+' Combined tags (single stereo => one reliable color in PlantUML)
+AddRelTag("immutable_async", $textColor="#0B5E3C", $lineColor="#1B8A5A", $lineStyle="dotted", $lineThickness="2", $legendText="append-only + async\nnever mutated, eventual delivery")
+AddRelTag("mediated_async", $textColor="#5B2C6F", $lineColor="#8E44AD", $lineStyle="dotted", $lineThickness="2", $legendText="mediated + async\nno external mutation, eventual")
+
+!endif

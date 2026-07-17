@@ -1,0 +1,145 @@
+' ============================================================
+' Title:     Selma -- C4 Canonical Entity Identities
+' Purpose:   Single source of truth for entity IDs, Names, Tech,
+'            and Descriptions across Context, Container, and
+'            Component diagrams. Include after c4_styles.puml.
+' Contract:  8.2.4
+'
+' Rules:
+'   1. PlantUML alias (ID) is the bare token in Person/System/...
+'      and in Rel() — listed here as comments for the registry.
+'   2. Display Name / Tech / Desc are $variables — use them in
+'      every diagram so the rendered label is identical.
+'   3. When the same entity appears on multiple layers, the ID
+'      and $NAME_* MUST match. Only the macro may change
+'      (System vs System_Boundary, Container vs Container_Ext,
+'      ContainerDb vs ContainerDb_Ext).
+' ============================================================
+
+' ------------------------------------------------------------
+' Actors (ID = regulatory_official | compliance_rep)
+' Layers: Context, Container  (Component faces via selma_interface)
+' ------------------------------------------------------------
+!$NAME_regulatory_official = "Regulatory Official"
+!$DESC_regulatory_official = "Human or AI agent acting for the regulatory authority. Holds full directive lifecycle capabilities — create, modify, retire, fork, merge, restore — Conflict Artifact resolution, finding disposition — dismiss, waive, approve remediation, reject remediation, supersede — analytics, and finding views."
+
+!$NAME_compliance_rep = "Compliance Representative"
+!$DESC_compliance_rep = "Human, AI agent, or programmatic service acting for the regulated entity. Submits and reinspects targets, acknowledges findings, submits evidence, and views findings and analytics. Cannot create, modify, or retire directives, and cannot waive findings."
+
+' ------------------------------------------------------------
+' System in scope (ID = selma)
+' Layers: Context = System(selma); Container = System_Boundary(selma)
+' Name is identical on both layers: "Selma"
+' ------------------------------------------------------------
+!$NAME_selma = "Selma"
+!$DESC_selma = "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations."
+
+' ------------------------------------------------------------
+' External systems (ID = governance_contracts | cicd |
+'   regulated_systems | audit_platform | remediation_systems)
+' Layers: Context, Container, Component
+' ------------------------------------------------------------
+!$NAME_governance_contracts = "Governance Contracts"
+!$DESC_governance_contracts = "Authoring artifacts that define the rules: the normative specification, structural schema, governance policy, and behavioral contracts. Consumed exclusively at compile time — never accessed at runtime."
+
+!$NAME_cicd = "CI/CD Pipeline"
+!$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime."
+
+!$NAME_regulated_systems = "Target & Regulated Entity Systems"
+!$DESC_regulated_systems = "External systems from which Selma pulls targets for inspection. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other. Targets conform to the target schema."
+
+!$NAME_audit_platform = "Audit & Observability Platform"
+!$DESC_audit_platform = "Immutable long-term retention store for regulatory compliance and forensics. Receives finding events, security audit records, inspection snapshots, and certification artifacts. Supports external auditors and compliance reporting."
+
+!$NAME_remediation_systems = "Remediation & Case Management"
+!$DESC_remediation_systems = "Operational workflows for remediation: ticketing systems, RPA platforms, and regulatory portals. Selma sends finding notifications only — it never directly modifies external remediation state."
+
+' ------------------------------------------------------------
+' Containers (ID = selma_interface | selma_app)
+' Layers: Container; Component uses Container_Ext / Container_Boundary
+' ------------------------------------------------------------
+!$NAME_selma_interface = "Selma Interface"
+!$TECH_selma_interface = "CLI / WebApp / DesktopApp / MobileApp"
+!$DESC_selma_interface = "User-facing interface across all delivery channels. Authenticates users, renders the UI, and translates user actions into REST API calls to the Selma Application."
+
+!$NAME_selma_app = "Selma Application"
+!$TECH_selma_app = "REST API / Python / RE2 / JSON Schema / SHA-256"
+!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, and the read-only analytics layer. Reads governance contracts only at compile time — never at runtime."
+
+' ------------------------------------------------------------
+' Data stores (ID = directive_store | cgir_store |
+'   event_store | artifact_store)
+' Layers: Container = ContainerDb; Component = ContainerDb_Ext
+' Always $tags="store"
+' ------------------------------------------------------------
+!$NAME_directive_store = "Directives"
+!$TECH_directive_store = "PostgreSQL"
+!$DESC_directive_store = "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance."
+
+!$NAME_cgir_store = "Compiled Rules"
+!$TECH_cgir_store = "Content-Addressed Storage"
+!$DESC_cgir_store = "Immutable compiled rule snapshots, keyed by content hash. Deduplicates identical rule nodes and edges across snapshots. Never modified after publication; retained indefinitely."
+
+!$NAME_event_store = "Findings & Audit Trail"
+!$TECH_event_store = "Append-Only Log"
+!$DESC_event_store = "Immutable, tamper-evident log of finding lifecycle events and security denial records. Source of truth for finding state, disposition history, and compliance audit trail."
+
+!$NAME_artifact_store = "Inspection Snapshots"
+!$TECH_artifact_store = "Object Store"
+!$DESC_artifact_store = "Immutable inspection snapshots, execution traces, reproducibility hashes, conflict artifacts pending human resolution, and certification artifacts. Append-only after creation."
+
+' ------------------------------------------------------------
+' Components (ID = application_service | hermetic_compiler |
+'   rule_inspector | conflict_resolver | lifecycle_finder |
+'   finding_analyzer | architectural_auditor |
+'   directives_adapter | compiled_rules_adapter |
+'   findings_audit_adapter | snapshots_adapter | target_adapter)
+' Layers: Component only
+' ------------------------------------------------------------
+!$NAME_application_service = "Application Service"
+!$TECH_application_service = "FastAPI / Pydantic"
+!$DESC_application_service = "Single entry point for all requests. Authenticates, enforces permissions, validates input, and dispatches to the appropriate component. Orchestrates business workflows including directive mutation sequencing and compilation triggers."
+
+!$NAME_hermetic_compiler = "Hermetic Compiler"
+!$TECH_hermetic_compiler = "Python / JSON Schema / SHA-256"
+!$DESC_hermetic_compiler = "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup."
+
+!$NAME_rule_inspector = "Rule Inspector"
+!$TECH_rule_inspector = "Python / RE2 Regex / SHA-256"
+!$DESC_rule_inspector = "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots."
+
+!$NAME_conflict_resolver = "Conflict Resolver"
+!$TECH_conflict_resolver = "Python / Pydantic"
+!$DESC_conflict_resolver = "Deterministic conflict resolution authority. Applies fixed precedence: explicit override, priority, specificity, recency. Unresolvable conflicts produce artifacts for human review."
+
+!$NAME_lifecycle_finder = "Lifecycle Finder"
+!$TECH_lifecycle_finder = "Python / Pydantic"
+!$DESC_lifecycle_finder = "Manages the full 10-state finding lifecycle from Created through Closed. Enforces permissions and segregation of duties at every human-triggered transition. Emits tamper-evident events to the Event Store."
+
+!$NAME_finding_analyzer = "Finding Analyzer"
+!$TECH_finding_analyzer = "Python / Pydantic"
+!$DESC_finding_analyzer = "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes."
+
+!$NAME_architectural_auditor = "Architectural Auditor"
+!$TECH_architectural_auditor = "Python"
+!$DESC_architectural_auditor = "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts."
+
+!$NAME_directives_adapter = "Directives Adapter"
+!$TECH_directives_adapter = "Python / SQLAlchemy / PostgreSQL"
+!$DESC_directives_adapter = "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition and lineage identity resolution."
+
+!$NAME_compiled_rules_adapter = "Compiled Rules Adapter"
+!$TECH_compiled_rules_adapter = "Python / SHA-256 / Content-Addressed Storage"
+!$DESC_compiled_rules_adapter = "Manages content-addressed storage of compiled rule snapshots. Handles publish, load, deduplication, and incremental reuse of snapshots."
+
+!$NAME_findings_audit_adapter = "Findings & Audit Trail Adapter"
+!$TECH_findings_audit_adapter = "Python / SHA-256 / Append-Only Log"
+!$DESC_findings_audit_adapter = "Manages append-only event streams for finding lifecycle events and security denial records. Handles event appending, hash chain integrity, and replication to the external Audit Platform."
+
+!$NAME_snapshots_adapter = "Inspection Snapshots Adapter"
+!$TECH_snapshots_adapter = "Python / Object Store"
+!$DESC_snapshots_adapter = "Manages immutable storage of inspection snapshots, execution traces, conflict artifacts, and certification artifacts. Handles write-once storage and replication to the external Audit Platform."
+
+!$NAME_target_adapter = "Target Adapter"
+!$TECH_target_adapter = "Python / HTTP Client / Schema Validation"
+!$DESC_target_adapter = "Mediates all outbound communication with external target and regulated entity systems. Handles authentication, transport, retries, schema validation, and response normalization."
