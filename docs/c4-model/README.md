@@ -40,9 +40,9 @@ All entity IDs, names, tech stacks, and descriptions are defined in `common/c4_i
 Requires [PlantUML](https://plantuml.com/) and [C4-PlantUML](https://github.com/plantuml-stdlib/C4-PlantUML) v2.13.0:
 
 ```bash
-plantuml docs/C4-Design/c4_selma_context.puml
-plantuml docs/C4-Design/c4_selma_container.puml
-plantuml docs/C4-Design/c4_selma_component.puml
+plantuml docs/c4-model/c4_selma_context.puml
+plantuml docs/c4-model/c4_selma_container.puml
+plantuml docs/c4-model/c4_selma_component.puml
 ```
 
 ## Behavioral state machines

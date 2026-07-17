@@ -44,7 +44,7 @@ The Selma system has three document layers with a strict dominance hierarchy:
 - Any engine implementation that loads, parses, or otherwise accesses `policy_doctrine.yaml` during runtime code paths (inspection, evaluation, FSM transitions, conflict resolution) is **non-conformant**
 - Engines MUST implement configuration checks that fail if policy files are accessible from runtime modules
 - Recommended: boot-time assertion that verifies policy_doctrine.yaml is absent from runtime data paths
-- CI/CD pipelines MUST include static analysis that scans runtime source code for policy_doctrine.yaml references (see `scripts/validate_contracts.py`)
+- CI/CD pipelines MUST include static analysis that scans runtime source code for policy_doctrine.yaml references
 - Compile-time only: policy MAY be read by authors, validators, and compilation tools that generate schema/CG-IR from human prose
 
 ### 1.3 Terminology
@@ -2112,7 +2112,7 @@ Reference implementations SHOULD use strict JSON parsing (reject duplicate keys,
 2. No schema element contradicts a spec invariant
 3. No policy field violates contamination guard
 4. evaluator_config fields match evaluator_type (no invalid state combinations)
-5. Runtime engines do not read policy_doctrine.yaml — enforced by: (a) architecture discipline (runtime modules MUST NOT import or load policy_doctrine.yaml); (b) CI static analysis scanning runtime source paths for references to policy_doctrine.yaml (see `scripts/validate_contracts.py`); (c) boot-time assertion (recommended): runtime startup MAY verify policy_doctrine.yaml is absent from configured data paths
+5. Runtime engines do not read policy_doctrine.yaml — enforced by: (a) architecture discipline (runtime modules MUST NOT import or load policy_doctrine.yaml); (b) CI static analysis scanning runtime source paths for references to policy_doctrine.yaml; (c) boot-time assertion (recommended): runtime startup MAY verify policy_doctrine.yaml is absent from configured data paths
 6. Conflict resolution at runtime uses spec algorithm over schema/CG-IR fields only
 7. `anchor_ref` conforms to §7.2 syntax
 8. `metadata` uses declared namespaces only; no executable hints
