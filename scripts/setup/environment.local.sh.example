@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# Copy to environment.local.sh (git-ignored) for per-machine overrides.
-#
-# export SETUP_CONDA_DIR="${HOME}/miniconda3"
-# export SETUP_ENV_NAME="selma"
-# export SETUP_SKIP_CONDA_INSTALL=0
-# export SETUP_SKIP_VSCODE=0
-# export SETUP_RECREATE_ENV=0
