@@ -6,33 +6,6 @@
 ' C4:      Application Service + Directives Adapter → directive_store
 '          Hermetic Compiler on every publish / identity op
 ' Contract: 8.2.4
-'
-' Dual identity:
-'   lineage_id   = immutable root (Machine ID at creation)
-'   execution_id = active node identity (changes on fork/merge/split)
-' Status enum (schema): draft | active | deprecated | superseded
-' Ownership / events / concurrency: README.md
-' Split capability: directive.fork (v8.2.4; no directive.split matrix row)
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Directive identity status + identity-spawn ops
-'   Scope: Single directive execution path; children are new instances
-'   Initial: Draft
-'   Terminal: Superseded (business terminal → final)
-'             Deprecated is non-terminal (restore enabled)
-'   Event set: DirectiveCreated, DirectiveRevised, DirectivePublished,
-'              DirectiveRetired, DirectiveSuperseded, DirectiveRestored,
-'              DirectiveForked, DirectiveMerged, DirectiveSplit,
-'              DirectiveChildrenSpawned, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032); capabilities are guards
-'   Key invariants: lineage assigned once at create (STM-035);
-'                   revise/rename are internal (STM-018); dual identity
-'
-' UML: IdentitySpawn hierarchical composite for fork/merge/split
-' materialization before children enter Draft.
 ' ============================================================
 
 title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>

@@ -4,27 +4,6 @@
 ' Source:  C4 component map + docs/state-machine ownership
 ' Contract: 8.2.4
 ' Role:    Cross-machine handoff overview (not a lifecycle aggregate)
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Exploratory (overview diagram; not a single lifecycle)
-'   Documentation tier: Minimal
-'   Purpose: Cross-machine handoffs between catalog machines
-'   Scope: Collaboration overview only — STM-010 exempt (not one lifecycle)
-'   Initial: Authz (ingress)
-'   Terminal: DomainUnchanged deny path; Artifact archived sink
-'   Event set: MutatingRequestReceived, AuthzAllowedDirective,
-'              AuthzAllowedInspection, AuthzAllowedFinding,
-'              AuthzAllowedConflict, AuthzDenied,
-'              CompileRequested, HashDetailEntered, HashDetailReturned,
-'              CgIrPublished, DirectiveRecorded, CgIrPinned,
-'              FindingsBirthed, InspectionArtifactPublished,
-'              ConflictDetected, FindingEventAppended, HlcTagged,
-'              ConflictArtifactPublished, CertificationArtifactPublished,
-'              CertificationSamplesRead, ArtifactRetained
-'   Unhandled-event policy: ignore (overview; no aggregate authority)
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: no 9th independent aggregate; detail views nest
-'                   under Finding/Compilation owners
 ' ============================================================
 
 title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · primary machines · detail views · no independent 9th aggregate</i></size>

@@ -6,32 +6,6 @@
 '          Compiled Rules Adapter → cgir_store (CG-IR snapshots)
 '          Findings & Audit Trail Adapter → event_store (events)
 ' Contract: 8.2.4
-'
-' Write-once / append-only for:
-'   CG-IR snapshots · Inspection snapshots + traces
-'   Conflict artifacts · Certification artifacts
-'   Finding events (append-only stream entries)
-' Retention defaults (README / §3.5): CG-IR & events indefinite;
-'   inspection snapshots 7y; pipeline traces 1y.
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Immutable artifact durability with orthogonal reference ‖ replication
-'   Scope: One durable artifact instance after successful publish
-'   Initial: Building
-'   Terminal: RejectedBuild, Archived
-'   Event set: ArtifactBuildStarted, ArtifactValidated, ArtifactBuildRejected,
-'              ArtifactPublished, ArtifactReferenced, ArtifactSuperseded,
-'              ArtifactReplicated, ArtifactArchived, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: write-once; no in-place rewrite; content-addressed
-'                   publish is idempotent; durable = both regions active
-'
-' UML: Durable Artifact composite with orthogonal regions:
-'   Reference ‖ Replication (AND-decomposition).
-' Archive exits the composite from the Reference region.
 ' ============================================================
 
 title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthogonal reference ‖ replication · no silent rewrite</i></size>

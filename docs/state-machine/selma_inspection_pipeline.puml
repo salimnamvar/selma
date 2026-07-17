@@ -6,34 +6,6 @@
 ' C4:      Rule Inspector → Snapshots Adapter → artifact_store
 '          Rule Inspector → Lifecycle Finder (finding birth)
 ' Contract: 8.2.4
-'
-' Six pure stages. Reinspect = NEW inspection_id.
-' Process FSM (not multi-day durable aggregate).
-' Ownership / events / concurrency: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Point-in-time inspection evaluation through sealed outcomes
-'   Scope: One inspection_id; reinspect is a new instance
-'   Initial: Submitted
-'   Terminal: RejectedIngress, Completed, Partial, Failed
-'   Event set: InspectionSubmitted, InspectionIngressGranted,
-'              InspectionIngressDenied, InspectionPinned,
-'              InspectionStagePassed, InspectionStageFault,
-'              InspectionNodesSkipped, InspectionEvalRetried,
-'              InspectionAggregated, InspectionCompleted,
-'              InspectionPartial, InspectionFailed, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: pure evaluators; immutable snapshot; system_state pins;
-'                   timeout retry max 3 default 0; no snapshot on ingress deny
-'   STM-031: Evaluate uses internal InspectionEvalRetried; on budget exhaust
-'            → InspectionStageFault → Report (no indefinite stall)
-'   Process note: stage substates are stable wait-points for completion events
-'
-' UML: PureStages hierarchical composite (Normalize…Report).
-' Stage faults route to Report; terminals external.
 ' ============================================================
 
 title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>

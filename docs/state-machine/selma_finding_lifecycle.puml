@@ -5,30 +5,6 @@
 '          User_Stories.md S-11..S-14c, S-25, S-29, S-32, S-33
 ' C4:      Lifecycle Finder → Findings & Audit Trail Adapter → event_store
 ' Contract: 8.2.4
-'
-' Authority: ONLY fully normative FSM in the specification.
-' Ownership, matrices, concurrency: docs/state-machine/README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Full
-'   Purpose: Authoritative finding disposition lifecycle (§3.1)
-'   Scope: Single finding identity; supersede optional and unmodeled
-'   Initial: Created
-'   Terminal: Dismissed, Closed (business); Verified/Waived pre-terminal
-'   Event set: FindingCreated, Opened, AcknowledgementAccepted, DismissalDeclared,
-'              WaiverGranted, EvidenceAccepted, VerificationRequested,
-'              RemediationApproved, RemediationRejected, ReopenDeclared,
-'              FindingClosed, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032); capabilities are guards
-'   Key invariants: system-only close; SoD-1 waive; SoD-2 approve;
-'                   no reopen from Closed/Dismissed; identity once at birth
-'   STM-031: PendingVerification has no SPEC SLA timeout; unhandled time
-'            events reject. Recovery via RemediationRejected → ReopenDeclared.
-'
-' UML: InRemediation hierarchical composite groups acknowledge → verify.
-' Normative 10 leaf states unchanged; Open/Dismissed/Waived/Closed siblings.
 ' ============================================================
 
 title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · hierarchical remediation · SoD-1/SoD-2 · system-only close</i></size>

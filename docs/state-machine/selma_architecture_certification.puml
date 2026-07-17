@@ -6,31 +6,6 @@
 ' C4:      Architectural Auditor → Snapshots Adapter → artifact_store
 '          trigger: CI/CD → Application Service
 ' Contract: 8.2.4
-'
-' Production-grade reference certification requires all AA gates.
-' Document suite conformance alone does not certify an engine.
-' Ownership / retention: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: CI/CD architectural audit AA-01…AA-07
-'   Scope: One certification run_id; no domain mutation
-'   Initial: Triggered
-'   Terminal: Archived
-'   Event set: CertificationTriggered, CertificationEvidenceCollecting,
-'              CertificationEvidenceReady, CertificationRejected,
-'              CertificationGatePassed, CertificationGateFailed,
-'              CertificationGatesComplete, CertificationSealed,
-'              CertificationFailed, CertificationRemediationRequired,
-'              CertificationArchived, CertificationRetriggered, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: no domain FSM mutation; all gates required for Certified;
-'                   remediation loops to new run_id (STM-037 cycle justified)
-'
-' UML: ValidatingGates hierarchical composite (OR-decomposition).
-' Any FAIL exits composite to Failed (external transition).
 ' ============================================================
 
 title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · hierarchical AA composite · no runtime policy contamination</i></size>

@@ -4,33 +4,6 @@
 ' Source:  SPECIFICATION.md §2.6, §3.5
 ' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
 ' Contract: 8.2.4
-'
-' DETAIL VIEW: zoom of Compilation Hash Nodes → Publish.
-' Not an independent aggregate — sub-stages of Hermetic Compiler (§2.6).
-' Dual-hash model and incremental reuse decision path.
-' Canonical linear pipeline remains selma_compilation_pipeline.puml.
-' Ownership: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Detail view of dual-hash, reuse, snapshot hash, CAS dedup
-'   Scope: One node/snapshot hash composition path inside compilation
-'   Initial: NodeBodyLoaded
-'   Terminal: PublishedDedup, PublishedNew
-'   Event set: HashChainStarted, DualHashStarted, DualHashReady,
-'              SemanticHashReady, PresentationHashReady,
-'              SemanticSubgraphReused, SemanticSubgraphRecomputed,
-'              NodeHashComposeStarted, EdgeHashesComputed,
-'              SnapshotHashComposed, ComposeCompleted, CasLookupStarted,
-'              CgIrDedupHit, CgIrPublishedNew, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: semantic_hash excludes presentation; node_hash local
-'                   only; compiled_at excluded from snapshot hash
-'
-' UML: DualHash orthogonal regions (semantic ‖ presentation).
-' Completion transition fires when both regions finish.
 ' ============================================================
 
 title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Orthogonal dual-hash · local node identity · CAS dedup · compiled_at excluded</i></size>

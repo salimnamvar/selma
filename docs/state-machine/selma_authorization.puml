@@ -7,30 +7,6 @@
 '          + Lifecycle Finder / Conflict Resolver (domain gates)
 '          denials → Findings & Audit Trail Adapter → event_store
 ' Contract: 8.2.4
-'
-' Cross-cutting behavioral security model. Applies to humans,
-' service accounts, and AI agents (same matrix; actor = agent ID).
-' Delegation is NOT supported in v8.2.x.
-' Ownership / matrix summary: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Cross-cutting capability + SoD + stage gate before mutation
-'   Scope: One authorization request; not a durable aggregate
-'   Initial: RequestReceived
-'   Terminal: Allowed (dispatch), DomainUnchanged (deny complete)
-'   Event set: AuthzRequestReceived, AuthzIdentityVerified,
-'              AuthzCapabilityChecked, AuthzSoDRequired, AuthzSoDSkipped,
-'              AuthzSoDPassed, AuthzAllowed, AuthzDispatched, AuthzDenied,
-'              AuthzDenialAudited, AuthzDomainUnchanged, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: hard deny (no partial write); denial audit always;
-'                   matrix only source of grants (no invented rows)
-'
-' UML: EvaluateAccess hierarchical composite groups matrix → SoD → stage.
-' DenyPath composite groups Denied → audit → DomainUnchanged.
 ' ============================================================
 
 title Selma — Capability Authorization FSM\n<size:12><i>Hierarchical evaluate · allow | deny+audit · hard-reject</i></size>

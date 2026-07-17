@@ -7,44 +7,6 @@
 '          artifacts → Snapshots Adapter → artifact_store
 '          denials → Findings & Audit Trail Adapter → event_store
 ' Contract: 8.2.4
-'
-' Precedence (normative, lower priority_level wins):
-'   1. Explicit override (always_wins / never_wins / defer_to)
-'   2. Compatible dual overrides (compatible_overrides)
-'   3. Priority: constitutional=1 > statutory=2 > regulatory=3
-'                > operational=4 > advisory=5
-'   4. Specificity (higher score wins)
-'   5. Recency (newer created_at wins; frozen in node_body)
-'   6. Conflict Artifact → human conflict.resolve
-' Within-lineage = binding. Cross-lineage = advisory only.
-' Ownership / events: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Deterministic conflict cascade + human artifact path
-'   Scope: One conflicting pair evaluation; binding vs advisory
-'   Initial: DetectPair
-'   Terminal: NoConflict, ResolvedBinding, ArtifactArchived,
-'             AdvisoryArtifact completion, NoAdvisory
-'   Event set: ConflictDetectionStarted, ConflictNone, ConflictPairDetected,
-'              ConflictBindingScope, ConflictAdvisoryScope,
-'              ConflictOverrideFallthrough, ConflictFallthroughPriority,
-'              ConflictFallthroughSpecificity, ConflictFallthroughRecency,
-'              ConflictResolvedBinding, ConflictArtifactOpened,
-'              ConflictReviewOpened, ConflictArtifactResolved,
-'              ConflictArtifactRejected, ConflictReviewReopened,
-'              ConflictArtifactArchived, ConflictAdvisoryEmitted,
-'              ConflictAdvisoryNone, Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: within-lineage binding only; cross-lineage advisory;
-'                   no CG-IR rewrite on resolve; frozen snapshot decisions
-'   STM-031: HumanReview has no SPEC SLA timeout; unhandled time events
-'            reject. Resolution only via conflict.resolve (capability-gated).
-'
-' UML: BindingCascade hierarchical (steps 1–5).
-' HumanArtifactPath nests review → resolve/reject → archive.
 ' ============================================================
 
 title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>

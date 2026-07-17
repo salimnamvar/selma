@@ -5,38 +5,6 @@
 '          User_Stories.md S-05, S-21..S-24, S-27, S-31
 ' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
 ' Contract: 8.2.4
-'
-' Invariants: hermetic frozen_env · all-or-nothing · SHA-256 CAS
-'             compiled_at excluded from snapshot hash (S-23)
-'             policy_doctrine.yaml never at runtime (AA-02)
-' Ownership / concurrency: README.md
-'
-' Doctrine compliance (STM-034):
-'   Compliance: Strict
-'   Documentation tier: Standard
-'   Purpose: Hermetic compile process from request to CAS publish
-'   Scope: One compile request_id; process FSM (not multi-day aggregate)
-'   Initial: Requested
-'   Terminal: Completed, Failed (after lock release)
-'   Event set: CompileRequested, CompileQueued, CompileDequeued,
-'              CompileLockAcquired, CompileLockDeferred, CompileGatePassed,
-'              CompileGateFailed, CompileStructuralOk, CompileMaterialized,
-'              CompileNodesHashed, CompileEdgesHashed, CompileConflictsMapped,
-'              CompileSnapshotHashed, CgIrPublished, CompileLockReleased,
-'              Finalized
-'   Unhandled-event policy: reject
-'   Event naming paradigm: past-tense (STM-032)
-'   Key invariants: all-or-nothing CAS; no partial CG-IR; always release lock;
-'                   policy never at runtime (AA-02)
-'   STM-031: AcquireReadLock uses CompileLockDeferred re-queue; gate FAILs
-'            exit to Failed then lock release (no indefinite silent wait)
-'   Process note: gate substates are stable wait-points for PASS/FAIL
-'                 completion events (not flowchart method calls — STM-002 intent)
-'
-' UML hierarchy:
-'   StructuralValidation  — Schema…Lineage (ordered gates)
-'   MaterializeCgIr       — Hash…PolicyAssert (compose path)
-' FAIL from nested gate exits composite → Failed (then release lock).
 ' ============================================================
 
 title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>Hierarchical validate → materialize · all-or-nothing CAS · no runtime policy</i></size>
