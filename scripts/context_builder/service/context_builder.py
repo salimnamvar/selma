@@ -13,26 +13,11 @@ from context_builder.domain.models import ContextConfig
 from context_builder.domain.models import ContextResult
 from context_builder.domain.models import Document
 from context_builder.infrastructure.output_path_resolver import resolve_output_path
-from context_builder.pipeline.collector_pipeline import collect_and_order
 from context_builder.pipeline.renderer_pipeline import render_and_write
 from context_builder.pipeline.splitter_pipeline import split_documents
-from context_builder.renderer.markdown import MarkdownRenderer
 from context_builder.renderer.protocols import RendererProtocol
 from context_builder.repository.protocols import CollectorProtocol
 from context_builder.repository.protocols import WriterProtocol
-from context_builder.repository.writer import FileWriter
-
-
-def _noop_tokenizer(_text: str) -> int:
-    """No-op tokenizer for fallback.
-
-    Args:
-        _text: Ignored text input.
-
-    Returns:
-        Always returns 0.
-    """
-    return 0
 
 
 class ContextBuilderService:
@@ -45,10 +30,10 @@ class ContextBuilderService:
     def __init__(
         self,
         a_config: ContextConfig,
-        a_collector: CollectorProtocol | None = None,
-        a_writer: WriterProtocol | None = None,
-        a_renderer: RendererProtocol | None = None,
-        a_tokenizer: Callable[[str], int] | None = None,
+        a_collector: CollectorProtocol,
+        a_writer: WriterProtocol,
+        a_renderer: RendererProtocol,
+        a_tokenizer: Callable[[str], int],
     ) -> None:
         """Initialize service with injected dependencies.
 
@@ -60,10 +45,10 @@ class ContextBuilderService:
             a_tokenizer: Token counting function.
         """
         self._config: ContextConfig = a_config
-        self._collector: CollectorProtocol | None = a_collector
-        self._writer: WriterProtocol | None = a_writer
-        self._renderer: RendererProtocol | None = a_renderer
-        self._tokenizer: Callable[[str], int] | None = a_tokenizer
+        self._collector: CollectorProtocol = a_collector
+        self._writer: WriterProtocol = a_writer
+        self._renderer: RendererProtocol = a_renderer
+        self._tokenizer: Callable[[str], int] = a_tokenizer
 
     def build(self) -> ContextResult:
         """Build context and write output.
@@ -71,17 +56,8 @@ class ContextBuilderService:
         Returns:
             ContextResult: Result of the operation.
         """
-        # Collect or use injected collector
-        if self._collector is not None:
-            documents: list[Document] = self._collector.collect(self._config.inputs)
-        else:
-            tokenizer: Callable[[str], int] = self._tokenizer or _noop_tokenizer
-            documents = collect_and_order(
-                self._config.inputs,
-                self._config.extensions,
-                self._config.exclude,
-                tokenizer,
-            )
+        # Collect documents
+        documents: list[Document] = self._collector.collect(self._config.inputs)
 
         # Order documents
         documents = sorted(documents, key=lambda d: d.path)
@@ -93,10 +69,8 @@ class ContextBuilderService:
         else:
             chunks = [documents]
 
-        # Resolve output path and get writer/renderer
+        # Resolve output path
         out_path: Path = resolve_output_path(self._config.output_path)
-        renderer: RendererProtocol = self._renderer or MarkdownRenderer()
-        writer: WriterProtocol = self._writer or FileWriter(out_path)
 
         # Render and write
         result: ContextResult = render_and_write(
@@ -105,8 +79,8 @@ class ContextBuilderService:
             a_output_path=out_path,
             a_mode=self._config.mode,
             a_max_tokens=self._config.max_tokens,
-            a_renderer=renderer,
-            a_writer=writer,
+            a_renderer=self._renderer,
+            a_writer=self._writer,
         )
 
         return result
