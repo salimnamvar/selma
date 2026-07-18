@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.domain.directive_graph.conftest import make_graph
 
 from domain.directive_graph.services.conflict_resolver import ConflictResolver
-from tests.domain.directive_graph.conftest import make_graph
 
 
 def _pair(
@@ -41,7 +41,8 @@ def _pair(
     g = make_graph(rules=[a_payload, b_payload])
     a = g.get_by_id("RULE-001")
     b = g.get_by_id("RULE-002")
-    assert a is not None and b is not None
+    assert a is not None
+    assert b is not None
     return a, b, g
 
 

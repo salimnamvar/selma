@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC
+from datetime import datetime
 from typing import ClassVar
 from uuid import uuid4
 
@@ -23,9 +24,9 @@ class DomainEvent:
     occurred_at: str
 
     @staticmethod
-    def _new_id() -> str:
+    def new_id() -> str:
         return str(uuid4())
 
     @staticmethod
-    def _now_utc() -> str:
+    def now_utc() -> str:
         return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

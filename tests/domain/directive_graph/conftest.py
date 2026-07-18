@@ -9,13 +9,16 @@ tests never depend on schema shape-normalisation living inside domain types.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from typing import Any
 
 import pytest
 
-from domain.directive_graph.directive import Directive
-from domain.directive_graph.directive_graph import DirectiveGraph
 from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
+
+if TYPE_CHECKING:
+    from domain.directive_graph.directive import Directive
+    from domain.directive_graph.directive_graph import DirectiveGraph
 
 _mapper = DirectiveGraphMapper()
 

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
-from pydantic import ValidationError
 
-from domain.policy_doctrine import ContentType, Section
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from domain.policy_doctrine import Section
 
 
 @pytest.mark.unit

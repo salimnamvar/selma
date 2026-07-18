@@ -20,10 +20,15 @@ Reference: SPECIFICATION.md §2.1-2.2
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 from domain.directive_graph.directive import Directive
-from domain.directive_graph.scalars import ExecutionId, LineageId, PolicyContractId, SemanticVersion
+from domain.directive_graph.scalars import ExecutionId
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import PolicyContractId
+from domain.directive_graph.scalars import SemanticVersion
 from domain.directive_graph.value_objects.metadata import DatasetMetadata
 
 
@@ -57,33 +62,34 @@ class DirectiveGraph(BaseModel):
     # Read-only accessors
     # ------------------------------------------------------------------
 
-    def get_by_id(self, execution_id: ExecutionId) -> Directive | None:
+    def get_by_id(self, a_execution_id: ExecutionId) -> Directive | None:
         """Return the directive with the given execution ID, or ``None``.
 
         Args:
-            execution_id: The execution ID to look up.
+            a_execution_id: The execution ID to look up.
 
         Returns:
             Matching directive, or None if not found.
         """
+        result: Directive | None = None
         for directive in self.directives:
-            if directive.id == execution_id:
-                return directive
-        return None
+            if directive.id == a_execution_id:
+                result = directive
+        return result
 
-    def get_by_lineage_id(self, lineage_id: LineageId) -> list[Directive]:
+    def get_by_lineage_id(self, a_lineage_id: LineageId) -> list[Directive]:
         """Return all directives sharing the given lineage ID.
 
         After fork or split operations there may be multiple directives with
         the same ``lineage_id`` (SPECIFICATION.md §2.3).
 
         Args:
-            lineage_id: The lineage ID to look up.
+            a_lineage_id: The lineage ID to look up.
 
         Returns:
             All matching directives (may be empty).
         """
-        return [d for d in self.directives if d.lineage_id == lineage_id]
+        return [d for d in self.directives if d.lineage_id == a_lineage_id]
 
     def execution_ids(self) -> frozenset[ExecutionId]:
         """Return a frozenset of all execution IDs in this graph.
@@ -108,11 +114,11 @@ class DirectiveGraph(BaseModel):
     # Structural copy helpers used by lifecycle factory
     # ------------------------------------------------------------------
 
-    def replace_directive(self, directive: Directive) -> DirectiveGraph:
+    def replace_directive(self, a_directive: Directive) -> DirectiveGraph:
         """Return a new graph with the directive of matching ``id`` replaced.
 
         Args:
-            directive: Replacement directive (must already exist by id).
+            a_directive: Replacement directive (must already exist by id).
 
         Returns:
             New frozen graph.
@@ -123,22 +129,23 @@ class DirectiveGraph(BaseModel):
         found = False
         new_directives: list[Directive] = []
         for d in self.directives:
-            if d.id == directive.id:
-                new_directives.append(directive)
+            if d.id == a_directive.id:
+                new_directives.append(a_directive)
                 found = True
             else:
                 new_directives.append(d)
         if not found:
-            raise ValueError(f"Cannot replace unknown directive id {directive.id!r}")
+            msg = f"Cannot replace unknown directive id {a_directive.id!r}"
+            raise ValueError(msg)
         return self.model_copy(update={"directives": tuple(new_directives)})
 
-    def with_directives(self, directives: tuple[Directive, ...]) -> DirectiveGraph:
+    def with_directives(self, a_directives: tuple[Directive, ...]) -> DirectiveGraph:
         """Return a new graph with the given directives collection.
 
         Args:
-            directives: Full replacement collection (must be non-empty).
+            a_directives: Full replacement collection (must be non-empty).
 
         Returns:
             New frozen graph.
         """
-        return self.model_copy(update={"directives": directives})
+        return self.model_copy(update={"directives": a_directives})

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import pytest
-from tests.domain.directive_graph.conftest import make_directive_payload, make_graph
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_graph
 
 from domain.directive_graph.enums import DirectiveStatus
-from domain.directive_graph.events import DirectiveForked, DirectiveMerged, DirectiveRetired
-from domain.directive_graph.factories.lifecycle import DirectiveLifecycleFactory, compute_merge_execution_id
+from domain.directive_graph.events import DirectiveForked
+from domain.directive_graph.events import DirectiveMerged
+from domain.directive_graph.events import DirectiveRetired
+from domain.directive_graph.factories.lifecycle import DirectiveLifecycleFactory
+from domain.directive_graph.factories.lifecycle import compute_merge_execution_id
 
 
 @pytest.fixture
@@ -62,9 +66,9 @@ class TestFork:
         )
         result = factory.fork(
             g,
-            parent_execution_id="RULE-001",
-            child_execution_ids=("RULE-001-A", "RULE-001-B"),
-            timestamp="2026-06-01T00:00:00Z",
+            a_parent_execution_id="RULE-001",
+            a_child_execution_ids=("RULE-001-A", "RULE-001-B"),
+            a_timestamp="2026-06-01T00:00:00Z",
         )
         assert len(result.graph.directives) == 3
         parent = result.graph.get_by_id("RULE-001")
@@ -105,7 +109,7 @@ class TestMerge:
             ("AUTH-001", "PAY-800"),
             ts,
         )
-        result = factory.merge(g, "AUTH-001", "PAY-800", timestamp=ts)
+        result = factory.merge(g, "AUTH-001", "PAY-800", a_timestamp=ts)
         merged = result.graph.get_by_id(expected_id)
         assert merged is not None
         assert merged.lineage_id == "AUTH-001"  # lex min
@@ -113,8 +117,10 @@ class TestMerge:
         assert merged.lineage.operation == "merge"
         a = result.graph.get_by_id("AUTH-001")
         b = result.graph.get_by_id("PAY-800")
-        assert a is not None and a.status == DirectiveStatus.DEPRECATED
-        assert b is not None and b.status == DirectiveStatus.DEPRECATED
+        assert a is not None
+        assert a.status == DirectiveStatus.DEPRECATED
+        assert b is not None
+        assert b.status == DirectiveStatus.DEPRECATED
         assert isinstance(result.events[0], DirectiveMerged)
 
 
@@ -132,9 +138,9 @@ class TestSplit:
         )
         result = factory.split(
             g,
-            parent_execution_id="RULE-001",
-            child_execution_ids=("RULE-001-A", "RULE-001-B", "RULE-001-C"),
-            timestamp="2026-06-01T00:00:00Z",
+            a_parent_execution_id="RULE-001",
+            a_child_execution_ids=("RULE-001-A", "RULE-001-B", "RULE-001-C"),
+            a_timestamp="2026-06-01T00:00:00Z",
         )
         assert len(result.graph.directives) == 4
         assert result.graph.get_by_id("RULE-001-A") is not None

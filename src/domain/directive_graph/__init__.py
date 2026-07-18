@@ -8,14 +8,15 @@ from __future__ import annotations
 
 from domain.directive_graph.directive import Directive
 from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.factories.lifecycle import DirectiveLifecycleFactory, LifecycleResult
-from domain.directive_graph.repositories import DirectiveGraphRef, DirectiveGraphRepository
-from domain.directive_graph.services.conflict_resolver import (
-    ConflictArtifact,
-    ConflictResolutionResult,
-    ConflictResolver,
-)
-from domain.directive_graph.services.directive_graph_validator import DirectiveGraphValidator, ValidationResult
+from domain.directive_graph.factories.lifecycle import DirectiveLifecycleFactory
+from domain.directive_graph.factories.lifecycle import LifecycleResult
+from domain.directive_graph.repositories import DirectiveGraphRef
+from domain.directive_graph.repositories import DirectiveGraphRepository
+from domain.directive_graph.services.conflict_resolver import ConflictArtifact
+from domain.directive_graph.services.conflict_resolver import ConflictResolutionResult
+from domain.directive_graph.services.conflict_resolver import ConflictResolver
+from domain.directive_graph.services.directive_graph_validator import DirectiveGraphValidator
+from domain.directive_graph.services.directive_graph_validator import ValidationResult
 
 __all__ = [
     "ConflictArtifact",

@@ -5,15 +5,17 @@ Fixtures here apply to tests under tests/domain/ only.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING
+from typing import Any
 
 import pytest
 
-from domain.policy_doctrine import (
-    ContentType,
-    PriorityCategory,
-    Section,
-)
+from domain.policy_doctrine import ContentType
+from domain.policy_doctrine import PriorityCategory
+from domain.policy_doctrine import Section
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.fixture

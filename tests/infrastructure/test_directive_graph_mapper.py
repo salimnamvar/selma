@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from tests.domain.directive_graph.conftest import make_directive_payload, make_graph_payload
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_graph_payload
 
-from domain.directive_graph.evaluators import CompositeEvaluator, RegexEvaluator
+from domain.directive_graph.evaluators import CompositeEvaluator
+from domain.directive_graph.evaluators import RegexEvaluator
 from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
 
 

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
-from tests.domain.directive_graph.conftest import make_directive, make_domain_directive_payload
+import pytest
+from tests.domain.directive_graph.conftest import make_directive
+from tests.domain.directive_graph.conftest import make_domain_directive_payload
 
 from domain.directive_graph.directive import Directive
-from domain.directive_graph.enums import DeonticType, DirectiveStatus, EvaluatorType
-from domain.directive_graph.evaluators import FieldCheckEvaluator, RegexEvaluator
+from domain.directive_graph.enums import DeonticType
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.evaluators import FieldCheckEvaluator
+from domain.directive_graph.evaluators import RegexEvaluator
 from domain.directive_graph.exceptions import InvalidLifecycleTransitionError
 from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
 

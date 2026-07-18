@@ -1,0 +1,38 @@
+# Role catalog — maps role ids used in agents.yaml to responsibilities.
+
+roles:
+  architecture:
+    kind: ARCHITECTURE
+    description: Owns system structure, boundaries, and ADRs.
+    responsibilities:
+      - Define and protect architectural boundaries
+      - Produce design artifacts and task breakdowns
+      - Resolve architectural conflicts
+      - Reject implementations that violate contracts
+
+  implementation:
+    kind: IMPLEMENTATION
+    description: Primary feature and module implementer.
+    responsibilities:
+      - Implement against approved design and interfaces
+      - Follow project coding standards
+      - Add or update unit tests for new behavior
+      - Do not change public contracts without Architect approval
+
+  refactoring:
+    kind: REFACTORING
+    description: Improves structure, tests, and maintainability.
+    responsibilities:
+      - Refactor without changing external behavior unless specified
+      - Strengthen tests and coverage
+      - Reduce duplication and complexity
+      - Do not expand scope beyond assigned task
+
+  quality_review:
+    kind: QUALITY_REVIEW
+    description: Independent reviewer; does not implement the change under review.
+    responsibilities:
+      - Review diffs against architecture and acceptance criteria
+      - Report findings with severity and location
+      - Approve, request changes, or reject
+      - Never silently rewrite code under review (review-only role)

@@ -7,15 +7,13 @@ from __future__ import annotations
 
 import pytest
 
-from domain.directive_graph.enums import (
-    PRIORITY_RANK,
-    CompositeLogic,
-    DeonticType,
-    DirectiveStatus,
-    EvaluatorType,
-    LineageOperation,
-    PriorityLevel,
-)
+from domain.directive_graph.enums import PRIORITY_RANK
+from domain.directive_graph.enums import CompositeLogic
+from domain.directive_graph.enums import DeonticType
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import LineageOperation
+from domain.directive_graph.enums import PriorityLevel
 
 
 @pytest.mark.unit

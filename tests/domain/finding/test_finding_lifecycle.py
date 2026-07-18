@@ -4,19 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from domain.finding import (
-    COMPLIANCE_CAPS,
-    OFFICIAL_CAPS,
-    CapabilityDeniedError,
-    EvaluatorOutcome,
-    FindingClosed,
-    FindingCreated,
-    FindingLifecycle,
-    FsmState,
-    InvalidFindingTransitionError,
-    OptimisticConcurrencyError,
-    Severity,
-)
+from domain.finding import COMPLIANCE_CAPS
+from domain.finding import OFFICIAL_CAPS
+from domain.finding import CapabilityDeniedError
+from domain.finding import EvaluatorOutcome
+from domain.finding import FindingClosed
+from domain.finding import FindingCreated
+from domain.finding import FindingLifecycle
+from domain.finding import FsmState
+from domain.finding import InvalidFindingTransitionError
+from domain.finding import OptimisticConcurrencyError
+from domain.finding import Severity
 
 
 @pytest.fixture
@@ -26,11 +24,11 @@ def lc() -> FindingLifecycle:
 
 def _open(lc: FindingLifecycle):
     return lc.create_from_inspection(
-        lineage_id="RULE-001",
-        control_id="RULE-001",
-        inspection_id="insp-1",
-        outcome=EvaluatorOutcome.FAIL,
-        severity=Severity.HIGH,
+        a_lineage_id="RULE-001",
+        a_control_id="RULE-001",
+        a_inspection_id="insp-1",
+        a_outcome=EvaluatorOutcome.FAIL,
+        a_severity=Severity.HIGH,
     )
 
 
@@ -47,10 +45,10 @@ class TestBirth:
     def test_pass_does_not_birth(self, lc: FindingLifecycle) -> None:
         with pytest.raises(InvalidFindingTransitionError):
             lc.create_from_inspection(
-                lineage_id="RULE-001",
-                control_id="RULE-001",
-                inspection_id="insp-1",
-                outcome="Pass",
+                a_lineage_id="RULE-001",
+                a_control_id="RULE-001",
+                a_inspection_id="insp-1",
+                a_outcome="Pass",
             )
 
 
@@ -61,9 +59,9 @@ class TestOpenHub:
         opened = _open(lc).finding
         result = lc.acknowledge(
             opened,
-            actor="cr-1",
-            role_capabilities=COMPLIANCE_CAPS,
-            expected_version=opened.version,
+            a_actor="cr-1",
+            a_role_capabilities=COMPLIANCE_CAPS,
+            a_expected_version=opened.version,
         )
         assert result.finding.fsm_state == FsmState.ACKNOWLEDGED
 
@@ -71,8 +69,8 @@ class TestOpenHub:
         opened = _open(lc).finding
         result = lc.dismiss(
             opened,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
         )
         assert result.finding.fsm_state == FsmState.DISMISSED
         assert result.finding.is_terminal
@@ -81,9 +79,9 @@ class TestOpenHub:
         opened = _open(lc).finding
         result = lc.waive(
             opened,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
-            creator_provenance=frozenset({"author-other"}),
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
+            a_creator_provenance=frozenset({"author-other"}),
         )
         assert result.finding.fsm_state == FsmState.CLOSED
         assert any(isinstance(e, FindingClosed) for e in result.events)
@@ -93,9 +91,9 @@ class TestOpenHub:
         with pytest.raises(CapabilityDeniedError) as exc:
             lc.waive(
                 opened,
-                actor="author-1",
-                role_capabilities=OFFICIAL_CAPS,
-                creator_provenance=frozenset({"author-1"}),
+                a_actor="author-1",
+                a_role_capabilities=OFFICIAL_CAPS,
+                a_creator_provenance=frozenset({"author-1"}),
             )
         assert exc.value.denial_audit["outcome"] == "denied"
         assert opened.fsm_state == FsmState.OPEN
@@ -106,11 +104,11 @@ class TestOpenHub:
 class TestRemediation:
     def _pending(self, lc: FindingLifecycle):
         opened = _open(lc).finding
-        acked = lc.acknowledge(opened, actor="cr-1", role_capabilities=COMPLIANCE_CAPS).finding
+        acked = lc.acknowledge(opened, a_actor="cr-1", a_role_capabilities=COMPLIANCE_CAPS).finding
         return lc.submit_evidence(
             acked,
-            actor="cr-1",
-            role_capabilities=COMPLIANCE_CAPS,
+            a_actor="cr-1",
+            a_role_capabilities=COMPLIANCE_CAPS,
         ).finding
 
     def test_evidence_to_pending(self, lc: FindingLifecycle) -> None:
@@ -122,8 +120,8 @@ class TestRemediation:
         pending = self._pending(lc)
         result = lc.approve_remediation(
             pending,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
         )
         assert result.finding.fsm_state == FsmState.CLOSED
         assert any(isinstance(e, FindingClosed) for e in result.events)
@@ -135,8 +133,8 @@ class TestRemediation:
         with pytest.raises(CapabilityDeniedError) as exc:
             lc.approve_remediation(
                 pending,
-                actor="cr-1",
-                role_capabilities=OFFICIAL_CAPS | COMPLIANCE_CAPS,
+                a_actor="cr-1",
+                a_role_capabilities=OFFICIAL_CAPS | COMPLIANCE_CAPS,
             )
         assert "SoD-2" in exc.value.reason
 
@@ -144,15 +142,15 @@ class TestRemediation:
         pending = self._pending(lc)
         rejected = lc.reject_remediation(
             pending,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
         ).finding
         assert rejected.fsm_state == FsmState.REJECTED
         reopened = lc.reopen(
             rejected,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
-            comments="needs more work on evidence package",
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
+            a_comments="needs more work on evidence package",
         ).finding
         assert reopened.fsm_state == FsmState.OPEN
 
@@ -160,30 +158,30 @@ class TestRemediation:
         pending = self._pending(lc)
         rejected = lc.reject_remediation(
             pending,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
         ).finding
         with pytest.raises(InvalidFindingTransitionError):
             lc.reopen(
                 rejected,
-                actor="ro-1",
-                role_capabilities=OFFICIAL_CAPS,
-                comments="   ",
+                a_actor="ro-1",
+                a_role_capabilities=OFFICIAL_CAPS,
+                a_comments="   ",
             )
 
     def test_compliance_cannot_reopen(self, lc: FindingLifecycle) -> None:
         pending = self._pending(lc)
         rejected = lc.reject_remediation(
             pending,
-            actor="ro-1",
-            role_capabilities=OFFICIAL_CAPS,
+            a_actor="ro-1",
+            a_role_capabilities=OFFICIAL_CAPS,
         ).finding
         with pytest.raises(CapabilityDeniedError):
             lc.reopen(
                 rejected,
-                actor="cr-1",
-                role_capabilities=COMPLIANCE_CAPS,
-                comments="please reopen",
+                a_actor="cr-1",
+                a_role_capabilities=COMPLIANCE_CAPS,
+                a_comments="please reopen",
             )
 
 
@@ -195,15 +193,15 @@ class TestConcurrencyAndForbidden:
         with pytest.raises(OptimisticConcurrencyError):
             lc.acknowledge(
                 opened,
-                actor="cr-1",
-                role_capabilities=COMPLIANCE_CAPS,
-                expected_version=opened.version - 1 if opened.version else -1,
+                a_actor="cr-1",
+                a_role_capabilities=COMPLIANCE_CAPS,
+                a_expected_version=opened.version - 1 if opened.version else -1,
             )
 
     def test_human_close_forbidden(self, lc: FindingLifecycle) -> None:
         opened = _open(lc).finding
         with pytest.raises(InvalidFindingTransitionError):
-            lc.human_close_forbidden(opened, actor="ro-1")
+            lc.human_close_forbidden(opened, a_actor="ro-1")
 
     def test_capability_matrix_deny_acknowledge_for_official_only_role(self, lc: FindingLifecycle) -> None:
         # Official lacks finding.acknowledge in OFFICIAL_CAPS
@@ -211,6 +209,6 @@ class TestConcurrencyAndForbidden:
         with pytest.raises(CapabilityDeniedError):
             lc.acknowledge(
                 opened,
-                actor="ro-1",
-                role_capabilities=OFFICIAL_CAPS,
+                a_actor="ro-1",
+                a_role_capabilities=OFFICIAL_CAPS,
             )

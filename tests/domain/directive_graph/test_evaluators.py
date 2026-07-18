@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+from pydantic import TypeAdapter
+from pydantic import ValidationError
 import pytest
-from pydantic import TypeAdapter, ValidationError
 
-from domain.directive_graph.enums import CompositeLogic, EvaluatorType, FieldCheckOperator, ThresholdOperator
-from domain.directive_graph.evaluators import (
-    CompositeEvaluator,
-    Evaluator,
-    FieldCheckEvaluator,
-    RegexEvaluator,
-    ThresholdEvaluator,
-)
+from domain.directive_graph.enums import CompositeLogic
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import FieldCheckOperator
+from domain.directive_graph.enums import ThresholdOperator
+from domain.directive_graph.evaluators import CompositeEvaluator
+from domain.directive_graph.evaluators import Evaluator
+from domain.directive_graph.evaluators import FieldCheckEvaluator
+from domain.directive_graph.evaluators import RegexEvaluator
+from domain.directive_graph.evaluators import ThresholdEvaluator
 from infrastructure.mappers.directive_graph_mapper import DirectiveGraphMapper
 
 _adapter = TypeAdapter(Evaluator)

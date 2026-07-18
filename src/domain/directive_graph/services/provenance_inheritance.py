@@ -13,47 +13,50 @@ Reference: SPECIFICATION.md §3.2
 
 from __future__ import annotations
 
-from domain.directive_graph.directive import Directive
-from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.scalars import ActorId
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from domain.directive_graph.directive import Directive
+    from domain.directive_graph.directive_graph import DirectiveGraph
+    from domain.directive_graph.scalars import ActorId
 
 
 class ProvenanceInheritanceService:
     """Computes creator_provenance across the lineage chain for a directive."""
 
-    def compute_provenance(self, directive: Directive, graph: DirectiveGraph) -> frozenset[ActorId]:
+    def compute_provenance(self, a_directive: Directive, a_graph: DirectiveGraph) -> frozenset[ActorId]:
         """Return the set of all actors in the directive's full lineage.
 
         Args:
-            directive: The directive whose provenance to compute.
-            graph: The graph containing the directive.
+            a_directive: The directive whose provenance to compute.
+            a_graph: The graph containing the directive.
 
         Returns:
             All authored_by actors through the lineage.
         """
-        return frozenset(self._collect(directive, graph, visited=set()))
+        return frozenset(self._collect(a_directive, a_graph, a_visited=set()))
 
     def _collect(
         self,
-        directive: Directive,
-        graph: DirectiveGraph,
-        visited: set[str],
+        a_directive: Directive,
+        a_graph: DirectiveGraph,
+        a_visited: set[str],
     ) -> set[ActorId]:
         """Recursively collect authored_by actors through ancestry."""
-        if directive.id in visited:
-            return set()
-        visited = visited | {directive.id}
+        if a_directive.id in a_visited:
+            result: set[ActorId] = set()
+        else:
+            a_visited = a_visited | {a_directive.id}
 
-        actors: set[ActorId] = set()
-        authored_by = directive.metadata and directive.metadata.audit and directive.metadata.audit.authored_by
-        if authored_by:
-            actors.add(authored_by)
+            actors: set[ActorId] = set()
+            authored_by = a_directive.metadata and a_directive.metadata.audit and a_directive.metadata.audit.authored_by
+            if authored_by:
+                actors.add(authored_by)
 
-        if directive.lineage is None:
-            return actors
-
-        for parent_exec_id in directive.lineage.parent_execution_ids:
-            parent = graph.get_by_id(parent_exec_id)
-            if parent is not None:
-                actors |= self._collect(parent, graph, visited)
-        return actors
+            if a_directive.lineage is not None:
+                for parent_exec_id in a_directive.lineage.parent_execution_ids:
+                    parent = a_graph.get_by_id(parent_exec_id)
+                    if parent is not None:
+                        actors |= self._collect(parent, a_graph, a_visited)
+            result = actors
+        return result

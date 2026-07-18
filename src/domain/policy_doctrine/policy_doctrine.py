@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 from domain.policy_doctrine.contamination_guard import ContaminationGuard
 from domain.policy_doctrine.cross_layer_binding import CrossLayerBinding
@@ -10,7 +12,8 @@ from domain.policy_doctrine.identity_resolution import IdentityResolution
 from domain.policy_doctrine.lifecycle_definition import LifecycleDefinition
 from domain.policy_doctrine.priority_hierarchy import PriorityHierarchy
 from domain.policy_doctrine.sections import Section
-from domain.policy_doctrine.version_strategy import SemanticVersion, VersionStrategy
+from domain.policy_doctrine.version_strategy import SemanticVersion
+from domain.policy_doctrine.version_strategy import VersionStrategy
 from domain.policy_doctrine.writing_principles import WritingPrinciple
 
 
@@ -19,9 +22,7 @@ class PolicyDoctrine(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str = Field(
-        pattern=r"^[a-z][a-z0-9-]*$", min_length=1, description="Unique doctrine identifier"
-    )
+    name: str = Field(pattern=r"^[a-z][a-z0-9-]*$", min_length=1, description="Unique doctrine identifier")
     version: SemanticVersion = Field(description="Doctrine version")
     description: str = Field(min_length=1, description="Human-readable purpose statement")
     spec_version: SemanticVersion = Field(description="Compatible specification version")

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from domain.directive_graph.enums import ConflictStrategy
 from domain.directive_graph.value_objects.conflict_resolution import ConflictResolution

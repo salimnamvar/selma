@@ -14,12 +14,22 @@ Reference: SPECIFICATION.md §2.9
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated
+from typing import Any
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
-from domain.directive_graph.enums import CompositeLogic, EvaluatorType, FieldCheckOperator, ThresholdOperator
-from domain.directive_graph.scalars import FiniteFloat, RegexFlags, RegexPattern
+from domain.directive_graph.enums import CompositeLogic
+from domain.directive_graph.enums import EvaluatorType
+from domain.directive_graph.enums import FieldCheckOperator
+from domain.directive_graph.enums import ThresholdOperator
+from domain.directive_graph.scalars import FiniteFloat
+from domain.directive_graph.scalars import RegexFlags
+from domain.directive_graph.scalars import RegexPattern
 
 # ---------------------------------------------------------------------------
 # Leaf evaluator value objects
@@ -116,10 +126,8 @@ class CompositeEvaluator(BaseModel):
             ValueError: If NOT logic has any count other than 1.
         """
         if self.logic == CompositeLogic.NOT and len(self.sub_evaluators) != 1:
-            raise ValueError(
-                f"CompositeEvaluator with NOT logic requires exactly 1 sub-evaluator; "
-                f"got {len(self.sub_evaluators)}"
-            )
+            msg = f"CompositeEvaluator with NOT logic requires exactly 1 sub-evaluator; got {len(self.sub_evaluators)}"
+            raise ValueError(msg)
         return self
 
 

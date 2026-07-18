@@ -5,17 +5,19 @@ from __future__ import annotations
 import pytest
 
 from domain.policy_doctrine.contamination_guard import ContaminationGuard
-from domain.policy_doctrine.cross_layer_binding import (
-    ConflictResolutionBinding,
-    CrossLayerBinding,
-    FieldLegality,
-)
-from domain.policy_doctrine.identity_resolution import IdentityResolution, MachineIdSemantics
+from domain.policy_doctrine.cross_layer_binding import ConflictResolutionBinding
+from domain.policy_doctrine.cross_layer_binding import CrossLayerBinding
+from domain.policy_doctrine.cross_layer_binding import FieldLegality
+from domain.policy_doctrine.identity_resolution import IdentityResolution
+from domain.policy_doctrine.identity_resolution import MachineIdSemantics
 from domain.policy_doctrine.lifecycle_definition import LifecycleDefinition
 from domain.policy_doctrine.policy_doctrine import PolicyDoctrine as PolicyDoctrineClass
-from domain.policy_doctrine.priority_hierarchy import CrossLayerPrecedence, Level, PriorityHierarchy
+from domain.policy_doctrine.priority_hierarchy import CrossLayerPrecedence
+from domain.policy_doctrine.priority_hierarchy import Level
+from domain.policy_doctrine.priority_hierarchy import PriorityHierarchy
 from domain.policy_doctrine.sections import Section as SectionModel
-from domain.policy_doctrine.version_strategy import SemanticVersion, VersionStrategy
+from domain.policy_doctrine.version_strategy import SemanticVersion
+from domain.policy_doctrine.version_strategy import VersionStrategy
 from domain.policy_doctrine.writing_principles import WritingPrinciple
 
 

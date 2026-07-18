@@ -7,9 +7,12 @@ truth for limits and walking is ``EvaluatorTreeComplexitySpec``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from domain.directive_graph.directive_graph import DirectiveGraph
 from domain.directive_graph.specifications.evaluator_complexity import EvaluatorTreeComplexitySpec
+
+if TYPE_CHECKING:
+    from domain.directive_graph.directive_graph import DirectiveGraph
 
 
 @dataclass(frozen=True)
@@ -35,10 +38,10 @@ class EvaluatorTreeValidator:
         """Bind to the shared complexity specification."""
         self._spec = EvaluatorTreeComplexitySpec()
 
-    def validate(self, graph: DirectiveGraph) -> list[EvaluatorTreeViolation]:
+    def validate(self, a_graph: DirectiveGraph) -> list[EvaluatorTreeViolation]:
         """Return all evaluator tree violations for the graph."""
         violations: list[EvaluatorTreeViolation] = []
-        for message in self._spec.violations(graph):
+        for message in self._spec.violations(a_graph):
             # Messages look like: Directive 'RULE-001': evaluator ...
             directive_id = "*"
             if message.startswith("Directive ") and ":" in message:

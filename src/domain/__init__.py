@@ -11,7 +11,12 @@ Bounded contexts:
 
 from __future__ import annotations
 
-from domain import authorization, directive_graph, finding, inspection, policy_doctrine, shared
+from domain import authorization
+from domain import directive_graph
+from domain import finding
+from domain import inspection
+from domain import policy_doctrine
+from domain import shared
 
 __all__ = [
     "authorization",
@@ -21,4 +26,3 @@ __all__ = [
     "policy_doctrine",
     "shared",
 ]
-

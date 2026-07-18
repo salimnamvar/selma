@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class LifecycleDefinition(BaseModel):
@@ -17,5 +19,3 @@ class LifecycleDefinition(BaseModel):
     rename: str = Field(min_length=1, description="When to use rename")
     retire: str = Field(min_length=1, description="When to use retire")
     dag_intent: str = Field(min_length=1, description="Constraint on lineage ancestry graph structure")
-
-

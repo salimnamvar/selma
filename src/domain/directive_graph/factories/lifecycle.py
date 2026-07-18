@@ -12,31 +12,33 @@ DirectiveChildrenSpawned, Finalized. Unhandled-event policy: reject.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 import hashlib
 import json
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from domain.directive_graph.directive import Directive
-from domain.directive_graph.directive_graph import DirectiveGraph
-from domain.directive_graph.enums import DirectiveStatus, LineageOperation
-from domain.directive_graph.events import (
-    DirectiveActivated,
-    DirectiveForked,
-    DirectiveMerged,
-    DirectiveRenamed,
-    DirectiveRetired,
-    DirectiveRevised,
-    DirectiveSplit,
-    DirectiveSuperseded,
-)
-from domain.directive_graph.exceptions import (
-    DirectiveNotFoundError,
-    InvalidLifecycleTransitionError,
-    LifecycleInvariantError,
-)
-from domain.directive_graph.scalars import ExecutionId, UtcTimestamp
+from domain.directive_graph.enums import DirectiveStatus
+from domain.directive_graph.enums import LineageOperation
+from domain.directive_graph.events import DirectiveActivated
+from domain.directive_graph.events import DirectiveForked
+from domain.directive_graph.events import DirectiveMerged
+from domain.directive_graph.events import DirectiveRenamed
+from domain.directive_graph.events import DirectiveRetired
+from domain.directive_graph.events import DirectiveRevised
+from domain.directive_graph.events import DirectiveSplit
+from domain.directive_graph.events import DirectiveSuperseded
+from domain.directive_graph.exceptions import DirectiveNotFoundError
+from domain.directive_graph.exceptions import InvalidLifecycleTransitionError
+from domain.directive_graph.exceptions import LifecycleInvariantError
 from domain.directive_graph.value_objects.lineage import Lineage
 from domain.shared.events import DomainEvent
+
+if TYPE_CHECKING:
+    from domain.directive_graph.directive import Directive
+    from domain.directive_graph.directive_graph import DirectiveGraph
+    from domain.directive_graph.scalars import ExecutionId
+    from domain.directive_graph.scalars import UtcTimestamp
 
 
 @dataclass(frozen=True)
@@ -54,37 +56,37 @@ class LifecycleResult:
 
 def _event_meta() -> dict[str, str]:
     return {
-        "event_id": DomainEvent._new_id(),
-        "occurred_at": DomainEvent._now_utc(),
+        "event_id": DomainEvent.new_id(),
+        "occurred_at": DomainEvent.now_utc(),
     }
 
 
 def compute_merge_execution_id(
-    lineage_id: str,
-    parent_lineage_ids: tuple[str, str],
-    parent_execution_ids: tuple[str, str],
-    timestamp: str,
+    a_lineage_id: str,
+    a_parent_lineage_ids: Sequence[str],
+    a_parent_execution_ids: Sequence[str],
+    a_timestamp: str,
 ) -> str:
     """Compute deterministic merge execution ID per SPEC §2.2.2.
 
     Args:
-        lineage_id: Surviving (lexicographic min) lineage root.
-        parent_lineage_ids: Both parent lineage IDs (any order).
-        parent_execution_ids: Both parent execution IDs (any order).
-        timestamp: Lineage operation timestamp.
+        a_lineage_id: Surviving (lexicographic min) lineage root.
+        a_parent_lineage_ids: Both parent lineage IDs (any order).
+        a_parent_execution_ids: Both parent execution IDs (any order).
+        a_timestamp: Lineage operation timestamp.
 
     Returns:
         Execution ID of the form ``{lineage_id}-M{16 hex uppercase}``.
     """
     payload = {
         "operation": "merge",
-        "parent_execution_ids": sorted(parent_execution_ids),
-        "parent_lineage_ids": sorted(parent_lineage_ids),
-        "timestamp": timestamp,
+        "parent_execution_ids": sorted(a_parent_execution_ids),
+        "parent_lineage_ids": sorted(a_parent_lineage_ids),
+        "timestamp": a_timestamp,
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16].upper()
-    return f"{lineage_id}-M{digest}"
+    return f"{a_lineage_id}-M{digest}"
 
 
 class DirectiveLifecycleFactory:
@@ -93,19 +95,19 @@ class DirectiveLifecycleFactory:
     All methods are pure: they never mutate the input graph.
     """
 
-    def activate(self, graph: DirectiveGraph, execution_id: ExecutionId) -> LifecycleResult:
+    def activate(self, a_graph: DirectiveGraph, a_execution_id: ExecutionId) -> LifecycleResult:
         """Activate a draft directive.
 
         Args:
-            graph: Current graph.
-            execution_id: Directive to activate.
+            a_graph: Current graph.
+            a_execution_id: Directive to activate.
 
         Returns:
             Updated graph and ``DirectiveActivated`` event.
         """
-        directive = self._require(graph, execution_id)
+        directive = self._require(a_graph, a_execution_id)
         activated = directive.activate()
-        new_graph = graph.replace_directive(activated)
+        new_graph = a_graph.replace_directive(activated)
         event = DirectiveActivated(
             **_event_meta(),
             execution_id=activated.id,
@@ -113,19 +115,19 @@ class DirectiveLifecycleFactory:
         )
         return LifecycleResult(graph=new_graph, events=(event,))
 
-    def retire(self, graph: DirectiveGraph, execution_id: ExecutionId) -> LifecycleResult:
+    def retire(self, a_graph: DirectiveGraph, a_execution_id: ExecutionId) -> LifecycleResult:
         """Retire an active directive (status → deprecated).
 
         Args:
-            graph: Current graph.
-            execution_id: Directive to retire.
+            a_graph: Current graph.
+            a_execution_id: Directive to retire.
 
         Returns:
             Updated graph and ``DirectiveRetired`` event.
         """
-        directive = self._require(graph, execution_id)
+        directive = self._require(a_graph, a_execution_id)
         retired = directive.retire()
-        new_graph = graph.replace_directive(retired)
+        new_graph = a_graph.replace_directive(retired)
         event = DirectiveRetired(
             **_event_meta(),
             execution_id=retired.id,
@@ -135,85 +137,83 @@ class DirectiveLifecycleFactory:
 
     def supersede(
         self,
-        graph: DirectiveGraph,
-        execution_id: ExecutionId,
-        successor_id: ExecutionId,
+        a_graph: DirectiveGraph,
+        a_execution_id: ExecutionId,
+        a_successor_id: ExecutionId,
     ) -> LifecycleResult:
         """Supersede an active directive with a successor.
 
         Args:
-            graph: Current graph.
-            execution_id: Directive being superseded.
-            successor_id: Replacing directive (must exist and be active/draft).
+            a_graph: Current graph.
+            a_execution_id: Directive being superseded.
+            a_successor_id: Replacing directive (must exist and be active/draft).
 
         Returns:
             Updated graph and ``DirectiveSuperseded`` event.
         """
-        directive = self._require(graph, execution_id)
-        successor = self._require(graph, successor_id)
+        directive = self._require(a_graph, a_execution_id)
+        successor = self._require(a_graph, a_successor_id)
         if successor.status not in (DirectiveStatus.ACTIVE, DirectiveStatus.DRAFT):
-            raise LifecycleInvariantError(
-                f"Successor {successor_id!r} must be active or draft "
-                f"(got {successor.status!r})"
-            )
-        superseded = directive.supersede(successor_id)
-        new_graph = graph.replace_directive(superseded)
+            msg = f"Successor {a_successor_id!r} must be active or draft (got {successor.status!r})"
+            raise LifecycleInvariantError(msg)
+        superseded = directive.supersede(a_successor_id)
+        new_graph = a_graph.replace_directive(superseded)
         event = DirectiveSuperseded(
             **_event_meta(),
             execution_id=superseded.id,
             lineage_id=superseded.lineage_id,
-            successor_id=successor_id,
+            successor_id=a_successor_id,
         )
         return LifecycleResult(graph=new_graph, events=(event,))
 
     def revise(
         self,
-        graph: DirectiveGraph,
-        execution_id: ExecutionId,
-        revision: str,
-        **field_updates: object,
+        a_graph: DirectiveGraph,
+        a_execution_id: ExecutionId,
+        a_revision: str,
+        **a_field_updates: object,
     ) -> LifecycleResult:
         """Revise a directive (same identity; no lineage record required).
 
         Args:
-            graph: Current graph.
-            execution_id: Directive to revise.
-            revision: New revision identifier.
-            **field_updates: Optional non-identity field updates.
+            a_graph: Current graph.
+            a_execution_id: Directive to revise.
+            a_revision: New revision identifier.
+            **a_field_updates: Optional non-identity field updates.
 
         Returns:
             Updated graph and ``DirectiveRevised`` event.
         """
-        directive = self._require(graph, execution_id)
-        revised = directive.with_revision(revision, **field_updates)
-        new_graph = graph.replace_directive(revised)
+        directive = self._require(a_graph, a_execution_id)
+        revised = directive.with_revision(a_revision, **a_field_updates)
+        new_graph = a_graph.replace_directive(revised)
         event = DirectiveRevised(
             **_event_meta(),
             execution_id=revised.id,
             lineage_id=revised.lineage_id,
-            directive_revision=revision,
+            directive_revision=a_revision,
         )
         return LifecycleResult(graph=new_graph, events=(event,))
 
     def rename(
         self,
-        graph: DirectiveGraph,
-        execution_id: ExecutionId,
-        message: str,
+        a_graph: DirectiveGraph,
+        a_execution_id: ExecutionId,
+        a_message: str,
     ) -> LifecycleResult:
         """Rename a directive message (identity unchanged).
 
         Args:
-            graph: Current graph.
-            execution_id: Directive to rename.
-            message: New human-readable message.
+            a_graph: Current graph.
+            a_execution_id: Directive to rename.
+            a_message: New human-readable message.
 
         Returns:
             Updated graph and ``DirectiveRenamed`` event.
         """
-        directive = self._require(graph, execution_id)
-        renamed = directive.with_message(message)
-        new_graph = graph.replace_directive(renamed)
+        directive = self._require(a_graph, a_execution_id)
+        renamed = directive.with_message(a_message)
+        new_graph = a_graph.replace_directive(renamed)
         event = DirectiveRenamed(
             **_event_meta(),
             execution_id=renamed.id,
@@ -223,11 +223,11 @@ class DirectiveLifecycleFactory:
 
     def fork(
         self,
-        graph: DirectiveGraph,
-        parent_execution_id: ExecutionId,
-        child_execution_ids: tuple[ExecutionId, ExecutionId],
-        timestamp: UtcTimestamp,
-        reason: str | None = None,
+        a_graph: DirectiveGraph,
+        a_parent_execution_id: ExecutionId,
+        a_child_execution_ids: tuple[ExecutionId, ExecutionId],
+        a_timestamp: UtcTimestamp,
+        a_reason: str | None = None,
     ) -> LifecycleResult:
         """Fork a parent into two new execution IDs sharing the lineage root.
 
@@ -235,34 +235,36 @@ class DirectiveLifecycleFactory:
         receive ``lineage.operation=fork``.
 
         Args:
-            graph: Current graph.
-            parent_execution_id: Source directive.
-            child_execution_ids: Two new unique execution IDs.
-            timestamp: Operation timestamp (UTC).
-            reason: Optional human-readable reason.
+            a_graph: Current graph.
+            a_parent_execution_id: Source directive.
+            a_child_execution_ids: Two new unique execution IDs.
+            a_timestamp: Operation timestamp (UTC).
+            a_reason: Optional human-readable reason.
 
         Returns:
             Updated graph and ``DirectiveForked`` event.
         """
-        parent = self._require(graph, parent_execution_id)
+        parent = self._require(a_graph, a_parent_execution_id)
         if parent.status not in (DirectiveStatus.ACTIVE, DirectiveStatus.DRAFT):
-            raise InvalidLifecycleTransitionError(
-                f"Cannot fork directive {parent_execution_id!r} with status {parent.status!r}"
-            )
-        if child_execution_ids[0] == child_execution_ids[1]:
-            raise LifecycleInvariantError("Fork child execution IDs must be distinct")
-        for cid in child_execution_ids:
-            if cid in graph.execution_ids():
-                raise LifecycleInvariantError(f"Execution ID already exists: {cid!r}")
+            msg = f"Cannot fork directive {a_parent_execution_id!r} with status {parent.status!r}"
+            raise InvalidLifecycleTransitionError(msg)
+        if a_child_execution_ids[0] == a_child_execution_ids[1]:
+            msg = "Fork child execution IDs must be distinct"
+            raise LifecycleInvariantError(msg)
+        for cid in a_child_execution_ids:
+            if cid in a_graph.execution_ids():
+                msg = f"Execution ID already exists: {cid!r}"
+                raise LifecycleInvariantError(msg)
             if cid == parent.id:
-                raise LifecycleInvariantError("Fork child ID must not equal parent ID")
+                msg = "Fork child ID must not equal parent ID"
+                raise LifecycleInvariantError(msg)
 
         lineage = Lineage(
             operation=LineageOperation.FORK,
             parent_lineage_ids=(parent.lineage_id,),
             parent_execution_ids=(parent.id,),
-            timestamp=timestamp,
-            reason=reason,
+            timestamp=a_timestamp,
+            reason=a_reason,
         )
         children = tuple(
             parent.model_copy(
@@ -271,31 +273,29 @@ class DirectiveLifecycleFactory:
                     "lineage_id": parent.lineage_id,
                     "lineage": lineage,
                     "status": DirectiveStatus.DRAFT,
-                    "created_at": timestamp,
+                    "created_at": a_timestamp,
                 }
             )
-            for cid in child_execution_ids
+            for cid in a_child_execution_ids
         )
         retired_parent = parent.model_copy(update={"status": DirectiveStatus.DEPRECATED})
-        new_graph = graph.with_directives(
-            self._replace_and_append(graph.directives, retired_parent, children)
-        )
+        new_graph = a_graph.with_directives(self._replace_and_append(a_graph.directives, retired_parent, children))
         event = DirectiveForked(
             **_event_meta(),
             parent_execution_id=parent.id,
             lineage_id=parent.lineage_id,
-            child_execution_ids=child_execution_ids,
+            child_execution_ids=a_child_execution_ids,
         )
         return LifecycleResult(graph=new_graph, events=(event,))
 
     def merge(
         self,
-        graph: DirectiveGraph,
-        parent_a_id: ExecutionId,
-        parent_b_id: ExecutionId,
-        timestamp: UtcTimestamp,
-        reason: str | None = None,
-        merged_message: str | None = None,
+        a_graph: DirectiveGraph,
+        a_parent_a_id: ExecutionId,
+        a_parent_b_id: ExecutionId,
+        a_timestamp: UtcTimestamp,
+        a_reason: str | None = None,
+        a_merged_message: str | None = None,
     ) -> LifecycleResult:
         """Merge two directives into one new execution ID (SPEC §2.2.2).
 
@@ -303,26 +303,26 @@ class DirectiveLifecycleFactory:
         lexicographic minimum of the parents' lineage IDs.
 
         Args:
-            graph: Current graph.
-            parent_a_id: First parent execution ID.
-            parent_b_id: Second parent execution ID.
-            timestamp: Operation timestamp (UTC).
-            reason: Optional human-readable reason.
-            merged_message: Optional message for the merged directive;
+            a_graph: Current graph.
+            a_parent_a_id: First parent execution ID.
+            a_parent_b_id: Second parent execution ID.
+            a_timestamp: Operation timestamp (UTC).
+            a_reason: Optional human-readable reason.
+            a_merged_message: Optional message for the merged directive;
                 defaults to parent A's message.
 
         Returns:
             Updated graph and ``DirectiveMerged`` event.
         """
-        if parent_a_id == parent_b_id:
-            raise LifecycleInvariantError("Cannot merge a directive with itself")
-        parent_a = self._require(graph, parent_a_id)
-        parent_b = self._require(graph, parent_b_id)
+        if a_parent_a_id == a_parent_b_id:
+            msg = "Cannot merge a directive with itself"
+            raise LifecycleInvariantError(msg)
+        parent_a = self._require(a_graph, a_parent_a_id)
+        parent_b = self._require(a_graph, a_parent_b_id)
         for p in (parent_a, parent_b):
             if p.status not in (DirectiveStatus.ACTIVE, DirectiveStatus.DRAFT):
-                raise InvalidLifecycleTransitionError(
-                    f"Cannot merge directive {p.id!r} with status {p.status!r}"
-                )
+                msg = f"Cannot merge directive {p.id!r} with status {p.status!r}"
+                raise InvalidLifecycleTransitionError(msg)
 
         # SPEC §2.2.2: sorted parent sets; merge cardinality is always 2 entries.
         # When both parents share one lineage_id (post-fork siblings), both slots
@@ -334,17 +334,18 @@ class DirectiveLifecycleFactory:
             surviving_lineage,
             sorted_lineage,
             sorted_exec,
-            timestamp,
+            a_timestamp,
         )
-        if merged_id in graph.execution_ids():
-            raise LifecycleInvariantError(f"Merge execution ID already exists: {merged_id!r}")
+        if merged_id in a_graph.execution_ids():
+            msg = f"Merge execution ID already exists: {merged_id!r}"
+            raise LifecycleInvariantError(msg)
 
         lineage = Lineage(
             operation=LineageOperation.MERGE,
             parent_lineage_ids=sorted_lineage,
             parent_execution_ids=sorted_exec,
-            timestamp=timestamp,
-            reason=reason,
+            timestamp=a_timestamp,
+            reason=a_reason,
         )
         # Prefer content from the parent whose lineage root survives.
         base = parent_a if parent_a.lineage_id == surviving_lineage else parent_b
@@ -354,15 +355,15 @@ class DirectiveLifecycleFactory:
                 "lineage_id": surviving_lineage,
                 "lineage": lineage,
                 "status": DirectiveStatus.DRAFT,
-                "created_at": timestamp,
-                "message": merged_message if merged_message is not None else base.message,
+                "created_at": a_timestamp,
+                "message": a_merged_message if a_merged_message is not None else base.message,
             }
         )
         retired_a = parent_a.model_copy(update={"status": DirectiveStatus.DEPRECATED})
         retired_b = parent_b.model_copy(update={"status": DirectiveStatus.DEPRECATED})
         replaced = {retired_a.id: retired_a, retired_b.id: retired_b}
-        new_directives = (*(replaced.get(d.id, d) for d in graph.directives), merged)
-        new_graph = graph.with_directives(new_directives)
+        new_directives = (*(replaced.get(d.id, d) for d in a_graph.directives), merged)
+        new_graph = a_graph.with_directives(new_directives)
         event = DirectiveMerged(
             **_event_meta(),
             parent_execution_ids=sorted_exec,
@@ -374,45 +375,48 @@ class DirectiveLifecycleFactory:
 
     def split(
         self,
-        graph: DirectiveGraph,
-        parent_execution_id: ExecutionId,
-        child_execution_ids: tuple[ExecutionId, ...],
-        timestamp: UtcTimestamp,
-        reason: str | None = None,
+        a_graph: DirectiveGraph,
+        a_parent_execution_id: ExecutionId,
+        a_child_execution_ids: tuple[ExecutionId, ...],
+        a_timestamp: UtcTimestamp,
+        a_reason: str | None = None,
     ) -> LifecycleResult:
         """Split a parent into multiple new execution IDs sharing the lineage root.
 
         Args:
-            graph: Current graph.
-            parent_execution_id: Source directive.
-            child_execution_ids: Two or more new unique execution IDs.
-            timestamp: Operation timestamp (UTC).
-            reason: Optional human-readable reason.
+            a_graph: Current graph.
+            a_parent_execution_id: Source directive.
+            a_child_execution_ids: Two or more new unique execution IDs.
+            a_timestamp: Operation timestamp (UTC).
+            a_reason: Optional human-readable reason.
 
         Returns:
             Updated graph and ``DirectiveSplit`` event.
         """
-        parent = self._require(graph, parent_execution_id)
+        parent = self._require(a_graph, a_parent_execution_id)
         if parent.status not in (DirectiveStatus.ACTIVE, DirectiveStatus.DRAFT):
-            raise InvalidLifecycleTransitionError(
-                f"Cannot split directive {parent_execution_id!r} with status {parent.status!r}"
-            )
-        if len(child_execution_ids) < 2:
-            raise LifecycleInvariantError("Split requires at least 2 child execution IDs")
-        if len(child_execution_ids) != len(set(child_execution_ids)):
-            raise LifecycleInvariantError("Split child execution IDs must be unique")
-        for cid in child_execution_ids:
-            if cid in graph.execution_ids():
-                raise LifecycleInvariantError(f"Execution ID already exists: {cid!r}")
+            msg = f"Cannot split directive {a_parent_execution_id!r} with status {parent.status!r}"
+            raise InvalidLifecycleTransitionError(msg)
+        if len(a_child_execution_ids) < 2:
+            msg = "Split requires at least 2 child execution IDs"
+            raise LifecycleInvariantError(msg)
+        if len(a_child_execution_ids) != len(set(a_child_execution_ids)):
+            msg = "Split child execution IDs must be unique"
+            raise LifecycleInvariantError(msg)
+        for cid in a_child_execution_ids:
+            if cid in a_graph.execution_ids():
+                msg = f"Execution ID already exists: {cid!r}"
+                raise LifecycleInvariantError(msg)
             if cid == parent.id:
-                raise LifecycleInvariantError("Split child ID must not equal parent ID")
+                msg = "Split child ID must not equal parent ID"
+                raise LifecycleInvariantError(msg)
 
         lineage = Lineage(
             operation=LineageOperation.SPLIT,
             parent_lineage_ids=(parent.lineage_id,),
             parent_execution_ids=(parent.id,),
-            timestamp=timestamp,
-            reason=reason,
+            timestamp=a_timestamp,
+            reason=a_reason,
         )
         children = tuple(
             parent.model_copy(
@@ -421,20 +425,18 @@ class DirectiveLifecycleFactory:
                     "lineage_id": parent.lineage_id,
                     "lineage": lineage,
                     "status": DirectiveStatus.DRAFT,
-                    "created_at": timestamp,
+                    "created_at": a_timestamp,
                 }
             )
-            for cid in child_execution_ids
+            for cid in a_child_execution_ids
         )
         retired_parent = parent.model_copy(update={"status": DirectiveStatus.DEPRECATED})
-        new_graph = graph.with_directives(
-            self._replace_and_append(graph.directives, retired_parent, children)
-        )
+        new_graph = a_graph.with_directives(self._replace_and_append(a_graph.directives, retired_parent, children))
         event = DirectiveSplit(
             **_event_meta(),
             parent_execution_id=parent.id,
             lineage_id=parent.lineage_id,
-            child_execution_ids=child_execution_ids,
+            child_execution_ids=a_child_execution_ids,
         )
         return LifecycleResult(graph=new_graph, events=(event,))
 
@@ -443,17 +445,17 @@ class DirectiveLifecycleFactory:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _require(graph: DirectiveGraph, execution_id: ExecutionId) -> Directive:
-        directive = graph.get_by_id(execution_id)
+    def _require(a_graph: DirectiveGraph, a_execution_id: ExecutionId) -> Directive:
+        directive = a_graph.get_by_id(a_execution_id)
         if directive is None:
-            raise DirectiveNotFoundError(execution_id)
+            raise DirectiveNotFoundError(a_execution_id)
         return directive
 
     @staticmethod
     def _replace_and_append(
-        directives: tuple[Directive, ...],
-        replacement: Directive,
-        extras: tuple[Directive, ...],
+        a_directives: tuple[Directive, ...],
+        a_replacement: Directive,
+        a_extras: tuple[Directive, ...],
     ) -> tuple[Directive, ...]:
-        updated = tuple(replacement if d.id == replacement.id else d for d in directives)
-        return updated + extras
+        updated = tuple(a_replacement if d.id == a_replacement.id else d for d in a_directives)
+        return updated + a_extras

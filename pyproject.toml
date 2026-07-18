@@ -123,6 +123,8 @@ ignore = [
   "PLR0912", # too many branches — sometimes necessary
   "PLR0915", # too many statements — sometimes necessary
   "SLF001",  # private member access — needed in tests
+  "TC001",   # type-checking import — breaks pydantic with from __future__ import annotations
+  "TC003",   # type-checking stdlib import — same reason
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -160,6 +162,11 @@ ignore = [
 "scripts/**/*.py" = [
     "ANN",     # type annotations not required in scripts
     "T201",    # print statement — allowed in scripts
+    "B008",    # function call in argument defaults — typer idiom
+    "FBT001",  # boolean positional — CLI flags
+    "FBT002",  # boolean default — CLI flags
+    "PLC0415", # import not at top level — circular import guards
+    "F821",    # undefined name — TYPE_CHECKING blocks
 ]
 
 [tool.ruff.lint.isort]

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
-from domain.finding.enums import Disposition, FsmState, Severity
+from domain.finding.enums import Disposition
+from domain.finding.enums import FsmState
+from domain.finding.enums import Severity
 
 
 class Finding(BaseModel):

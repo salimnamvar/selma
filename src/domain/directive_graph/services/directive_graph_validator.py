@@ -8,17 +8,22 @@ Reference: SPECIFICATION.md §2.2.3, §2.9, §2.15
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+from typing import TYPE_CHECKING
 
-from domain.directive_graph.directive_graph import DirectiveGraph
 from domain.directive_graph.services.lineage_validator import LineageValidator
-from domain.directive_graph.specifications.base import Specification
 from domain.directive_graph.specifications.evaluator_complexity import EvaluatorTreeComplexitySpec
 from domain.directive_graph.specifications.metadata_size import MetadataSizeSpec
-from domain.directive_graph.specifications.no_cycles import NoDeferToCyclesSpec, NoDependencyCyclesSpec
+from domain.directive_graph.specifications.no_cycles import NoDeferToCyclesSpec
+from domain.directive_graph.specifications.no_cycles import NoDependencyCyclesSpec
 from domain.directive_graph.specifications.supersession import SupersessionBindingSpec
 from domain.directive_graph.specifications.unique_ids import UniqueExecutionIdsSpec
 from domain.directive_graph.specifications.valid_references import ValidCrossReferencesSpec
+
+if TYPE_CHECKING:
+    from domain.directive_graph.directive_graph import DirectiveGraph
+    from domain.directive_graph.specifications.base import Specification
 
 
 @dataclass(frozen=True)
@@ -57,11 +62,11 @@ class DirectiveGraphValidator:
         ]
         self._lineage_validator = LineageValidator()
 
-    def validate(self, graph: DirectiveGraph) -> ValidationResult:
+    def validate(self, a_graph: DirectiveGraph) -> ValidationResult:
         """Run all specifications and domain services against the graph.
 
         Args:
-            graph: The graph to validate.
+            a_graph: The graph to validate.
 
         Returns:
             Structured result with all errors collected.
@@ -69,9 +74,9 @@ class DirectiveGraphValidator:
         errors: list[str] = []
 
         for spec in self._specs:
-            errors.extend(spec.violations(graph))
+            errors.extend(spec.violations(a_graph))
 
-        for violation in self._lineage_validator.validate(graph):
+        for violation in self._lineage_validator.validate(a_graph):
             errors.append(f"[{violation.directive_id}] {violation.message}")
 
         return ValidationResult(

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_graph
 
 from domain.directive_graph.services.directive_graph_validator import DirectiveGraphValidator
 from domain.directive_graph.services.directive_graph_validator import ValidationResult
-from tests.domain.directive_graph.conftest import make_directive_payload
-from tests.domain.directive_graph.conftest import make_graph
 
 
 @pytest.fixture

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from domain.policy_doctrine.version_strategy import SemanticVersion
 

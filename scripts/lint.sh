@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Comprehensive lint + format + type check for *this service only*.
-# Always operates on src/ and tests/ relative to the model_management service dir.
+# Operates on src/, tests/, and scripts/ relative to the service dir.
 # Run from anywhere, or via: bash scripts/lint.sh
 #
 # Checks (in order):
@@ -34,6 +34,7 @@ LINT_DIR="${SCRIPT_DIR}/lint"
 
 SRC_DIR="${SERVICE_ROOT}/src"
 TESTS_DIR="${SERVICE_ROOT}/tests"
+SCRIPTS_DIR="${SERVICE_ROOT}/scripts"
 
 # Source modular lint scripts
 # shellcheck source=lint/common.sh
@@ -66,7 +67,7 @@ fi
 dirs=()
 while IFS= read -r d; do
   dirs+=("${d}")
-done < <(lint_existing_dirs "${SRC_DIR}" "${TESTS_DIR}")
+done < <(lint_existing_dirs "${SRC_DIR}" "${TESTS_DIR}" "${SCRIPTS_DIR}")
 
 if [[ ${#dirs[@]} -eq 0 ]]; then
   lint_warn "No src/ or tests/ directories found, nothing to lint"

@@ -74,8 +74,8 @@ class DirectiveMerged(DomainEvent):
     """Two directives were merged into one new execution ID."""
 
     event_type: ClassVar[str] = "directive.merged"
-    parent_execution_ids: tuple[str, str]
-    parent_lineage_ids: tuple[str, str]
+    parent_execution_ids: tuple[str, ...]
+    parent_lineage_ids: tuple[str, ...]
     merged_execution_id: str
     merged_lineage_id: str
 

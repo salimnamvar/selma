@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
-from tests.domain.directive_graph.conftest import (
-    make_directive_payload,
-    make_domain_directive_payload,
-    make_graph,
-    make_graph_payload,
-)
+import pytest
+from tests.domain.directive_graph.conftest import make_directive_payload
+from tests.domain.directive_graph.conftest import make_domain_directive_payload
+from tests.domain.directive_graph.conftest import make_graph
+from tests.domain.directive_graph.conftest import make_graph_payload
 
 from domain.directive_graph.directive_graph import DirectiveGraph
 

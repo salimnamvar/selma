@@ -15,7 +15,9 @@ from __future__ import annotations
 import math
 from typing import Annotated
 
-from pydantic import ConfigDict, Field, RootModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import RootModel
 from pydantic.functional_validators import AfterValidator
 
 # ---------------------------------------------------------------------------
@@ -23,11 +25,12 @@ from pydantic.functional_validators import AfterValidator
 # ---------------------------------------------------------------------------
 
 
-def _require_finite(value: float) -> float:
+def _require_finite(a_value: float) -> float:
     """Reject NaN and ±Infinity; return the value unchanged if finite."""
-    if not math.isfinite(value):
-        raise ValueError(f"value must be a finite IEEE 754 number; got {value!r}")
-    return value
+    if not math.isfinite(a_value):
+        msg = f"value must be a finite IEEE 754 number; got {a_value!r}"
+        raise ValueError(msg)
+    return a_value
 
 
 # ---------------------------------------------------------------------------
@@ -167,16 +170,16 @@ class SemanticVersion(RootModel[str]):
         """
         return int(self.root.split(".")[2])
 
-    def is_major_compatible(self, other: SemanticVersion) -> bool:
+    def is_major_compatible(self, a_other: SemanticVersion) -> bool:
         """Return True iff both versions share the same MAJOR.
 
         Args:
-            other (SemanticVersion): Version to compare against.
+            a_other (SemanticVersion): Version to compare against.
 
         Returns:
             bool: True when major versions are equal.
         """
-        return self.major == other.major
+        return self.major == a_other.major
 
     def __str__(self) -> str:
         return self.root

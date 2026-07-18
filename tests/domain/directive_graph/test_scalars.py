@@ -5,22 +5,21 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.5
 
 from __future__ import annotations
 
+from pydantic import TypeAdapter
+from pydantic import ValidationError
 import pytest
-from pydantic import TypeAdapter, ValidationError
 
-from domain.directive_graph.scalars import (
-    ActorId,
-    AnchorReference,
-    DirectiveReference,
-    ExecutionId,
-    FiniteFloat,
-    LineageId,
-    PolicyContractId,
-    RegexFlags,
-    RegexPattern,
-    SemanticVersion,
-    UtcTimestamp,
-)
+from domain.directive_graph.scalars import ActorId
+from domain.directive_graph.scalars import AnchorReference
+from domain.directive_graph.scalars import DirectiveReference
+from domain.directive_graph.scalars import ExecutionId
+from domain.directive_graph.scalars import FiniteFloat
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import PolicyContractId
+from domain.directive_graph.scalars import RegexFlags
+from domain.directive_graph.scalars import RegexPattern
+from domain.directive_graph.scalars import SemanticVersion
+from domain.directive_graph.scalars import UtcTimestamp
 
 _lineage_id_adapter = TypeAdapter(LineageId)
 _execution_id_adapter = TypeAdapter(ExecutionId)

@@ -5,10 +5,15 @@ Reference: .tmp/Architecture/DOMAIN_ARCHITECTURE.md §2.3
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
 from domain.directive_graph.enums import LineageOperation
-from domain.directive_graph.scalars import ExecutionId, LineageId, UtcTimestamp
+from domain.directive_graph.scalars import ExecutionId
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import UtcTimestamp
 
 
 class Lineage(BaseModel):
@@ -51,13 +56,13 @@ class Lineage(BaseModel):
 
         if self.operation in (LineageOperation.FORK, LineageOperation.SPLIT):
             if n_lineage != 1:
-                raise ValueError(f"{self.operation} requires exactly 1 parent_lineage_id; got {n_lineage}")
-        elif self.operation == LineageOperation.MERGE:
-            if n_lineage != 2:
-                raise ValueError(f"merge requires exactly 2 parent_lineage_ids; got {n_lineage}")
+                msg = f"{self.operation} requires exactly 1 parent_lineage_id; got {n_lineage}"
+                raise ValueError(msg)
+        elif self.operation == LineageOperation.MERGE and n_lineage != 2:
+            msg_0 = f"merge requires exactly 2 parent_lineage_ids; got {n_lineage}"
+            raise ValueError(msg_0)
 
         if n_exec != n_lineage:
-            raise ValueError(
-                f"parent_execution_ids length ({n_exec}) must match " f"parent_lineage_ids length ({n_lineage})"
-            )
+            msg = f"parent_execution_ids length ({n_exec}) must match parent_lineage_ids length ({n_lineage})"
+            raise ValueError(msg)
         return self

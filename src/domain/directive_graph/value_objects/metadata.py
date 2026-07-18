@@ -11,10 +11,15 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+from pydantic import model_validator
 
-from domain.directive_graph.enums import LineagePreservation, SemanticWeightType
-from domain.directive_graph.scalars import LineageId, UtcTimestamp
+from domain.directive_graph.enums import LineagePreservation
+from domain.directive_graph.enums import SemanticWeightType
+from domain.directive_graph.scalars import LineageId
+from domain.directive_graph.scalars import UtcTimestamp
 from domain.directive_graph.value_objects.audit import AuditTrail
 
 # Pattern matches keys that would introduce executable logic into metadata.
@@ -22,11 +27,11 @@ from domain.directive_graph.value_objects.audit import AuditTrail
 _PROHIBITED_KEY_PATTERN: re.Pattern[str] = re.compile(r"^(x-exec|x-eval|x-hint|evaluator_|evaluator\.)")
 
 
-def _check_extensions(extensions: dict[str, Any]) -> dict[str, Any]:
+def _check_extensions(a_extensions: dict[str, Any]) -> dict[str, Any]:
     """Raise ValueError if any extension key matches the prohibited pattern.
 
     Args:
-        extensions: Extension key-value pairs to check.
+        a_extensions: Extension key-value pairs to check.
 
     Returns:
         The unchanged extensions dict.
@@ -34,13 +39,14 @@ def _check_extensions(extensions: dict[str, Any]) -> dict[str, Any]:
     Raises:
         ValueError: If any key matches the executable-hint prohibition pattern.
     """
-    for key in extensions:
+    for key in a_extensions:
         if _PROHIBITED_KEY_PATTERN.match(key):
-            raise ValueError(
+            msg = (
                 f"Metadata key {key!r} matches prohibited executable-hint pattern "
                 f"(x-exec*, x-eval*, x-hint*, evaluator_*, evaluator.*)"
             )
-    return extensions
+            raise ValueError(msg)
+    return a_extensions
 
 
 class NonSurvivingParent(BaseModel):
