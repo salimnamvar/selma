@@ -10,6 +10,34 @@ from scripts.lint.config import DeterminismConfig
 
 _MUTABLE_VALUE_NODES = (ast.Dict, ast.List, ast.Set)
 
+_CONTEXTVAR_CALL_NAMES = frozenset({"ContextVar"})
+
+
+def _is_contextvar_assignment(a_node: ast.Assign | ast.AnnAssign) -> bool:
+    """Check if an assignment creates a ContextVar (language context propagation, not mutable state)."""
+    value = getattr(a_node, "value", None)
+    if value is None or not isinstance(value, ast.Call):
+        return False
+    func = value.func
+    if isinstance(func, ast.Name):
+        return func.id in _CONTEXTVAR_CALL_NAMES
+    if isinstance(func, ast.Attribute):
+        return func.attr in _CONTEXTVAR_CALL_NAMES
+    return False
+
+
+def _is_frozen_dataclass_instantiation(a_node: ast.Assign | ast.AnnAssign) -> bool:
+    """Check if an assignment is a frozen dataclass constructor call (uppercase name = class)."""
+    value = getattr(a_node, "value", None)
+    if value is None or not isinstance(value, ast.Call):
+        return False
+    func = value.func
+    if isinstance(func, ast.Name):
+        return func.id[0:1].isupper()
+    if isinstance(func, ast.Attribute):
+        return func.attr[0:1].isupper()
+    return False
+
 
 def _is_mutable_value(a_node: ast.expr | None) -> bool:
     if a_node is None:
@@ -100,6 +128,8 @@ class NoModuleLevelMutableRule(Rule):
         violations: list[Violation] = []
         for stmt in a_node.body:
             if isinstance(stmt, ast.Assign):
+                if _is_contextvar_assignment(stmt) or _is_frozen_dataclass_instantiation(stmt):
+                    continue
                 for target in stmt.targets:
                     if isinstance(target, ast.Name):
                         name = target.id
@@ -113,6 +143,8 @@ class NoModuleLevelMutableRule(Rule):
                             f"Module-level variable '{name}' forbidden; move into function or class",
                         ))
             elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                if _is_contextvar_assignment(stmt) or _is_frozen_dataclass_instantiation(stmt):
+                    continue
                 name = stmt.target.id
                 if name.isupper() or name == "__all__":
                     continue
