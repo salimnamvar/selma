@@ -111,7 +111,7 @@ class NoStarImportRule(Rule):
 
 
 class InvalidResultSentinelRule(Rule):
-    """SC-004: Module-level INVALID_RESULT sentinel — DISABLED, conflicts with SC-070."""
+    """SC-004: Module-level INVALID_RESULT sentinel (frozen, immutable — no SC-070 conflict)."""
 
     @property
     def code(self) -> str:
@@ -119,8 +119,28 @@ class InvalidResultSentinelRule(Rule):
 
     @property
     def description(self) -> str:
-        return "DISABLED: conflicts with no-module-level-state rule"
+        return "INVALID_RESULT module-level sentinel required"
 
     def check_Module(self, a_node: ast.Module, a_filepath: str) -> list[Violation]:
-        """Disabled: conflicts with no-module-level-state rule."""
+        """Verify the module defines INVALID_RESULT."""
+        has_sentinel = False
+        for stmt in a_node.body:
+            if isinstance(stmt, ast.Assign):
+                for target in stmt.targets:
+                    if isinstance(target, ast.Name) and target.id == "INVALID_RESULT":
+                        has_sentinel = True
+                        break
+            elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                if stmt.target.id == "INVALID_RESULT":
+                    has_sentinel = True
+                    break
+            if has_sentinel:
+                break
+
+        if not has_sentinel:
+            return [Violation(
+                a_filepath, 1, 0,
+                self.code,
+                "Module missing required INVALID_RESULT sentinel",
+            )]
         return []
