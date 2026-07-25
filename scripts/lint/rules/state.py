@@ -7,6 +7,8 @@ from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import DeterminismConfig
 
+INVALID_RESULT = None
+
 
 class DeterminismRule(Rule):
     """SC-071: No non-deterministic calls in business logic."""
@@ -27,21 +29,23 @@ class DeterminismRule(Rule):
     def description(self) -> str:
         return "Deterministic execution (no datetime.now/random/etc.)"
 
-    def check_Call(self, node: ast.Call, filepath: str) -> list[Violation]:
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
-            mod = node.func.value.id
-            meth = node.func.attr
+    def check_Call(self, a_node: ast.Call, a_filepath: str) -> list[Violation]:
+        """Check for non-deterministic function calls."""
+        violations: list[Violation] = []
+        if isinstance(a_node.func, ast.Attribute) and isinstance(a_node.func.value, ast.Name):
+            mod = a_node.func.value.id
+            meth = a_node.func.attr
             if mod in self._forbidden and meth in self._forbidden[mod]:
-                return [Violation(
-                    filepath, node.lineno, node.col_offset,
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
                     self.code,
                     f"Non-deterministic call '{mod}.{meth}()' forbidden; inject time/random source",
                 )]
-        return []
+        return violations
 
 
 class NoModuleLevelMutableRule(Rule):
-    """SC-070: No module-level mutable state."""
+    """SC-070: No module-level variable assignments."""
 
     @property
     def code(self) -> str:
@@ -49,31 +53,31 @@ class NoModuleLevelMutableRule(Rule):
 
     @property
     def description(self) -> str:
-        return "No module-level mutable state"
+        return "No module-level variables"
 
-    def check_Module(self, node: ast.Module, filepath: str) -> list[Violation]:
+    def check_Module(self, a_node: ast.Module, a_filepath: str) -> list[Violation]:
+        """Check that no mutable module-level variables are defined."""
         violations: list[Violation] = []
-        for stmt in node.body:
+        for stmt in a_node.body:
             if isinstance(stmt, ast.Assign):
                 for target in stmt.targets:
                     if isinstance(target, ast.Name):
                         name = target.id
                         if name.isupper() or name.startswith("_"):
                             continue
-                        if isinstance(stmt.value, (ast.List, ast.Dict, ast.Set, ast.Call)):
-                            violations.append(Violation(
-                                filepath, stmt.lineno, stmt.col_offset,
-                                self.code,
-                                f"Module-level mutable state '{name}' forbidden; use frozen dataclass or constant",
-                            ))
+                        violations.append(Violation(
+                            a_filepath, stmt.lineno, stmt.col_offset,
+                            self.code,
+                            f"Module-level variable '{name}' forbidden; move into function or class",
+                        ))
             elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
                 name = stmt.target.id
                 if name.isupper() or name.startswith("_"):
                     continue
-                if stmt.value is not None and isinstance(stmt.value, (ast.List, ast.Dict, ast.Set)):
+                if stmt.value is not None:
                     violations.append(Violation(
-                        filepath, stmt.lineno, stmt.col_offset,
+                        a_filepath, stmt.lineno, stmt.col_offset,
                         self.code,
-                        f"Module-level mutable state '{name}' forbidden",
+                        f"Module-level variable '{name}' forbidden; move into function or class",
                     ))
         return violations

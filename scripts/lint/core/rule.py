@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
+import ast
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from scripts.lint.core.violation import Violation
+
+INVALID_RESULT = None
 
 
 class Rule(ABC):

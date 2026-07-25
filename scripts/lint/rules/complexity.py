@@ -7,6 +7,8 @@ from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import ComplexityConfig
 
+INVALID_RESULT = None
+
 _EXECUTABLE_NODES = (
     ast.Assign, ast.AugAssign, ast.AnnAssign,
     ast.Expr, ast.If, ast.For, ast.While, ast.With, ast.Try,
@@ -29,17 +31,19 @@ class FunctionLengthRule(Rule):
     def description(self) -> str:
         return f"Function length <= {self._max} lines"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check that function does not exceed maximum executable lines."""
         lines: set[int] = set()
-        for child in ast.walk(node):
+        for child in ast.walk(a_node):
             if isinstance(child, _EXECUTABLE_NODES) and hasattr(child, "lineno"):
                 lines.add(child.lineno)
+        violations: list[Violation] = []
         if len(lines) > self._max:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
-                f"Function '{node.name}' has {len(lines)} executable lines (max {self._max})",
+                f"Function '{a_node.name}' has {len(lines)} executable lines (max {self._max})",
             )]
-        return []
+        return violations
 
     check_AsyncFunctionDef = check_FunctionDef

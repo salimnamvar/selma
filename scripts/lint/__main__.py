@@ -22,6 +22,8 @@ from scripts.lint.runners.pylint import PylintRunner
 from scripts.lint.runners.pyright import PyrightRunner
 from scripts.lint.runners.base import ToolResult
 
+INVALID_RESULT = None
+
 
 def _print_result(v: Violation, fmt: str) -> None:
     if fmt == "json":
@@ -43,6 +45,7 @@ def _print_tool_result(result: ToolResult) -> None:
 
 
 def main() -> None:
+    """Parse CLI arguments and run lint checks."""
     parser = argparse.ArgumentParser(
         prog="selma-lint",
         description="Python AST-based linter enforcing selma coding standards",

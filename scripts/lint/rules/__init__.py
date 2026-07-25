@@ -17,9 +17,12 @@ from scripts.lint.rules.style import APrefixRule, FunctionContractRule, NoMutabl
 from scripts.lint.rules.imports import ImportInFunctionRule
 from scripts.lint.rules.b_continue import BContinueRule
 
+INVALID_RESULT = None
 
-def all_rules(config: LintConfig | None = None) -> list[Rule]:
-    cfg = config or LintConfig()
+
+def all_rules(a_config: LintConfig | None = None) -> list[Rule]:
+    """Return all registered lint rules, filtered by config."""
+    cfg = a_config or LintConfig()
     disabled = frozenset(cfg.rules.disabled)
 
     rules: list[Rule] = [

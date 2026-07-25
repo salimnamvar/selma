@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import shutil
 import subprocess
 
+INVALID_RESULT = None
+
 
 @dataclass(frozen=True, slots=True)
 class ToolResult:
@@ -24,7 +26,7 @@ class ToolRunner(ABC):
         """Human-readable tool name."""
 
     @abstractmethod
-    def run(self, paths: list[str], **kwargs: object) -> ToolResult:
+    def run(self, a_paths: list[str], **kwargs: object) -> ToolResult:
         """Execute the tool on given paths and return structured result."""
 
     def _resolve_bin(self, hint: str | None = None) -> str | None:

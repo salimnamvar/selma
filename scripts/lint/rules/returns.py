@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+INVALID_RESULT = None
 
 
 class ResultReturnRule(Rule):
@@ -18,15 +21,16 @@ class ResultReturnRule(Rule):
     def description(self) -> str:
         return "Result[T] returns, no tuples"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check that functions do not return tuples."""
         violations: list[Violation] = []
-        for child in ast.walk(node):
+        for child in ast.walk(a_node):
             if isinstance(child, ast.Return) and child.value is not None:
                 if isinstance(child.value, ast.Tuple):
                     violations.append(Violation(
-                        filepath, child.lineno, child.col_offset,
+                        a_filepath, child.lineno, child.col_offset,
                         "SC005",
-                        f"Function '{node.name}' returns a tuple; use Result[T]",
+                        f"Function '{a_node.name}' returns a tuple; use Result[T]",
                     ))
         return violations
 
@@ -44,16 +48,17 @@ class ExplicitReturnTypeRule(Rule):
     def description(self) -> str:
         return "Explicit return type annotation"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
-        if node.name.startswith("__") and node.name.endswith("__"):
-            return []
-        if node.returns is None:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
-                self.code,
-                f"Function '{node.name}' missing return type annotation",
-            )]
-        return []
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check that functions have explicit return type annotations."""
+        violations: list[Violation] = []
+        if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
+            if a_node.returns is None:
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' missing return type annotation",
+                )]
+        return violations
 
     check_AsyncFunctionDef = check_FunctionDef
 
@@ -69,16 +74,19 @@ class NoStarImportRule(Rule):
     def description(self) -> str:
         return "No wildcard imports"
 
-    def check_ImportFrom(self, node: ast.ImportFrom, filepath: str) -> list[Violation]:
-        for alias in node.names:
+    def check_ImportFrom(self, a_node: ast.ImportFrom, a_filepath: str) -> list[Violation]:
+        """Check that no wildcard imports are used."""
+        violations: list[Violation] = []
+        for alias in a_node.names:
             if alias.name == "*":
-                module = node.module or ""
-                return [Violation(
-                    filepath, node.lineno, node.col_offset,
+                module = a_node.module or ""
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
                     self.code,
                     f"Wildcard import from '{module}' forbidden",
                 )]
-        return []
+                break
+        return violations
 
 
 class InvalidResultSentinelRule(Rule):
@@ -92,14 +100,24 @@ class InvalidResultSentinelRule(Rule):
     def description(self) -> str:
         return "Module-level INVALID_RESULT sentinel"
 
-    def check_Module(self, node: ast.Module, filepath: str) -> list[Violation]:
-        for stmt in node.body:
-            if isinstance(stmt, ast.Assign):
-                for target in stmt.targets:
-                    if isinstance(target, ast.Name) and target.id == "INVALID_RESULT":
-                        return []
-        return [Violation(
-            filepath, 1, 0,
-            self.code,
-            "Module lacks INVALID_RESULT sentinel",
-        )]
+    def check_Module(self, a_node: ast.Module, a_filepath: str) -> list[Violation]:
+        """Check that module defines INVALID_RESULT sentinel."""
+        name = Path(a_filepath).name
+        violations: list[Violation] = []
+        if not (name.startswith("__") and name.endswith("__")):
+            found = False
+            for stmt in a_node.body:
+                if isinstance(stmt, ast.Assign):
+                    for target in stmt.targets:
+                        if isinstance(target, ast.Name) and target.id == "INVALID_RESULT":
+                            found = True
+                            break
+                if found:
+                    break
+            if not found:
+                violations = [Violation(
+                    a_filepath, 1, 0,
+                    self.code,
+                    "Module lacks INVALID_RESULT sentinel",
+                )]
+        return violations

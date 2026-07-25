@@ -6,6 +6,8 @@ from pathlib import Path
 from scripts.lint.runners.base import ToolResult
 from scripts.lint.runners.base import ToolRunner
 
+INVALID_RESULT = None
+
 
 class PylintRunner(ToolRunner):
     @property
@@ -14,23 +16,24 @@ class PylintRunner(ToolRunner):
 
     def run(
         self,
-        paths: list[str],
+        a_paths: list[str],
         *,
-        bin_path: str | None = None,
-        rcfile: str | None = None,
-        project_root: str | None = None,
+        a_bin_path: str | None = None,
+        a_rcfile: str | None = None,
+        a_project_root: str | None = None,
         **kwargs: object,
     ) -> ToolResult:
-        pylint_bin = self._resolve_bin(bin_path)
-        if not pylint_bin:
-            return ToolResult("pylint", True, "", "pylint not found, skipping", 0)
-
-        if rcfile is None:
-            lint_dir = Path(__file__).resolve().parent.parent
-            rcfile = str(lint_dir / "pylintrc")
-
-        if not Path(rcfile).exists():
-            return ToolResult("pylint", True, "", f"pylintrc not found at {rcfile}, skipping", 0)
-
-        src = paths[0] if paths else "src"
-        return self._exec([pylint_bin, f"--rcfile={rcfile}", "--recursive=y", "--fail-under=8", src])
+        """Run pylint on the given paths."""
+        pylint_bin = self._resolve_bin(a_bin_path)
+        rcfile = a_rcfile
+        result = ToolResult("pylint", True, "", "pylint not found, skipping", 0)
+        if pylint_bin:
+            if rcfile is None:
+                lint_dir = Path(__file__).resolve().parent.parent
+                rcfile = str(lint_dir / "pylintrc")
+            if not Path(rcfile).exists():
+                result = ToolResult("pylint", True, "", f"pylintrc not found at {rcfile}, skipping", 0)
+            else:
+                src = a_paths[0] if a_paths else "src"
+                result = self._exec([pylint_bin, f"--rcfile={rcfile}", "--recursive=y", "--fail-under=8", src])
+        return result

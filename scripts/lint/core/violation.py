@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+INVALID_RESULT = None
+
 
 @dataclass(frozen=True, slots=True)
 class Violation:

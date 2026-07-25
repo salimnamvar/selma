@@ -7,6 +7,8 @@ from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import SecurityConfig
 
+INVALID_RESULT = None
+
 
 class NoEvalExecRule(Rule):
     """SC-104: No eval() or exec() in production code."""
@@ -19,14 +21,16 @@ class NoEvalExecRule(Rule):
     def description(self) -> str:
         return "No eval() or exec()"
 
-    def check_Call(self, node: ast.Call, filepath: str) -> list[Violation]:
-        if isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec", "compile"):
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+    def check_Call(self, a_node: ast.Call, a_filepath: str) -> list[Violation]:
+        """Check that eval/exec/compile are not called."""
+        violations: list[Violation] = []
+        if isinstance(a_node.func, ast.Name) and a_node.func.id in ("eval", "exec", "compile"):
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
-                f"Forbidden call to '{node.func.id}()'",
+                f"Forbidden call to '{a_node.func.id}()'",
             )]
-        return []
+        return violations
 
 
 class ParameterizedQueryRule(Rule):
@@ -40,15 +44,17 @@ class ParameterizedQueryRule(Rule):
     def description(self) -> str:
         return "Parameterized queries (no SQL injection)"
 
-    def check_Call(self, node: ast.Call, filepath: str) -> list[Violation]:
-        if isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
-            if node.args and isinstance(node.args[0], (ast.JoinedStr, ast.Call)):
-                return [Violation(
-                    filepath, node.lineno, node.col_offset,
+    def check_Call(self, a_node: ast.Call, a_filepath: str) -> list[Violation]:
+        """Check that .execute() uses parameterized queries."""
+        violations: list[Violation] = []
+        if isinstance(a_node.func, ast.Attribute) and a_node.func.attr == "execute":
+            if a_node.args and isinstance(a_node.args[0], (ast.JoinedStr, ast.Call)):
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
                     self.code,
                     "Possible SQL injection: use parameterized queries",
                 )]
-        return []
+        return violations
 
 
 class NoSecretsRule(Rule):
@@ -65,36 +71,41 @@ class NoSecretsRule(Rule):
     def description(self) -> str:
         return "No hardcoded secrets"
 
-    def _check_name(self, name: str, node: ast.AST, filepath: str) -> list[Violation]:
-        name_lower = name.lower()
+    def _check_name(self, a_name: str, node: ast.AST, a_filepath: str) -> list[Violation]:
+        name_lower = a_name.lower()
         if any(p in name_lower for p in self._patterns):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == name:
+                    if isinstance(target, ast.Name) and target.id == a_name:
                         if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
                             return [Violation(
-                                filepath, node.lineno, node.col_offset,
+                                a_filepath, node.lineno, node.col_offset,
                                 self.code,
-                                f"Possible hardcoded secret in '{name}'; use environment variable",
+                                f"Possible hardcoded secret in '{a_name}'; use environment variable",
                             )]
-            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == name:
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == a_name:
                 if node.value and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
                     return [Violation(
-                        filepath, node.lineno, node.col_offset,
+                        a_filepath, node.lineno, node.col_offset,
                         self.code,
-                        f"Possible hardcoded secret in '{name}'; use environment variable",
+                        f"Possible hardcoded secret in '{a_name}'; use environment variable",
                     )]
         return []
 
-    def check_Assign(self, node: ast.Assign, filepath: str) -> list[Violation]:
-        for target in node.targets:
+    def check_Assign(self, a_node: ast.Assign, a_filepath: str) -> list[Violation]:
+        """Check assignments for hardcoded secrets."""
+        violations: list[Violation] = []
+        for target in a_node.targets:
             if isinstance(target, ast.Name):
-                result = self._check_name(target.id, node, filepath)
+                result = self._check_name(target.id, a_node, a_filepath)
                 if result:
-                    return result
-        return []
+                    violations = result
+                    break
+        return violations
 
-    def check_AnnAssign(self, node: ast.AnnAssign, filepath: str) -> list[Violation]:
-        if isinstance(node.target, ast.Name):
-            return self._check_name(node.target.id, node, filepath)
-        return []
+    def check_AnnAssign(self, a_node: ast.AnnAssign, a_filepath: str) -> list[Violation]:
+        """Check annotated assignments for hardcoded secrets."""
+        violations: list[Violation] = []
+        if isinstance(a_node.target, ast.Name):
+            violations = self._check_name(a_node.target.id, a_node, a_filepath)
+        return violations

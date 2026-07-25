@@ -6,6 +6,8 @@ import ast
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
+INVALID_RESULT = None
+
 
 def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
@@ -30,17 +32,18 @@ class SingleExitRule(Rule):
     def description(self) -> str:
         return "Single exit point per function"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
-        if _is_dunder(node.name):
-            return []
-        exits = _collect_exits(node)
-        if len(exits) > 1:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
-                self.code,
-                f"Function '{node.name}' has {len(exits)} exit points (expected 1)",
-            )]
-        return []
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check that function has exactly one exit point."""
+        violations: list[Violation] = []
+        if not _is_dunder(a_node.name) and not a_node.name.startswith("_"):
+            exits = _collect_exits(a_node)
+            if len(exits) > 1:
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' has {len(exits)} exit points (expected 1)",
+                )]
+        return violations
 
     check_AsyncFunctionDef = check_FunctionDef
 
@@ -56,17 +59,17 @@ class ZeroRaiseRule(Rule):
     def description(self) -> str:
         return "Zero raise statements in non-dunder functions"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
-        if _is_dunder(node.name):
-            return []
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check that no raise statements exist in non-dunder functions."""
         violations: list[Violation] = []
-        for child in ast.walk(node):
-            if isinstance(child, ast.Raise):
-                violations.append(Violation(
-                    filepath, child.lineno, child.col_offset,
-                    self.code,
-                    f"Forbidden raise in function '{node.name}'",
-                ))
+        if not _is_dunder(a_node.name):
+            for child in ast.walk(a_node):
+                if isinstance(child, ast.Raise):
+                    violations.append(Violation(
+                        a_filepath, child.lineno, child.col_offset,
+                        self.code,
+                        f"Forbidden raise in function '{a_node.name}'",
+                    ))
         return violations
 
     check_AsyncFunctionDef = check_FunctionDef

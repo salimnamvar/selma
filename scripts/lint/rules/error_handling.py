@@ -6,6 +6,8 @@ import ast
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
+INVALID_RESULT = None
+
 
 class SpecificExceptionRule(Rule):
     """SC-041: All except clauses must catch specific exception types."""
@@ -18,20 +20,22 @@ class SpecificExceptionRule(Rule):
     def description(self) -> str:
         return "Specific exception types in except clauses"
 
-    def check_ExceptHandler(self, node: ast.ExceptHandler, filepath: str) -> list[Violation]:
-        if node.type is None:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+    def check_ExceptHandler(self, a_node: ast.ExceptHandler, a_filepath: str) -> list[Violation]:
+        """Check that except clauses catch specific exception types."""
+        violations: list[Violation] = []
+        if a_node.type is None:
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
                 "Bare 'except:' forbidden; catch specific exception types",
             )]
-        if isinstance(node.type, ast.Name) and node.type.id == "Exception":
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+        elif isinstance(a_node.type, ast.Name) and a_node.type.id == "Exception":
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
                 "Broad 'except Exception' forbidden; catch specific types",
             )]
-        return []
+        return violations
 
 
 class NoSilentFailureRule(Rule):
@@ -45,20 +49,22 @@ class NoSilentFailureRule(Rule):
     def description(self) -> str:
         return "No silent failures (empty except blocks)"
 
-    def check_ExceptHandler(self, node: ast.ExceptHandler, filepath: str) -> list[Violation]:
-        if not node.body:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+    def check_ExceptHandler(self, a_node: ast.ExceptHandler, a_filepath: str) -> list[Violation]:
+        """Check that except blocks are not empty or pass-only."""
+        violations: list[Violation] = []
+        if not a_node.body:
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
                 "Empty except block: silent failure forbidden",
             )]
-        if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
+        elif len(a_node.body) == 1 and isinstance(a_node.body[0], ast.Pass):
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
                 "Except block contains only 'pass': silent failure forbidden",
             )]
-        return []
+        return violations
 
 
 class NoReraiseRule(Rule):
@@ -72,12 +78,15 @@ class NoReraiseRule(Rule):
     def description(self) -> str:
         return "No exception re-raising"
 
-    def check_ExceptHandler(self, node: ast.ExceptHandler, filepath: str) -> list[Violation]:
-        for child in ast.walk(node):
+    def check_ExceptHandler(self, a_node: ast.ExceptHandler, a_filepath: str) -> list[Violation]:
+        """Check that caught exceptions are not re-raised."""
+        violations: list[Violation] = []
+        for child in ast.walk(a_node):
             if isinstance(child, ast.Raise) and child.exc is None:
-                return [Violation(
-                    filepath, child.lineno, child.col_offset,
+                violations = [Violation(
+                    a_filepath, child.lineno, child.col_offset,
                     self.code,
                     "Re-raise forbidden; convert exception to Result return",
                 )]
-        return []
+                break
+        return violations

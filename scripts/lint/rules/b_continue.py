@@ -6,6 +6,8 @@ import ast
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
+INVALID_RESULT = None
+
 
 def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
@@ -14,8 +16,11 @@ def _is_dunder(name: str) -> bool:
 def _returns_result(node: ast.FunctionDef) -> bool:
     if node.returns is None:
         return False
-    ret_str = ast.dump(node.returns)
-    return "Result" in ret_str
+    if isinstance(node.returns, ast.Name) and node.returns.id == "Result":
+        return True
+    if isinstance(node.returns, ast.Subscript) and isinstance(node.returns.value, ast.Name):
+        return node.returns.value.id == "Result"
+    return False
 
 
 class BContinueRule(Rule):
@@ -29,57 +34,58 @@ class BContinueRule(Rule):
     def description(self) -> str:
         return "b_continue one-way transition rules"
 
-    def check_FunctionDef(self, node: ast.FunctionDef, filepath: str) -> list[Violation]:
-        if _is_dunder(node.name):
-            return []
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+        """Check b_continue usage rules in a function."""
+        if _is_dunder(a_node.name):
+            result: list[Violation] = []
+        elif not _returns_result(a_node):
+            result = []
+        else:
+            violations: list[Violation] = []
+            assignments: list[ast.Assign] = []
+            guards: list[ast.If | ast.While] = []
 
-        has_result_return = _returns_result(node)
-        if not has_result_return:
-            return []
+            for child in ast.walk(a_node):
+                if isinstance(child, ast.Assign):
+                    for target in child.targets:
+                        if isinstance(target, ast.Name) and target.id == "b_continue":
+                            assignments.append(child)
+                elif isinstance(child, (ast.If, ast.While)):
+                    if "b_continue" in ast.dump(child.test):
+                        guards.append(child)
 
-        violations: list[Violation] = []
-        assignments: list[ast.Assign] = []
-        guards: list[ast.If | ast.While] = []
-
-        for child in ast.walk(node):
-            if isinstance(child, ast.Assign):
-                for target in child.targets:
-                    if isinstance(target, ast.Name) and target.id == "b_continue":
-                        assignments.append(child)
-            elif isinstance(child, (ast.If, ast.While)):
-                if "b_continue" in ast.dump(child.test):
-                    guards.append(child)
-
-        if not assignments:
-            return [Violation(
-                filepath, node.lineno, node.col_offset,
-                f"{self.code}-missing",
-                f"Function '{node.name}' lacks b_continue",
-            )]
-
-        first = assignments[0]
-        if not (isinstance(first.value, ast.Constant) and first.value.value is True):
-            violations.append(Violation(
-                filepath, first.lineno, first.col_offset,
-                f"{self.code}-init",
-                "b_continue must be initialized to True",
-            ))
-
-        for assign in assignments[1:]:
-            if isinstance(assign.value, ast.Constant) and assign.value.value is True:
+            if not assignments:
                 violations.append(Violation(
-                    filepath, assign.lineno, assign.col_offset,
-                    f"{self.code}-reset",
-                    "b_continue reset to True forbidden",
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    f"{self.code}-missing",
+                    f"Function '{a_node.name}' lacks b_continue",
                 ))
+            else:
+                first = assignments[0]
+                if not (isinstance(first.value, ast.Constant) and first.value.value is True):
+                    violations.append(Violation(
+                        a_filepath, first.lineno, first.col_offset,
+                        f"{self.code}-init",
+                        "b_continue must be initialized to True",
+                    ))
 
-        if assignments and not guards:
-            violations.append(Violation(
-                filepath, node.lineno, node.col_offset,
-                f"{self.code}-unused",
-                "b_continue initialized but never used as guard",
-            ))
+                for assign in assignments[1:]:
+                    if isinstance(assign.value, ast.Constant) and assign.value.value is True:
+                        violations.append(Violation(
+                            a_filepath, assign.lineno, assign.col_offset,
+                            f"{self.code}-reset",
+                            "b_continue reset to True forbidden",
+                        ))
 
-        return violations
+                if assignments and not guards:
+                    violations.append(Violation(
+                        a_filepath, a_node.lineno, a_node.col_offset,
+                        f"{self.code}-unused",
+                        "b_continue initialized but never used as guard",
+                    ))
+
+            result = violations
+
+        return result
 
     check_AsyncFunctionDef = check_FunctionDef

@@ -5,6 +5,8 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+INVALID_RESULT = None
+
 
 @dataclass(frozen=True, slots=True)
 class RunnerConfig:
@@ -78,58 +80,58 @@ def _parse_determinism(forbidden: list[str]) -> dict[str, set[str]]:
     return result
 
 
-def load_config(project_root: str | Path | None = None) -> LintConfig:
-    if project_root is None:
-        project_root = Path(__file__).resolve().parent.parent.parent
+def load_config(a_project_root: str | Path | None = None) -> LintConfig:
+    """Load lint configuration from pyproject.toml."""
+    if a_project_root is None:
+        a_project_root = Path(__file__).resolve().parent.parent.parent
     else:
-        project_root = Path(project_root)
+        a_project_root = Path(a_project_root)
 
-    pyproject = project_root / "pyproject.toml"
-    if not pyproject.exists():
-        return LintConfig()
+    pyproject = a_project_root / "pyproject.toml"
+    config = LintConfig()
+    if pyproject.exists():
+        with open(pyproject, "rb") as f:
+            data = tomllib.load(f)
 
-    with open(pyproject, "rb") as f:
-        data = tomllib.load(f)
+        selma = data.get("tool", {}).get("selma", {}).get("lint", {})
+        if selma:
+            paths = tuple(selma.get("paths", ["src", "tests"]))
 
-    selma = data.get("tool", {}).get("selma", {}).get("lint", {})
-    if not selma:
-        return LintConfig()
+            runner_raw = selma.get("runner", {})
+            runner = RunnerConfig(
+                ruff=runner_raw.get("ruff", "ruff"),
+                pylint=runner_raw.get("pylint", "pylint"),
+                pyright=runner_raw.get("pyright", "pyright"),
+            )
 
-    paths = tuple(selma.get("paths", ["src", "tests"]))
+            exclude_raw = selma.get("exclude", {})
+            exclude = ExcludeConfig(
+                paths=tuple(exclude_raw.get("paths", [])),
+                codes=tuple(exclude_raw.get("codes", [])),
+            )
 
-    runner_raw = selma.get("runner", {})
-    runner = RunnerConfig(
-        ruff=runner_raw.get("ruff", "ruff"),
-        pylint=runner_raw.get("pylint", "pylint"),
-        pyright=runner_raw.get("pyright", "pyright"),
-    )
+            rules_raw = selma.get("rules", {})
+            complexity_raw = rules_raw.get("complexity", {})
+            resources_raw = rules_raw.get("resources", {})
+            determinism_raw = rules_raw.get("determinism", {})
+            security_raw = rules_raw.get("security", {})
 
-    exclude_raw = selma.get("exclude", {})
-    exclude = ExcludeConfig(
-        paths=tuple(exclude_raw.get("paths", [])),
-        codes=tuple(exclude_raw.get("codes", [])),
-    )
+            rules = RulesConfig(
+                disabled=tuple(rules_raw.get("disabled", [])),
+                complexity=ComplexityConfig(
+                    max_lines=complexity_raw.get("max-lines", 60),
+                ),
+                resources=ResourcesConfig(
+                    calls=tuple(resources_raw.get("calls", [])) or ResourcesConfig.calls,
+                ),
+                determinism=DeterminismConfig(
+                    forbidden=tuple(determinism_raw.get("forbidden", [])) or DeterminismConfig.forbidden,
+                ),
+                security=SecurityConfig(
+                    secret_patterns=tuple(security_raw.get("secret-patterns", [])) or SecurityConfig.secret_patterns,
+                ),
+            )
 
-    rules_raw = selma.get("rules", {})
-    complexity_raw = rules_raw.get("complexity", {})
-    resources_raw = rules_raw.get("resources", {})
-    determinism_raw = rules_raw.get("determinism", {})
-    security_raw = rules_raw.get("security", {})
+            config = LintConfig(paths=paths, runner=runner, exclude=exclude, rules=rules)
 
-    rules = RulesConfig(
-        disabled=tuple(rules_raw.get("disabled", [])),
-        complexity=ComplexityConfig(
-            max_lines=complexity_raw.get("max-lines", 60),
-        ),
-        resources=ResourcesConfig(
-            calls=tuple(resources_raw.get("calls", [])) or ResourcesConfig.calls,
-        ),
-        determinism=DeterminismConfig(
-            forbidden=tuple(determinism_raw.get("forbidden", [])) or DeterminismConfig.forbidden,
-        ),
-        security=SecurityConfig(
-            secret_patterns=tuple(security_raw.get("secret-patterns", [])) or SecurityConfig.secret_patterns,
-        ),
-    )
-
-    return LintConfig(paths=paths, runner=runner, exclude=exclude, rules=rules)
+    return config
