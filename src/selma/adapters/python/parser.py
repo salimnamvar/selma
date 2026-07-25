@@ -18,6 +18,7 @@ from selma.core.entities.facts import LineNode
 from selma.core.entities.facts import ParameterNode
 from selma.core.ports.parser_port import AbstractParser
 
+
 class TreeSitterPythonParser(AbstractParser):
     """Python parser using Tree-sitter."""
 

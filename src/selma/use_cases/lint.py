@@ -14,6 +14,7 @@ from selma.core.evaluators.threshold import ThresholdEvaluator
 from selma.core.ports.cache_port import AbstractCache
 from selma.core.ports.parser_port import AbstractParser
 
+
 class LintOrchestrator:
     """Orchestrates the linting process."""
 

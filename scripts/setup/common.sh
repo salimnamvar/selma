@@ -17,7 +17,7 @@ SKIP_VERIFY="${SKIP_VERIFY:-0}"
 SKIP_VSCODE="${SKIP_VSCODE:-0}"
 SKIP_CICD="${SKIP_CICD:-0}"
 
-ALL_STEPS=(conda env python vscode verify cicd)
+ALL_STEPS=(conda env python vscode verify hooks cicd)
 SELECTED_STEPS=()
 
 log_step() {

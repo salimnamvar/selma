@@ -4,6 +4,7 @@ import re
 
 from selma.core.evaluators.base import EvaluatorBase
 
+
 class RegexEvaluator(EvaluatorBase):
     """Evaluates data against regex patterns."""
 

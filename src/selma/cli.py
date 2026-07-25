@@ -5,6 +5,7 @@ import sys
 
 from selma import __version__
 
+
 def main() -> None:
     """Main entry point for Selma CLI."""
     parser = argparse.ArgumentParser(

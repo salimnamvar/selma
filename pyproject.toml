@@ -64,14 +64,28 @@ Documentation = "https://github.com/salimnamvar/selma/tree/main/docs"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Ruff — Universal Linter & Formatter
+# ──────────────────────────────────────────────────────────────────────────────
 [tool.ruff]
-line-length = 88
+line-length = 88                    # Google / Black standard
 target-version = "py313"
-src = ["src", "tests"]
+src = ["src", "tests", "scripts"]   # All source roots
 show-fixes = true
+exclude = [
+  ".git",
+  ".venv",
+  ".ruff_cache",
+  "__pycache__",
+  "build",
+  "dist",
+  "*.egg-info",
+]
 
+# ── Lint Rules ────────────────────────────────────────────────────────────────
 [tool.ruff.lint]
 select = [
+  # ── Core ──
   "E",      # pycodestyle errors
   "W",      # pycodestyle warnings
   "F",      # pyflakes
@@ -86,10 +100,18 @@ select = [
   "PTH",    # flake8-use-pathlib
   "TRY",    # tryceratops
   "RUF",    # Ruff-specific rules
-  "D",      # pydocstyle (Google)
+
+  # ── Documentation ──
+  "D",      # pydocstyle (Google convention)
+
+  # ── Type Safety ──
   "ANN",    # flake8-annotations (type hints required)
-  "T20",    # flake8-print (no print in src)
-  "S",      # flake8-bandit (security)
+  "TCH",    # flake8-type-checking
+
+  # ── Security ──
+  "S",      # flake8-bandit
+
+  # ── Code Quality ──
   "FBT",    # flake8-boolean-trap
   "PT",     # flake8-pytest-style
   "PLC",    # Pylint conventions
@@ -97,7 +119,6 @@ select = [
   "PLW",    # Pylint warnings
   "ICN",    # flake8-import-conventions
   "PIE",    # flake8-pie
-  "TCH",    # flake8-type-checking
   "Q",      # flake8-quotes
   "COM",    # flake8-commas
   "BLE",    # flake8-blind-except
@@ -111,6 +132,8 @@ select = [
   "C90",    # mccabe complexity
   "TD",     # flake8-todos
   "TID",    # flake8-tidy-imports
+
+  # ── Modern Python ──
   "A",      # flake8-builtins (avoid shadowing builtins)
   "FLY",    # flynt (prefer f-strings over .format())
   "G",      # flake8-logging-format (lazy logging)
@@ -119,20 +142,37 @@ select = [
   "PERF",   # perflint (performance anti-patterns)
   "YTT",    # flake8-2020 (sys.version checks)
   "RUF100", # unused noqa directives
+
+  # ── Print & Debug ──
+  "T20",    # flake8-print (no print in src)
 ]
+
 ignore = [
+  # ── Formatter conflicts (must ignore) ──
   "COM812",  # trailing comma — conflicts with formatter
   "ISC001",  # implicit string concat — conflicts with formatter
-  "TRY003",  # long messages — meaningful exceptions
+
+  # ── Justified ignores ──
+  "TRY003",  # long messages — meaningful exceptions allowed
   "D102",    # missing docstring in public method — enforced at class level
   "D105",    # missing docstring in magic method — self-explanatory
   "D107",    # missing docstring in __init__ — class docstring suffices
   "TD003",   # missing issue link — handled by custom check
   "EXE001",  # shebang — handled by clean.sh
+
+  # ── Pydantic / typing compatibility ──
   "TC001",   # type-checking import — breaks pydantic with from __future__ import annotations
   "TC003",   # type-checking stdlib import — same reason
+
+  # ── Pyright TypeVar inference ──
+  "UP046",   # Generic subclass — required for pyright TypeVar inference in staticmethods
+  "UP047",   # Generic function — same reason as UP046
+
+  # ── Safe Coding Doctrine ──
+  "S101",    # assert — required by Safe Coding Doctrine (SC-003) for postcondition checks
 ]
 
+# ── Per-file Ignores ──────────────────────────────────────────────────────────
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
     "ANN",     # type annotations not required in tests
@@ -150,11 +190,18 @@ ignore = [
     "D106",    # missing nested class docstring — tests
     "D107",    # missing __init__ docstring — tests
     "D415",    # docstring first line punctuation — tests
+    "E501",    # line too long — test data fixtures
+    "EM101",   # exception must not use string literal — test assertions
+    "F401",    # unused imports — test fixtures intentionally import unused modules
     "FBT001",  # boolean positional — test helpers
     "FBT002",  # boolean default — test helpers
     "FBT003",  # boolean positional in function call — test helpers
+    "I001",    # unsorted imports — test fixtures
+    "INP001",  # implicit namespace package — test fixtures
+    "N807",    # function name should not start and end with __ — test fixtures
     "PLC0415", # import not at top level — test isolation
     "PLR2004", # magic values in comparisons — common in tests
+    "PLW0108", # lambda may be unnecessary — test helpers
     "PT011",   # pytest.raises too broad — validation tests
     "PT017",   # assertion on exception — test pattern
     "S101",    # assert usage — expected in tests
@@ -164,6 +211,7 @@ ignore = [
     "S608",    # SQL injection — test queries
     "SLF001",  # private member access — testing internals
     "T201",    # print statement — allowed in tests
+    "TC002",   # type-checking import — runtime pytest usage
 ]
 "__init__.py" = ["F401", "TID252"]
 "scripts/**/*.py" = [
@@ -175,36 +223,61 @@ ignore = [
     "FBT003",  # boolean positional in function call — CLI flags
     "PLC0415", # import not at top level — circular import guards
     "F821",    # undefined name — TYPE_CHECKING blocks
+    "D100",    # missing module docstring — scripts
+    "D101",    # missing class docstring — scripts
+    "D103",    # missing function docstring — scripts
+    "D104",    # missing package docstring — scripts
+    "E501",    # line too long — scripts have long strings
+    "N802",    # function name should be lowercase — AST visitor convention
+    "N815",    # variable in class scope should not be mixedCase — AST visitor convention
+    "C901",    # complexity — AST visitors are inherently complex
+    "PERF401", # use list comprehension — readability over micro-optimization
+    "SIM102",  # use single if — nested ifs are clearer for AST visitors
+    "PIE810",  # call startswith once with tuple — readability
+    "F401",    # unused imports — TYPE_CHECKING blocks
+    "TC005",   # empty type checking block — TYPE_CHECKING guards
+    "PLW1510", # subprocess.run without check — explicit check=False needed
+    "S603",    # subprocess call — trusted input in scripts
+    "ARG002",  # unused method argument — interface compliance
 ]
 
+# ── isort (Google Style) ─────────────────────────────────────────────────────
 [tool.ruff.lint.isort]
 known-first-party = ["selma"]
-force-single-line = true  # Google style: one import per line
+force-single-line = true           # Google style: one import per line
 force-sort-within-sections = true  # Alphabetical within each group
-lines-after-imports = 1  # Single blank after imports (Google)
-lines-between-types = 0  # No blank between import types
+lines-between-types = 0            # No blank between import types
 
+# ── pydocstyle (Google) ──────────────────────────────────────────────────────
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+# ── flake8-unused-arguments ──────────────────────────────────────────────────
 [tool.ruff.lint.flake8-unused-arguments]
 ignore-variadic-names = true
 
+# ── flake8-tidy-imports ──────────────────────────────────────────────────────
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
+# ── flake8-quotes ────────────────────────────────────────────────────────────
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
 
+# ── mccabe ───────────────────────────────────────────────────────────────────
 [tool.ruff.lint.mccabe]
 max-complexity = 8  # Stricter than 10, Google recommends simple functions
 
+# ── Formatter ────────────────────────────────────────────────────────────────
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Pytest
+# ──────────────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
@@ -232,15 +305,21 @@ markers = [
   "service: Service layer tests",
 ]
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Coverage
+# ──────────────────────────────────────────────────────────────────────────────
 [tool.coverage.run]
 branch = true
-source = ["domain"]
+source = ["selma"]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
 fail_under = 0
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Pyright — Static Type Checker
+# ──────────────────────────────────────────────────────────────────────────────
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
@@ -248,7 +327,51 @@ pythonPlatform = "Linux"
 include = ["src"]
 extraPaths = ["src"]
 reportMissingTypeStubs = false
-reportUntypedFunctionDecorator = true  # Type decorators
+reportUntypedFunctionDecorator = true
 reportUntypedClassDecorator = true
-reportPrivateUsage = false  # Allow _private in same package
-reportImplicitStringConcatenation = true  # Catch accidental concat
+reportPrivateUsage = false
+reportImplicitStringConcatenation = true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Selma Custom Linter — Python AST rules
+# ──────────────────────────────────────────────────────────────────────────────
+[tool.selma.lint]
+paths = ["src", "tests"]
+
+[tool.selma.lint.runner]
+ruff = "ruff"
+pylint = "pylint"
+pyright = "pyright"
+
+[tool.selma.lint.exclude]
+paths = ["tests/fixtures"]
+codes = []
+
+[tool.selma.lint.rules]
+# All enabled by default; disable specific codes here
+disabled = []
+
+[tool.selma.lint.rules.complexity]
+max-lines = 60
+
+[tool.selma.lint.rules.resources]
+calls = [
+  "open", "Popen", "Lock", "RLock", "connect",
+  "NamedTemporaryFile", "TemporaryFile", "TemporaryDirectory",
+  "socket", "urlopen",
+]
+
+[tool.selma.lint.rules.determinism]
+forbidden = [
+  "datetime.now", "datetime.utcnow",
+  "time.time", "time.monotonic", "time.localtime", "time.gmtime",
+  "random.random", "random.randint", "random.choice", "random.sample",
+  "random.shuffle", "random.gauss",
+  "uuid.uuid4",
+]
+
+[tool.selma.lint.rules.security]
+secret-patterns = [
+  "password", "secret", "api_key", "apikey", "token",
+  "private_key", "access_key", "auth_token",
+]

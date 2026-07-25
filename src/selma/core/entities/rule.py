@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+
 class EvaluatorConfig(BaseModel):
     """Configuration for an evaluator."""
 

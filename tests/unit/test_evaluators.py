@@ -95,41 +95,50 @@ class TestCompositeEvaluator:
     """Tests for CompositeEvaluator."""
 
     def test_and_logic(self):
-        evaluator = CompositeEvaluator(
-            {"field_check": FieldCheckEvaluator()}
-        )
+        evaluator = CompositeEvaluator({"field_check": FieldCheckEvaluator()})
         config = {
             "logic": "and",
             "sub_evaluators": [
-                {"evaluator_type": "field_check", "evaluator_config": {"field": "a", "operator": "eq", "value": 1}},
-                {"evaluator_type": "field_check", "evaluator_config": {"field": "b", "operator": "eq", "value": 2}},
+                {
+                    "evaluator_type": "field_check",
+                    "evaluator_config": {"field": "a", "operator": "eq", "value": 1},
+                },
+                {
+                    "evaluator_type": "field_check",
+                    "evaluator_config": {"field": "b", "operator": "eq", "value": 2},
+                },
             ],
         }
         data = {"a": 1, "b": 2}
         assert evaluator.evaluate(config, data) is True
 
     def test_or_logic(self):
-        evaluator = CompositeEvaluator(
-            {"field_check": FieldCheckEvaluator()}
-        )
+        evaluator = CompositeEvaluator({"field_check": FieldCheckEvaluator()})
         config = {
             "logic": "or",
             "sub_evaluators": [
-                {"evaluator_type": "field_check", "evaluator_config": {"field": "a", "operator": "eq", "value": 1}},
-                {"evaluator_type": "field_check", "evaluator_config": {"field": "b", "operator": "eq", "value": 2}},
+                {
+                    "evaluator_type": "field_check",
+                    "evaluator_config": {"field": "a", "operator": "eq", "value": 1},
+                },
+                {
+                    "evaluator_type": "field_check",
+                    "evaluator_config": {"field": "b", "operator": "eq", "value": 2},
+                },
             ],
         }
         data = {"a": 1, "b": 3}
         assert evaluator.evaluate(config, data) is True
 
     def test_not_logic(self):
-        evaluator = CompositeEvaluator(
-            {"field_check": FieldCheckEvaluator()}
-        )
+        evaluator = CompositeEvaluator({"field_check": FieldCheckEvaluator()})
         config = {
             "logic": "not",
             "sub_evaluators": [
-                {"evaluator_type": "field_check", "evaluator_config": {"field": "a", "operator": "eq", "value": 1}},
+                {
+                    "evaluator_type": "field_check",
+                    "evaluator_config": {"field": "a", "operator": "eq", "value": 1},
+                },
             ],
         }
         data = {"a": 2}

@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+
 class ParameterNode(BaseModel):
     """Represents a function parameter."""
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from selma.core.entities.facts import FactDocument
 
+
 class AbstractParser(ABC):
     """Abstract interface for language parsers."""
 

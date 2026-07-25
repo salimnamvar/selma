@@ -67,6 +67,12 @@ main() {
     setup_vscode
   fi
 
+  if step_selected hooks; then
+    log_step "Git hooks"
+    git -C "${PROJECT_ROOT}" config core.hooksPath .githooks
+    log_ok "core.hooksPath set to .githooks"
+  fi
+
   if step_selected verify; then
     log_step "Verification"
     verify_setup

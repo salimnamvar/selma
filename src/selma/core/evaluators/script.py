@@ -5,6 +5,7 @@ import subprocess
 
 from selma.core.evaluators.base import EvaluatorBase
 
+
 class ScriptEvaluator(EvaluatorBase):
     """Evaluates rules by running external scripts."""
 

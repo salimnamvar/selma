@@ -3,6 +3,7 @@
 from selma.core.entities.facts import FactDocument
 from selma.core.ports.cache_port import AbstractCache
 
+
 class InMemoryCache(AbstractCache):
     """Simple in-memory cache for parsed facts."""
 

@@ -2,6 +2,7 @@
 
 from selma.core.evaluators.base import EvaluatorBase
 
+
 class CompositeEvaluator(EvaluatorBase):
     """Evaluates multiple sub-evaluators with logic operators."""
 
