@@ -12,26 +12,20 @@ from scripts.lint.core.result import Result
 
 if TYPE_CHECKING:
     from scripts.lint.core.rule import Rule
-    from scripts.lint.core.violation import Violation
-
 
 _current_visitor: ContextVar[Any] = ContextVar("_current_visitor")
 
 
 def get_visitor() -> Result[Any]:
-    """Return the current LintVisitor from context, or Ok(None).
+    """Return the current LintVisitor from context, or Ok(None)."""
+    return Result.success(_current_visitor.get(None))
 
-    Precondition: none.
-    Postcondition: returns Ok with current visitor or Ok(None).
-    Side effect: none.
-    Resource: none.
-    Failure: never fails.
-    """
-    b_continue = True
-    result: Result[Any] = Result.success(None)
-    if b_continue:
-        result = Result.success(_current_visitor.get(None))
-    return result
+
+_VALID_AST_HOOKS: set[str] = {
+    f"check_{re.sub(r'(?<!^)(?=[A-Z])', '_', cls.__name__).lower()}"
+    for cls in ast.__dict__.values()
+    if isinstance(cls, type) and issubclass(cls, ast.AST)
+}
 
 
 class LintVisitor(ast.NodeVisitor):
@@ -43,6 +37,21 @@ class LintVisitor(ast.NodeVisitor):
         self.violations: list[Violation] = []
         self._parent_stack: list[ast.AST] = []
         self._with_calls: set[int] = set()
+        self._validate_rule_hooks()
+
+    def _validate_rule_hooks(self) -> None:
+        """Validate that all check_* methods on registered rules target valid AST nodes."""
+        for rule in self.rules:
+            for attr_name in dir(rule):
+                if attr_name.startswith("check_") and callable(
+                    getattr(rule, attr_name)
+                ):
+                    if attr_name not in _VALID_AST_HOOKS:
+                        rule_name = rule.__class__.__name__
+                        raise ValueError(
+                            f"Invalid rule hook '{attr_name}' on {rule_name}. "
+                            f"Does not match any ast.AST node type."
+                        )
 
     def visit(self, a_node: ast.AST) -> Result[None]:
         """Visit an AST node, tracking parent context.
@@ -96,12 +105,27 @@ class LintVisitor(ast.NodeVisitor):
         if b_continue:
             node_type = type(a_node).__name__
             hook_name = re.sub(r"(?<!^)(?=[A-Z])", "_", node_type).lower()
+            hook = f"check_{hook_name}"
             for rule in self.rules:
-                hook = f"check_{hook_name}"
                 if hasattr(rule, hook):
-                    hook_result = getattr(rule, hook)(a_node, self.filepath)
-                    if hook_result.is_success().value and hook_result.value:
-                        self.violations.extend(hook_result.value)
+                    try:
+                        hook_result = getattr(rule, hook)(a_node, self.filepath)
+                        if hook_result.is_success().value and hook_result.value:
+                            self.violations.extend(hook_result.value)
+                    except Exception as exc:
+                        line_no = getattr(a_node, "lineno", 1)
+                        col_no = getattr(a_node, "col_offset", 0)
+                        rule_cls = rule.__class__.__name__
+                        self.violations.append(
+                            Violation(
+                                filepath=self.filepath,
+                                line=line_no,
+                                col=col_no,
+                                code="LINT-ERR",
+                                message=(f"Internal error in {rule_cls}.{hook}: {exc}"),
+                                severity="error",
+                            )
+                        )
             super().generic_visit(a_node)
         return result
 
