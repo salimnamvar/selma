@@ -93,7 +93,7 @@ class Result(Generic[_T]):
             result = Result.failure(self.message)
             b_continue = False
 
-        if b_continue and self.value is not None:
+        if b_continue:
             result = Result.success(a_fn(self.value), self.message)
 
         return result
@@ -120,7 +120,7 @@ class Result(Generic[_T]):
             result = Result.failure(self.message)
             b_continue = False
 
-        if b_continue and self.value is not None:
+        if b_continue:
             result = a_fn(self.value)
 
         return result
@@ -144,7 +144,7 @@ class Result(Generic[_T]):
         b_continue = True
         result: Result[_T] = Result.failure("unreachable placeholder")
 
-        if b_continue and self._is_success and self.value is not None:
+        if b_continue and self._is_success:
             result = Result.success(self.value)
             b_continue = False
 
@@ -172,7 +172,7 @@ class Result(Generic[_T]):
         b_continue = True
         result: Result[_T] = Result.success(a_default)
 
-        if b_continue and self._is_success and self.value is not None:
+        if b_continue and self._is_success:
             result = Result.success(self.value)
 
         return result
@@ -225,3 +225,8 @@ class Result(Generic[_T]):
         if b_continue:
             result = Result(_is_success=False, value=None, message=a_message)
         return result
+
+
+INVALID_RESULT: Result[Any] = Result.failure(
+    "INVALID_RESULT: Uninitialized result sentinel"
+)
