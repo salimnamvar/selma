@@ -6,23 +6,21 @@ Priority: CLI Arguments > Environment Variables > pyproject.toml > Defaults
 from __future__ import annotations
 
 import os
-import tomllib
 from pathlib import Path
+import tomllib
 from typing import Any
 
 from selma.domain.value_objects.result import Result
-from selma.infrastructure.config.models import (
-    ExecutionConfig,
-    LoggingConfig,
-    OutputConfig,
-    PathsConfig,
-    RulesConfig,
-    RulesFilterConfig,
-    SC010Config,
-    SelmaConfig,
-    ToolConfig,
-    ToolsConfig,
-)
+from selma.infrastructure.config.models import ExecutionConfig
+from selma.infrastructure.config.models import LoggingConfig
+from selma.infrastructure.config.models import OutputConfig
+from selma.infrastructure.config.models import PathsConfig
+from selma.infrastructure.config.models import RulesConfig
+from selma.infrastructure.config.models import RulesFilterConfig
+from selma.infrastructure.config.models import SC010Config
+from selma.infrastructure.config.models import SelmaConfig
+from selma.infrastructure.config.models import ToolConfig
+from selma.infrastructure.config.models import ToolsConfig
 from selma.infrastructure.config.validator import ConfigValidator
 
 _ENV_PREFIX = "SELMA_"
@@ -40,8 +38,9 @@ class ConfigLoader:
         a_config_path: Path | None = None,
         a_cli_args: dict[str, Any] | None = None,
     ) -> Result[SelmaConfig]:
-        """Load configuration with priority:
-        CLI > env > toml > defaults.
+        """Load configuration with priority.
+
+        Priority: CLI > env > toml > defaults.
 
         Preconditions:
             - a_config_path points to a valid pyproject.toml if
@@ -135,8 +134,7 @@ class ConfigLoader:
         result = self._merge_execution_toml(result, a_toml)
         result = self._merge_rules_toml(result, a_toml)
         result = self._merge_tools_toml(result, a_toml)
-        result = self._merge_logging_toml(result, a_toml)
-        return result
+        return self._merge_logging_toml(result, a_toml)
 
     def _merge_paths_toml(
         self,
@@ -214,10 +212,13 @@ class ConfigLoader:
         data = a_toml.get("execution")
         if b_continue and data:
             ex = result.execution
+            only_val = data.get("only", ex.only)
+            if only_val == "":
+                only_val = None
             execution = ExecutionConfig(
                 skip_tools=data.get("skip_tools", ex.skip_tools),
                 skip_ast=data.get("skip_ast", ex.skip_ast),
-                only=data.get("only", ex.only),
+                only=only_val,
                 max_workers=data.get(
                     "max_workers", ex.max_workers
                 ),
@@ -497,8 +498,7 @@ class ConfigLoader:
         result = self._env_output(result)
         result = self._env_execution(result)
         result = self._env_rules(result)
-        result = self._env_logging(result)
-        return result
+        return self._env_logging(result)
 
     def _env_paths(self, a_config: SelmaConfig) -> SelmaConfig:
         """Load paths from env."""
@@ -858,11 +858,11 @@ class ConfigLoader:
         file: str | None = None,
     ) -> SelmaConfig:
         """Set logging config values."""
-        l = a_config.logging
+        log_cfg = a_config.logging
         log_config = LoggingConfig(
-            level=level if level is not None else l.level,
-            format=l.format,
-            file=file if file is not None else l.file,
+            level=level if level is not None else log_cfg.level,
+            format=log_cfg.format,
+            file=file if file is not None else log_cfg.file,
         )
         return SelmaConfig(
             version=a_config.version,

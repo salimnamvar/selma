@@ -90,6 +90,7 @@ class ConfigValidator:
         if (
             b_continue
             and a_config.execution.only is not None
+            and a_config.execution.only != ""
             and a_config.execution.only not in VALID_CHECKS
         ):
             b_continue = False
