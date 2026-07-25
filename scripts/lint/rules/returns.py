@@ -83,13 +83,19 @@ class ExplicitReturnTypeRule(Rule):
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
         """Check that functions have explicit return type annotations."""
         violations: list[Violation] = []
-        if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
-            if a_node.returns is None:
-                violations = [Violation(
-                    a_filepath, a_node.lineno, a_node.col_offset,
-                    self.code,
-                    f"Function '{a_node.name}' missing return type annotation",
-                )]
+        if a_node.name.startswith("__") and a_node.name.endswith("__"):
+            return violations
+        for dec in a_node.decorator_list:
+            if isinstance(dec, ast.Name) and dec.id == "abstractmethod":
+                return violations
+            if isinstance(dec, ast.Attribute) and dec.attr == "abstractmethod":
+                return violations
+        if a_node.returns is None:
+            violations = [Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
+                self.code,
+                f"Function '{a_node.name}' missing return type annotation",
+            )]
         return violations
 
     check_AsyncFunctionDef = check_FunctionDef
