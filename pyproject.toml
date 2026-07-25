@@ -167,28 +167,7 @@ ignore = [
   # ── Pyright TypeVar inference ──
   "UP046",   # Generic subclass — required for pyright TypeVar inference in staticmethods
   "UP047",   # Generic function — same reason as UP046
-
-  # ── Safe Coding Doctrine ──
-  "S101",    # assert — required by Safe Coding Doctrine (SC-003) for postcondition checks
 ]
-
-# ── Per-file ignores ──────────────────────────────────────────────────────────
-[tool.ruff.lint.per-file-ignores]
-# AST visitor hooks: check_<NodeType> naming is mandated by ast.NodeVisitor
-"scripts/lint/rules/*.py" = ["N802"]
-# CLI entry point: print() is the output mechanism, main() is intentionally complex
-"scripts/lint/__main__.py" = ["T201", "C901"]
-# Subprocess execution: shell=False is default, check=False is handled manually
-"scripts/lint/runners/*.py" = ["S603"]
-# External evaluator: subprocess call is sandboxed
-".src/selma/core/evaluators/script.py" = ["S603"]
-# Complex lint rule implementations: domain-specific complexity is inherent
-"scripts/lint/rules/assertions.py" = ["C901"]
-"scripts/lint/rules/b_continue.py" = ["C901"]
-"scripts/lint/rules/control_flow.py" = ["C901"]
-"scripts/lint/rules/returns.py" = ["C901"]
-"scripts/lint/rules/state.py" = ["C901"]
-"scripts/lint/rules/style.py" = ["C901"]
 
 # ── isort (Google Style) ─────────────────────────────────────────────────────
 [tool.ruff.lint.isort]

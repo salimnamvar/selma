@@ -45,7 +45,7 @@ class NoEvalExecRule(Rule):
             b_result = "No eval() or exec()"
         return b_result
 
-    def check_Call(
+    def check_call(
         self, a_node: ast.Call, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that eval/exec/compile are not called.
@@ -112,7 +112,7 @@ class ParameterizedQueryRule(Rule):
             b_result = "Parameterized queries (no SQL injection)"
         return b_result
 
-    def check_Call(
+    def check_call(
         self, a_node: ast.Call, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that .execute() uses parameterized queries.
@@ -271,7 +271,7 @@ class NoSecretsRule(Rule):
                     ]
         return Result.success(violations)
 
-    def check_Assign(
+    def check_assign(
         self, a_node: ast.Assign, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check assignments for hardcoded secrets.
@@ -299,7 +299,7 @@ class NoSecretsRule(Rule):
                         break
         return Result.success(violations)
 
-    def check_AnnAssign(
+    def check_ann_assign(
         self, a_node: ast.AnnAssign, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check annotated assignments for hardcoded secrets.

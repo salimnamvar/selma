@@ -42,7 +42,7 @@ def _print_result(v: Violation, fmt: str) -> Result[None]:
         b_continue = False
     if b_continue:
         if fmt == "json":
-            print(
+            sys.stdout.write(
                 json.dumps(
                     {
                         "file": v.filepath,
@@ -53,11 +53,14 @@ def _print_result(v: Violation, fmt: str) -> Result[None]:
                         "severity": v.severity,
                     }
                 )
+                + "\n"
             )
         elif fmt == "gcc":
-            print(f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}")
+            sys.stdout.write(
+                f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}\n"
+            )
         else:
-            print(v)
+            sys.stdout.write(str(v) + "\n")
     return ret
 
 
@@ -76,9 +79,9 @@ def _print_tool_result(result: ToolResult) -> Result[None]:
         b_continue = False
     if b_continue:
         if result.stdout:
-            print(result.stdout, end="")
+            sys.stdout.write(result.stdout)
         if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
+            sys.stderr.write(result.stderr)
     return ret
 
 
@@ -98,13 +101,198 @@ def _run_tool_check(
     run_result = a_runner.run(a_paths, **kwargs)
     if run_result.is_failure().value:
         b_continue = False
-        print(run_result.message, file=sys.stderr)
+        sys.stderr.write(run_result.message + "\n")
         failed = Result.success(a_value=True)
     if b_continue:
         _print_tool_result(run_result.value)
         if not run_result.value.ok:
             failed = Result.success(a_value=True)
     return failed
+
+
+def _build_parser() -> Result[argparse.ArgumentParser]:
+    """Build the CLI argument parser.
+
+    Precondition: None.
+    Postcondition: Returns Ok with a configured ArgumentParser.
+    Side effect: None.
+    Resource: None.
+    Failure: Never fails.
+    """
+    b_continue = True
+    ret: Result[argparse.ArgumentParser] = Result.success(
+        argparse.ArgumentParser(
+            prog="selma-lint",
+            description="Python AST-based linter enforcing selma coding standards",
+        )
+    )
+    if b_continue:
+        ret.value.add_argument(
+            "paths",
+            nargs="*",
+            help="Files or directories to lint (default: from pyproject.toml)",
+        )
+        ret.value.add_argument(
+            "--codes", nargs="*", help="Only run AST rules with these codes"
+        )
+        ret.value.add_argument(
+            "--exclude-codes", nargs="*", help="Exclude AST rules with these codes"
+        )
+        ret.value.add_argument(
+            "--format", choices=["default", "json", "gcc"], default="default"
+        )
+        ret.value.add_argument(
+            "--skip-tools",
+            action="store_true",
+            help="Skip external tools (ruff/pylint/pyright)",
+        )
+        ret.value.add_argument(
+            "--skip-ast", action="store_true", help="Skip custom AST rules"
+        )
+        ret.value.add_argument(
+            "--only",
+            choices=["ruff-check", "ruff-format", "pylint", "pyright", "ast"],
+            help="Run only one check",
+        )
+        ret.value.add_argument(
+            "--config", help="Path to pyproject.toml (default: auto-detect)"
+        )
+    return ret
+
+
+def _resolve_paths(
+    a_args_paths: list[str],
+    a_config_paths: tuple[str, ...],
+    a_service_root: Path,
+) -> Result[list[str]]:
+    """Resolve lint target paths relative to service root.
+
+    Precondition: a_args_paths or a_config_paths is non-empty.
+    Postcondition: Returns Ok with list of absolute path strings.
+    Side effect: None.
+    Resource: None.
+    Failure: Never fails.
+    """
+    b_continue = True
+    ret: Result[list[str]] = Result.success([])
+    if b_continue:
+        raw = a_args_paths or list(a_config_paths)
+        ret = Result.success([
+            str(a_service_root / p) if not Path(p).is_absolute() else p
+            for p in raw
+        ])
+    return ret
+
+
+def _run_external_tools(
+    a_only: str | None,
+    a_paths: list[str],
+    a_service_root: Path,
+    *,
+    a_skip_tools: bool,
+) -> Result[bool]:
+    """Run external tool checks (ruff, pylint, pyright).
+
+    Precondition: a_paths is non-empty.
+    Postcondition: Returns Ok(True) if any tool reported failure, Ok(False) otherwise.
+    Side effect: prints tool output to stdout/stderr.
+    Resource: subprocess handles, file descriptors.
+    Failure: Never fails; errors reported via return value.
+    """
+    b_continue = True
+    ret: Result[bool] = Result.success(a_value=False)
+    if b_continue and not a_skip_tools:
+        runners: list[tuple[str, ToolRunner, dict[str, object]]] = [
+            ("ruff-check", RuffCheckRunner(), {}),
+            ("ruff-format", RuffFormatRunner(), {}),
+            ("pylint", PylintRunner(), {"project_root": str(a_service_root)}),
+            ("pyright", PyrightRunner(), {"project_root": str(a_service_root)}),
+        ]
+        for name, runner, kwargs in runners:
+            if a_only is not None and a_only != name:
+                continue
+            tr = _run_tool_check(runner, a_paths, **kwargs)
+            if tr.is_success().value and tr.value:
+                ret = Result.success(a_value=True)
+    return ret
+
+
+def _run_ast_rules(
+    a_only: str | None,
+    a_codes: list[str] | None,
+    a_exclude_codes: set[str],
+    a_paths: list[str],
+    a_config: object,
+    a_format: str,
+    *,
+    a_skip_ast: bool,
+) -> Result[bool]:
+    """Run custom AST lint rules.
+
+    Precondition: a_paths is non-empty.
+    Postcondition: Returns Ok(True) if any violations found, Ok(False) otherwise.
+    Side effect: prints violations to stdout.
+    Resource: None.
+    Failure: Never fails; errors encoded in return value.
+    """
+    b_continue = True
+    ret: Result[bool] = Result.success(a_value=False)
+    if b_continue and not a_skip_ast and a_only in (None, "ast"):
+        rules_result = all_rules(a_config)
+        rules = rules_result.value if rules_result.is_success().value else []
+        if a_codes:
+            rules = [r for r in rules if r.code in a_codes]
+        if a_exclude_codes:
+            rules = [r for r in rules if r.code not in a_exclude_codes]
+        engine = LintEngine(rules, a_config)
+        violations_result = engine.lint_paths(a_paths)
+        violations = (
+            violations_result.value if violations_result.is_success().value else []
+        )
+        for v in violations:
+            _print_result(v, a_format)
+        if violations:
+            ret = Result.success(a_value=True)
+    return ret
+
+
+def _run_checks(
+    a_args: argparse.Namespace,
+    a_config: object,
+    a_paths: list[str],
+    a_service_root: Path,
+    a_exclude_codes: set[str],
+) -> Result[int]:
+    """Run all lint checks and return the exit code.
+
+    Precondition: config loaded successfully.
+    Postcondition: Returns Ok with exit code (0=pass, 1=fail).
+    Side effect: prints results to stdout/stderr.
+    Resource: subprocess handles, file descriptors.
+    Failure: Never fails.
+    """
+    b_continue = True
+    failed = False
+    if b_continue:
+        tools_result = _run_external_tools(
+            a_args.only, a_paths, a_service_root,
+            a_skip_tools=a_args.skip_tools,
+        )
+        if tools_result.is_success().value and tools_result.value:
+            failed = True
+    if b_continue:
+        ast_result = _run_ast_rules(
+            a_args.only,
+            a_args.codes,
+            a_exclude_codes,
+            a_paths,
+            a_config,
+            a_args.format,
+            a_skip_ast=a_args.skip_ast,
+        )
+        if ast_result.is_success().value and ast_result.value:
+            failed = True
+    return Result.success(1 if failed else 0)
 
 
 def main() -> Result[int]:
@@ -119,105 +307,41 @@ def main() -> Result[int]:
     b_continue = True
     result: Result[int] = Result.success(0)
 
-    parser = argparse.ArgumentParser(
-        prog="selma-lint",
-        description="Python AST-based linter enforcing selma coding standards",
-    )
-    parser.add_argument(
-        "paths",
-        nargs="*",
-        help="Files or directories to lint (default: from pyproject.toml)",
-    )
-    parser.add_argument(
-        "--codes", nargs="*", help="Only run AST rules with these codes"
-    )
-    parser.add_argument(
-        "--exclude-codes", nargs="*", help="Exclude AST rules with these codes"
-    )
-    parser.add_argument(
-        "--format", choices=["default", "json", "gcc"], default="default"
-    )
-    parser.add_argument(
-        "--skip-tools",
-        action="store_true",
-        help="Skip external tools (ruff/pylint/pyright)",
-    )
-    parser.add_argument("--skip-ast", action="store_true", help="Skip custom AST rules")
-    parser.add_argument(
-        "--only",
-        choices=["ruff-check", "ruff-format", "pylint", "pyright", "ast"],
-        help="Run only one check",
-    )
-    parser.add_argument(
-        "--config", help="Path to pyproject.toml (default: auto-detect)"
-    )
-    args = parser.parse_args()
-
-    service_root = (
-        Path(args.config).parent
-        if args.config
-        else Path(__file__).resolve().parent.parent.parent
-    )
-    config_result = load_config(service_root)
-
-    if config_result.is_failure().value:
+    parser_result = _build_parser()
+    if parser_result.is_failure().value:
         b_continue = False
-        result = Result.failure(config_result.message)
+        result = Result.failure(parser_result.message)
+
+    if b_continue:
+        args = parser_result.value.parse_args()
+
+        service_root = (
+            Path(args.config).parent
+            if args.config
+            else Path(__file__).resolve().parent.parent.parent
+        )
+        config_result = load_config(service_root)
+
+        if config_result.is_failure().value:
+            b_continue = False
+            result = Result.failure(config_result.message)
 
     if b_continue:
         config = config_result.value
-        paths = args.paths or list(config.paths)
-        paths = [
-            str(service_root / p) if not Path(p).is_absolute() else p for p in paths
-        ]
+        paths_result = _resolve_paths(args.paths, config.paths, service_root)
+        if paths_result.is_failure().value:
+            b_continue = False
+            result = Result.failure(paths_result.message)
 
+    if b_continue:
         exclude_codes = set(config.exclude.codes)
         if args.exclude_codes:
             exclude_codes.update(args.exclude_codes)
 
-        failed = False
-
-        # --- External tool checks ---
-        if not args.skip_tools and args.only in (None, "ruff-check"):
-            tr = _run_tool_check(RuffCheckRunner(), paths)
-            if tr.is_success().value and tr.value:
-                failed = True
-
-        if not args.skip_tools and args.only in (None, "ruff-format"):
-            tr = _run_tool_check(RuffFormatRunner(), paths)
-            if tr.is_success().value and tr.value:
-                failed = True
-
-        if not args.skip_tools and args.only in (None, "pylint"):
-            tr = _run_tool_check(PylintRunner(), paths, project_root=str(service_root))
-            if tr.is_success().value and tr.value:
-                failed = True
-
-        if not args.skip_tools and args.only in (None, "pyright"):
-            tr = _run_tool_check(PyrightRunner(), paths, project_root=str(service_root))
-            if tr.is_success().value and tr.value:
-                failed = True
-
-        # --- Custom AST rules ---
-        if not args.skip_ast and args.only in (None, "ast"):
-            rules_result = all_rules(config)
-            rules = rules_result.value if rules_result.is_success().value else []
-            if args.codes:
-                rules = [r for r in rules if r.code in args.codes]
-            if exclude_codes:
-                rules = [r for r in rules if r.code not in exclude_codes]
-
-            engine = LintEngine(rules, config)
-            violations_result = engine.lint_paths(paths)
-            violations = (
-                violations_result.value if violations_result.is_success().value else []
-            )
-            for v in violations:
-                _print_result(v, args.format)
-            if violations:
-                failed = True
-
-        result = Result.success(1 if failed else 0)
+        result = _run_checks(
+            args, config, paths_result.value,
+            service_root, exclude_codes,
+        )
 
     return result
 

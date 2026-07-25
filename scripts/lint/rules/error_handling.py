@@ -68,7 +68,7 @@ class SpecificExceptionRule(Rule):
                         break
         return result
 
-    def check_ExceptHandler(
+    def check_except_handler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that except clauses catch specific exception types.
@@ -153,7 +153,7 @@ class NoSilentFailureRule(Rule):
             b_result = "No silent failures (empty except blocks)"
         return b_result
 
-    def check_ExceptHandler(
+    def check_except_handler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that except blocks are not empty or pass-only.
@@ -226,7 +226,7 @@ class NoReraiseRule(Rule):
             b_result = "No exception re-raising"
         return b_result
 
-    def check_ExceptHandler(
+    def check_except_handler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that caught exceptions are not re-raised.

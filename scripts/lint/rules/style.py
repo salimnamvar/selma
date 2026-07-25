@@ -119,7 +119,7 @@ class APrefixRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(
+    def check_function_def(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that all function arguments have a_ prefix.
@@ -135,7 +135,7 @@ class APrefixRule(Rule):
             return self._check_function(a_node, a_filepath)
         return Result.success([])
 
-    def check_AsyncFunctionDef(
+    def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that all async function arguments have a_ prefix.
@@ -197,6 +197,85 @@ class FunctionContractRule(Rule):
         }
     )
 
+    @staticmethod
+    def _is_exempt_decorator(
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> Result[bool]:
+        """Check whether a function has an exempt decorator.
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node.
+        Postcondition: Returns Ok(True) if function has an exempt decorator.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        b_result = False
+        if b_continue:
+            for dec in a_node.decorator_list:
+                if isinstance(dec, ast.Name) and dec.id in (
+                    "property",
+                    "staticmethod",
+                    "classmethod",
+                ):
+                    b_result = True
+                    break
+                if isinstance(dec, ast.Attribute) and dec.attr in (
+                    "setter",
+                    "getter",
+                    "deleter",
+                ):
+                    b_result = True
+                    break
+        return Result.success(b_result)
+
+    def _check_docstring(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that a function has a docstring with all required sections.
+
+        Precondition: a_node is not a dunder and not an exempt decorator.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        violations: list[Violation] = []
+        if b_continue:
+            docstring = ast.get_docstring(a_node)
+            if not docstring:
+                violations = [
+                    Violation(
+                        a_filepath,
+                        a_node.lineno,
+                        a_node.col_offset,
+                        self.code,
+                        f"Function '{a_node.name}' missing docstring",
+                    )
+                ]
+            else:
+                doc_lower = docstring.lower()
+                missing = [
+                    s for s in self._REQUIRED_SECTIONS if s not in doc_lower
+                ]
+                if missing:
+                    joined = ", ".join(missing)
+                    violations = [
+                        Violation(
+                            a_filepath,
+                            a_node.lineno,
+                            a_node.col_offset,
+                            self.code,
+                            f"Function '{a_node.name}' "
+                            "docstring missing contract "
+                            f"sections: {joined}",
+                        )
+                    ]
+        return Result.success(violations)
+
     def _check_function(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
@@ -216,56 +295,15 @@ class FunctionContractRule(Rule):
         if b_continue:
             is_dunder = a_node.name.startswith("__") and a_node.name.endswith("__")
             if not is_dunder:
-                exempt = False
-                for dec in a_node.decorator_list:
-                    if isinstance(dec, ast.Name) and dec.id in (
-                        "property",
-                        "staticmethod",
-                        "classmethod",
-                    ):
-                        exempt = True
-                        break
-                    if isinstance(dec, ast.Attribute) and dec.attr in (
-                        "setter",
-                        "getter",
-                        "deleter",
-                    ):
-                        exempt = True
-                        break
-                if not exempt:
-                    docstring = ast.get_docstring(a_node)
-                    if not docstring:
-                        violations = [
-                            Violation(
-                                a_filepath,
-                                a_node.lineno,
-                                a_node.col_offset,
-                                self.code,
-                                f"Function '{a_node.name}' missing docstring",
-                            )
-                        ]
-                    else:
-                        doc_lower = docstring.lower()
-                        missing = [
-                            s for s in self._REQUIRED_SECTIONS if s not in doc_lower
-                        ]
-                        if missing:
-                            joined = ", ".join(missing)
-                            violations = [
-                                Violation(
-                                    a_filepath,
-                                    a_node.lineno,
-                                    a_node.col_offset,
-                                    self.code,
-                                    f"Function '{a_node.name}' "
-                                    "docstring missing contract "
-                                    f"sections: {joined}",
-                                )
-                            ]
+                exempt_result = self._is_exempt_decorator(a_node)
+                if not (exempt_result.is_success().value and exempt_result.value):
+                    doc_result = self._check_docstring(a_node, a_filepath)
+                    if doc_result.is_success().value:
+                        violations = doc_result.value
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(
+    def check_function_def(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions have docstrings with all 5 mandatory sections.
@@ -281,7 +319,7 @@ class FunctionContractRule(Rule):
             return self._check_function(a_node, a_filepath)
         return Result.success([])
 
-    def check_AsyncFunctionDef(
+    def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions have docstrings with all 5 sections.
@@ -366,7 +404,7 @@ class NoMutableDefaultRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(
+    def check_function_def(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that function defaults are not mutable.
@@ -382,7 +420,7 @@ class NoMutableDefaultRule(Rule):
             return self._check_function(a_node, a_filepath)
         return Result.success([])
 
-    def check_AsyncFunctionDef(
+    def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async function defaults are not mutable.

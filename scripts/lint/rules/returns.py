@@ -164,24 +164,46 @@ class ResultReturnRule(Rule):
                     break
         return Result.success(b_result)
 
-    def _check_function(
+    def _is_function_exempt(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> Result[bool]:
+        """Check whether function is exempt from Result[T] compliance.
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef.
+        Postcondition: Returns Result.success(True) if function is
+            exempt (dunder, property, or abstract).
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        b_result = False
+        if b_continue:
+            exempt_result = self._is_exempt(a_node.name)
+            if exempt_result.is_success().value and exempt_result.value:
+                b_result = True
+            elif isinstance(a_node, ast.FunctionDef):
+                prop_result = self._is_property_or_abstract(a_node)
+                if prop_result.is_success().value and prop_result.value:
+                    b_result = True
+        return Result.success(b_result)
+
+    def _check_tuple_returns(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
         a_filepath: str,
     ) -> Result[list[Violation]]:
-        """Check that functions do not return tuples and use Result[T].
+        """Check that functions do not return tuples.
 
-        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node;
-            a_filepath is a valid file path.
-        Postcondition: Returns Ok with list of SC003/SC005 violations.
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of SC005 violations found.
         Side effect: None.
         Resource: None.
-        Failure: Never returns Failure; all errors are encoded as
-            violations in Ok.
+        Failure: Never fails (pure function).
         """
         b_continue = True
         violations: list[Violation] = []
-        b_skip = False
         if b_continue:
             for child in ast.walk(a_node):
                 if (
@@ -206,26 +228,24 @@ class ResultReturnRule(Rule):
                             f"Function '{a_node.name}' returns a tuple; use Result[T]",
                         )
                     )
-        exempt_result = (
-            self._is_exempt(a_node.name)
-            if b_continue
-            else Result.success(a_value=False)
-        )
-        if b_continue and exempt_result.is_success().value and exempt_result.value:
-            b_skip = True
-        prop_result = (
-            self._is_property_or_abstract(a_node)  # type: ignore[arg-type]
-            if b_continue and not b_skip
-            else Result.success(a_value=False)
-        )
-        if (
-            b_continue
-            and not b_skip
-            and prop_result.is_success().value
-            and prop_result.value
-        ):
-            b_skip = True
-        if b_continue and not b_skip:
+        return Result.success(violations)
+
+    def _check_result_type_compliance(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that functions returning values use Result[T].
+
+        Precondition: a_node is not exempt and not returning None.
+        Postcondition: Returns Ok with list of SC003 violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        violations: list[Violation] = []
+        if b_continue:
             has_return_result = self._has_return_value(a_node)  # type: ignore[arg-type]
             has_return_value = (
                 has_return_result.is_success().value and has_return_result.value
@@ -236,34 +256,111 @@ class ResultReturnRule(Rule):
             is_result_type = (
                 result_type_result.is_success().value and result_type_result.value
             )
-            if not is_none:
-                if is_result_type:
-                    pass
-                elif a_node.returns is not None and has_return_value:
-                    violations.append(
-                        Violation(
-                            a_filepath,
-                            a_node.lineno,
-                            a_node.col_offset,
-                            self.code,
-                            f"Function '{a_node.name}' returns "
-                            "values but type is not Result[T]",
-                        )
-                    )
-                elif a_node.returns is None and has_return_value:
-                    violations.append(
-                        Violation(
-                            a_filepath,
-                            a_node.lineno,
-                            a_node.col_offset,
-                            self.code,
-                            f"Function '{a_node.name}' missing "
-                            "return type (must be Result[T])",
-                        )
-                    )
+            if not is_none and not is_result_type and has_return_value:
+                violations.append(
+                    self._make_result_type_violation(a_node, a_filepath)
+                )
+            elif not is_none and a_node.returns is None and has_return_value:
+                violations.append(
+                    self._make_missing_type_violation(a_node, a_filepath)
+                )
         return Result.success(violations)
 
-    def check_FunctionDef(
+    def _make_result_type_violation(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[Violation]:
+        """Build a violation for non-Result return type annotation.
+
+        Precondition: a_node has a return annotation that is not Result[T].
+        Postcondition: Returns Ok with a Violation instance.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        ret: Result[Violation] = Result.success(
+            Violation("", 0, 0, "", "")
+        )
+        if b_continue:
+            ret = Result.success(
+                Violation(
+                    a_filepath,
+                    a_node.lineno,
+                    a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' returns "
+                    "values but type is not Result[T]",
+                )
+            )
+        return ret
+
+    def _make_missing_type_violation(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[Violation]:
+        """Build a violation for missing return type annotation.
+
+        Precondition: a_node has no return annotation but returns values.
+        Postcondition: Returns Ok with a Violation instance.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        ret: Result[Violation] = Result.success(
+            Violation("", 0, 0, "", "")
+        )
+        if b_continue:
+            ret = Result.success(
+                Violation(
+                    a_filepath,
+                    a_node.lineno,
+                    a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' missing "
+                    "return type (must be Result[T])",
+                )
+            )
+        return ret
+
+    def _check_function(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that functions do not return tuples and use Result[T].
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node;
+            a_filepath is a valid file path.
+        Postcondition: Returns Ok with list of SC003/SC005 violations.
+        Side effect: None.
+        Resource: None.
+        Failure: Never returns Failure; all errors are encoded as
+            violations in Ok.
+        """
+        b_continue = True
+        violations: list[Violation] = []
+        b_skip = False
+        if b_continue:
+            tuple_result = self._check_tuple_returns(a_node, a_filepath)
+            if tuple_result.is_success().value:
+                violations.extend(tuple_result.value)
+        if b_continue:
+            exempt_result = self._is_function_exempt(a_node)
+            if exempt_result.is_success().value and exempt_result.value:
+                b_skip = True
+        if b_continue and not b_skip:
+            compliance_result = self._check_result_type_compliance(
+                a_node, a_filepath
+            )
+            if compliance_result.is_success().value:
+                violations.extend(compliance_result.value)
+        return Result.success(violations)
+
+    def check_function_def(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions do not return tuples and use Result[T].
@@ -281,7 +378,7 @@ class ResultReturnRule(Rule):
             return self._check_function(a_node, a_filepath)
         return Result.success([])
 
-    def check_AsyncFunctionDef(
+    def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions do not return tuples and use Result[T].
@@ -375,7 +472,7 @@ class ExplicitReturnTypeRule(Rule):
             ]
         return Result.success(violations)
 
-    def check_FunctionDef(
+    def check_function_def(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions have explicit return type annotations.
@@ -393,7 +490,7 @@ class ExplicitReturnTypeRule(Rule):
             return self._check_function(a_node, a_filepath)
         return Result.success([])
 
-    def check_AsyncFunctionDef(
+    def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions have explicit return type annotations.
@@ -447,7 +544,7 @@ class NoStarImportRule(Rule):
             b_result = "No wildcard imports"
         return b_result
 
-    def check_ImportFrom(
+    def check_import_from(
         self, a_node: ast.ImportFrom, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no wildcard imports are used.

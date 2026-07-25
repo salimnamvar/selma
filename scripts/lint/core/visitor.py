@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from contextvars import ContextVar
+import re
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -94,8 +95,9 @@ class LintVisitor(ast.NodeVisitor):
         result: Result[None] = Result.success(None)
         if b_continue:
             node_type = type(a_node).__name__
+            hook_name = re.sub(r"(?<!^)(?=[A-Z])", "_", node_type).lower()
             for rule in self.rules:
-                hook = f"check_{node_type}"
+                hook = f"check_{hook_name}"
                 if hasattr(rule, hook):
                     hook_result = getattr(rule, hook)(a_node, self.filepath)
                     if hook_result.is_success().value and hook_result.value:

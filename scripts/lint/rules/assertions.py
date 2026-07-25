@@ -69,6 +69,69 @@ class AssertValidationRule(Rule):
                         break
         return Result.success(b_result)
 
+    @staticmethod
+    def _collect_param_names(a_func: ast.FunctionDef) -> set[str]:
+        """Collect all parameter names from a function definition.
+
+        Precondition: a_func is a FunctionDef AST node.
+        Postcondition: Returns set of parameter name strings.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        b_result: set[str] = set()
+        if b_continue:
+            b_result = {
+                arg.arg
+                for arg in a_func.args.args
+                + a_func.args.posonlyargs
+                + a_func.args.kwonlyargs
+            }
+        return b_result
+
+    @staticmethod
+    def _collect_assigned_names(a_func: ast.FunctionDef) -> set[str]:
+        """Collect all locally assigned names from a function body.
+
+        Precondition: a_func is a FunctionDef AST node.
+        Postcondition: Returns set of assigned name strings.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        b_result: set[str] = set()
+        if b_continue:
+            for stmt in a_func.body:
+                if isinstance(stmt, ast.Assign):
+                    for target in stmt.targets:
+                        if isinstance(target, ast.Name):
+                            b_result.add(target.id)
+                elif isinstance(stmt, ast.AnnAssign) and isinstance(
+                    stmt.target, ast.Name
+                ):
+                    b_result.add(stmt.target.id)
+        return b_result
+
+    @staticmethod
+    def _collect_ref_names(a_test: ast.expr) -> set[str]:
+        """Collect all referenced names from an expression subtree.
+
+        Precondition: a_test is an AST expression node.
+        Postcondition: Returns set of referenced name strings.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (pure function).
+        """
+        b_continue = True
+        b_result: set[str] = set()
+        if b_continue:
+            for node in ast.walk(a_test):
+                if isinstance(node, ast.Name):
+                    b_result.add(node.id)
+        return b_result
+
     def _is_invariant_assert(
         self, a_node: ast.Assert, a_func: ast.FunctionDef
     ) -> Result[bool]:
@@ -87,38 +150,17 @@ class AssertValidationRule(Rule):
         b_continue = True
         b_result: bool = False
         if b_continue:
-            param_names = {
-                arg.arg
-                for arg in a_func.args.args
-                + a_func.args.posonlyargs
-                + a_func.args.kwonlyargs
-            }
-            assigned_names: set[str] = set()
-            for stmt in a_func.body:
-                if isinstance(stmt, ast.Assign):
-                    for target in stmt.targets:
-                        if isinstance(target, ast.Name):
-                            assigned_names.add(target.id)
-                elif isinstance(stmt, ast.AnnAssign) and isinstance(
-                    stmt.target, ast.Name
-                ):
-                    assigned_names.add(stmt.target.id)
-
-            test = a_node.test
-            ref_names: set[str] = set()
-            for node in ast.walk(test):
-                if isinstance(node, ast.Name):
-                    ref_names.add(node.id)
-
-            if (
-                ref_names
-                and not (ref_names & param_names)
-                and (ref_names & assigned_names)
-            ):
-                b_result = True
+            param_names = self._collect_param_names(a_func)
+            assigned_names = self._collect_assigned_names(a_func)
+            ref_names = self._collect_ref_names(a_node.test)
+            b_result = (
+                bool(ref_names)
+                and not bool(ref_names & param_names)
+                and bool(ref_names & assigned_names)
+            )
         return Result.success(b_result)
 
-    def check_Assert(
+    def check_assert(
         self, a_node: ast.Assert, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that assert is not used for input validation.
