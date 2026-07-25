@@ -31,8 +31,6 @@ class ResultReturnRule(Rule):
     def _is_exempt(self, a_name: str) -> bool:
         if a_name.startswith("__") and a_name.endswith("__"):
             return True
-        if a_name.startswith("_"):
-            return True
         return False
 
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
