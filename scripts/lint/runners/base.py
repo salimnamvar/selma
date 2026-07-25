@@ -113,10 +113,12 @@ class ToolRunner(ABC):
                 timeout=300,
                 check=False,
             )
-        except FileNotFoundError as exc:
-            b_continue = False
-            result = Result.failure(str(exc))
-        except subprocess.TimeoutExpired as exc:
+        except (
+            FileNotFoundError,
+            PermissionError,
+            OSError,
+            subprocess.TimeoutExpired,
+        ) as exc:
             b_continue = False
             result = Result.failure(str(exc))
         if b_continue:
