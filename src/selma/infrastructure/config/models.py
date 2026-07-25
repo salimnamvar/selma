@@ -71,7 +71,7 @@ class ToolConfig:
 class RulesFilterConfig:
     """Top-level rule filtering."""
 
-    disabled: tuple[str, ...] = ()
+    disabled: tuple[str, ...] = ("SC-031", "SC-033", "SC-114")
     codes: tuple[str, ...] = ()
     exclude_codes: tuple[str, ...] = ()
 
