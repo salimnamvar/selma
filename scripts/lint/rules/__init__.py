@@ -17,7 +17,6 @@ from scripts.lint.rules.style import APrefixRule, FunctionContractRule, NoMutabl
 from scripts.lint.rules.imports import ImportInFunctionRule
 from scripts.lint.rules.b_continue import BContinueRule
 
-INVALID_RESULT = None
 
 
 def all_rules(a_config: LintConfig | None = None) -> list[Rule]:

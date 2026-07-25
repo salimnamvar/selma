@@ -8,7 +8,6 @@ from scripts.lint.core.violation import Violation
 from scripts.lint.core.visitor import get_visitor
 from scripts.lint.config import ResourcesConfig
 
-INVALID_RESULT = None
 
 
 class ResourceContextManagerRule(Rule):

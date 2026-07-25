@@ -7,7 +7,6 @@ from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import ComplexityConfig
 
-INVALID_RESULT = None
 
 _EXECUTABLE_NODES = (
     ast.Assign, ast.AugAssign, ast.AnnAssign,

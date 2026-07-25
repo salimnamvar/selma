@@ -6,7 +6,6 @@ import ast
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
-INVALID_RESULT = None
 
 
 def _is_dunder(name: str) -> bool:

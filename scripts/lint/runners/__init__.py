@@ -4,7 +4,6 @@ from scripts.lint.runners.pyright import PyrightRunner
 from scripts.lint.runners.ruff import RuffCheckRunner
 from scripts.lint.runners.ruff import RuffFormatRunner
 
-INVALID_RESULT = None
 
 __all__ = [
     "PylintRunner",

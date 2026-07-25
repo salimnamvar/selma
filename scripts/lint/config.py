@@ -5,7 +5,6 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-INVALID_RESULT = None
 
 
 @dataclass(frozen=True, slots=True)

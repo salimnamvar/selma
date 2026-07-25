@@ -6,7 +6,6 @@ from pathlib import Path
 from scripts.lint.runners.base import ToolResult
 from scripts.lint.runners.base import ToolRunner
 
-INVALID_RESULT = None
 
 
 class PylintRunner(ToolRunner):

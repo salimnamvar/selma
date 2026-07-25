@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from scripts.lint.core.rule import Rule
     from scripts.lint.core.violation import Violation
 
-INVALID_RESULT = None
 
 _current_visitor: ContextVar[Any] = ContextVar("_current_visitor")
 

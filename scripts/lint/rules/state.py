@@ -7,7 +7,6 @@ from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import DeterminismConfig
 
-INVALID_RESULT = None
 
 
 class DeterminismRule(Rule):

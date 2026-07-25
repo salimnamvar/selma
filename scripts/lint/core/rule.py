@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from scripts.lint.core.violation import Violation
 
-INVALID_RESULT = None
 
 
 class Rule(ABC):

@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 import ast
-from pathlib import Path
 
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
-INVALID_RESULT = None
 
 
 class ResultReturnRule(Rule):
@@ -90,7 +88,7 @@ class NoStarImportRule(Rule):
 
 
 class InvalidResultSentinelRule(Rule):
-    """SC-004: Module-level INVALID_RESULT sentinel."""
+    """SC-004: Module-level INVALID_RESULT sentinel — DISABLED, conflicts with SC-070."""
 
     @property
     def code(self) -> str:
@@ -98,26 +96,8 @@ class InvalidResultSentinelRule(Rule):
 
     @property
     def description(self) -> str:
-        return "Module-level INVALID_RESULT sentinel"
+        return "DISABLED: conflicts with no-module-level-state rule"
 
     def check_Module(self, a_node: ast.Module, a_filepath: str) -> list[Violation]:
-        """Check that module defines INVALID_RESULT sentinel."""
-        name = Path(a_filepath).name
-        violations: list[Violation] = []
-        if not (name.startswith("__") and name.endswith("__")):
-            found = False
-            for stmt in a_node.body:
-                if isinstance(stmt, ast.Assign):
-                    for target in stmt.targets:
-                        if isinstance(target, ast.Name) and target.id == "INVALID_RESULT":
-                            found = True
-                            break
-                if found:
-                    break
-            if not found:
-                violations = [Violation(
-                    a_filepath, 1, 0,
-                    self.code,
-                    "Module lacks INVALID_RESULT sentinel",
-                )]
-        return violations
+        """Disabled: conflicts with no-module-level-state rule."""
+        return []

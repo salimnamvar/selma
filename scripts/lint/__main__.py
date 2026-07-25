@@ -22,7 +22,6 @@ from scripts.lint.runners.pylint import PylintRunner
 from scripts.lint.runners.pyright import PyrightRunner
 from scripts.lint.runners.base import ToolResult
 
-INVALID_RESULT = None
 
 
 def _print_result(v: Violation, fmt: str) -> None:

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import shutil
 import subprocess
 
-INVALID_RESULT = None
 
 
 @dataclass(frozen=True, slots=True)
