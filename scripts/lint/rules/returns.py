@@ -19,8 +19,24 @@ class ResultReturnRule(Rule):
     def description(self) -> str:
         return "Result[T] returns, no tuples"
 
+    def _is_result_type(self, a_node: ast.expr | None) -> bool:
+        if a_node is None:
+            return False
+        if isinstance(a_node, ast.Name) and a_node.id == "Result":
+            return True
+        if isinstance(a_node, ast.Subscript) and isinstance(a_node.value, ast.Name):
+            return a_node.value.id == "Result"
+        return False
+
+    def _is_exempt(self, a_name: str) -> bool:
+        if a_name.startswith("__") and a_name.endswith("__"):
+            return True
+        if a_name.startswith("_"):
+            return True
+        return False
+
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
-        """Check that functions do not return tuples."""
+        """Check that functions do not return tuples and use Result[T]."""
         violations: list[Violation] = []
         for child in ast.walk(a_node):
             if isinstance(child, ast.Return) and child.value is not None:
@@ -30,6 +46,13 @@ class ResultReturnRule(Rule):
                         "SC005",
                         f"Function '{a_node.name}' returns a tuple; use Result[T]",
                     ))
+        if not self._is_exempt(a_node.name) and a_node.returns is not None:
+            if not self._is_result_type(a_node.returns):
+                violations.append(Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' return type is not Result[T]",
+                ))
         return violations
 
     check_AsyncFunctionDef = check_FunctionDef

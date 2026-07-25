@@ -44,7 +44,22 @@ class BContinueRule(Rule):
             assignments: list[ast.Assign] = []
             guards: list[ast.If | ast.While] = []
 
+            param_names = {arg.arg for arg in a_node.args.args + a_node.args.posonlyargs + a_node.args.kwonlyargs}
+            if "b_continue" in param_names:
+                violations.append(Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    f"{self.code}-param",
+                    "b_continue must not be a function parameter",
+                ))
+
             for child in ast.walk(a_node):
+                if isinstance(child, ast.Attribute):
+                    if isinstance(child.value, ast.Name) and child.value.id == "self" and child.attr == "b_continue":
+                        violations.append(Violation(
+                            a_filepath, child.lineno, child.col_offset,
+                            f"{self.code}-attr",
+                            "b_continue must not be accessed as an instance attribute",
+                        ))
                 if isinstance(child, ast.Assign):
                     for target in child.targets:
                         if isinstance(target, ast.Name) and target.id == "b_continue":

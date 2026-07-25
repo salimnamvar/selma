@@ -65,25 +65,39 @@ class FunctionContractRule(Rule):
     def description(self) -> str:
         return "Function docstring contracts"
 
+    _REQUIRED_SECTIONS = frozenset({
+        "precondition", "postcondition", "side effect", "resource", "failure",
+    })
+
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
-        """Check that public functions have docstrings."""
+        """Check that functions have docstrings with contract sections."""
         violations: list[Violation] = []
         if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
-            if not a_node.name.startswith("_"):
-                exempt = False
-                for dec in a_node.decorator_list:
-                    if isinstance(dec, ast.Name) and dec.id in ("property", "staticmethod", "classmethod"):
-                        exempt = True
-                        break
-                    if isinstance(dec, ast.Attribute) and dec.attr in ("setter", "getter", "deleter"):
-                        exempt = True
-                        break
-                if not exempt and not ast.get_docstring(a_node):
+            exempt = False
+            for dec in a_node.decorator_list:
+                if isinstance(dec, ast.Name) and dec.id in ("property", "staticmethod", "classmethod"):
+                    exempt = True
+                    break
+                if isinstance(dec, ast.Attribute) and dec.attr in ("setter", "getter", "deleter"):
+                    exempt = True
+                    break
+            if not exempt:
+                docstring = ast.get_docstring(a_node)
+                if not docstring:
                     violations = [Violation(
                         a_filepath, a_node.lineno, a_node.col_offset,
                         self.code,
                         f"Function '{a_node.name}' missing docstring",
                     )]
+                else:
+                    doc_lower = docstring.lower()
+                    found = sum(1 for s in self._REQUIRED_SECTIONS if s in doc_lower)
+                    if found < 3:
+                        violations = [Violation(
+                            a_filepath, a_node.lineno, a_node.col_offset,
+                            self.code,
+                            f"Function '{a_node.name}' docstring missing contract sections (found {found}/5, need >= 3)",
+                        )]
         return violations
 
     check_AsyncFunctionDef = check_FunctionDef

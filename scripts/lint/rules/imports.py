@@ -19,23 +19,20 @@ class ImportInFunctionRule(Rule):
     def description(self) -> str:
         return "No imports inside functions"
 
-    def _check_body(self, a_body: list[ast.stmt], a_filepath: str, a_func_name: str) -> list[Violation]:
-        violations: list[Violation] = []
-        for stmt in a_body:
-            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
-                violations.append(Violation(
-                    a_filepath, stmt.lineno, stmt.col_offset,
-                    self.code,
-                    f"Import inside function '{a_func_name}' forbidden",
-                ))
-            elif isinstance(stmt, (ast.If, ast.For, ast.While, ast.With, ast.Try)):
-                for inner in ast.iter_child_nodes(stmt):
-                    if isinstance(inner, ast.stmt):
-                        violations.extend(self._check_body([inner], a_filepath, a_func_name))
-        return violations
-
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
         """Check that no imports exist inside function bodies."""
-        return self._check_body(a_node.body, a_filepath, a_node.name)
+        violations: list[Violation] = []
+        for node in ast.walk(a_node):
+            if node is a_node:
+                continue
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                violations.append(Violation(
+                    a_filepath, node.lineno, node.col_offset,
+                    self.code,
+                    f"Import inside function '{a_node.name}' forbidden",
+                ))
+        return violations
 
     check_AsyncFunctionDef = check_FunctionDef

@@ -53,6 +53,20 @@ class ParameterizedQueryRule(Rule):
                     self.code,
                     "Possible SQL injection: use parameterized queries",
                 )]
+            elif a_node.args and isinstance(a_node.args[0], ast.BinOp):
+                if isinstance(a_node.args[0].op, ast.Mod):
+                    violations = [Violation(
+                        a_filepath, a_node.lineno, a_node.col_offset,
+                        self.code,
+                        "Possible SQL injection: use parameterized queries",
+                    )]
+            elif a_node.args and isinstance(a_node.args[0], ast.Call):
+                if isinstance(a_node.args[0].func, ast.Attribute) and a_node.args[0].func.attr == "format":
+                    violations = [Violation(
+                        a_filepath, a_node.lineno, a_node.col_offset,
+                        self.code,
+                        "Possible SQL injection: use parameterized queries",
+                    )]
         return violations
 
 

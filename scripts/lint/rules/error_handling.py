@@ -5,6 +5,7 @@ import ast
 
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+from scripts.lint.core.visitor import get_visitor
 
 
 
@@ -19,6 +20,18 @@ class SpecificExceptionRule(Rule):
     def description(self) -> str:
         return "Specific exception types in except clauses"
 
+    def _is_last_handler(self, a_node: ast.ExceptHandler) -> bool:
+        visitor = get_visitor()
+        if not visitor:
+            return False
+        for parent in reversed(visitor._parent_stack):
+            if isinstance(parent, ast.Try):
+                handlers = parent.handlers
+                if handlers and handlers[-1] is a_node:
+                    return True
+                return False
+        return False
+
     def check_ExceptHandler(self, a_node: ast.ExceptHandler, a_filepath: str) -> list[Violation]:
         """Check that except clauses catch specific exception types."""
         violations: list[Violation] = []
@@ -29,16 +42,19 @@ class SpecificExceptionRule(Rule):
                 "Bare 'except:' forbidden; catch specific exception types",
             )]
         elif isinstance(a_node.type, ast.Name) and a_node.type.id == "Exception":
-            violations = [Violation(
-                a_filepath, a_node.lineno, a_node.col_offset,
-                self.code,
-                "Broad 'except Exception' forbidden; catch specific types",
-            )]
+            if not self._is_last_handler(a_node):
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    self.code,
+                    "Broad 'except Exception' forbidden; catch specific types",
+                )]
         return violations
 
 
 class NoSilentFailureRule(Rule):
-    """SC-042: No empty except blocks (silent failures)."""
+    """SC-042: No empty except blocks (silent failures).
+    Limitation: cannot detect except blocks that don't convert to Result or log
+    without full dataflow analysis. Only catches empty/pass-only blocks."""
 
     @property
     def code(self) -> str:

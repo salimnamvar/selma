@@ -13,6 +13,7 @@ _EXECUTABLE_NODES = (
     ast.Expr, ast.If, ast.For, ast.While, ast.With, ast.Try,
     ast.Raise, ast.Assert, ast.Delete, ast.Pass, ast.Break, ast.Continue,
     ast.Await, ast.Yield, ast.YieldFrom,
+    ast.FunctionDef, ast.AsyncFunctionDef,
 )
 
 
