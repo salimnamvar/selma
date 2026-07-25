@@ -1,9 +1,12 @@
 """Read lint configuration from pyproject.toml [tool.selma.lint]."""
 from __future__ import annotations
 
+import logging
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -80,7 +83,10 @@ def _parse_determinism(forbidden: list[str]) -> dict[str, set[str]]:
 
 
 def load_config(a_project_root: str | Path | None = None) -> LintConfig:
-    """Load lint configuration from pyproject.toml."""
+    """Load lint configuration from pyproject.toml.
+
+    Falls back to defaults on any read/parse error (OSError, TOMLDecodeError).
+    """
     if a_project_root is None:
         a_project_root = Path(__file__).resolve().parent.parent.parent
     else:
@@ -89,8 +95,15 @@ def load_config(a_project_root: str | Path | None = None) -> LintConfig:
     pyproject = a_project_root / "pyproject.toml"
     config = LintConfig()
     if pyproject.exists():
-        with open(pyproject, "rb") as f:
-            data = tomllib.load(f)
+        try:
+            with open(pyproject, "rb") as f:
+                data = tomllib.load(f)
+        except OSError as exc:
+            logger.warning("Failed to read pyproject.toml: %s", exc)
+            return config
+        except tomllib.TOMLDecodeError as exc:
+            logger.warning("Invalid TOML in pyproject.toml: %s", exc)
+            return config
 
         selma = data.get("tool", {}).get("selma", {}).get("lint", {})
         if selma:
