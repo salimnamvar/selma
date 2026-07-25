@@ -8,10 +8,14 @@ import logging
 from pathlib import Path
 
 from scripts.lint.config import LintConfig
+from scripts.lint.core.ports import ASTParserPort
+from scripts.lint.core.ports import FileLoaderPort
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.core.visitor import LintVisitor
+from scripts.lint.infrastructure.adapters import FilesystemFileLoader
+from scripts.lint.infrastructure.adapters import StandardASTParser
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +23,18 @@ logger = logging.getLogger(__name__)
 class LintEngine:
     """Orchestrates file reading, AST parsing, and rule dispatch."""
 
-    def __init__(self, rules: list[Rule], config: LintConfig | None = None) -> None:
+    def __init__(
+        self,
+        rules: list[Rule],
+        config: LintConfig | None = None,
+        file_loader: FileLoaderPort | None = None,
+        ast_parser: ASTParserPort | None = None,
+    ) -> None:
         self._all_rules = rules
         self._config = config or LintConfig()
         self._exclude_paths = tuple(self._config.exclude.paths)
+        self.file_loader = file_loader or FilesystemFileLoader()
+        self.ast_parser = ast_parser or StandardASTParser()
 
     def _is_excluded(self, filepath: str) -> Result[bool]:
         """Check whether filepath matches any configured exclusion pattern.
@@ -72,40 +84,44 @@ class LintEngine:
         Precondition: a_filepath points to an existing Python file.
         Postcondition: returns Ok with list of violations found.
         Side effect: logs warnings on read or parse failures.
-        Resource: reads file content from disk.
+        Resource: reads file content via file_loader port.
         Failure: returns Ok with IO_ERROR or PARSE violation on read errors.
         """
         a_filepath = str(a_filepath)
         b_continue = True
         violations: list[Violation] = []
-        result: Result[list[Violation]]
         excluded = self._is_excluded(a_filepath)
         is_excluded = excluded.is_success().value and excluded.value
         if not is_excluded:
-            try:
-                source = Path(a_filepath).read_text(encoding="utf-8")
-            except OSError as exc:
+            source_result = self.file_loader.read_source(a_filepath)
+            if source_result.is_failure().value:
                 b_continue = False
-                logger.warning("Failed to read %s: %s", a_filepath, exc)
+                logger.warning(
+                    "Failed to read %s: %s", a_filepath, source_result.message
+                )
                 violations = [
-                    Violation(a_filepath, 0, 0, "IO_ERROR", str(exc), "error")
+                    Violation(
+                        a_filepath, 0, 0, "IO_ERROR", source_result.message, "error"
+                    )
                 ]
+
             if b_continue:
-                try:
-                    tree = ast.parse(source, filename=a_filepath)
-                except (SyntaxError, UnicodeDecodeError) as exc:
+                tree_result = self.ast_parser.parse_ast(source_result.value, a_filepath)
+                if tree_result.is_failure().value:
                     b_continue = False
                     violations = [
-                        Violation(a_filepath, 0, 0, "PARSE", str(exc), "error")
+                        Violation(
+                            a_filepath, 0, 0, "PARSE", tree_result.message, "error"
+                        )
                     ]
-                if b_continue:
+
+                if b_continue and tree_result.value:
                     rules_result = self._rules_for_file(a_filepath)
                     if rules_result.is_success().value:
                         visitor = LintVisitor(rules_result.value, a_filepath)
-                        visitor.visit(tree)
+                        visitor.visit(tree_result.value)
                         violations = visitor.violations
-        result = Result.success(violations)
-        return result
+        return Result.success(violations)
 
     def lint_paths(self, a_paths: list[str | Path]) -> Result[list[Violation]]:
         """Lint multiple file or directory paths and return all violations.
