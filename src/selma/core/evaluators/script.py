@@ -25,7 +25,7 @@ class ScriptEvaluator(EvaluatorBase):
             return False
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 [script_path],
                 input=json.dumps(data),
                 capture_output=True,

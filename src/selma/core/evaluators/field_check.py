@@ -1,8 +1,20 @@
 """Field check evaluator for Selma."""
 
+from collections.abc import Callable
+import operator
 import re
+from typing import Any
 
 from selma.core.evaluators.base import EvaluatorBase
+
+OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
+    "eq": operator.eq,
+    "neq": operator.ne,
+    "gt": operator.gt,
+    "gte": operator.ge,
+    "lt": operator.lt,
+    "lte": operator.le,
+}
 
 
 class FieldCheckEvaluator(EvaluatorBase):
@@ -22,31 +34,20 @@ class FieldCheckEvaluator(EvaluatorBase):
             return False
 
         field = config.get("field", "")
-        operator = config.get("operator", "")
+        op_name = config.get("operator", "")
         value = config.get("value")
 
-        # Simple dot-notation field access
         field_value = data.get(field)
-
         if field_value is None:
             return False
 
-        match operator:
-            case "eq":
-                return field_value == value
-            case "neq":
-                return field_value != value
-            case "gt":
-                return field_value > value
-            case "gte":
-                return field_value >= value
-            case "lt":
-                return field_value < value
-            case "lte":
-                return field_value <= value
-            case "contains":
-                return str(value) in str(field_value)
-            case "matches":
-                return bool(re.search(str(value), str(field_value)))
-            case _:
-                return False
+        if op_name in OPERATORS:
+            return OPERATORS[op_name](field_value, value)
+
+        if op_name == "contains":
+            return str(value) in str(field_value)
+
+        if op_name == "matches":
+            return bool(re.search(str(value), str(field_value)))
+
+        return False

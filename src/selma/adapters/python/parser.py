@@ -67,7 +67,7 @@ class TreeSitterPythonParser(AbstractParser):
                     content=line,
                     stripped=line.strip(),
                     indent=len(line) - len(line.lstrip()),
-                )
+                ),
             )
         return lines
 
@@ -102,7 +102,7 @@ class TreeSitterPythonParser(AbstractParser):
                             is_dunder=name.startswith("__") and name.endswith("__"),
                             has_decorator=self._has_decorator(match),
                             parameters=params,
-                        )
+                        ),
                     )
 
         # Query classes
@@ -128,7 +128,7 @@ class TreeSitterPythonParser(AbstractParser):
                             end_line=end_line,
                             is_dunder=name.startswith("__") and name.endswith("__"),
                             has_decorator=self._has_decorator(match),
-                        )
+                        ),
                     )
 
         # Query imports
@@ -153,7 +153,7 @@ class TreeSitterPythonParser(AbstractParser):
                         line=start_line,
                         end_line=end_line,
                         import_module=module_name,
-                    )
+                    ),
                 )
 
         return declarations
@@ -166,58 +166,44 @@ class TreeSitterPythonParser(AbstractParser):
         if not params_node:
             return params
 
-        # Walk through children of parameters node to extract identifiers
         for child in params_node.children:
-            if child.type == "identifier":
-                params.append(
-                    ParameterNode(
-                        name=child.text.decode("utf-8"),
-                        position="positional",
-                        has_default=False,
-                        line=child.start_point[0] + 1,
-                    )
-                )
-            elif child.type == "default_parameter":
-                # Get the identifier inside default_parameter
-                for subchild in child.children:
-                    if subchild.type == "identifier":
-                        params.append(
-                            ParameterNode(
-                                name=subchild.text.decode("utf-8"),
-                                position="keyword_only",
-                                has_default=True,
-                                line=subchild.start_point[0] + 1,
-                            )
-                        )
-                        break
-            elif child.type == "list_splat_pattern":
-                # *args
-                for subchild in child.children:
-                    if subchild.type == "identifier":
-                        params.append(
-                            ParameterNode(
-                                name=subchild.text.decode("utf-8"),
-                                position="var_positional",
-                                has_default=False,
-                                line=subchild.start_point[0] + 1,
-                            )
-                        )
-                        break
-            elif child.type == "dictionary_splat_pattern":
-                # **kwargs
-                for subchild in child.children:
-                    if subchild.type == "identifier":
-                        params.append(
-                            ParameterNode(
-                                name=subchild.text.decode("utf-8"),
-                                position="var_keyword",
-                                has_default=False,
-                                line=subchild.start_point[0] + 1,
-                            )
-                        )
-                        break
+            param = self._parse_param_node(child)
+            if param:
+                params.append(param)
 
         return params
+
+    def _parse_param_node(self, child: object) -> ParameterNode | None:
+        """Parse a single parameter node."""
+        node_type = child.type
+        if node_type == "identifier":
+            return ParameterNode(
+                name=child.text.decode("utf-8"),
+                position="positional",
+                has_default=False,
+                line=child.start_point[0] + 1,
+            )
+
+        type_map = {
+            "default_parameter": ("keyword_only", True),
+            "list_splat_pattern": ("var_positional", False),
+            "dictionary_splat_pattern": ("var_keyword", False),
+        }
+
+        if node_type not in type_map:
+            return None
+
+        position, has_default = type_map[node_type]
+        for subchild in child.children:
+            if subchild.type == "identifier":
+                return ParameterNode(
+                    name=subchild.text.decode("utf-8"),
+                    position=position,
+                    has_default=has_default,
+                    line=subchild.start_point[0] + 1,
+                )
+
+        return None
 
     def _has_decorator(self, node: object) -> bool:
         """Check if a node has a decorator."""

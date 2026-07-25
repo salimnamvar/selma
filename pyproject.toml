@@ -104,7 +104,6 @@ select = [
   "EM",     # flake8-errmsg
   "T10",    # flake8-debugger
   "FIX",    # flake8-fixme
-  # "DOC",  # pydoclint — requires preview mode
   "SLF",    # flake8-self
   "RSE",    # flake8-raise
   "PGH",    # pygrep-hooks

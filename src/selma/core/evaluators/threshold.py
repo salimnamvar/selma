@@ -1,6 +1,17 @@
 """Threshold evaluator for Selma."""
 
+from collections.abc import Callable
+import operator
+from typing import Any
+
 from selma.core.evaluators.base import EvaluatorBase
+
+OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
+    "gt": operator.gt,
+    "gte": operator.ge,
+    "lt": operator.lt,
+    "lte": operator.le,
+}
 
 
 class ThresholdEvaluator(EvaluatorBase):
@@ -20,11 +31,10 @@ class ThresholdEvaluator(EvaluatorBase):
             return False
 
         field = config.get("field", "")
-        operator = config.get("operator", "")
+        op_name = config.get("operator", "")
         threshold = config.get("threshold", 0)
 
         field_value = data.get(field)
-
         if field_value is None:
             return False
 
@@ -33,14 +43,5 @@ class ThresholdEvaluator(EvaluatorBase):
         except (TypeError, ValueError):
             return False
 
-        match operator:
-            case "gt":
-                return numeric_value > threshold
-            case "gte":
-                return numeric_value >= threshold
-            case "lt":
-                return numeric_value < threshold
-            case "lte":
-                return numeric_value <= threshold
-            case _:
-                return False
+        op_func = OPERATORS.get(op_name)
+        return op_func(numeric_value, threshold) if op_func else False
