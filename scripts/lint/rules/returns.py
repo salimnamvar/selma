@@ -46,8 +46,19 @@ class ResultReturnRule(Rule):
                         "SC005",
                         f"Function '{a_node.name}' returns a tuple; use Result[T]",
                     ))
-        if not self._is_exempt(a_node.name) and a_node.returns is not None:
-            if not self._is_result_type(a_node.returns):
+        if not self._is_exempt(a_node.name):
+            if a_node.returns is None:
+                has_return_value = any(
+                    isinstance(c, ast.Return) and c.value is not None
+                    for c in ast.walk(a_node)
+                )
+                if has_return_value:
+                    violations.append(Violation(
+                        a_filepath, a_node.lineno, a_node.col_offset,
+                        self.code,
+                        f"Function '{a_node.name}' missing return type annotation (must be Result[T])",
+                    ))
+            elif not self._is_result_type(a_node.returns):
                 violations.append(Violation(
                     a_filepath, a_node.lineno, a_node.col_offset,
                     self.code,
