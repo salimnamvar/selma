@@ -35,7 +35,10 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "pydantic",
+  "pydantic>=2.0",
+  "tree-sitter>=0.21",
+  "tree-sitter-python>=0.21",
+  "jsonpath-ng>=1.6",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +51,9 @@ dev = [
   "httpx",
   "PyYAML",
 ]
+
+[project.scripts]
+selma = "selma.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/salimnamvar/selma"
