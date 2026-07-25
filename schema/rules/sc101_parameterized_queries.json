@@ -1,0 +1,20 @@
+{
+  "lineage_id": "SC-101",
+  "id": "SC-101",
+  "type": "prohibition",
+  "message": "Possible SQL injection — use parameterized queries",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "target_methods": ["execute", "executemany"],
+    "check_first_arg": {
+      "forbid_fstring": true,
+      "forbid_format_call": true,
+      "forbid_percent": true
+    },
+    "message_template": "Possible SQL injection — use parameterized queries"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {}
+}

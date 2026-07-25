@@ -262,45 +262,355 @@ reportPrivateUsage = false
 reportImplicitStringConcatenation = true
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Selma Custom Linter — Python AST rules
+# Selma Configuration — Zero Hardcoding
 # ──────────────────────────────────────────────────────────────────────────────
-[tool.selma.lint]
-paths = ["src", "tests", "scripts"]
+[tool.selma]
+version = "0.1.0"
+name = "selma"
 
-[tool.selma.lint.runner]
-ruff = "ruff"
-pylint = "pylint"
-pyright = "pyright"
+# ─── Paths ──────────────────────────────────────────────────────────────────
+[tool.selma.paths]
+include = ["src", "tests"]
+exclude = ["__pycache__", "*.pyc", ".git", ".venv", "build", "dist", "*.egg-info"]
+extensions = [".py"]
 
-[tool.selma.lint.exclude]
-paths = []
-codes = []
+# ─── Output ─────────────────────────────────────────────────────────────────
+[tool.selma.output]
+format = "default"
+guide = false
+# file = null (stdout by default)
+color = true
 
-[tool.selma.lint.rules]
-# All enabled by default; disable specific codes here
+# ─── Execution ──────────────────────────────────────────────────────────────
+[tool.selma.execution]
+skip_tools = false
+skip_ast = false
+only = ""  # null equivalent: run all checks
+max_workers = 4
+file_timeout = 30
+
+# ─── Rules (top-level filtering) ───────────────────────────────────────────
+[tool.selma.rules]
 disabled = []
+codes = []
+exclude_codes = []
 
-[tool.selma.lint.rules.complexity]
-max-lines = 60
+# ─── Rule: SC-001 Single Exit ──────────────────────────────────────────────
+[tool.selma.rules.sc001]
+enabled = true
+severity = "critical"
+exempt_dunders = true
+exempt_generators = true
+exempt_names = []
 
-[tool.selma.lint.rules.resources]
-calls = [
-  "open", "Popen", "Lock", "RLock", "connect",
-  "NamedTemporaryFile", "TemporaryFile", "TemporaryDirectory",
-  "socket", "urlopen",
+# ─── Rule: SC-002 Zero Raise ───────────────────────────────────────────────
+[tool.selma.rules.sc002]
+enabled = true
+severity = "critical"
+exempt_dunders = true
+exempt_adapters = true
+adapter_keywords = ["exception", "error", "http"]
+
+# ─── Rule: SC-003 Result Return ────────────────────────────────────────────
+[tool.selma.rules.sc003]
+enabled = true
+severity = "critical"
+exempt_dunders = true
+exempt_properties = true
+exempt_abstract = true
+
+# ─── Rule: SC-004 INVALID_RESULT Sentinel ──────────────────────────────────
+[tool.selma.rules.sc004]
+enabled = true
+severity = "critical"
+sentinel_name = "INVALID_RESULT"
+exempt_pure = true
+
+# ─── Rule: SC-005 No Tuple Returns ─────────────────────────────────────────
+[tool.selma.rules.sc005]
+enabled = true
+severity = "high"
+exempt_dunders = true
+
+# ─── Rule: SC-007 No Assert for Validation ─────────────────────────────────
+[tool.selma.rules.sc007]
+enabled = true
+severity = "critical"
+exempt_tests = true
+test_patterns = ["test_*.py", "*_test.py"]
+
+# ─── Rule: SC-010 Function Length ──────────────────────────────────────────
+[tool.selma.rules.sc010]
+enabled = true
+severity = "medium"
+max_lines = 60
+count_nested = true
+exclude_non_executable = true
+
+# ─── Rule: SC-011 b_continue ───────────────────────────────────────────────
+[tool.selma.rules.sc011]
+enabled = true
+severity = "critical"
+exempt_dunders = true
+require_all = false
+require_result_functions = true
+warn_multi_false = true
+flag_alias = true
+flag_delete = true
+flag_parameter = true
+flag_global = true
+flag_attribute = true
+
+# ─── Rule: SC-013 Function Contracts ───────────────────────────────────────
+[tool.selma.rules.sc013]
+enabled = true
+severity = "high"
+exempt_dunders = true
+exempt_properties = true
+required_sections = ["preconditions", "postconditions", "side effect", "resource", "failure"]
+
+# ─── Rule: SC-022 No Input Mutation ────────────────────────────────────────
+[tool.selma.rules.sc022]
+enabled = true
+severity = "high"
+exempt_dunders = true
+read_only_methods = ["get", "copy", "items", "keys", "values", "iter", "len", "str", "repr"]
+mutation_methods = [
+  "append", "extend", "insert", "remove", "pop", "clear", "sort", "reverse",
+  "update", "setdefault", "popitem", "add", "discard", "remove",
 ]
 
-[tool.selma.lint.rules.determinism]
-forbidden = [
+# ─── Rule: SC-024 Explicit Return Types ────────────────────────────────────
+[tool.selma.rules.sc024]
+enabled = true
+severity = "high"
+exempt_dunders = true
+exempt_abstract = true
+
+# ─── Rule: SC-025 No Star Imports ──────────────────────────────────────────
+[tool.selma.rules.sc025]
+enabled = true
+severity = "medium"
+allowed_modules = []
+
+# ─── Rule: SC-031 Type Validation ──────────────────────────────────────────
+[tool.selma.rules.sc031]
+enabled = true
+severity = "warning"
+exempt_dunders = true
+skip_params = ["self", "cls"]
+framework_types = ["BaseModel", "BaseSettings", "dataclass"]
+
+# ─── Rule: SC-033 Nullability Validation ────────────────────────────────────
+[tool.selma.rules.sc033]
+enabled = true
+severity = "warning"
+exempt_dunders = true
+inherently_nullable = ["None"]
+skip_with_default = true
+
+# ─── Rule: SC-041 Specific Exception Handling ──────────────────────────────
+[tool.selma.rules.sc041]
+enabled = true
+severity = "critical"
+allow_broad_last = true
+allow_bare_except = false
+allow_base_exception = false
+
+# ─── Rule: SC-042 No Silent Failures ──────────────────────────────────────
+[tool.selma.rules.sc042]
+enabled = true
+severity = "critical"
+flag_empty = true
+flag_pass_only = true
+
+# ─── Rule: SC-052 No Re-Raising ────────────────────────────────────────────
+[tool.selma.rules.sc052]
+enabled = true
+severity = "critical"
+allow_in_finally = false
+
+# ─── Rule: SC-060 Log at First Detection Layer ─────────────────────────────
+[tool.selma.rules.sc060]
+enabled = true
+severity = "warning"
+flag_duplicate = true
+
+# ─── Rule: SC-061 Structured Logging ──────────────────────────────────────
+[tool.selma.rules.sc061]
+enabled = true
+severity = "warning"
+exempt_methods = ["debug"]
+flag_printf = true
+flag_fstring = true
+flag_percent = true
+
+# ─── Rule: SC-062 No Sensitive Data in Logs ───────────────────────────────
+[tool.selma.rules.sc062]
+enabled = true
+severity = "critical"
+sensitive_patterns = [
+  "password", "secret", "api_key", "apikey", "token",
+  "private_key", "access_key", "auth_token", "credential",
+]
+
+# ─── Rule: SC-065 Mandatory Failure Logging ────────────────────────────────
+[tool.selma.rules.sc065]
+enabled = true
+severity = "high"
+exempt_dunders = true
+exempt_safe_decorator = true
+log_levels = { validation = "warning", computation = "error", system = "critical" }
+
+# ─── Rule: SC-070 No Module-Level Mutable State ───────────────────────────
+[tool.selma.rules.sc070]
+enabled = true
+severity = "critical"
+exempt_constants = true
+exempt_dunders = ["__all__", "__version__"]
+exempt_context_var = true
+exempt_frozen_dataclass = true
+framework_globals = ["logger", "log", "app", "router", "db", "engine", "session", "config", "settings", "base", "Base", "metadata"]
+
+# ─── Rule: SC-071 Deterministic Execution ──────────────────────────────────
+[tool.selma.rules.sc071]
+enabled = true
+severity = "critical"
+forbidden_calls = [
   "datetime.now", "datetime.utcnow",
   "time.time", "time.monotonic", "time.localtime", "time.gmtime",
   "random.random", "random.randint", "random.choice", "random.sample",
   "random.shuffle", "random.gauss",
   "uuid.uuid4",
 ]
+exempt_injection = true
+injection_params = ["timestamp", "a_timestamp", "a_time", "seed", "a_seed", "a_clock"]
+exempt_crypto = true
+exempt_infrastructure = ["logging", "structlog", "prometheus", "statsd"]
 
-[tool.selma.lint.rules.security]
-secret-patterns = [
-  "password", "secret", "api_key", "apikey", "token",
-  "private_key", "access_key", "auth_token",
+# ─── Rule: SC-080 Context Managers ─────────────────────────────────────────
+[tool.selma.rules.sc080]
+enabled = true
+severity = "critical"
+resource_calls = [
+  "open", "Popen", "Lock", "RLock", "connect",
+  "NamedTemporaryFile", "TemporaryFile", "TemporaryDirectory",
+  "socket", "urlopen", "sqlite3.connect",
 ]
+
+# ─── Rule: SC-090 Shared State Protection ──────────────────────────────────
+[tool.selma.rules.sc090]
+enabled = true
+severity = "critical"
+detect_global = true
+detect_nonlocal = true
+strict_async = true
+
+# ─── Rule: SC-092 No Shared Mutable State Without Sync ────────────────────
+[tool.selma.rules.sc092]
+enabled = true
+severity = "critical"
+sync_primitives = ["Lock", "RLock", "asyncio.Lock", "Semaphore", "asyncio.Semaphore"]
+
+# ─── Rule: SC-100 No Secrets ──────────────────────────────────────────────
+[tool.selma.rules.sc100]
+enabled = true
+severity = "critical"
+secret_patterns = [
+  "password", "secret", "api_key", "apikey", "token",
+  "private_key", "access_key", "auth_token", "credential",
+]
+min_length = 8
+
+# ─── Rule: SC-101 Parameterized Queries ────────────────────────────────────
+[tool.selma.rules.sc101]
+enabled = true
+severity = "critical"
+execute_methods = ["execute", "executemany", "executescript"]
+sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "FROM", "WHERE", "JOIN", "INTO", "VALUES"]
+
+# ─── Rule: SC-104 No eval/exec ────────────────────────────────────────────
+[tool.selma.rules.sc104]
+enabled = true
+severity = "critical"
+forbidden_functions = ["eval", "exec", "compile"]
+
+# ─── Rule: SC-114 Recursion Limits ────────────────────────────────────────
+[tool.selma.rules.sc114]
+enabled = true
+severity = "critical"
+max_depth = 10
+depth_param = "a_depth"
+exempt_names = []
+
+# ─── Rule: SC-115 Configurable Timeouts ────────────────────────────────────
+[tool.selma.rules.sc115]
+enabled = true
+severity = "high"
+io_calls = [
+  "requests.get", "requests.post", "requests.put", "requests.delete",
+  "requests.patch", "requests.head", "requests.options",
+  "httpx.get", "httpx.post", "httpx.put", "httpx.delete",
+  "aiohttp.ClientSession.get", "aiohttp.ClientSession.post",
+  "urlopen", "socket.connect",
+  "subprocess.run", "subprocess.Popen",
+]
+timeout_param = "timeout"
+default_timeout = 30
+
+# ─── Rule: No print() in src/ ──────────────────────────────────────────────
+[tool.selma.rules.no_print]
+enabled = true
+severity = "warning"
+exempt_tests = true
+test_patterns = ["test_*.py", "*_test.py"]
+
+# ─── Rule: TODO Format ─────────────────────────────────────────────────────
+[tool.selma.rules.todo_format]
+enabled = true
+severity = "info"
+require_bug_ref = true
+valid_format = "TODO(bugref): description"
+
+# ─── Rule: a-prefix ────────────────────────────────────────────────────────
+[tool.selma.rules.a_prefix]
+enabled = true
+severity = "error"
+exempt_params = ["self", "cls", "args", "kwargs"]
+exempt_prefixes = ["_", "__"]
+inherited_methods = [
+  "filter", "emit", "format", "formatTime", "formatException",
+  "write", "read", "close", "flush", "seek", "tell",
+  "readline", "readlines", "writelines",
+]
+exempt_decorated = true
+
+# ─── Rule: mutable-default ─────────────────────────────────────────────────
+[tool.selma.rules.mutable_default]
+enabled = true
+severity = "error"
+mutable_types = ["list", "dict", "set"]
+
+# ─── External Tools ────────────────────────────────────────────────────────
+[tool.selma.tools.ruff]
+enabled = true
+binary = "ruff"
+args = []
+
+[tool.selma.tools.pylint]
+enabled = true
+binary = "pylint"
+rcfile = "pylintrc"
+fail_under = 8
+args = ["--recursive=y"]
+
+[tool.selma.tools.pyright]
+enabled = true
+binary = "pyright"
+args = ["--strict"]
+
+# ─── Logging ───────────────────────────────────────────────────────────────
+[tool.selma.logging]
+level = "WARNING"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+file = ""

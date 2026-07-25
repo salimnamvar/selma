@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class ResultReturnRule(Rule):
@@ -350,7 +354,10 @@ class ResultReturnRule(Rule):
         return Result.success(violations)
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that functions do not return tuples and use Result[T].
 
@@ -365,7 +372,10 @@ class ResultReturnRule(Rule):
         return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that async functions do not return tuples and use Result[T].
 
@@ -456,7 +466,10 @@ class ExplicitReturnTypeRule(Rule):
         return Result.success(violations)
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that functions have explicit return type annotations.
 
@@ -471,7 +484,10 @@ class ExplicitReturnTypeRule(Rule):
         return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that async functions have explicit return type annotations.
 
@@ -522,7 +538,10 @@ class NoStarImportRule(Rule):
         return b_result
 
     def check_import_from(
-        self, a_node: ast.ImportFrom, a_filepath: str
+        self,
+        a_node: ast.ImportFrom,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that no wildcard imports are used.
 

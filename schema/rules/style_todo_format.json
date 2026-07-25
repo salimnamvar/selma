@@ -1,0 +1,25 @@
+{
+  "lineage_id": "style-todo-format",
+  "id": "style-todo-format",
+  "type": "obligation",
+  "message": "TODO/FIXME must follow format: // TODO(name): description",
+  "evaluator_type": "ast_walk",
+  "evaluator_config": {
+    "root_node": "Module",
+    "walk_nodes": ["Comment"],
+    "walk_config": {
+      "check_todo_format": true
+    },
+    "count": {"operator": "gt", "value": 0},
+    "message_template": "TODO/FIXME comment does not follow required format: // TODO(name): description"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Unformatted TODOs are hard to track and assign ownership.",
+  "remediation": "Use format: # TODO(yourname): description or # FIXME(yourname): description",
+  "parameters": {
+    "required_format": "# TODO({name}): {description}"
+  }
+}

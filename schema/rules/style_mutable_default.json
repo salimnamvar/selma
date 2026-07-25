@@ -1,0 +1,23 @@
+{
+  "lineage_id": "style-mutable-default",
+  "id": "style-mutable-default",
+  "type": "prohibition",
+  "message": "Mutable default argument in function signature",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"}
+    ],
+    "message_template": "Function '{name}' has mutable default argument — use None with guard"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Mutable default arguments are shared across calls and cause subtle bugs.",
+  "remediation": "Use None as default and create the mutable inside: def func(a_items=None): items = a_items or []",
+  "parameters": {
+    "mutable_types": ["list", "dict", "set"]
+  }
+}

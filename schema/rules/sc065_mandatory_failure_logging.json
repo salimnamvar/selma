@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-065",
+  "id": "SC-065",
+  "type": "obligation",
+  "message": "Result.failure() must include descriptive message",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Call",
+    "conditions": [
+      {"field": "func", "operator": "exists"},
+      {"field": "func.attr", "operator": "equals", "value": "failure"}
+    ],
+    "message_template": "Result.failure() called without descriptive message"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Empty failure messages make debugging impossible.",
+  "remediation": "Add descriptive message: Result.failure('What went wrong and why')",
+  "parameters": {}
+}

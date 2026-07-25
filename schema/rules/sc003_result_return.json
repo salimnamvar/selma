@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-003",
+  "id": "SC-003",
+  "type": "obligation",
+  "message": "Function returns values but type is not Result[T]",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "returns", "operator": "exists"}
+    ],
+    "message_template": "Function '{name}' returns values but type is not Result[T]"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {
+    "exempt_dunders": true,
+    "exempt_properties": true
+  }
+}

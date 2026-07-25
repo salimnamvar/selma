@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
-from scripts.lint.core.visitor import get_visitor
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class SpecificExceptionRule(Rule):
@@ -45,31 +48,34 @@ class SpecificExceptionRule(Rule):
             b_result = "Specific exception types in except clauses"
         return b_result
 
-    def _is_last_handler(self, a_node: ast.ExceptHandler) -> Result[bool]:
+    def _is_last_handler(
+        self,
+        a_node: ast.ExceptHandler,
+        a_context: VisitorContext,
+    ) -> Result[bool]:
         """Check whether a_node is the last handler in its enclosing try block.
 
-        Precondition: a_node is an ExceptHandler visited by a LintVisitor
-            with a non-empty parent stack.
+        Precondition: a_node is an ExceptHandler AST node; a_context provides parent stack.
         Postcondition: Returns Ok(True) if a_node is the final handler;
             Ok(False) otherwise.
         Side effect: None.
-        Resource: Reads the visitor's parent stack via ContextVar.
-        Failure: Returns Ok(False) if no visitor is available.
+        Resource: Reads a_context.parent_stack.
+        Failure: Returns Ok(False) if no context is available.
         """
-        b_continue = True
         result: Result[bool] = Result.success(a_value=False)
-        if b_continue:
-            visitor = get_visitor()
-            if visitor.is_success().value and visitor.value:
-                for parent in reversed(visitor.value.parent_stack):
-                    if isinstance(parent, ast.Try):
-                        if parent.handlers and parent.handlers[-1] is a_node:
-                            result = Result.success(a_value=True)
-                        break
+        if a_context is not None:
+            for parent in reversed(a_context.parent_stack):
+                if isinstance(parent, ast.Try):
+                    if parent.handlers and parent.handlers[-1] is a_node:
+                        result = Result.success(a_value=True)
+                    break
         return result
 
     def check_except_handler(
-        self, a_node: ast.ExceptHandler, a_filepath: str
+        self,
+        a_node: ast.ExceptHandler,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that except clauses catch specific exception types.
 
@@ -77,39 +83,37 @@ class SpecificExceptionRule(Rule):
             at a_filepath.
         Postcondition: Returns Ok containing violations found, or Ok([]) if compliant.
         Side effect: None.
-        Resource: Reads the visitor's parent stack for last-handler detection.
+        Resource: Reads the VisitorContext for last-handler detection.
         Failure: Never returns Failure; all errors are encoded as violations in Ok.
         """
-        b_continue = True
         violations: list[Violation] = []
-        if b_continue:
-            if a_node.type is None:
+        if a_node.type is None:
+            violations = [
+                Violation(
+                    a_filepath,
+                    a_node.lineno,
+                    a_node.col_offset,
+                    self.code,
+                    "Bare 'except:' forbidden; catch specific exception types",
+                )
+            ]
+        elif isinstance(a_node.type, ast.Name) and a_node.type.id == "Exception":
+            is_last_result = self._is_last_handler(a_node, a_context)
+            is_last = (
+                is_last_result.value
+                if is_last_result.is_success().value
+                else False
+            )
+            if not is_last:
                 violations = [
                     Violation(
                         a_filepath,
                         a_node.lineno,
                         a_node.col_offset,
                         self.code,
-                        "Bare 'except:' forbidden; catch specific exception types",
+                        "Broad 'except Exception' forbidden; catch specific types",
                     )
                 ]
-            elif isinstance(a_node.type, ast.Name) and a_node.type.id == "Exception":
-                is_last_result = self._is_last_handler(a_node)
-                is_last = (
-                    is_last_result.value.value
-                    if is_last_result.is_success().value
-                    else False
-                )
-                if not is_last:
-                    violations = [
-                        Violation(
-                            a_filepath,
-                            a_node.lineno,
-                            a_node.col_offset,
-                            self.code,
-                            "Broad 'except Exception' forbidden; catch specific types",
-                        )
-                    ]
         return Result.success(violations)
 
 
@@ -154,7 +158,10 @@ class NoSilentFailureRule(Rule):
         return b_result
 
     def check_except_handler(
-        self, a_node: ast.ExceptHandler, a_filepath: str
+        self,
+        a_node: ast.ExceptHandler,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that except blocks are not empty or pass-only.
 
@@ -165,29 +172,27 @@ class NoSilentFailureRule(Rule):
         Resource: None.
         Failure: Never returns Failure; all errors are encoded as violations in Ok.
         """
-        b_continue = True
         violations: list[Violation] = []
-        if b_continue:
-            if not a_node.body:
-                violations = [
-                    Violation(
-                        a_filepath,
-                        a_node.lineno,
-                        a_node.col_offset,
-                        self.code,
-                        "Empty except block: silent failure forbidden",
-                    )
-                ]
-            elif len(a_node.body) == 1 and isinstance(a_node.body[0], ast.Pass):
-                violations = [
-                    Violation(
-                        a_filepath,
-                        a_node.lineno,
-                        a_node.col_offset,
-                        self.code,
-                        "Except block contains only 'pass': silent failure forbidden",
-                    )
-                ]
+        if not a_node.body:
+            violations = [
+                Violation(
+                    a_filepath,
+                    a_node.lineno,
+                    a_node.col_offset,
+                    self.code,
+                    "Empty except block: silent failure forbidden",
+                )
+            ]
+        elif len(a_node.body) == 1 and isinstance(a_node.body[0], ast.Pass):
+            violations = [
+                Violation(
+                    a_filepath,
+                    a_node.lineno,
+                    a_node.col_offset,
+                    self.code,
+                    "Except block contains only 'pass': silent failure forbidden",
+                )
+            ]
         return Result.success(violations)
 
 
@@ -227,7 +232,10 @@ class NoReraiseRule(Rule):
         return b_result
 
     def check_except_handler(
-        self, a_node: ast.ExceptHandler, a_filepath: str
+        self,
+        a_node: ast.ExceptHandler,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that caught exceptions are not re-raised.
 
@@ -238,19 +246,17 @@ class NoReraiseRule(Rule):
         Resource: None.
         Failure: Never returns Failure; all errors are encoded as violations in Ok.
         """
-        b_continue = True
         violations: list[Violation] = []
-        if b_continue:
-            for child in ast.walk(a_node):
-                if isinstance(child, ast.Raise) and child.exc is None:
-                    violations = [
-                        Violation(
-                            a_filepath,
-                            child.lineno,
-                            child.col_offset,
-                            self.code,
-                            "Re-raise forbidden; convert exception to Result return",
-                        )
-                    ]
-                    break
+        for child in ast.walk(a_node):
+            if isinstance(child, ast.Raise) and child.exc is None:
+                violations = [
+                    Violation(
+                        a_filepath,
+                        child.lineno,
+                        child.col_offset,
+                        self.code,
+                        "Re-raise forbidden; convert exception to Result return",
+                    )
+                ]
+                break
         return Result.success(violations)

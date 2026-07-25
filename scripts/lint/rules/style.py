@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class APrefixRule(Rule):
@@ -120,7 +124,10 @@ class APrefixRule(Rule):
         return result
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that all function arguments have a_ prefix.
 
@@ -133,7 +140,10 @@ class APrefixRule(Rule):
         return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that all async function arguments have a_ prefix.
 
@@ -296,7 +306,10 @@ class FunctionContractRule(Rule):
         return result
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that functions have docstrings with all 5 mandatory sections.
 
@@ -309,7 +322,10 @@ class FunctionContractRule(Rule):
         return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that async functions have docstrings with all 5 sections.
 
@@ -391,7 +407,10 @@ class NoMutableDefaultRule(Rule):
         return result
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that function defaults are not mutable.
 
@@ -404,7 +423,10 @@ class NoMutableDefaultRule(Rule):
         return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that async function defaults are not mutable.
 

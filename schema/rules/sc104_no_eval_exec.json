@@ -1,0 +1,15 @@
+{
+  "lineage_id": "SC-104",
+  "id": "SC-104",
+  "type": "prohibition",
+  "message": "Forbidden call to eval/exec/compile — use safe alternative",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_functions": ["eval", "exec", "compile"],
+    "message_template": "Forbidden call to '{function}()' — use safe alternative"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {}
+}

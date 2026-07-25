@@ -1,0 +1,26 @@
+{
+  "lineage_id": "SC-060",
+  "id": "SC-060",
+  "type": "obligation",
+  "message": "Logging must happen at the first layer (not re-logged downstream)",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "logging", "method": "info"},
+      {"module": "logging", "method": "warning"},
+      {"module": "logging", "method": "error"},
+      {"module": "logging", "method": "debug"},
+      {"module": "logging", "method": "critical"}
+    ],
+    "message_template": "Direct logging call '{module}.{method}()' — log at boundary layer only"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Logging should happen at the first layer to avoid duplicate log entries.",
+  "remediation": "Use structlog or log only at the boundary layer (interface/application).",
+  "parameters": {
+    "exempt_boundary": true
+  }
+}

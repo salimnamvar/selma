@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 _SC002_EXEMPT_DUNDERS = frozenset(
     {
@@ -590,7 +594,10 @@ class SingleExitRule(Rule):
         return Result.success(violations)
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that function has exactly one exit door.
 
@@ -606,7 +613,10 @@ class SingleExitRule(Rule):
         return self._check_exits(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that async function has exactly one exit door.
 
@@ -723,7 +733,10 @@ class ZeroRaiseRule(Rule):
         return Result.success(violations)
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that no raise statements exist in non-dunder functions.
 
@@ -739,7 +752,10 @@ class ZeroRaiseRule(Rule):
         return self._check_raise(a_node, a_filepath)
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check no raise statements in non-dunder async functions.
 

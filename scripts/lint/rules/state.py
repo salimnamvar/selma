@@ -3,42 +3,17 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.config import DeterminismConfig
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
+
 _MUTABLE_VALUE_NODES = (ast.Dict, ast.List, ast.Set)
-
-_CONTEXTVAR_CALL_NAMES = frozenset({"ContextVar"})
-
-
-def _is_contextvar_assignment(
-    a_node: ast.Assign | ast.AnnAssign,
-) -> Result[bool]:
-    """Check if an assignment creates a ContextVar.
-
-    Precondition: a_node is a valid Assign or AnnAssign AST node.
-    Postcondition: Returns Ok(True) if the assignment creates a
-        ContextVar; Ok(False) otherwise.
-    Side effect: None.
-    Resource: None.
-    Failure: Never returns Failure.
-    """
-    b_continue = True
-    result: Result[bool] = Result.success(a_value=False)
-    if b_continue:
-        value = getattr(a_node, "value", None)
-        if value is not None and isinstance(value, ast.Call):
-            func = value.func
-            is_cv = isinstance(func, ast.Name) and func.id in _CONTEXTVAR_CALL_NAMES
-            is_cv_attr = (
-                isinstance(func, ast.Attribute) and func.attr in _CONTEXTVAR_CALL_NAMES
-            )
-            if is_cv or is_cv_attr:
-                result = Result.success(a_value=True)
-    return result
 
 
 def _is_frozen_dataclass_instantiation(
@@ -261,7 +236,12 @@ class DeterminismRule(Rule):
                     break
         return Result.success(violations)
 
-    def check_call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
+    def check_call(
+        self,
+        a_node: ast.Call,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
+    ) -> Result[list[Violation]]:
         """Check for non-deterministic function calls.
 
         Precondition: a_node is a valid Call AST node in the file
@@ -432,7 +412,10 @@ class NoModuleLevelMutableRule(Rule):
         return Result.success(violations)
 
     def check_module(
-        self, a_node: ast.Module, a_filepath: str
+        self,
+        a_node: ast.Module,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that no mutable module-level variables are defined.
 

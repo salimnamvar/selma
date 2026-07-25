@@ -1,0 +1,27 @@
+{
+  "lineage_id": "SC-024",
+  "id": "SC-024",
+  "type": "obligation",
+  "message": "Function missing explicit return type annotation",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "returns", "operator": "not_exists"}
+    ],
+    "message_template": "Function '{name}' missing explicit return type annotation"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Explicit return types enable static analysis and self-documenting code.",
+  "remediation": "Add return type annotation: def foo() -> Result[int]:",
+  "parameters": {
+    "exempt_dunders": true,
+    "exempt_properties": true,
+    "exempt_abstract": true,
+    "exempt_private": true
+  }
+}

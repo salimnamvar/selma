@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class AssertValidationRule(Rule):
@@ -161,7 +165,10 @@ class AssertValidationRule(Rule):
         return Result.success(b_result)
 
     def check_assert(
-        self, a_node: ast.Assert, a_filepath: str
+        self,
+        a_node: ast.Assert,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that assert is not used for input validation.
 

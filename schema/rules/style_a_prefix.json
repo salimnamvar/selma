@@ -1,0 +1,26 @@
+{
+  "lineage_id": "style-a-prefix",
+  "id": "style-a-prefix",
+  "type": "obligation",
+  "message": "Function arguments must use a_ prefix",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"}
+    ],
+    "message_template": "Function '{name}' arguments must use a_ prefix (except self/cls)"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Consistent argument naming improves code readability and searchability.",
+  "remediation": "Rename arguments: def func(a_name: str, a_count: int):",
+  "parameters": {
+    "exempt_dunders": true,
+    "exempt_self": true,
+    "exempt_cls": true,
+    "exempt_private": true
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "lineage_id": "SC-004",
+  "id": "SC-004",
+  "type": "obligation",
+  "message": "Module has functions returning Result but missing INVALID_RESULT sentinel",
+  "evaluator_type": "ast_module_check",
+  "evaluator_config": {
+    "sentinel_name": "INVALID_RESULT",
+    "condition": "module_has_result_returning_functions",
+    "message_template": "Module missing INVALID_RESULT sentinel per SC-004"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {
+    "sentinel_name": "INVALID_RESULT"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "lineage_id": "SC-022",
+  "id": "SC-022",
+  "type": "prohibition",
+  "message": "Function mutates input parameters",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "check": {
+      "type": "input_mutation",
+      "rules": [
+        {"rule": "no_list_mutation", "severity": "error", "methods": ["append", "extend", "insert", "remove", "pop", "clear", "sort", "reverse"]},
+        {"rule": "no_dict_mutation", "severity": "error", "methods": ["update", "pop", "popitem", "clear", "setdefault"]},
+        {"rule": "no_set_mutation", "severity": "error", "methods": ["add", "remove", "discard", "pop", "clear", "update"]}
+      ]
+    },
+    "message_template": "Function '{name}' mutates input parameter — return new value instead"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Input mutation creates hidden side effects and breaks referential transparency.",
+  "remediation": "Return a new value instead of mutating input. Use copy.deepcopy() if needed.",
+  "parameters": {}
+}

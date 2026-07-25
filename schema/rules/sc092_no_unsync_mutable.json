@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-092",
+  "id": "SC-092",
+  "type": "prohibition",
+  "message": "Unsynchronized mutable access detected",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Call",
+    "conditions": [
+      {"field": "func", "operator": "exists"},
+      {"field": "func.attr", "operator": "matches", "value": "^(append|extend|insert|remove|pop|update|clear|sort|reverse)$"}
+    ],
+    "message_template": "Unsynchronized mutable access detected — use thread-safe wrapper"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Unsynchronized mutable access in concurrent code creates data races.",
+  "remediation": "Wrap with threading.Lock or use queue.Queue for thread-safe access.",
+  "parameters": {}
+}

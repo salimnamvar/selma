@@ -1,0 +1,20 @@
+{
+  "lineage_id": "SC-011",
+  "id": "SC-011",
+  "type": "obligation",
+  "message": "Function lacks b_continue error-gating",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "variable": "b_continue",
+    "rules": ["must_exist", "first_value_is_true", "used_in_guard"],
+    "message_template": "Function '{name}' b_continue violation"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {
+    "exempt_dunders": true,
+    "require_result_functions": true
+  }
+}

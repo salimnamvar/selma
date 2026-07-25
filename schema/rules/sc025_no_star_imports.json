@@ -1,0 +1,23 @@
+{
+  "lineage_id": "SC-025",
+  "id": "SC-025",
+  "type": "prohibition",
+  "message": "Star import detected — use explicit imports",
+  "evaluator_type": "ast_walk",
+  "evaluator_config": {
+    "root_node": "Module",
+    "walk_nodes": ["ImportFrom"],
+    "walk_config": {
+      "check_wildcard": true
+    },
+    "count": {"operator": "gt", "value": 0},
+    "message_template": "Star import 'from {module} import *' detected — use explicit imports"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Star imports pollute namespace and hide dependencies.",
+  "remediation": "Replace with explicit imports: from module import name1, name2",
+  "parameters": {}
+}

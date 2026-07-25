@@ -1,0 +1,26 @@
+{
+  "lineage_id": "SC-090",
+  "id": "SC-090",
+  "type": "prohibition",
+  "message": "Mutable shared state detected — use thread-safe patterns",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "check": {
+      "type": "shared_state",
+      "rules": [
+        {"rule": "no_module_level_mutable", "severity": "error"},
+        {"rule": "no_global_mutable", "severity": "error"},
+        {"rule": "no_class_level_mutable", "severity": "warning"}
+      ]
+    },
+    "message_template": "Function '{name}' uses mutable shared state — use thread-safe patterns"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Mutable shared state creates race conditions and test pollution.",
+  "remediation": "Use threading.Lock, queue.Queue, or immutable data structures.",
+  "parameters": {}
+}

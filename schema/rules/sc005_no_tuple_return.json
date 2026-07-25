@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-005",
+  "id": "SC-005",
+  "type": "prohibition",
+  "message": "Function returns bare tuples — use Result[T] or dataclass",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Return",
+    "conditions": [
+      {"field": "value", "operator": "exists"},
+      {"field": "value", "operator": "contains_node", "value": "Tuple"}
+    ],
+    "message_template": "Bare tuple return detected — wrap in Result[T] or dataclass"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Bare tuples have no named fields and are ambiguous at call sites.",
+  "remediation": "Use Result[T] or a dataclass with named fields.",
+  "parameters": {}
+}

@@ -1,0 +1,17 @@
+{
+  "lineage_id": "SC-052",
+  "id": "SC-052",
+  "type": "prohibition",
+  "message": "Re-raise forbidden — convert exception to Result return",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "ExceptHandler",
+    "variable": "raise",
+    "rules": ["must_not_exist"],
+    "message_template": "Re-raise forbidden — convert exception to Result return"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {}
+}

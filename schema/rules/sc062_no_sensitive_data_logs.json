@@ -1,0 +1,29 @@
+{
+  "lineage_id": "SC-062",
+  "id": "SC-062",
+  "type": "prohibition",
+  "message": "Sensitive data logged — passwords, tokens, secrets must not appear in logs",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "logging", "method": "info"},
+      {"module": "logging", "method": "warning"},
+      {"module": "logging", "method": "error"},
+      {"module": "logging", "method": "debug"}
+    ],
+    "check_first_arg": {
+      "forbid_fstring": true,
+      "forbid_format_call": true
+    },
+    "message_template": "Sensitive data may be logged — sanitize before logging"
+  },
+  "weight": "critical",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Logging sensitive data exposes credentials in log files and monitoring systems.",
+  "remediation": "Sanitize sensitive fields before logging. Use redaction functions.",
+  "parameters": {
+    "sensitive_patterns": ["password", "token", "secret", "key", "credential"]
+  }
+}

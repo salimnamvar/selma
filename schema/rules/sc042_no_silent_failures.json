@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-042",
+  "id": "SC-042",
+  "type": "prohibition",
+  "message": "Silent failure — exception caught but not logged or converted to Result",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "ExceptHandler",
+    "conditions": [
+      {"field": "type", "operator": "exists"},
+      {"field": "name", "operator": "exists"}
+    ],
+    "message_template": "Silent exception handling detected — log or convert to Result.failure()"
+  },
+  "weight": "high",
+  "priority": "constitutional",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Silent failures hide bugs and make debugging impossible.",
+  "remediation": "Log the exception or convert to Result.failure() with descriptive message.",
+  "parameters": {}
+}

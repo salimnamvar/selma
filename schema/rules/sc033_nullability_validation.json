@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-033",
+  "id": "SC-033",
+  "type": "obligation",
+  "message": "Missing nullability check before dereference",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Attribute",
+    "conditions": [
+      {"field": "value", "operator": "exists"},
+      {"field": "value", "operator": "contains_node", "value": "Name"}
+    ],
+    "message_template": "Potential null dereference on attribute access"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Null dereference is a common runtime error that static analysis can catch.",
+  "remediation": "Add if value is not None: guard before attribute access.",
+  "parameters": {}
+}

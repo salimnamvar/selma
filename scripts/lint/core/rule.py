@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from abc import ABC
 from abc import abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class Rule(ABC):
@@ -42,3 +46,19 @@ class Rule(ABC):
         if b_continue:
             b_result = ""
         return b_result
+
+    def check(
+        self,
+        a_node: object,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
+    ) -> object:
+        """Dispatch hook for rule checking. Subclasses override check_<NodeType>.
+
+        Precondition: a_node is a valid AST node.
+        Postcondition: returns Result with list of violations.
+        Side effect: none.
+        Resource: none.
+        Failure: never fails.
+        """
+        raise NotImplementedError

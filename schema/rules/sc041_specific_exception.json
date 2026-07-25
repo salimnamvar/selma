@@ -1,0 +1,18 @@
+{
+  "lineage_id": "SC-041",
+  "id": "SC-041",
+  "type": "obligation",
+  "message": "Bare except forbidden — catch specific exception types",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "ExceptHandler",
+    "conditions": [
+      {"field": "type", "operator": "not_exists"}
+    ],
+    "message_template": "Bare 'except:' forbidden — catch specific exception types"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {}
+}

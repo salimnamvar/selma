@@ -1,0 +1,26 @@
+{
+  "lineage_id": "SC-013",
+  "id": "SC-013",
+  "type": "obligation",
+  "message": "Function missing contract (preconditions/postconditions docstring)",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "body", "operator": "not_exists"}
+    ],
+    "message_template": "Function '{name}' missing contract docstring (preconditions/postconditions)"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Contracts document invariants, preconditions, and postconditions for maintainability.",
+  "remediation": "Add docstring with Preconditions, Postconditions, Side Effects, Resource, Failure sections.",
+  "parameters": {
+    "exempt_dunders": true,
+    "exempt_properties": true,
+    "exempt_private": true
+  }
+}

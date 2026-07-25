@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field
 
-from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.guidance import RuleGuidance
 from selma.domain.value_objects.rule_id import RuleId
 from selma.domain.value_objects.severity import Severity
@@ -20,7 +19,7 @@ class EvaluatorConfig:
 
     pattern: str | None = None
     flags: str | None = None
-    field: str | None = None
+    target_field: str | None = None
     operator: str | None = None
     value: str | int | float | bool | None = None
     threshold: float | None = None

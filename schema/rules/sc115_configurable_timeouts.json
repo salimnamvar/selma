@@ -1,0 +1,28 @@
+{
+  "lineage_id": "SC-115",
+  "id": "SC-115",
+  "type": "obligation",
+  "message": "External call without configurable timeout",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "urllib", "method": "urlopen"},
+      {"module": "requests", "method": "get"},
+      {"module": "requests", "method": "post"},
+      {"module": "requests", "method": "put"},
+      {"module": "requests", "method": "delete"},
+      {"module": "httpx", "method": "get"},
+      {"module": "httpx", "method": "post"}
+    ],
+    "message_template": "External call '{module}.{method}()' without configurable timeout"
+  },
+  "weight": "high",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "External calls without timeouts can hang indefinitely.",
+  "remediation": "Add timeout parameter: requests.get(url, timeout=a_timeout)",
+  "parameters": {
+    "default_timeout": 30
+  }
+}

@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
+
+if TYPE_CHECKING:
+    from scripts.lint.core.visitor import VisitorContext
 
 
 class ImportInFunctionRule(Rule):
@@ -45,7 +49,10 @@ class ImportInFunctionRule(Rule):
         return b_result
 
     def check_function_def(
-        self, a_node: ast.FunctionDef, a_filepath: str
+        self,
+        a_node: ast.FunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that no imports exist inside function bodies.
 
@@ -78,7 +85,10 @@ class ImportInFunctionRule(Rule):
         return result
 
     def check_async_function_def(
-        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+        self,
+        a_node: ast.AsyncFunctionDef,
+        a_filepath: str,
+        a_context: VisitorContext | None = None,
     ) -> Result[list[Violation]]:
         """Check that no imports exist inside async function bodies.
 

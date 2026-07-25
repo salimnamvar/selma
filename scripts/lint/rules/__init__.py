@@ -1,8 +1,15 @@
-"""Auto-discover and register all lint rules."""
+"""Auto-discover and register all lint rules.
+
+Loads both Python rule classes AND JSON rule files.
+JSON rules are loaded from schema/rules/ directory.
+"""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from scripts.lint.config import LintConfig
+from scripts.lint.core.json_rule import load_json_rules
 from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.rules.assertions import AssertValidationRule
@@ -27,9 +34,15 @@ from scripts.lint.rules.style import APrefixRule
 from scripts.lint.rules.style import FunctionContractRule
 from scripts.lint.rules.style import NoMutableDefaultRule
 
+_RULES_DIR = Path(__file__).resolve().parent.parent.parent.parent / "schema" / "rules"
+
 
 def all_rules(a_config: LintConfig | None = None) -> Result[list[Rule]]:
     """Return all registered lint rules, filtered by config.
+
+    Loads Python rule classes AND JSON rule files from schema/rules/.
+    JSON rules are added alongside Python rules. Duplicate codes are
+    resolved by preferring Python rules (they can override JSON rules).
 
     Precondition: None.
     Postcondition: Returns Ok with list of enabled Rule instances.
@@ -44,7 +57,8 @@ def all_rules(a_config: LintConfig | None = None) -> Result[list[Rule]]:
         cfg = a_config or LintConfig()
         disabled = frozenset(cfg.rules.disabled)
 
-        rules = [
+        # Python rule classes (existing)
+        python_rules: list[Rule] = [
             # Control flow
             SingleExitRule(),
             ZeroRaiseRule(),
@@ -78,6 +92,15 @@ def all_rules(a_config: LintConfig | None = None) -> Result[list[Rule]]:
             # b_continue
             BContinueRule(),
         ]
+
+        # JSON rule files (new)
+        json_rules = load_json_rules(_RULES_DIR)
+
+        # Merge: Python rules take precedence over JSON rules with same code
+        python_codes = {r.code for r in python_rules}
+        json_only = [r for r in json_rules if r.code not in python_codes]
+
+        rules = python_rules + json_only
 
         if disabled:
             rules = [r for r in rules if r.code not in disabled]

@@ -1,0 +1,24 @@
+{
+  "lineage_id": "SC-114",
+  "id": "SC-114",
+  "type": "obligation",
+  "message": "Recursive function missing depth limit",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"}
+    ],
+    "message_template": "Recursive function '{name}' missing depth limit protection"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Unbounded recursion causes stack overflow and denial of service.",
+  "remediation": "Add a max_depth parameter or use @functools.lru_cache for memoization.",
+  "parameters": {
+    "exempt_dunders": true,
+    "max_recursion_depth": 100
+  }
+}

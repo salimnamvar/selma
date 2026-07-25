@@ -1,0 +1,25 @@
+{
+  "lineage_id": "SC-031",
+  "id": "SC-031",
+  "type": "obligation",
+  "message": "Missing type validation before operation",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "args", "operator": "exists"}
+    ],
+    "message_template": "Function '{name}' accepts arguments without type validation"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Type validation prevents runtime errors from invalid inputs.",
+  "remediation": "Add isinstance() checks or use Protocol/ABC for structural validation.",
+  "parameters": {
+    "exempt_dunders": true,
+    "exempt_typed": true
+  }
+}

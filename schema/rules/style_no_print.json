@@ -1,0 +1,21 @@
+{
+  "lineage_id": "style-no-print",
+  "id": "style-no-print",
+  "type": "prohibition",
+  "message": "print() used in production code",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_functions": ["print"],
+    "message_template": "print() detected in production code — use logging or structlog"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "print() has no log levels, no structured output, and no configurability.",
+  "remediation": "Replace with structlog.info() or logging.info().",
+  "parameters": {
+    "exempt_test_files": true,
+    "exempt_scripts": true
+  }
+}

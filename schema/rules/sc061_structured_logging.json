@@ -1,0 +1,20 @@
+{
+  "lineage_id": "SC-061",
+  "id": "SC-061",
+  "type": "obligation",
+  "message": "Use structured logging (structlog) instead of print/logging",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_functions": ["print"],
+    "message_template": "print() detected — use structlog for structured logging"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Structured logging enables machine-readable logs and better observability.",
+  "remediation": "Replace print() with structlog.info() or similar structured logger.",
+  "parameters": {
+    "exempt_test_files": true
+  }
+}

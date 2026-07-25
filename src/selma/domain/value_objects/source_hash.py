@@ -26,12 +26,11 @@ class SourceHash:
     def from_content(a_content: str | bytes) -> SourceHash:
         """Create a SourceHash from file content."""
         b_continue = True
-        result = SourceHash("")
+        raw = a_content
         if b_continue and isinstance(a_content, str):
-            a_content = a_content.encode("utf-8")
-        if b_continue:
-            result = SourceHash(hashlib.sha256(a_content).hexdigest())
-        return result
+            raw = a_content.encode("utf-8")
+        b_result = SourceHash(hashlib.sha256(raw).hexdigest())  # type: ignore[arg-type]
+        return b_result
 
     def __eq__(self, a_other: object) -> bool:
         b_continue = True

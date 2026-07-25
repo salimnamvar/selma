@@ -1,0 +1,32 @@
+{
+  "lineage_id": "SC-071",
+  "id": "SC-071",
+  "type": "prohibition",
+  "message": "Non-deterministic call forbidden — inject time/random source",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "datetime", "method": "now"},
+      {"module": "datetime", "method": "utcnow"},
+      {"module": "time", "method": "time"},
+      {"module": "time", "method": "monotonic"},
+      {"module": "time", "method": "localtime"},
+      {"module": "time", "method": "gmtime"},
+      {"module": "random", "method": "random"},
+      {"module": "random", "method": "randint"},
+      {"module": "random", "method": "choice"},
+      {"module": "random", "method": "sample"},
+      {"module": "random", "method": "shuffle"},
+      {"module": "random", "method": "gauss"},
+      {"module": "uuid", "method": "uuid4"}
+    ],
+    "message_template": "Non-deterministic call forbidden — inject parameter"
+  },
+  "weight": "critical",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "parameters": {
+    "exempt_injection": true,
+    "exempt_crypto": true
+  }
+}
