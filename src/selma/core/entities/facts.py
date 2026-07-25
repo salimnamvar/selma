@@ -2,12 +2,12 @@
 
 from pydantic import BaseModel
 
-
 class ParameterNode(BaseModel):
     """Represents a function parameter."""
 
     name: str
-    position: str  # positional_only, positional, var_positional, keyword_only, var_keyword
+    # positional_only, positional, var_positional, keyword_only, var_keyword
+    position: str
     has_default: bool
     type_annotation: str | None = None
     line: int

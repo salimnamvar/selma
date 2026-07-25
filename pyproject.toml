@@ -65,7 +65,7 @@ Documentation = "https://github.com/salimnamvar/selma/tree/main/docs"
 where = ["src"]
 
 [tool.ruff]
-line-length = 120
+line-length = 88
 target-version = "py313"
 src = ["src", "tests"]
 show-fixes = true
@@ -111,23 +111,24 @@ select = [
   "C90",    # mccabe complexity
   "TD",     # flake8-todos
   "TID",    # flake8-tidy-imports
+  "A",      # flake8-builtins (avoid shadowing builtins)
+  "FLY",    # flynt (prefer f-strings over .format())
+  "G",      # flake8-logging-format (lazy logging)
+  "INP",    # flake8-no-pep420 (implicit namespace packages)
+  "NPY",    # NumPy-specific rules
+  "PERF",   # perflint (performance anti-patterns)
+  "YTT",    # flake8-2020 (sys.version checks)
+  "RUF100", # unused noqa directives
 ]
 ignore = [
-  "E501",    # line-too-long — handled by formatter
+  "COM812",  # trailing comma — conflicts with formatter
+  "ISC001",  # implicit string concat — conflicts with formatter
   "TRY003",  # long messages — meaningful exceptions
   "D102",    # missing docstring in public method — enforced at class level
   "D105",    # missing docstring in magic method — self-explanatory
   "D107",    # missing docstring in __init__ — class docstring suffices
-  "ANN401",  # dynamically typed expressions — too strict
-  "FBT003",  # boolean positional in function call — sometimes needed
-  "COM812",  # trailing comma — conflicts with formatter
-  "ISC001",  # implicit string concat — conflicts with formatter
   "TD003",   # missing issue link — handled by custom check
   "EXE001",  # shebang — handled by clean.sh
-  "PLR0913", # too many arguments — sometimes necessary
-  "PLR0912", # too many branches — sometimes necessary
-  "PLR0915", # too many statements — sometimes necessary
-  "SLF001",  # private member access — needed in tests
   "TC001",   # type-checking import — breaks pydantic with from __future__ import annotations
   "TC003",   # type-checking stdlib import — same reason
 ]
@@ -151,6 +152,7 @@ ignore = [
     "D415",    # docstring first line punctuation — tests
     "FBT001",  # boolean positional — test helpers
     "FBT002",  # boolean default — test helpers
+    "FBT003",  # boolean positional in function call — test helpers
     "PLC0415", # import not at top level — test isolation
     "PLR2004", # magic values in comparisons — common in tests
     "PT011",   # pytest.raises too broad — validation tests
@@ -163,13 +165,14 @@ ignore = [
     "SLF001",  # private member access — testing internals
     "T201",    # print statement — allowed in tests
 ]
-"**/__init__.py" = ["F401", "TID252"]
+"__init__.py" = ["F401", "TID252"]
 "scripts/**/*.py" = [
     "ANN",     # type annotations not required in scripts
     "T201",    # print statement — allowed in scripts
     "B008",    # function call in argument defaults — typer idiom
     "FBT001",  # boolean positional — CLI flags
     "FBT002",  # boolean default — CLI flags
+    "FBT003",  # boolean positional in function call — CLI flags
     "PLC0415", # import not at top level — circular import guards
     "F821",    # undefined name — TYPE_CHECKING blocks
 ]
@@ -178,6 +181,8 @@ ignore = [
 known-first-party = ["selma"]
 force-single-line = true  # Google style: one import per line
 force-sort-within-sections = true  # Alphabetical within each group
+lines-after-imports = 1  # Single blank after imports (Google)
+lines-between-types = 0  # No blank between import types
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -192,7 +197,7 @@ ban-relative-imports = "all"
 inline-quotes = "double"
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10  # Google recommends simple functions
+max-complexity = 8  # Stricter than 10, Google recommends simple functions
 
 [tool.ruff.format]
 quote-style = "double"
@@ -243,3 +248,7 @@ pythonPlatform = "Linux"
 include = ["src"]
 extraPaths = ["src"]
 reportMissingTypeStubs = false
+reportUntypedFunctionDecorator = true  # Type decorators
+reportUntypedClassDecorator = true
+reportPrivateUsage = false  # Allow _private in same package
+reportImplicitStringConcatenation = true  # Catch accidental concat

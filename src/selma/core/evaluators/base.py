@@ -3,7 +3,6 @@
 from abc import ABC
 from abc import abstractmethod
 
-
 class EvaluatorBase(ABC):
     """Abstract base class for all evaluators."""
 

@@ -4,7 +4,6 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
-
 class Weight(StrEnum):
     """Severity weight for findings."""
 

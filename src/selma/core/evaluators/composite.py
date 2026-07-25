@@ -2,11 +2,12 @@
 
 from selma.core.evaluators.base import EvaluatorBase
 
-
 class CompositeEvaluator(EvaluatorBase):
     """Evaluates multiple sub-evaluators with logic operators."""
 
-    def __init__(self, evaluator_registry: dict[str, EvaluatorBase] | None = None) -> None:
+    def __init__(
+        self, evaluator_registry: dict[str, EvaluatorBase] | None = None
+    ) -> None:
         """Initialize composite evaluator.
 
         Args:

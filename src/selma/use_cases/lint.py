@@ -14,7 +14,6 @@ from selma.core.evaluators.threshold import ThresholdEvaluator
 from selma.core.ports.cache_port import AbstractCache
 from selma.core.ports.parser_port import AbstractParser
 
-
 class LintOrchestrator:
     """Orchestrates the linting process."""
 
@@ -53,7 +52,7 @@ class LintOrchestrator:
                     "regex": regex,
                     "threshold": threshold,
                     "script": script,
-                }
+                },
             ),
             "script": script,
         }
@@ -118,8 +117,10 @@ class LintOrchestrator:
                     file=file_path,
                     line=data.get("line", 0),
                     message=rule.message,
-                    weight=Weight(rule.weight) if rule.weight in Weight.__members__.values() else Weight.MEDIUM,
-                )
+                    weight=Weight(rule.weight)
+                    if rule.weight in Weight.__members__.values()
+                    else Weight.MEDIUM,
+                ),
             ]
 
         return []

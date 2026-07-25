@@ -5,7 +5,6 @@ from abc import abstractmethod
 
 from selma.core.entities.facts import FactDocument
 
-
 class AbstractCache(ABC):
     """Abstract interface for caching parsed facts."""
 

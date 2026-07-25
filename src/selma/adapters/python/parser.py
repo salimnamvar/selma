@@ -18,7 +18,6 @@ from selma.core.entities.facts import LineNode
 from selma.core.entities.facts import ParameterNode
 from selma.core.ports.parser_port import AbstractParser
 
-
 class TreeSitterPythonParser(AbstractParser):
     """Python parser using Tree-sitter."""
 
@@ -74,88 +73,88 @@ class TreeSitterPythonParser(AbstractParser):
     def _extract_declarations(self, tree: object) -> list[DeclarationNode]:
         """Extract declaration nodes from the AST."""
         declarations: list[DeclarationNode] = []
+        declarations.extend(self._extract_functions(tree))
+        declarations.extend(self._extract_classes(tree))
+        declarations.extend(self._extract_imports(tree))
+        return declarations
 
-        # Query functions
-        func_query = Query(self.language, FUNCTION_QUERY)
-        func_cursor = QueryCursor(func_query)
-        func_matches = func_cursor.matches(tree.root_node)
+    def _extract_functions(self, tree: object) -> list[DeclarationNode]:
+        """Extract function declarations."""
+        declarations: list[DeclarationNode] = []
+        query = Query(self.language, FUNCTION_QUERY)
+        cursor = QueryCursor(query)
+        matches = cursor.matches(tree.root_node)
 
-        for _pattern_idx, captures in func_matches:
+        for _idx, captures in matches:
             func_def = captures.get("func_def")
             if func_def:
                 match = func_def[0] if isinstance(func_def, list) else func_def
                 name_node = match.child_by_field_name("name")
                 if name_node:
                     name = name_node.text.decode("utf-8")
-                    start_line = match.start_point[0] + 1
-                    end_line = match.end_point[0] + 1
-
-                    # Extract parameters
-                    params = self._extract_parameters(match)
-
                     declarations.append(
                         DeclarationNode(
                             kind="function",
                             name=name,
-                            line=start_line,
-                            end_line=end_line,
+                            line=match.start_point[0] + 1,
+                            end_line=match.end_point[0] + 1,
                             is_dunder=name.startswith("__") and name.endswith("__"),
                             has_decorator=self._has_decorator(match),
-                            parameters=params,
+                            parameters=self._extract_parameters(match),
                         ),
                     )
+        return declarations
 
-        # Query classes
-        class_query = Query(self.language, CLASS_QUERY)
-        class_cursor = QueryCursor(class_query)
-        class_matches = class_cursor.matches(tree.root_node)
+    def _extract_classes(self, tree: object) -> list[DeclarationNode]:
+        """Extract class declarations."""
+        declarations: list[DeclarationNode] = []
+        query = Query(self.language, CLASS_QUERY)
+        cursor = QueryCursor(query)
+        matches = cursor.matches(tree.root_node)
 
-        for _pattern_idx, captures in class_matches:
+        for _idx, captures in matches:
             class_def = captures.get("class_def")
             if class_def:
                 match = class_def[0] if isinstance(class_def, list) else class_def
                 name_node = match.child_by_field_name("name")
                 if name_node:
                     name = name_node.text.decode("utf-8")
-                    start_line = match.start_point[0] + 1
-                    end_line = match.end_point[0] + 1
-
                     declarations.append(
                         DeclarationNode(
                             kind="class",
                             name=name,
-                            line=start_line,
-                            end_line=end_line,
+                            line=match.start_point[0] + 1,
+                            end_line=match.end_point[0] + 1,
                             is_dunder=name.startswith("__") and name.endswith("__"),
                             has_decorator=self._has_decorator(match),
                         ),
                     )
+        return declarations
 
-        # Query imports
-        import_query = Query(self.language, IMPORT_QUERY)
-        import_cursor = QueryCursor(import_query)
-        import_matches = import_cursor.matches(tree.root_node)
+    def _extract_imports(self, tree: object) -> list[DeclarationNode]:
+        """Extract import declarations."""
+        declarations: list[DeclarationNode] = []
+        query = Query(self.language, IMPORT_QUERY)
+        cursor = QueryCursor(query)
+        matches = cursor.matches(tree.root_node)
 
-        for _pattern_idx, captures in import_matches:
+        for _idx, captures in matches:
             import_node = captures.get("import") or captures.get("import_from")
             module_captures = captures.get("module")
             if import_node and module_captures:
                 match = import_node[0] if isinstance(import_node, list) else import_node
-                module_capture = module_captures[0] if isinstance(module_captures, list) else module_captures
-                module_name = module_capture.text.decode("utf-8")
-                start_line = match.start_point[0] + 1
-                end_line = match.end_point[0] + 1
-
+                mod_caps = module_captures
+                mod_cap = mod_caps[0] if isinstance(mod_caps, list) else mod_caps
+                module_name = mod_cap.text.decode("utf-8")
                 declarations.append(
                     DeclarationNode(
                         kind="import",
                         name=module_name,
-                        line=start_line,
-                        end_line=end_line,
+                        line=match.start_point[0] + 1,
+                        end_line=match.end_point[0] + 1,
                         import_module=module_name,
                     ),
                 )
-
         return declarations
 
     def _extract_parameters(self, func_node: object) -> list[ParameterNode]:
