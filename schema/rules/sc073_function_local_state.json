@@ -1,0 +1,20 @@
+{
+  "lineage_id": "SC-073",
+  "id": "SC-073",
+  "type": "prohibition",
+  "message": "Function uses global or nonlocal state",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "variable": "global",
+    "rules": ["must_not_exist"],
+    "message_template": "Function '{name}' uses global state — use function-local state or parameters"
+  },
+  "weight": "high",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Global state creates hidden dependencies and makes functions impure.",
+  "remediation": "Use function parameters for input and return values for output. Pass state explicitly.",
+  "parameters": {}
+}

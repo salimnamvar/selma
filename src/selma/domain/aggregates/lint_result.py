@@ -1,28 +1,36 @@
 """LintResult aggregate root — consistency boundary for lint findings.
 
 Maintains invariants: no findings after completion, violation count accurate.
+Uses Pydantic v2 BaseModel (mutable for aggregate state management).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import PrivateAttr
 
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.source_file import SourceFile
 from selma.domain.exceptions.domain_errors import LintResultAlreadyComplete
 
 
-@dataclass
-class LintResult:
+class LintResult(BaseModel):
     """Aggregate root for lint results.
 
     Maintains consistency: no findings can be added after completion.
+    Mutable — aggregate state changes via methods.
     """
 
     source_file: SourceFile
-    _findings: list[Finding] = field(default_factory=list)
-    _is_complete: bool = False
+    _findings: list[Finding] = PrivateAttr(default_factory=list)
+    _is_complete: bool = PrivateAttr(default=False)
+
+    def model_post_init(self, __context: object) -> None:
+        """Initialize private attributes after model creation."""
+        if not hasattr(self, "_findings"):
+            self._findings = []
+        if not hasattr(self, "_is_complete"):
+            self._is_complete = False
 
     def add_finding(self, a_finding: Finding) -> None:
         """Add a finding. Enforces business rules.
@@ -38,9 +46,7 @@ class LintResult:
         Failure: Raises LintResultAlreadyComplete if result is complete.
         """
         if self._is_complete:
-            raise LintResultAlreadyComplete(
-                "Cannot add finding to completed result"
-            )
+            raise LintResultAlreadyComplete("Cannot add finding to completed result")
         self._findings.append(a_finding)
 
     def complete(self) -> None:

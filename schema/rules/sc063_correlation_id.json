@@ -1,0 +1,19 @@
+{
+  "lineage_id": "SC-063",
+  "id": "SC-063",
+  "type": "obligation",
+  "message": "Function missing correlation_id parameter for tracing",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "rules": ["must_have_correlation_id"],
+    "message_template": "Function '{name}' should accept correlation_id for distributed tracing"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Correlation IDs enable tracing requests across service boundaries.",
+  "remediation": "Add correlation_id: str = '' parameter and propagate it through function calls.",
+  "parameters": {"param_name": "correlation_id", "default_value": ""}
+}

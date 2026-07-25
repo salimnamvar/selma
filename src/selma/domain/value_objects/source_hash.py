@@ -1,22 +1,27 @@
 """SourceHash value object — SHA-256 hash of source file content.
 
-Immutable, validates format.
+Immutable, validates format. Uses Pydantic v2 for validation.
 """
 
 from __future__ import annotations
 
 import hashlib
 
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
-class SourceHash:
+
+class SourceHash(BaseModel):
     """SHA-256 hash of source file content. Value object."""
 
-    __slots__ = ("_value",)
+    model_config = ConfigDict(frozen=True)
+
+    _value: str
 
     def __init__(self, a_value: str) -> None:
         if not a_value:
             raise ValueError("SourceHash cannot be empty")
-        self._value = a_value
+        object.__setattr__(self, "_value", a_value)
 
     @property
     def value(self) -> str:
@@ -25,22 +30,15 @@ class SourceHash:
     @staticmethod
     def from_content(a_content: str | bytes) -> SourceHash:
         """Create a SourceHash from file content."""
-        b_continue = True
         raw = a_content
-        if b_continue and isinstance(a_content, str):
+        if isinstance(a_content, str):
             raw = a_content.encode("utf-8")
-        b_result = SourceHash(hashlib.sha256(raw).hexdigest())  # type: ignore[arg-type]
-        return b_result
+        return SourceHash(hashlib.sha256(raw).hexdigest())  # type: ignore[arg-type]
 
     def __eq__(self, a_other: object) -> bool:
-        b_continue = True
-        result = False
-        if b_continue and not isinstance(a_other, SourceHash):
-            b_continue = False
-            result = False
-        if b_continue:
-            result = self._value == a_other._value  # type: ignore[union-attr]
-        return result
+        if not isinstance(a_other, SourceHash):
+            return False
+        return self._value == a_other._value
 
     def __hash__(self) -> int:
         return hash(self._value)

@@ -12,8 +12,13 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Structured logging enables machine-readable logs and better observability.",
+  "rationale": "Structured logs are machine-parseable. They enable automated alerting, aggregation, and analysis. Unstructured log strings are unsearchable at scale.",
   "remediation": "Replace print() with structlog.info() or similar structured logger.",
+  "guidance": {
+    "correct_example": "import structlog\nlogger = structlog.get_logger()\n\ndef process(a_data: dict) -> Result[str]:\n    logger.info('processing_started', data_keys=list(a_data.keys()))\n    name = a_data.get('name', '')\n    logger.info('processing_complete', name=name)\n    return Result.success(name)",
+    "incorrect_example": "def process(a_data: dict) -> Result[str]:\n    print(f'Processing: {a_data}')\n    name = a_data.get('name', '')\n    print(f'Done: {name}')\n    return Result.success(name)",
+    "explanation": "The correct version uses structlog with structured key-value pairs. The incorrect version uses print() which has no log levels, no structured output, and no configurability."
+  },
   "parameters": {
     "exempt_test_files": true
   }

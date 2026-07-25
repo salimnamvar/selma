@@ -16,7 +16,12 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Null dereference is a common runtime error that static analysis can catch.",
-  "remediation": "Add if value is not None: guard before attribute access.",
+  "rationale": "None is Python's universal null. An unhandled None propagates through the codebase, causing failures at distant, unrelated points. Catching None at the entry point localizes the failure.",
+  "remediation": "Add explicit 'if value is not None:' guard before attribute access.",
+  "guidance": {
+    "correct_example": "def get_name(a_user: User | None) -> Result[str]:\n    if a_user is None:\n        return Result.failure('User is None')\n    return Result.success(a_user.name)",
+    "incorrect_example": "def get_name(a_user: User | None) -> Result[str]:\n    return Result.success(a_user.name)",
+    "explanation": "The correct version explicitly checks for None before accessing attributes. The incorrect version dereferences without checking, causing AttributeError if None."
+  },
   "parameters": {}
 }

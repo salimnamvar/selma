@@ -1,21 +1,23 @@
 """Rule aggregate root — the core domain entity for lint rules.
 
 Has identity (RuleId), carries behavior, enforces invariants.
+Uses Pydantic v2 BaseModel with frozen config.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 from selma.domain.value_objects.guidance import RuleGuidance
-from selma.domain.value_objects.rule_id import RuleId
 from selma.domain.value_objects.severity import Severity
 
 
-@dataclass(frozen=True)
-class EvaluatorConfig:
+class EvaluatorConfig(BaseModel):
     """Configuration for a rule evaluator."""
+
+    model_config = ConfigDict(frozen=True)
 
     pattern: str | None = None
     flags: str | None = None
@@ -27,14 +29,15 @@ class EvaluatorConfig:
     sub_evaluators: tuple[EvaluatorConfig, ...] = ()
     target_node: str | None = None
     walk_nodes: tuple[str, ...] = ()
+    conditions: tuple[dict[str, object], ...] = ()
     forbidden_calls: tuple[dict[str, str], ...] = ()
     forbidden_functions: tuple[str, ...] = ()
     resource_calls: tuple[str, ...] = ()
     execute_methods: tuple[str, ...] = ()
     sql_keywords: tuple[str, ...] = ()
     io_calls: tuple[str, ...] = ()
-    check_first_arg: dict[str, bool] = field(default_factory=dict)
-    count: dict[str, object] = field(default_factory=dict)
+    check_first_arg: dict[str, bool] = Field(default_factory=dict)
+    count: dict[str, object] = Field(default_factory=dict)
     message_template: str = ""
     exempt_dunders: bool = True
     exempt_generators: bool = True
@@ -42,13 +45,13 @@ class EvaluatorConfig:
     max_lines: int = 60
 
 
-@dataclass(frozen=True)
-class RuleDefinition:
+class RuleDefinition(BaseModel):
     """Rule definition loaded from JSON. Immutable.
 
-    This is the domain representation of a rule. It does NOT depend on
-    any infrastructure (no Pydantic, no JSON parsing).
+    This is the domain representation of a rule.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     lineage_id: str
     id: str
@@ -63,13 +66,13 @@ class RuleDefinition:
     rationale: str = ""
     remediation: str = ""
     guidance: RuleGuidance | None = None
-    parameters: dict[str, object] = field(default_factory=dict)
+    parameters: dict[str, object] = Field(default_factory=dict)
     depends_on: tuple[str, ...] = ()
     conflicts_with: tuple[str, ...] = ()
 
     @property
-    def rule_id(self) -> RuleId:
-        return RuleId(self.lineage_id)
+    def rule_id(self) -> str:
+        return self.lineage_id
 
     def is_active(self) -> bool:
         return self.status == "active"

@@ -1,8 +1,8 @@
 {
-  "lineage_id": "style-todo-format",
-  "id": "style-todo-format",
+  "lineage_id": "STYLE-4",
+  "id": "STYLE-4-TODO-FORMAT",
   "type": "obligation",
-  "message": "TODO/FIXME must follow format: // TODO(name): description",
+  "message": "TODO/FIXME must follow format: # TODO(name): description",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_node": "Module",
@@ -11,14 +11,19 @@
       "check_todo_format": true
     },
     "count": {"operator": "gt", "value": 0},
-    "message_template": "TODO/FIXME comment does not follow required format: // TODO(name): description"
+    "message_template": "TODO/FIXME comment does not follow required format: # TODO(name): description"
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Unformatted TODOs are hard to track and assign ownership.",
+  "rationale": "Unformatted TODOs are hard to track and assign ownership. A consistent format enables automated tracking and assignment.",
   "remediation": "Use format: # TODO(yourname): description or # FIXME(yourname): description",
+  "guidance": {
+    "correct_example": "# TODO(alice): Add retry logic for transient failures\n# FIXME(bob): Handle edge case when list is empty",
+    "incorrect_example": "# TODO: fix this\n# FIXME: broken",
+    "explanation": "The correct version includes the author's name and a descriptive message. The incorrect version has no name or description, making ownership unclear."
+  },
   "parameters": {
     "required_format": "# TODO({name}): {description}"
   }

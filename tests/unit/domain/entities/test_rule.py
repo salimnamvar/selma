@@ -1,23 +1,15 @@
 """Tests for RuleDefinition entity — creation, properties.
 
-NOTE: EvaluatorConfig has a field named `field` that shadows the
-dataclasses.field import, causing TypeError at class definition time.
-These tests mark the affected classes as xfail until the source bug is fixed.
+NOTE: With Pydantic v2, the field name collision with dataclasses.field
+is no longer an issue. All tests run without skipif.
 """
 
-import pytest
-
-try:
-    from selma.domain.entities.rule import EvaluatorConfig
-    from selma.domain.entities.rule import RuleDefinition
-    from selma.domain.value_objects.severity import Severity
-
-    _IMPORT_OK = True
-except TypeError:
-    _IMPORT_OK = False
+from selma.domain.entities.rule import EvaluatorConfig
+from selma.domain.entities.rule import RuleDefinition
+from selma.domain.value_objects.severity import Severity
 
 
-def _make_rule(**overrides: object) -> "RuleDefinition":  # type: ignore[name-defined]
+def _make_rule(**overrides: object) -> RuleDefinition:
     """Create a RuleDefinition with sensible defaults."""
     defaults: dict[str, object] = {
         "lineage_id": "SC001",
@@ -31,7 +23,6 @@ def _make_rule(**overrides: object) -> "RuleDefinition":  # type: ignore[name-de
     return RuleDefinition(**defaults)  # type: ignore[arg-type]
 
 
-@pytest.mark.skipif(not _IMPORT_OK, reason="EvaluatorConfig field name collision with dataclasses.field")
 class TestRuleDefinitionCreation:
     """RuleDefinition creation behavior."""
 
@@ -59,12 +50,11 @@ class TestRuleDefinitionCreation:
         assert r.conflicts_with == ()
 
 
-@pytest.mark.skipif(not _IMPORT_OK, reason="EvaluatorConfig field name collision with dataclasses.field")
 class TestRuleDefinitionProperties:
     """RuleDefinition property behavior."""
 
     def test_rule_id_property(self) -> None:
-        """rule_id should return a RuleId wrapping lineage_id."""
+        """rule_id should return a string wrapping lineage_id."""
         r = _make_rule(lineage_id="SC042")
         rid = r.rule_id
         assert str(rid) == "SC042"
@@ -80,7 +70,6 @@ class TestRuleDefinitionProperties:
         assert r.is_active() is False
 
 
-@pytest.mark.skipif(not _IMPORT_OK, reason="EvaluatorConfig field name collision with dataclasses.field")
 class TestEvaluatorConfig:
     """EvaluatorConfig creation behavior."""
 
@@ -98,6 +87,6 @@ class TestEvaluatorConfig:
         assert ec.max_lines == 60
 
     def test_frozen(self) -> None:
-        """EvaluatorConfig should be a frozen dataclass."""
+        """EvaluatorConfig should be a Pydantic frozen model."""
         ec = EvaluatorConfig()
-        assert ec.__dataclass_params__.frozen is True
+        assert hasattr(ec, "__pydantic_fields__")

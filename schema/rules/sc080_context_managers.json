@@ -13,5 +13,12 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Context managers guarantee deterministic cleanup. They are the language's mechanism for RAII (Resource Acquisition Is Initialization). Using them eliminates an entire class of resource leak bugs.",
+  "remediation": "Wrap resource acquisition in a 'with' statement or try/finally block to guarantee deterministic cleanup.",
+  "guidance": {
+    "correct_example": "def read_file(a_path: str) -> Result[str]:\n    try:\n        with open(a_path) as f:\n            content = f.read()\n    except FileNotFoundError as e:\n        return Result.failure(f'File not found: {a_path}: {e}')\n    return Result.success(content)",
+    "incorrect_example": "def read_file(a_path: str) -> Result[str]:\n    f = open(a_path)\n    content = f.read()\n    return Result.success(content)",
+    "explanation": "The correct version uses a context manager (with statement) guaranteeing cleanup even on errors. The incorrect version opens a file handle without context management, risking resource leaks."
+  },
   "parameters": {}
 }

@@ -1,8 +1,9 @@
 """LintUseCase — main application service for linting files.
 
-Orchestrates: parse → evaluate → report
+Orchestrates: parse -> evaluate -> report
 
-FIXED: P0.4 — Rule hook validation + exception isolation.
+FIXED: P0.4 -- Rule hook validation + exception isolation.
+FIXED: Wired _evaluate_rule to ASTInterpreter.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import ast
 import logging
 import time
+from typing import Any
 
 from selma.application.dto.lint_request import LintRequest
 from selma.application.dto.lint_response import LintResponse
@@ -22,6 +24,7 @@ from selma.domain.events.lint_completed import LintCompleted
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
+from selma.infrastructure.evaluators.ast_interpreter import ASTInterpreter
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,7 @@ class LintUseCase:
         self._parser = a_parser
         self._rule_repository = a_rule_repository
         self._event_publisher = a_event_publisher
+        self._interpreter = ASTInterpreter()
 
     def execute(self, a_request: LintRequest) -> Result[LintResponse]:
         """Execute the lint use case.
@@ -86,7 +90,9 @@ class LintUseCase:
                 duration_ms = (time.monotonic() - start_time) * 1000
                 self._event_publisher.publish(
                     LintCompleted(
-                        file_path=a_request.paths[0] if a_request.paths else FilePath(""),
+                        file_path=a_request.paths[0]
+                        if a_request.paths
+                        else FilePath(""),
                         finding_count=len(all_findings),
                         violation_count=response.violation_count,
                         duration_ms=duration_ms,
@@ -118,9 +124,7 @@ class LintUseCase:
                     r for r in rules if r.lineage_id not in a_request.exclude_codes
                 )
             if a_request.only:
-                rules = tuple(
-                    r for r in rules if r.evaluator_type == a_request.only
-                )
+                rules = tuple(r for r in rules if r.evaluator_type == a_request.only)
             result = Result.success(rules)
         return result
 
@@ -151,7 +155,9 @@ class LintUseCase:
                     rule_findings = self._evaluate_rule(rule, tree, a_path)
                     findings.extend(rule_findings)
                 except Exception as exc:
-                    logger.warning("Rule %s failed on %s: %s", rule.lineage_id, a_path, exc)
+                    logger.warning(
+                        "Rule %s failed on %s: %s", rule.lineage_id, a_path, exc
+                    )
                     findings.append(
                         Finding(
                             rule_id=rule.lineage_id,
@@ -173,5 +179,27 @@ class LintUseCase:
         a_tree: ast.AST,
         a_path: FilePath,
     ) -> list[Finding]:
-        """Evaluate a single rule against an AST."""
-        return []
+        """Evaluate a single rule against an AST.
+
+        Delegates to ASTInterpreter for actual evaluation.
+        """
+        b_continue = True
+        result: list[Finding] = []
+
+        a_rule_dict: dict[str, Any] = {
+            "evaluator_type": a_rule.evaluator_type,
+            "evaluator_config": a_rule.evaluator_config.model_dump(),
+            "weight": a_rule.weight.value,
+            "lineage_id": a_rule.lineage_id,
+            "message": a_rule.message,
+        }
+
+        eval_result = self._interpreter.evaluate(
+            a_tree=a_tree,
+            a_rule=a_rule_dict,
+            a_file_path=str(a_path),
+        )
+        if b_continue and eval_result.is_success():
+            b_continue = False
+            result = eval_result.unwrap()
+        return result

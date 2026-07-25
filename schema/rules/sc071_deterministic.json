@@ -25,6 +25,13 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Non-deterministic code is untestable and unreproducible. A test that passes sometimes and fails sometimes is a test that tells you nothing.",
+  "remediation": "Inject time/random as parameters. Use datetime.datetime for timestamps, random.Random with seed for random values.",
+  "guidance": {
+    "correct_example": "from datetime import datetime\n\ndef create_timestamp(a_now: datetime | None = None) -> Result[str]:\n    now = a_now or datetime.now()\n    return Result.success(now.isoformat())",
+    "incorrect_example": "from datetime import datetime\n\ndef create_timestamp() -> Result[str]:\n    now = datetime.now()\n    return Result.success(now.isoformat())",
+    "explanation": "The correct version accepts a timestamp parameter (injectable for testing) with a default fallback. The incorrect version calls datetime.now() directly, making the function non-deterministic and untestable."
+  },
   "parameters": {
     "exempt_injection": true,
     "exempt_crypto": true

@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-115",
+  "id": "SC-115-B",
+  "type": "obligation",
+  "message": "Non-idempotent operation without idempotency key",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "matches", "value": "^(create|delete|update|modify)"}
+    ],
+    "message_template": "Function '{name}' appears non-idempotent — add idempotency key parameter"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Non-idempotent operations can cause duplicate side effects on retry.",
+  "remediation": "Add idempotency_key parameter or use database unique constraints.",
+  "parameters": {"require_idempotency_key": true}
+}

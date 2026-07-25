@@ -16,8 +16,13 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Type validation prevents runtime errors from invalid inputs.",
+  "rationale": "Python type hints are not enforced at runtime. A caller passing an int where a str is expected will not trigger a runtime error without an explicit check. Type validation catches these mismatches deterministically.",
   "remediation": "Add isinstance() checks or use Protocol/ABC for structural validation.",
+  "guidance": {
+    "correct_example": "def process(a_data: dict) -> Result[str]:\n    if not isinstance(a_data, dict):\n        return Result.failure(f'Expected dict, got {type(a_data).__name__}')\n    name = a_data.get('name')\n    if not isinstance(name, str):\n        return Result.failure('name must be a string')\n    return Result.success(name)",
+    "incorrect_example": "def process(a_data: dict) -> Result[str]:\n    name = a_data.get('name')\n    return Result.success(name)",
+    "explanation": "The correct version validates types with isinstance() before use. The incorrect version trusts type hints which are not enforced at runtime in Python."
+  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_typed": true

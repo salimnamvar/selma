@@ -29,7 +29,9 @@ class TestFindingIsViolation:
 
     def test_critical_is_violation(self) -> None:
         """CRITICAL severity should be a violation."""
-        f = Finding(rule_id="SC001", file="main.py", line=10, severity=Severity.CRITICAL)
+        f = Finding(
+            rule_id="SC001", file="main.py", line=10, severity=Severity.CRITICAL
+        )
         assert f.is_violation is True
 
     def test_high_is_violation(self) -> None:
@@ -49,7 +51,9 @@ class TestFindingIsViolation:
 
     def test_informational_not_violation(self) -> None:
         """INFORMATIONAL severity should not be a violation."""
-        f = Finding(rule_id="SC001", file="main.py", line=10, severity=Severity.INFORMATIONAL)
+        f = Finding(
+            rule_id="SC001", file="main.py", line=10, severity=Severity.INFORMATIONAL
+        )
         assert f.is_violation is False
 
 
@@ -58,7 +62,14 @@ class TestFindingStr:
 
     def test_str_with_filepath(self) -> None:
         """str() should use filepath when available."""
-        f = Finding(rule_id="SC001", file="main.py", line=10, col=5, message="bad", filepath="/src/main.py")
+        f = Finding(
+            rule_id="SC001",
+            file="main.py",
+            line=10,
+            col=5,
+            message="bad",
+            filepath="/src/main.py",
+        )
         s = str(f)
         assert "/src/main.py:10:5" in s
         assert "SC001" in s

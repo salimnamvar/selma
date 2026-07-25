@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-116",
+  "id": "SC-116",
+  "type": "obligation",
+  "message": "Function side effects not documented",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "body", "operator": "not_empty"}
+    ],
+    "message_template": "Function '{name}' should document side effects in docstring"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Undocumented side effects make code unpredictable and hard to test.",
+  "remediation": "Add a 'Side Effects:' section to the function docstring listing all mutations.",
+  "parameters": {"docstring_section": "Side Effects"}
+}

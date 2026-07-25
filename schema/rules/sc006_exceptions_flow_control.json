@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-006",
+  "id": "SC-006",
+  "type": "prohibition",
+  "message": "Exceptions used as flow control — use conditional logic instead",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "ExceptHandler",
+    "conditions": [
+      {"field": "type", "operator": "exists"}
+    ],
+    "message_template": "Exception used for flow control — use conditional logic for expected cases"
+  },
+  "weight": "high",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Exceptions for flow control obscure logic and degrade performance.",
+  "remediation": "Use if/else or match for expected conditions. Reserve exceptions for truly exceptional cases.",
+  "parameters": {}
+}

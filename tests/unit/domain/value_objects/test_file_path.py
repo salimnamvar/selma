@@ -31,22 +31,22 @@ class TestFilePathProperties:
     """FilePath property behavior."""
 
     def test_extension(self) -> None:
-        """extension should return the file suffix."""
+        """Extension should return the file suffix."""
         fp = FilePath("/src/main.py")
         assert fp.extension == ".py"
 
     def test_extension_no_dot(self) -> None:
-        """extension returns empty for files without extension."""
+        """Extension returns empty for files without extension."""
         fp = FilePath("/src/Makefile")
         assert fp.extension == ""
 
     def test_name(self) -> None:
-        """name should return the filename portion."""
+        """Name should return the filename portion."""
         fp = FilePath("/src/deep/main.py")
         assert fp.name == "main.py"
 
     def test_value_returns_raw(self) -> None:
-        """value property returns the raw string."""
+        """Value property returns the raw string."""
         fp = FilePath("/src/main.py")
         assert fp.value == "/src/main.py"
 

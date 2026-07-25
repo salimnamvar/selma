@@ -41,12 +41,12 @@ class TestResultSuccess:
         assert r.message == "done"
 
     def test_bool_truthy_on_success(self) -> None:
-        """if result: should be True for success."""
+        """If result: should be True for success."""
         r = Result.success(42)
         assert bool(r) is True
 
     def test_bool_falsy_on_failure(self) -> None:
-        """if result: should be False for failure."""
+        """If result: should be False for failure."""
         r = Result.failure("error")
         assert bool(r) is False
 

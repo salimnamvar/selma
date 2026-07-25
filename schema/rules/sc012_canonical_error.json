@@ -1,0 +1,19 @@
+{
+  "lineage_id": "SC-012",
+  "id": "SC-012",
+  "type": "obligation",
+  "message": "Function does not use b_continue canonical error handling pattern",
+  "evaluator_type": "ast_scope_check",
+  "evaluator_config": {
+    "root_node": "FunctionDef",
+    "rules": ["must_have_b_continue"],
+    "message_template": "Function '{name}' must use b_continue pattern for error handling"
+  },
+  "weight": "high",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "The b_continue pattern provides consistent, testable error handling.",
+  "remediation": "Use the b_continue pattern: assign result, check b_continue flag, continue or return.",
+  "parameters": {"pattern_name": "b_continue"}
+}

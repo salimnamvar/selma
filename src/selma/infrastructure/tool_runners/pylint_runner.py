@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from selma.infrastructure.tool_runners.base_runner import BaseToolRunner
-from selma.domain.value_objects.result import Result
 from selma.application.ports.tool_runner_port import ToolResult
+from selma.domain.value_objects.result import Result
+from selma.infrastructure.tool_runners.base_runner import BaseToolRunner
 
 
 class PylintRunner(BaseToolRunner):
@@ -54,6 +54,12 @@ class PylintRunner(BaseToolRunner):
         if b_continue:
             src = a_paths[0] if a_paths else "src"
             result = self._exec(
-                [bin_result.value, f"--rcfile={rcfile}", "--recursive=y", "--fail-under=8", src]
+                [
+                    bin_result.value,
+                    f"--rcfile={rcfile}",
+                    "--recursive=y",
+                    "--fail-under=8",
+                    src,
+                ]
             )
         return result

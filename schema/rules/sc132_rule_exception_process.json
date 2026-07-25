@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-132",
+  "id": "SC-132",
+  "type": "obligation",
+  "message": "Rule exception process not followed",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Module",
+    "conditions": [
+      {"field": "body", "operator": "exists"}
+    ],
+    "message_template": "Rule exceptions must be documented and approved per process"
+  },
+  "weight": "informational",
+  "priority": "advisory",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Uncontrolled exceptions erode the rule system.",
+  "remediation": "Document exceptions with justification, approver, and expiration date.",
+  "parameters": {"require_exception_doc": true}
+}

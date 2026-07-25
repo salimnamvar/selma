@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-130",
+  "id": "SC-130",
+  "type": "obligation",
+  "message": "Rules not enforced in CI/CD pipeline",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Module",
+    "conditions": [
+      {"field": "body", "operator": "exists"}
+    ],
+    "message_template": "Safe coding rules must be enforced via automated CI/CD checks"
+  },
+  "weight": "informational",
+  "priority": "advisory",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Manual enforcement is inconsistent; automation ensures consistent compliance.",
+  "remediation": "Add rule checks to CI/CD pipeline as blocking or warning gates.",
+  "parameters": {"ci_enforcement_required": true}
+}

@@ -15,6 +15,13 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "A raise is an unhandled failure transferred to an unknown caller. It is a declaration that the function does not know how to handle its own errors. In safety-critical systems, every error must be handled at the point of detection with full contextual awareness.",
+  "remediation": "Catch all exceptions within the function and convert them to Result.failure() or Result.success().",
+  "guidance": {
+    "correct_example": "def fetch_user(a_id: int) -> Result[User]:\n    b_continue = True\n    result: Result[User] = INVALID_RESULT\n    try:\n        user = db.query(a_id)\n    except ConnectionError as e:\n        result = Result.failure(f'DB connection failed: {e}')\n        b_continue = False\n    if b_continue:\n        result = Result.success(user)\n    return result",
+    "incorrect_example": "def fetch_user(a_id: int) -> Result[User]:\n    user = db.query(a_id)\n    if user is None:\n        raise ValueError('User not found')\n    return Result.success(user)",
+    "explanation": "The correct version catches exceptions locally and converts them to Result.failure(). The incorrect version uses raise, which transfers error handling to an unknown caller."
+  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_adapters": true

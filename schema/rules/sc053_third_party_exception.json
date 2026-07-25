@@ -1,0 +1,23 @@
+{
+  "lineage_id": "SC-053",
+  "id": "SC-053",
+  "type": "obligation",
+  "message": "Third-party call without try/except handling",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "requests", "method": "get"},
+      {"module": "requests", "method": "post"},
+      {"module": "httpx", "method": "get"},
+      {"module": "httpx", "method": "post"}
+    ],
+    "message_template": "Third-party call must be wrapped in try/except for error handling"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Third-party libraries can raise unexpected exceptions.",
+  "remediation": "Wrap third-party calls in try/except with appropriate error handling.",
+  "parameters": {"wrap_in_try_except": true}
+}

@@ -14,5 +14,12 @@
   "weight": "medium",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Star imports pollute the namespace, create implicit dependencies, and make it impossible to determine where a symbol originates without reading the imported module.",
+  "remediation": "Use explicit imports naming each symbol: from module import name1, name2.",
+  "guidance": {
+    "correct_example": "from typing import TypeVar, Generic, Optional\nfrom dataclasses import dataclass",
+    "incorrect_example": "from typing import *\nfrom dataclasses import *",
+    "explanation": "The correct version imports specific symbols, making dependencies explicit and namespace clean. The incorrect version uses star imports that pollute the namespace and hide dependencies."
+  },
   "parameters": {}
 }

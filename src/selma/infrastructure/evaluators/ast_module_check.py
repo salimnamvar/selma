@@ -59,11 +59,19 @@ def _has_sentinel(a_tree: ast.AST, a_name: str) -> bool:
     for a_node in ast.iter_child_nodes(a_tree):
         if b_continue and isinstance(a_node, ast.Assign):
             for a_target in a_node.targets:
-                if b_continue and isinstance(a_target, ast.Name) and a_target.id == a_name:
+                if (
+                    b_continue
+                    and isinstance(a_target, ast.Name)
+                    and a_target.id == a_name
+                ):
                     b_continue = False
                     result = True
         if b_continue and isinstance(a_node, ast.AnnAssign):
-            if b_continue and isinstance(a_node.target, ast.Name) and a_node.target.id == a_name:
+            if (
+                b_continue
+                and isinstance(a_node.target, ast.Name)
+                and a_node.target.id == a_name
+            ):
                 b_continue = False
                 result = True
     return result

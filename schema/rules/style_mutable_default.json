@@ -1,6 +1,6 @@
 {
-  "lineage_id": "style-mutable-default",
-  "id": "style-mutable-default",
+  "lineage_id": "STYLE-2",
+  "id": "STYLE-2-MUTABLE-DEFAULT",
   "type": "prohibition",
   "message": "Mutable default argument in function signature",
   "evaluator_type": "ast_node_match",
@@ -15,8 +15,13 @@
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Mutable default arguments are shared across calls and cause subtle bugs.",
+  "rationale": "Mutable default arguments are shared across all calls. The default object is created once at function definition time, not per call, causing subtle bugs when the mutable is modified.",
   "remediation": "Use None as default and create the mutable inside: def func(a_items=None): items = a_items or []",
+  "guidance": {
+    "correct_example": "def process(a_items: list[str] | None = None) -> Result[int]:\n    items = a_items if a_items is not None else []\n    return Result.success(len(items))",
+    "incorrect_example": "def process(a_items: list[str] = []) -> Result[int]:\n    return Result.success(len(a_items))",
+    "explanation": "The correct version uses None as default and creates a new list inside. The incorrect version uses a mutable default ([]) which is shared across all calls."
+  },
   "parameters": {
     "mutable_types": ["list", "dict", "set"]
   }

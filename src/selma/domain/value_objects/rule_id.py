@@ -1,37 +1,37 @@
 """RuleId value object — unique identifier for a lint rule.
 
-Immutable, defined by its string value. Implements equality and hashing.
+Immutable, defined by its string value. Uses Pydantic v2 for validation.
 """
 
 from __future__ import annotations
 
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
-class RuleId:
+
+class RuleId(BaseModel):
     """Unique identifier for a lint rule. Immutable value object.
 
     Examples: "SC001", "SC-001", "a-prefix", "mutable-default"
     """
 
-    __slots__ = ("_value",)
+    model_config = ConfigDict(frozen=True)
+
+    _value: str
 
     def __init__(self, a_value: str) -> None:
         if not a_value:
             raise ValueError("RuleId cannot be empty")
-        self._value = a_value
+        object.__setattr__(self, "_value", a_value)
 
     @property
     def value(self) -> str:
         return self._value
 
     def __eq__(self, a_other: object) -> bool:
-        b_continue = True
-        result = False
-        if b_continue and not isinstance(a_other, RuleId):
-            b_continue = False
-            result = False
-        if b_continue:
-            result = self._value == a_other._value  # type: ignore[union-attr]
-        return result
+        if not isinstance(a_other, RuleId):
+            return False
+        return self._value == a_other._value
 
     def __hash__(self) -> int:
         return hash(self._value)

@@ -1,16 +1,20 @@
-"""LintRequest DTO — input for the lint use case."""
+"""LintRequest DTO — input for the lint use case.
+
+Uses Pydantic v2 BaseModel with frozen config.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
 from selma.domain.value_objects.file_path import FilePath
 
 
-@dataclass(frozen=True)
-class LintRequest:
+class LintRequest(BaseModel):
     """Input DTO for lint use case."""
+
+    model_config = ConfigDict(frozen=True)
 
     paths: tuple[FilePath, ...]
     exclude_codes: frozenset[str] = frozenset()

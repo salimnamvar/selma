@@ -34,7 +34,9 @@ class TestLintResponseCreation:
 
     def test_violation_count(self) -> None:
         """violation_count should count CRITICAL and HIGH findings."""
-        f1 = Finding(rule_id="SC001", file="main.py", line=10, severity=Severity.CRITICAL)
+        f1 = Finding(
+            rule_id="SC001", file="main.py", line=10, severity=Severity.CRITICAL
+        )
         f2 = Finding(rule_id="SC002", file="main.py", line=20, severity=Severity.HIGH)
         f3 = Finding(rule_id="SC003", file="main.py", line=30, severity=Severity.LOW)
         r = LintResponse(findings=(f1, f2, f3))
@@ -48,4 +50,9 @@ class TestLintResponseCreation:
     def test_frozen(self) -> None:
         """LintResponse should be immutable."""
         r = LintResponse(findings=())
-        assert hasattr(r, "__dataclass_fields__")
+        assert hasattr(r, "__pydantic_fields__")
+        try:
+            r.summary = "changed"  # type: ignore[misc]
+            assert False, "Should have raised ValidationError"
+        except Exception:
+            pass

@@ -1,6 +1,6 @@
 {
-  "lineage_id": "style-no-print",
-  "id": "style-no-print",
+  "lineage_id": "STYLE-3",
+  "id": "STYLE-3-NO-PRINT",
   "type": "prohibition",
   "message": "print() used in production code",
   "evaluator_type": "ast_call_check",
@@ -12,8 +12,13 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "print() has no log levels, no structured output, and no configurability.",
+  "rationale": "print() has no log levels, no structured output, and no configurability. It cannot be filtered, routed, or analyzed in production.",
   "remediation": "Replace with structlog.info() or logging.info().",
+  "guidance": {
+    "correct_example": "import structlog\nlogger = structlog.get_logger()\n\ndef process(a_data: dict) -> Result[str]:\n    logger.info('processing', keys=list(a_data.keys()))\n    return Result.success('done')",
+    "incorrect_example": "def process(a_data: dict) -> Result[str]:\n    print(f'Processing {a_data}')\n    return Result.success('done')",
+    "explanation": "The correct version uses structlog with structured output. The incorrect version uses print() which has no log levels and cannot be configured in production."
+  },
   "parameters": {
     "exempt_test_files": true,
     "exempt_scripts": true

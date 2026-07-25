@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import ast
 from abc import ABC
 from abc import abstractmethod
+import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding

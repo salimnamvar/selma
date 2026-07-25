@@ -5,9 +5,9 @@ FIXED: P0.2 — Uses 'success' field consistently.
 
 from __future__ import annotations
 
-from selma.infrastructure.tool_runners.base_runner import BaseToolRunner
-from selma.domain.value_objects.result import Result
 from selma.application.ports.tool_runner_port import ToolResult
+from selma.domain.value_objects.result import Result
+from selma.infrastructure.tool_runners.base_runner import BaseToolRunner
 
 
 class RuffCheckRunner(BaseToolRunner):

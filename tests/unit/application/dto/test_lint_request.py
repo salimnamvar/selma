@@ -49,4 +49,9 @@ class TestLintRequestCreation:
     def test_frozen(self) -> None:
         """LintRequest should be immutable."""
         r = LintRequest(paths=())
-        assert hasattr(r, "__dataclass_fields__")
+        assert hasattr(r, "__pydantic_fields__")
+        try:
+            r.format = "json"  # type: ignore[misc]
+            assert False, "Should have raised ValidationError"
+        except Exception:
+            pass

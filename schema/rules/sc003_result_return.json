@@ -15,6 +15,13 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Tuple returns are ambiguous. Callers must remember positional semantics. Typed results are self-documenting and statically analyzable.",
+  "remediation": "Return a typed Result[T] with is_success(), value, and message fields.",
+  "guidance": {
+    "correct_example": "from dataclasses import dataclass\nfrom typing import TypeVar, Generic, Optional\n\nclass Result(Generic[T]):\n    _is_success: bool\n    value: Optional[T]\n    message: str\n\n    def is_success(self) -> bool:\n        return self._is_success\n\n    @staticmethod\n    def success(value: T, message: str = 'Success') -> Result[T]:\n        return Result(_is_success=True, value=value, message=message)\n\n    @staticmethod\n    def failure(message: str) -> Result[None]:\n        return Result(_is_success=False, value=None, message=message)",
+    "incorrect_example": "def fetch_user(a_id: int) -> tuple[bool, User | None, str]:\n    user = db.query(a_id)\n    if user is None:\n        return (False, None, 'User not found')\n    return (True, user, 'Success')",
+    "explanation": "The correct version uses a typed Result[T] dataclass. The incorrect version returns a bare tuple where callers must remember positional semantics."
+  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_properties": true

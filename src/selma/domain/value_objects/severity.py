@@ -1,6 +1,6 @@
 """Severity value object — severity level for findings.
 
-Immutable enum-like value object.
+Immutable enum-like value object using StrEnum for Pydantic v2 compatibility.
 """
 
 from __future__ import annotations

@@ -49,7 +49,11 @@ class AstCallCheckEvaluator(EvaluatorBase):
             if b_continue and a_forbidden_calls:
                 a_match = self._check_forbidden_module_call(a_node, a_forbidden_calls)
                 if b_continue and a_match:
-                    a_ctx = {"module": a_match[0], "method": a_match[1], "function": f"{a_match[0]}.{a_match[1]}"}
+                    a_ctx = {
+                        "module": a_match[0],
+                        "method": a_match[1],
+                        "function": f"{a_match[0]}.{a_match[1]}",
+                    }
                     a_msg = self._render_message(a_message_template, a_ctx)
                     findings.append(
                         Finding(
@@ -64,7 +68,11 @@ class AstCallCheckEvaluator(EvaluatorBase):
             if b_continue and a_forbidden_functions:
                 a_func_name = self._get_call_name(a_node)
                 if b_continue and a_func_name in a_forbidden_functions:
-                    a_ctx = {"function": a_func_name, "module": "", "method": a_func_name}
+                    a_ctx = {
+                        "function": a_func_name,
+                        "module": "",
+                        "method": a_func_name,
+                    }
                     a_msg = self._render_message(a_message_template, a_ctx)
                     findings.append(
                         Finding(
@@ -79,7 +87,9 @@ class AstCallCheckEvaluator(EvaluatorBase):
             if b_continue and a_target_methods and a_check_first_arg:
                 a_method = self._get_method_name(a_node)
                 if b_continue and a_method in a_target_methods:
-                    if b_continue and self._first_arg_violates(a_node, a_check_first_arg):
+                    if b_continue and self._first_arg_violates(
+                        a_node, a_check_first_arg
+                    ):
                         a_ctx = {"function": a_method, "module": "", "method": a_method}
                         a_msg = self._render_message(a_message_template, a_ctx)
                         findings.append(
@@ -126,7 +136,11 @@ class AstCallCheckEvaluator(EvaluatorBase):
             a_module = _resolve_module_name(a_node.func.value)
             if b_continue and a_module:
                 for a_forbidden in a_forbidden_calls:
-                    if b_continue and a_forbidden.get("module") == a_module and a_forbidden.get("method") == a_method:
+                    if (
+                        b_continue
+                        and a_forbidden.get("module") == a_module
+                        and a_forbidden.get("method") == a_method
+                    ):
                         b_continue = False
                         result = (a_module, a_method)
         return result
@@ -172,16 +186,28 @@ class AstCallCheckEvaluator(EvaluatorBase):
                     b_continue = False
                     result = True
             if b_continue and a_check.get("forbid_format_call", False):
-                if b_continue and isinstance(a_first, ast.Call) and isinstance(a_first.func, ast.Attribute):
+                if (
+                    b_continue
+                    and isinstance(a_first, ast.Call)
+                    and isinstance(a_first.func, ast.Attribute)
+                ):
                     if b_continue and a_first.func.attr == "format":
                         b_continue = False
                         result = True
             if b_continue and a_check.get("forbid_percent_format", False):
-                if b_continue and isinstance(a_first, ast.BinOp) and isinstance(a_first.op, ast.Mod):
+                if (
+                    b_continue
+                    and isinstance(a_first, ast.BinOp)
+                    and isinstance(a_first.op, ast.Mod)
+                ):
                     b_continue = False
                     result = True
             if b_continue and a_check.get("forbid_string_concat", False):
-                if b_continue and isinstance(a_first, ast.BinOp) and isinstance(a_first.op, ast.Add):
+                if (
+                    b_continue
+                    and isinstance(a_first, ast.BinOp)
+                    and isinstance(a_first.op, ast.Add)
+                ):
                     b_continue = False
                     result = True
         return result
@@ -211,7 +237,9 @@ def _resolve_module_name(a_node: ast.AST) -> str:
     return result
 
 
-def _find_enclosing_function(a_node: ast.AST, a_tree: ast.AST) -> ast.FunctionDef | None:
+def _find_enclosing_function(
+    a_node: ast.AST, a_tree: ast.AST
+) -> ast.FunctionDef | None:
     """Find the enclosing FunctionDef for a given node by walking parent references."""
     b_continue = True
     result: ast.FunctionDef | None = None

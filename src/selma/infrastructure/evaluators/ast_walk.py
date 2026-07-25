@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import re
 from typing import Any
 
 from selma.domain.entities.finding import Finding
@@ -50,8 +49,12 @@ class AstWalkEvaluator(EvaluatorBase):
                 b_continue = False
             if b_continue:
                 a_count = self._count_child_nodes(a_node, a_walk_nodes, a_walk_config)
-                if b_continue and self._check_operator(a_count, a_threshold_op, a_threshold_value):
-                    a_breakdown = self._build_breakdown(a_node, a_walk_nodes, a_count_breakdown)
+                if b_continue and self._check_operator(
+                    a_count, a_threshold_op, a_threshold_value
+                ):
+                    a_breakdown = self._build_breakdown(
+                        a_node, a_walk_nodes, a_count_breakdown
+                    )
                     a_ctx = self._build_context(a_node, a_count, a_breakdown)
                     a_msg = self._render_message(a_message_template, a_ctx)
                     findings.append(
@@ -85,7 +88,9 @@ class AstWalkEvaluator(EvaluatorBase):
                 result = True
         if b_continue and a_walk_config.get("exclude_framework_adapters", False):
             a_params = a_config.get("parameters", {})
-            a_adapter_keywords = a_params.get("adapter_keywords", ["exception", "error", "http"])
+            a_adapter_keywords = a_params.get(
+                "adapter_keywords", ["exception", "error", "http"]
+            )
             a_name = getattr(a_node, "name", "")
             if b_continue:
                 for a_kw in a_adapter_keywords:
@@ -99,7 +104,9 @@ class AstWalkEvaluator(EvaluatorBase):
         """Check if a FunctionDef is a generator (contains yield)."""
         b_continue = True
         result = False
-        if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if b_continue and not isinstance(
+            a_node, (ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
             b_continue = False
             result = False
         if b_continue:
@@ -123,7 +130,11 @@ class AstWalkEvaluator(EvaluatorBase):
             b_continue = True
             if b_continue and a_exclude_nested and isinstance(a_child, ast.FunctionDef):
                 b_continue = False
-            if b_continue and a_exclude_nested and isinstance(a_child, ast.AsyncFunctionDef):
+            if (
+                b_continue
+                and a_exclude_nested
+                and isinstance(a_child, ast.AsyncFunctionDef)
+            ):
                 b_continue = False
             if b_continue and self._node_name(a_child) in a_walk_nodes:
                 a_count += 1

@@ -45,7 +45,9 @@ class AstContextCheckEvaluator(EvaluatorBase):
                 a_func_name = _extract_call_name(a_node)
                 if b_continue and a_func_name not in a_target_functions:
                     b_continue = False
-                if b_continue and not _is_in_required_context(a_node, a_tree, a_context):
+                if b_continue and not _is_in_required_context(
+                    a_node, a_tree, a_context
+                ):
                     a_ctx = {"function": a_func_name, "name": a_func_name}
                     a_msg = self._render_message(a_message_template, a_ctx)
                     findings.append(

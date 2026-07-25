@@ -44,7 +44,9 @@ class RuleRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_codes(self, a_codes: tuple[str, ...]) -> Result[tuple[RuleDefinition, ...]]:
+    def find_by_codes(
+        self, a_codes: tuple[str, ...]
+    ) -> Result[tuple[RuleDefinition, ...]]:
         """Retrieve rules by code list.
 
         Preconditions: None.

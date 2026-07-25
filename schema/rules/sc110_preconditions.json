@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-110",
+  "id": "SC-110",
+  "type": "obligation",
+  "message": "Function missing Preconditions section in docstring",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "FunctionDef",
+    "conditions": [
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {"field": "body", "operator": "not_empty"}
+    ],
+    "message_template": "Function '{name}' should document preconditions in docstring"
+  },
+  "weight": "low",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Documenting preconditions makes function contracts explicit.",
+  "remediation": "Add a 'Preconditions:' section to the function docstring listing required state.",
+  "parameters": {"docstring_section": "Preconditions"}
+}

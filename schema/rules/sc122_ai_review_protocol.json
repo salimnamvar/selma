@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-122",
+  "id": "SC-122",
+  "type": "obligation",
+  "message": "AI agent output not reviewed per protocol",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Module",
+    "conditions": [
+      {"field": "body", "operator": "exists"}
+    ],
+    "message_template": "AI-generated code must be reviewed by human before merge"
+  },
+  "weight": "informational",
+  "priority": "advisory",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "AI-generated code requires human review to ensure quality and safety.",
+  "remediation": "Review all AI-generated code in pull requests before merging.",
+  "parameters": {"require_human_review": true}
+}

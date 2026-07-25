@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-131",
+  "id": "SC-131",
+  "type": "obligation",
+  "message": "Code review not completed for safe coding compliance",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Module",
+    "conditions": [
+      {"field": "body", "operator": "exists"}
+    ],
+    "message_template": "Code changes must pass review for safe coding rule compliance"
+  },
+  "weight": "informational",
+  "priority": "advisory",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Code review is a critical gate for catching rule violations.",
+  "remediation": "Include safe coding checklist in code review process.",
+  "parameters": {"require_review_checklist": true}
+}

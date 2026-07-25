@@ -23,17 +23,17 @@ class TestSourceFileCreation:
         assert sf.content == ""
 
     def test_extension_delegates_to_path(self) -> None:
-        """extension property should delegate to path.extension."""
+        """Extension property should delegate to path.extension."""
         sf = SourceFile(path=FilePath("/src/main.py"), hash=SourceHash("abc"))
         assert sf.extension == ".py"
 
     def test_extension_no_suffix(self) -> None:
-        """extension returns empty for files without suffix."""
+        """Extension returns empty for files without suffix."""
         sf = SourceFile(path=FilePath("/src/Makefile"), hash=SourceHash("abc"))
         assert sf.extension == ""
 
     def test_custom_language(self) -> None:
-        """language can be set to non-default value."""
+        """Language can be set to non-default value."""
         sf = SourceFile(
             path=FilePath("/src/main.js"),
             hash=SourceHash("abc"),
@@ -42,7 +42,7 @@ class TestSourceFileCreation:
         assert sf.language == "javascript"
 
     def test_content_stored(self) -> None:
-        """content should be stored as provided."""
+        """Content should be stored as provided."""
         sf = SourceFile(
             path=FilePath("/src/main.py"),
             hash=SourceHash("abc"),

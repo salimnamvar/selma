@@ -1,18 +1,21 @@
 """Violation entity — a single lint violation found during analysis.
 
 Distinct from Finding: Violation is the output format, Finding is the domain object.
+Uses Pydantic v2 BaseModel with frozen config.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
 from selma.domain.value_objects.guidance import RuleGuidance
 
 
-@dataclass(frozen=True)
-class Violation:
+class Violation(BaseModel):
     """A single lint violation found during analysis."""
+
+    model_config = ConfigDict(frozen=True)
 
     filepath: str
     line: int

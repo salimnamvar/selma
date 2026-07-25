@@ -13,5 +13,12 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Re-raising is a declaration that the function chose not to handle the error. Under the Zero-Raise Policy, every function must handle its own errors. Re-raising violates this principle.",
+  "remediation": "Convert the caught exception to a structured Result.failure() return instead of re-raising.",
+  "guidance": {
+    "correct_example": "def query(a_sql: str) -> Result[list]:\n    b_continue = True\n    result: Result[list] = INVALID_RESULT\n    try:\n        cursor.execute(a_sql)\n        rows = cursor.fetchall()\n    except sqlite3.OperationalError as e:\n        result = Result.failure(f'SQL error: {e}')\n        b_continue = False\n    if b_continue:\n        result = Result.success(rows)\n    return result",
+    "incorrect_example": "def query(a_sql: str) -> Result[list]:\n    try:\n        cursor.execute(a_sql)\n        rows = cursor.fetchall()\n        return Result.success(rows)\n    except sqlite3.OperationalError as e:\n        raise RuntimeError(f'SQL failed: {e}')",
+    "explanation": "The correct version converts the exception to Result.failure(). The incorrect version re-raises, violating the Zero-Raise Policy by transferring error handling to the caller."
+  },
   "parameters": {}
 }

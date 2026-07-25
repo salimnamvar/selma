@@ -1,7 +1,5 @@
 """Tests for SourceHash value object — creation, equality, hashing."""
 
-import hashlib
-
 import pytest
 
 from selma.domain.value_objects.source_hash import SourceHash

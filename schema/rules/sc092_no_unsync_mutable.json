@@ -16,7 +16,12 @@
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Unsynchronized mutable access in concurrent code creates data races.",
+  "rationale": "Python's GIL does not protect against logical data races. Two threads can interleave between operations on a mutable object, producing corrupted state even with the GIL held.",
   "remediation": "Wrap with threading.Lock or use queue.Queue for thread-safe access.",
+  "guidance": {
+    "correct_example": "import threading\n\nclass SafeList:\n    def __init__(self):\n        self._items: list[str] = []\n        self._lock = threading.Lock()\n\n    def add(self, a_item: str) -> Result[None]:\n        with self._lock:\n            self._items.append(a_item)\n            return Result.success(None)",
+    "incorrect_example": "items: list[str] = []\n\ndef add_item(a_item: str) -> None:\n    items.append(a_item)",
+    "explanation": "The correct version wraps mutable access with a threading.Lock. The incorrect version performs unsynchronized append, creating data races when accessed from multiple threads."
+  },
   "parameters": {}
 }

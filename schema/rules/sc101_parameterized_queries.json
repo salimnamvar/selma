@@ -16,5 +16,12 @@
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "String-formatted SQL queries are the primary vector for SQL injection attacks. Parameterized queries separate data from code, eliminating this class of vulnerability entirely.",
+  "remediation": "Use parameterized queries with ? placeholders. Never use string concatenation or f-strings in SQL.",
+  "guidance": {
+    "correct_example": "def find_user(a_username: str) -> Result[User]:\n    cursor.execute('SELECT * FROM users WHERE username = ?', (a_username,))\n    row = cursor.fetchone()\n    if row is None:\n        return Result.failure(f'User {a_username} not found')\n    return Result.success(User.from_row(row))",
+    "incorrect_example": "def find_user(a_username: str) -> Result[User]:\n    query = f'SELECT * FROM users WHERE username = \\'{a_username}\\''\n    cursor.execute(query)\n    return Result.success(User.from_row(cursor.fetchone()))",
+    "explanation": "The correct version uses parameterized queries with ? placeholders. The incorrect version uses f-string formatting, creating a SQL injection vulnerability."
+  },
   "parameters": {}
 }

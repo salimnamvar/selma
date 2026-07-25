@@ -15,8 +15,13 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Unbounded recursion causes stack overflow and denial of service.",
-  "remediation": "Add a max_depth parameter or use @functools.lru_cache for memoization.",
+  "rationale": "Unbounded recursion causes stack overflow, which is an unrecoverable process-level failure. It bypasses all error handling mechanisms. A recursive function without depth limits is a denial-of-service vulnerability.",
+  "remediation": "Add a max_depth parameter and validate depth at each call. Prefer iterative solutions over recursive.",
+  "guidance": {
+    "correct_example": "def traverse(a_node: TreeNode, a_depth: int = 0, a_max_depth: int = 100) -> Result[list]:\n    if a_depth >= a_max_depth:\n        return Result.failure(f'Max recursion depth {a_max_depth} exceeded')\n    result = [a_node.value]\n    for child in a_node.children:\n        child_result = traverse(child, a_depth + 1, a_max_depth)\n        if not child_result.is_success():\n            return child_result\n        result.extend(child_result.value)\n    return Result.success(result)",
+    "incorrect_example": "def traverse(a_node: TreeNode) -> list:\n    result = [a_node.value]\n    for child in a_node.children:\n        result.extend(traverse(child))\n    return result",
+    "explanation": "The correct version has a max_depth parameter that limits recursion depth. The incorrect version has no depth limit, risking stack overflow on deep trees."
+  },
   "parameters": {
     "exempt_dunders": true,
     "max_recursion_depth": 100

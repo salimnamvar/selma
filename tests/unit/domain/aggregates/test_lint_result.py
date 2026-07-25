@@ -40,7 +40,7 @@ class TestLintResultAddFinding:
         assert lr.finding_count == 2
 
     def test_findings_returns_tuple(self) -> None:
-        """findings property should return a tuple."""
+        """Findings property should return a tuple."""
         lr = LintResult(source_file=_make_source_file())
         lr.add_finding(_make_finding())
         assert isinstance(lr.findings, tuple)

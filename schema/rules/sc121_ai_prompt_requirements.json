@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-121",
+  "id": "SC-121",
+  "type": "obligation",
+  "message": "AI agent prompt requirements not met",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "Module",
+    "conditions": [
+      {"field": "body", "operator": "exists"}
+    ],
+    "message_template": "AI agent prompts must include safety constraints and review requirements"
+  },
+  "weight": "informational",
+  "priority": "advisory",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "AI agent prompts need explicit safety constraints to prevent harmful outputs.",
+  "remediation": "Include safety guidelines, review requirements, and compliance checks in AI prompts.",
+  "parameters": {"require_safety_prompt": true, "require_review": true}
+}

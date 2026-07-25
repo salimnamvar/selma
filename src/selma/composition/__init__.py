@@ -46,7 +46,9 @@ class Container:
     def get_parser(self) -> PythonAstParser:
         return self._parser
 
-    def get_reporter(self, a_format: str) -> DefaultReporter | JsonReporter | GccReporter:
+    def get_reporter(
+        self, a_format: str
+    ) -> DefaultReporter | JsonReporter | GccReporter:
         reporters = {
             "default": self._default_reporter,
             "json": self._json_reporter,

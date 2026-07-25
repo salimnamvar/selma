@@ -1,0 +1,18 @@
+{
+  "lineage_id": "SC-103",
+  "id": "SC-103",
+  "type": "obligation",
+  "message": "Operation uses excessive permissions",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_functions": ["chmod", "chown"],
+    "message_template": "Operations should use least privilege — avoid chmod 777 or overly permissive settings"
+  },
+  "weight": "high",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Excessive permissions increase attack surface.",
+  "remediation": "Grant minimum required permissions. Use specific permissions (0o644) not permissive (0o777).",
+  "parameters": {"forbid_777": true}
+}

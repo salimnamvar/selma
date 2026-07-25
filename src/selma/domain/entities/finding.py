@@ -1,24 +1,25 @@
 """Finding entity — a lint violation found during analysis.
 
 Has identity (file + line + code), carries behavior.
+Uses Pydantic v2 BaseModel with frozen config.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
-from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.guidance import RuleGuidance
 from selma.domain.value_objects.severity import Severity
 
 
-@dataclass(frozen=True)
-class Finding:
+class Finding(BaseModel):
     """A lint finding produced by rule evaluation.
 
     Immutable. Has identity defined by (file, line, code).
     """
+
+    model_config = ConfigDict(frozen=True)
 
     rule_id: str
     file: str

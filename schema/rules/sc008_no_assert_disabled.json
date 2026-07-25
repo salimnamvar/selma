@@ -1,0 +1,21 @@
+{
+  "lineage_id": "SC-008",
+  "id": "SC-008",
+  "type": "prohibition",
+  "message": "Assertions disabled by flags or environment variables",
+  "evaluator_type": "ast_call_check",
+  "evaluator_config": {
+    "forbidden_calls": [
+      {"module": "os", "method": "environ"},
+      {"module": "sys", "method": "flags"}
+    ],
+    "message_template": "Assertions must not be disabled via environment or flags near assert usage"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Disabling assertions removes safety checks and validation.",
+  "remediation": "Keep assertions enabled in all environments. Use explicit validation instead of relying on assertions.",
+  "parameters": {"check_context": "near_asserts"}
+}

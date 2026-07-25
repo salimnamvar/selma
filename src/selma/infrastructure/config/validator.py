@@ -9,28 +9,34 @@ from selma.domain.value_objects.result import Result
 from selma.infrastructure.config.models import SelmaConfig
 
 VALID_FORMATS = frozenset({"default", "json", "gcc", "guidance"})
-VALID_SEVERITIES = frozenset({
-    "critical",
-    "high",
-    "medium",
-    "low",
-    "warning",
-    "info",
-})
-VALID_CHECKS = frozenset({
-    "ruff-check",
-    "ruff-format",
-    "pylint",
-    "pyright",
-    "ast",
-})
-VALID_PRIORITIES = frozenset({
-    "constitutional",
-    "statutory",
-    "regulatory",
-    "operational",
-    "advisory",
-})
+VALID_SEVERITIES = frozenset(
+    {
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "warning",
+        "info",
+    }
+)
+VALID_CHECKS = frozenset(
+    {
+        "ruff-check",
+        "ruff-format",
+        "pylint",
+        "pyright",
+        "ast",
+    }
+)
+VALID_PRIORITIES = frozenset(
+    {
+        "constitutional",
+        "statutory",
+        "regulatory",
+        "operational",
+        "advisory",
+    }
+)
 
 
 class ConfigValidator:
@@ -76,9 +82,7 @@ class ConfigValidator:
         b_continue = True
         if b_continue and a_config.output.format not in VALID_FORMATS:
             b_continue = False
-            a_errors.append(
-                f"Invalid output format: {a_config.output.format}"
-            )
+            a_errors.append(f"Invalid output format: {a_config.output.format}")
 
     def _validate_execution(
         self,
@@ -94,9 +98,7 @@ class ConfigValidator:
             and a_config.execution.only not in VALID_CHECKS
         ):
             b_continue = False
-            a_errors.append(
-                f"Invalid check: {a_config.execution.only}"
-            )
+            a_errors.append(f"Invalid check: {a_config.execution.only}")
         b_continue = True
         if b_continue and a_config.execution.max_workers < 1:
             b_continue = False
@@ -146,9 +148,7 @@ class ConfigValidator:
             ("SC115", a_config.rules.sc115),
         ]
         for a_name, a_rc in rule_configs:
-            self._validate_rule_severity(
-                a_name, a_rc.severity, a_errors
-            )
+            self._validate_rule_severity(a_name, a_rc.severity, a_errors)
 
     def _validate_rule_severity(
         self,
@@ -160,9 +160,7 @@ class ConfigValidator:
         b_continue = True
         if b_continue and a_severity not in VALID_SEVERITIES:
             b_continue = False
-            a_errors.append(
-                f"{a_name}: invalid severity '{a_severity}'"
-            )
+            a_errors.append(f"{a_name}: invalid severity '{a_severity}'")
 
     def _validate_tools(
         self,
@@ -176,9 +174,7 @@ class ConfigValidator:
             ("pyright", a_config.tools.pyright),
         ]
         for a_name, a_tool in tools:
-            self._validate_tool_binary(
-                a_name, a_tool.binary, a_errors
-            )
+            self._validate_tool_binary(a_name, a_tool.binary, a_errors)
 
     def _validate_tool_binary(
         self,
@@ -190,9 +186,7 @@ class ConfigValidator:
         b_continue = True
         if b_continue and not a_binary:
             b_continue = False
-            a_errors.append(
-                f"Tool '{a_name}' has empty binary path"
-            )
+            a_errors.append(f"Tool '{a_name}' has empty binary path")
 
     def _validate_logging(
         self,
@@ -200,16 +194,16 @@ class ConfigValidator:
         a_errors: list[str],
     ) -> None:
         """Validate logging configuration."""
-        valid_levels = frozenset({
-            "DEBUG",
-            "INFO",
-            "WARNING",
-            "ERROR",
-            "CRITICAL",
-        })
+        valid_levels = frozenset(
+            {
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR",
+                "CRITICAL",
+            }
+        )
         b_continue = True
         if b_continue and a_config.logging.level not in valid_levels:
             b_continue = False
-            a_errors.append(
-                f"Invalid log level: {a_config.logging.level}"
-            )
+            a_errors.append(f"Invalid log level: {a_config.logging.level}")

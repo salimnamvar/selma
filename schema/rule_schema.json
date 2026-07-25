@@ -165,7 +165,16 @@
     "policy_model": "Declarative intent description only. Compilation engine implements via spec multi-factor algorithm."
   },
   "type": "object",
-  "required": ["version", "policy_contract_version", "policy_contract_id", "rules"],
+  "anyOf": [
+    {
+      "description": "Wrapped rule dataset",
+      "required": ["version", "policy_contract_version", "policy_contract_id", "rules"]
+    },
+    {
+      "description": "Individual rule object",
+      "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"]
+    }
+  ],
   "properties": {
     "version": {
       "type": "string",
@@ -320,8 +329,8 @@
           },
           "evaluator_type": {
             "type": "string",
-            "enum": ["regex", "field_check", "threshold", "composite"],
-            "description": "Pure evaluator type. Discriminator for evaluator_config."
+            "enum": ["regex", "field_check", "threshold", "composite", "ast_walk", "ast_node_match", "ast_call_check", "ast_scope_check", "ast_module_check", "ast_context_check"],
+            "description": "Evaluator type. Discriminator for evaluator_config. AST types are Selma-specific extensions for Python code analysis."
           },
           "evaluator_config": {
             "oneOf": [
@@ -376,6 +385,144 @@
                 "required": ["logic", "sub_evaluators"],
                 "additionalProperties": false,
                 "x-evaluator-type": "composite"
+              },
+              {
+                "description": "AST walk evaluator config — walks AST tree counting matching nodes",
+                "type": "object",
+                "properties": {
+                  "root_node": { "type": "string", "description": "AST node type to start walking from (e.g. FunctionDef, Module)" },
+                  "walk_nodes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "AST node types to count during walk" },
+                  "walk_config": { "type": "object", "description": "Additional walk configuration" },
+                  "count": {
+                    "type": "object",
+                    "properties": {
+                      "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte", "eq", "neq"] },
+                      "value": { "type": "integer" }
+                    },
+                    "required": ["operator", "value"],
+                    "description": "Threshold condition on counted nodes"
+                  },
+                  "message_template": { "type": "string", "description": "Message template with {name}, {count} placeholders" },
+                  "exempt_dunders": { "type": "boolean", "default": false },
+                  "exempt_generators": { "type": "boolean", "default": false }
+                },
+                "required": ["root_node", "walk_nodes", "count", "message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_walk"
+              },
+              {
+                "description": "AST node match evaluator config — matches specific AST nodes with conditions",
+                "type": "object",
+                "properties": {
+                  "target_node": { "type": "string", "description": "AST node type to match (e.g. FunctionDef, ExceptHandler, Call)" },
+                  "conditions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "field": { "type": "string" },
+                        "operator": { "type": "string", "enum": ["eq", "neq", "exists", "not_exists", "matches", "not_matches", "contains", "contains_node", "not_empty", "star_import", "equals"] },
+                        "value": { "description": "Value to compare against (string, number, or pattern)" }
+                      },
+                      "required": ["field", "operator"]
+                    },
+                    "minItems": 1
+                  },
+                  "message_template": { "type": "string", "description": "Message template with {name} placeholder" }
+                },
+                "required": ["target_node", "conditions", "message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_node_match"
+              },
+              {
+                "description": "AST call check evaluator config — checks for forbidden or unsafe function calls",
+                "type": "object",
+                "properties": {
+                  "forbidden_functions": { "type": "array", "items": { "type": "string" }, "description": "Function names that are forbidden (e.g. eval, exec, print)" },
+                  "forbidden_calls": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "module": { "type": "string" },
+                        "method": { "type": "string" }
+                      },
+                      "required": ["module", "method"]
+                    },
+                    "description": "Module.method calls that are forbidden"
+                  },
+                  "target_methods": { "type": "array", "items": { "type": "string" }, "description": "Methods to check arguments of (e.g. execute for SQL injection)" },
+                  "check_first_arg": {
+                    "type": "object",
+                    "properties": {
+                      "forbid_fstring": { "type": "boolean", "default": false },
+                      "forbid_format_call": { "type": "boolean", "default": false },
+                      "forbid_percent": { "type": "boolean", "default": false }
+                    },
+                    "description": "Checks on first argument of target methods"
+                  },
+                  "message_template": { "type": "string" }
+                },
+                "required": ["message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_call_check"
+              },
+              {
+                "description": "AST scope check evaluator config — checks variable usage patterns within function scope",
+                "type": "object",
+                "properties": {
+                  "root_node": { "type": "string", "description": "AST node type to scope to (e.g. FunctionDef, Module)" },
+                  "variable": { "type": "string", "description": "Variable name to track (e.g. b_continue, raise)" },
+                  "check": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string", "enum": ["input_mutation", "shared_state"] },
+                      "rules": { "type": "array" },
+                      "forbidden_types": { "type": "array", "items": { "type": "string" } },
+                      "forbid_reassignable": { "type": "boolean" }
+                    },
+                    "description": "Scope check configuration"
+                  },
+                  "rules": { "type": "array", "items": { "type": "string" }, "description": "Rules to check (e.g. must_exist, must_not_exist, first_value_is_true)" },
+                  "message_template": { "type": "string" }
+                },
+                "required": ["root_node", "message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_scope_check"
+              },
+              {
+                "description": "AST module check evaluator config — checks module-level patterns",
+                "type": "object",
+                "properties": {
+                  "sentinel_name": { "type": "string", "description": "Name of required sentinel (e.g. INVALID_RESULT)" },
+                  "condition": { "type": "string", "description": "Condition that triggers the check" },
+                  "check": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string" },
+                      "forbidden_types": { "type": "array", "items": { "type": "string" } },
+                      "forbid_reassignable": { "type": "boolean" }
+                    },
+                    "description": "Module-level check configuration"
+                  },
+                  "message_template": { "type": "string" }
+                },
+                "required": ["message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_module_check"
+              },
+              {
+                "description": "AST context check evaluator config — ensures resource functions are used with context managers",
+                "type": "object",
+                "properties": {
+                  "target_functions": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Functions that must be used in context managers (e.g. open, Popen)" },
+                  "must_be_inside": { "type": "array", "items": { "type": "string" }, "description": "Required enclosing AST node types (e.g. With)" },
+                  "or_try_finally": { "type": "boolean", "default": true, "description": "Whether try/finally is an acceptable alternative" },
+                  "message_template": { "type": "string" }
+                },
+                "required": ["target_functions", "must_be_inside", "message_template"],
+                "additionalProperties": true,
+                "x-evaluator-type": "ast_context_check"
               }
             ]
           },
@@ -578,9 +725,70 @@
           }
         ]
       }
+    },
+    "lineage_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "description": "Immutable root identifier for individual rule objects."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+      "description": "Active execution identifier for individual rule objects."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["obligation", "prohibition", "permission"],
+      "description": "Deontic classification."
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable output or description."
+    },
+    "evaluator_type": {
+      "type": "string",
+      "enum": ["regex", "field_check", "threshold", "composite", "ast_walk", "ast_node_match", "ast_call_check", "ast_scope_check", "ast_module_check", "ast_context_check"],
+      "description": "Evaluator type for individual rule objects."
+    },
+    "evaluator_config": {
+      "type": "object",
+      "description": "Evaluator configuration for individual rule objects."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "deprecated", "superseded"],
+      "description": "Lifecycle state."
+    },
+    "created_at": {
+      "$ref": "#/definitions/utc_datetime",
+      "description": "ISO 8601 UTC timestamp."
+    },
+    "weight": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "informational"],
+      "description": "Severity weight."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
+      "default": "operational"
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why this rule exists."
+    },
+    "remediation": {
+      "type": "string",
+      "description": "What to do if violated."
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Configuration values passed to evaluator_config.",
+      "additionalProperties": true
     }
   },
-  "additionalProperties": false,
+  "additionalProperties": true,
   "definitions": {
     "utc_datetime": {
       "type": "string",

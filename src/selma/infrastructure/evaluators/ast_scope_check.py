@@ -130,11 +130,19 @@ def _find_assignments(a_node: ast.AST, a_name: str) -> list[ast.AST]:
             b_continue_inner = True
             if b_continue_inner and isinstance(a_child, ast.Assign):
                 for a_target in a_child.targets:
-                    if b_continue_inner and isinstance(a_target, ast.Name) and a_target.id == a_name:
+                    if (
+                        b_continue_inner
+                        and isinstance(a_target, ast.Name)
+                        and a_target.id == a_name
+                    ):
                         b_continue_inner = False
                         result.append(a_child)
             if b_continue_inner and isinstance(a_child, ast.AugAssign):
-                if b_continue_inner and isinstance(a_child.target, ast.Name) and a_child.target.id == a_name:
+                if (
+                    b_continue_inner
+                    and isinstance(a_child.target, ast.Name)
+                    and a_child.target.id == a_name
+                ):
                     b_continue_inner = False
                     result.append(a_child)
     return result
@@ -146,7 +154,12 @@ def _find_usages(a_node: ast.AST, a_name: str) -> list[ast.AST]:
     result: list[ast.AST] = []
     if b_continue:
         for a_child in ast.walk(a_node):
-            if b_continue and isinstance(a_child, ast.Name) and a_child.id == a_name and isinstance(a_child.ctx, ast.Load):
+            if (
+                b_continue
+                and isinstance(a_child, ast.Name)
+                and a_child.id == a_name
+                and isinstance(a_child.ctx, ast.Load)
+            ):
                 result.append(a_child)
     return result
 
@@ -170,7 +183,11 @@ def _find_deletes(a_node: ast.AST, a_name: str) -> list[ast.AST]:
     for a_child in ast.walk(a_node):
         if b_continue and isinstance(a_child, ast.Delete):
             for a_target in a_child.targets:
-                if b_continue and isinstance(a_target, ast.Name) and a_target.id == a_name:
+                if (
+                    b_continue
+                    and isinstance(a_target, ast.Name)
+                    and a_target.id == a_name
+                ):
                     result.append(a_child)
     return result
 
@@ -204,9 +221,18 @@ def _no_reset_to_true(a_assignments: list[ast.AST]) -> bool:
     for a_assign in a_assignments:
         if b_continue and isinstance(a_assign, ast.Assign):
             a_value = a_assign.value
-            if b_continue and isinstance(a_value, ast.Constant) and a_value.value is False:
+            if (
+                b_continue
+                and isinstance(a_value, ast.Constant)
+                and a_value.value is False
+            ):
                 a_seen_false = True
-            if b_continue and a_seen_false and isinstance(a_value, ast.Constant) and a_value.value is True:
+            if (
+                b_continue
+                and a_seen_false
+                and isinstance(a_value, ast.Constant)
+                and a_value.value is True
+            ):
                 b_continue = False
                 result = False
     return result
@@ -224,7 +250,11 @@ def _used_in_guard(a_node: ast.AST, a_name: str) -> bool:
                 result = True
             if b_continue and isinstance(a_test, ast.BoolOp):
                 for a_val in a_test.values:
-                    if b_continue and isinstance(a_val, ast.Name) and a_val.id == a_name:
+                    if (
+                        b_continue
+                        and isinstance(a_val, ast.Name)
+                        and a_val.id == a_name
+                    ):
                         b_continue = False
                         result = True
     return result
@@ -249,7 +279,11 @@ def _used_as_attribute(a_node: ast.AST, a_name: str) -> bool:
     result = False
     for a_child in ast.walk(a_node):
         if b_continue and isinstance(a_child, ast.Attribute):
-            if b_continue and isinstance(a_child.value, ast.Name) and a_child.value.id == a_name:
+            if (
+                b_continue
+                and isinstance(a_child.value, ast.Name)
+                and a_child.value.id == a_name
+            ):
                 b_continue = False
                 result = True
     return result
@@ -268,6 +302,10 @@ def _all_bool_assignments(a_assignments: list[ast.AST]) -> bool:
                     result = False
             if b_continue and isinstance(a_value, ast.BoolOp):
                 pass
-            if b_continue and isinstance(a_value, ast.UnaryOp) and isinstance(a_value.op, ast.Not):
+            if (
+                b_continue
+                and isinstance(a_value, ast.UnaryOp)
+                and isinstance(a_value.op, ast.Not)
+            ):
                 pass
     return result

@@ -1,16 +1,20 @@
-"""LintResponse DTO — output from the lint use case."""
+"""LintResponse DTO — output from the lint use case.
+
+Uses Pydantic v2 BaseModel with frozen config.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
 from selma.domain.entities.finding import Finding
 
 
-@dataclass(frozen=True)
-class LintResponse:
+class LintResponse(BaseModel):
     """Output DTO for lint use case."""
+
+    model_config = ConfigDict(frozen=True)
 
     findings: tuple[Finding, ...]
     summary: str = ""

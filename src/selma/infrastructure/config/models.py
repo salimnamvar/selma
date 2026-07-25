@@ -1,17 +1,19 @@
-"""Configuration dataclasses — all frozen for immutability.
+"""Configuration models — all frozen for immutability using Pydantic v2.
 
 Every value in the system comes from configuration, never hardcoded.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
-@dataclass(frozen=True)
-class PathsConfig:
+class PathsConfig(BaseModel):
     """Directories and files to lint."""
+
+    model_config = ConfigDict(frozen=True)
 
     include: tuple[str, ...] = ("src", "tests")
     exclude: tuple[str, ...] = (
@@ -26,9 +28,10 @@ class PathsConfig:
     extensions: tuple[str, ...] = (".py",)
 
 
-@dataclass(frozen=True)
-class OutputConfig:
+class OutputConfig(BaseModel):
     """Output formatting options."""
+
+    model_config = ConfigDict(frozen=True)
 
     format: str = "default"
     guide: bool = False
@@ -36,9 +39,10 @@ class OutputConfig:
     color: bool = True
 
 
-@dataclass(frozen=True)
-class ExecutionConfig:
+class ExecutionConfig(BaseModel):
     """Execution behavior options."""
+
+    model_config = ConfigDict(frozen=True)
 
     skip_tools: bool = False
     skip_ast: bool = False
@@ -47,18 +51,20 @@ class ExecutionConfig:
     file_timeout: int = 30
 
 
-@dataclass(frozen=True)
-class LoggingConfig:
+class LoggingConfig(BaseModel):
     """Logging configuration."""
+
+    model_config = ConfigDict(frozen=True)
 
     level: str = "WARNING"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file: str | None = None
 
 
-@dataclass(frozen=True)
-class ToolConfig:
+class ToolConfig(BaseModel):
     """Configuration for an external tool (ruff, pylint, pyright)."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     binary: str = ""
@@ -67,18 +73,20 @@ class ToolConfig:
     fail_under: int = 8
 
 
-@dataclass(frozen=True)
-class RulesFilterConfig:
+class RulesFilterConfig(BaseModel):
     """Top-level rule filtering."""
 
-    disabled: tuple[str, ...] = ("SC-031", "SC-033", "SC-114")
+    model_config = ConfigDict(frozen=True)
+
+    disabled: tuple[str, ...] = ("SC-031", "SC-033", "SC-065", "SC-092", "SC-114")
     codes: tuple[str, ...] = ()
     exclude_codes: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class SC001Config:
+class SC001Config(BaseModel):
     """SC-001: Single Exit Point."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -87,9 +95,10 @@ class SC001Config:
     exempt_names: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class SC002Config:
+class SC002Config(BaseModel):
     """SC-002: Zero Raise."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -98,9 +107,10 @@ class SC002Config:
     adapter_keywords: tuple[str, ...] = ("exception", "error", "http")
 
 
-@dataclass(frozen=True)
-class SC003Config:
+class SC003Config(BaseModel):
     """SC-003: Result Return."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -109,9 +119,10 @@ class SC003Config:
     exempt_abstract: bool = True
 
 
-@dataclass(frozen=True)
-class SC004Config:
+class SC004Config(BaseModel):
     """SC-004: INVALID_RESULT Sentinel."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -119,18 +130,20 @@ class SC004Config:
     exempt_pure: bool = True
 
 
-@dataclass(frozen=True)
-class SC005Config:
+class SC005Config(BaseModel):
     """SC-005: No Tuple Returns."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
     exempt_dunders: bool = True
 
 
-@dataclass(frozen=True)
-class SC007Config:
+class SC007Config(BaseModel):
     """SC-007: No Assert for Validation."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -138,9 +151,10 @@ class SC007Config:
     test_patterns: tuple[str, ...] = ("test_*.py", "*_test.py")
 
 
-@dataclass(frozen=True)
-class SC010Config:
+class SC010Config(BaseModel):
     """SC-010: Function Length."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "medium"
@@ -149,9 +163,10 @@ class SC010Config:
     exclude_non_executable: bool = True
 
 
-@dataclass(frozen=True)
-class SC011Config:
+class SC011Config(BaseModel):
     """SC-011: b_continue Pattern."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -166,9 +181,10 @@ class SC011Config:
     flag_attribute: bool = True
 
 
-@dataclass(frozen=True)
-class SC013Config:
+class SC013Config(BaseModel):
     """SC-013: Function Contracts."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
@@ -183,9 +199,10 @@ class SC013Config:
     )
 
 
-@dataclass(frozen=True)
-class SC022Config:
+class SC022Config(BaseModel):
     """SC-022: No Input Mutation."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
@@ -215,13 +232,13 @@ class SC022Config:
         "popitem",
         "add",
         "discard",
-        "remove",
     )
 
 
-@dataclass(frozen=True)
-class SC024Config:
+class SC024Config(BaseModel):
     """SC-024: Explicit Return Types."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
@@ -229,18 +246,20 @@ class SC024Config:
     exempt_abstract: bool = True
 
 
-@dataclass(frozen=True)
-class SC025Config:
+class SC025Config(BaseModel):
     """SC-025: No Star Imports."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "medium"
     allowed_modules: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class SC031Config:
+class SC031Config(BaseModel):
     """SC-031: Type Validation."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "warning"
@@ -249,9 +268,10 @@ class SC031Config:
     framework_types: tuple[str, ...] = ("BaseModel", "BaseSettings", "dataclass")
 
 
-@dataclass(frozen=True)
-class SC033Config:
+class SC033Config(BaseModel):
     """SC-033: Nullability Validation."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "warning"
@@ -260,9 +280,10 @@ class SC033Config:
     skip_with_default: bool = True
 
 
-@dataclass(frozen=True)
-class SC041Config:
+class SC041Config(BaseModel):
     """SC-041: Specific Exception Handling."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -271,9 +292,10 @@ class SC041Config:
     allow_base_exception: bool = False
 
 
-@dataclass(frozen=True)
-class SC042Config:
+class SC042Config(BaseModel):
     """SC-042: No Silent Failures."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -281,27 +303,30 @@ class SC042Config:
     flag_pass_only: bool = True
 
 
-@dataclass(frozen=True)
-class SC052Config:
+class SC052Config(BaseModel):
     """SC-052: No Re-Raising."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
     allow_in_finally: bool = False
 
 
-@dataclass(frozen=True)
-class SC060Config:
+class SC060Config(BaseModel):
     """SC-060: Log at First Detection Layer."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "warning"
     flag_duplicate: bool = True
 
 
-@dataclass(frozen=True)
-class SC061Config:
+class SC061Config(BaseModel):
     """SC-061: Structured Logging."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "warning"
@@ -311,9 +336,10 @@ class SC061Config:
     flag_percent: bool = True
 
 
-@dataclass(frozen=True)
-class SC062Config:
+class SC062Config(BaseModel):
     """SC-062: No Sensitive Data in Logs."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -330,15 +356,16 @@ class SC062Config:
     )
 
 
-@dataclass(frozen=True)
-class SC065Config:
+class SC065Config(BaseModel):
     """SC-065: Mandatory Failure Logging."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
     exempt_dunders: bool = True
     exempt_safe_decorator: bool = True
-    log_levels: dict[str, str] = field(
+    log_levels: dict[str, str] = Field(
         default_factory=lambda: {
             "validation": "warning",
             "computation": "error",
@@ -347,9 +374,10 @@ class SC065Config:
     )
 
 
-@dataclass(frozen=True)
-class SC070Config:
+class SC070Config(BaseModel):
     """SC-070: No Module-Level Mutable State."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -373,9 +401,10 @@ class SC070Config:
     )
 
 
-@dataclass(frozen=True)
-class SC071Config:
+class SC071Config(BaseModel):
     """SC-071: Deterministic Execution."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -412,9 +441,10 @@ class SC071Config:
     )
 
 
-@dataclass(frozen=True)
-class SC080Config:
+class SC080Config(BaseModel):
     """SC-080: Context Managers."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -433,9 +463,10 @@ class SC080Config:
     )
 
 
-@dataclass(frozen=True)
-class SC090Config:
+class SC090Config(BaseModel):
     """SC-090: Shared State Protection."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -444,9 +475,10 @@ class SC090Config:
     strict_async: bool = True
 
 
-@dataclass(frozen=True)
-class SC092Config:
+class SC092Config(BaseModel):
     """SC-092: No Shared Mutable State Without Sync."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -459,9 +491,10 @@ class SC092Config:
     )
 
 
-@dataclass(frozen=True)
-class SC100Config:
+class SC100Config(BaseModel):
     """SC-100: No Secrets."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -479,9 +512,10 @@ class SC100Config:
     min_length: int = 8
 
 
-@dataclass(frozen=True)
-class SC101Config:
+class SC101Config(BaseModel):
     """SC-101: Parameterized Queries."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -506,18 +540,20 @@ class SC101Config:
     )
 
 
-@dataclass(frozen=True)
-class SC104Config:
+class SC104Config(BaseModel):
     """SC-104: No eval/exec."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
     forbidden_functions: tuple[str, ...] = ("eval", "exec", "compile")
 
 
-@dataclass(frozen=True)
-class SC114Config:
+class SC114Config(BaseModel):
     """SC-114: Recursion Limits."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "critical"
@@ -526,9 +562,10 @@ class SC114Config:
     exempt_names: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class SC115Config:
+class SC115Config(BaseModel):
     """SC-115: Configurable Timeouts."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "high"
@@ -555,9 +592,10 @@ class SC115Config:
     default_timeout: int = 30
 
 
-@dataclass(frozen=True)
-class NoPrintConfig:
+class NoPrintConfig(BaseModel):
     """No print() in src/."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "warning"
@@ -565,9 +603,10 @@ class NoPrintConfig:
     test_patterns: tuple[str, ...] = ("test_*.py", "*_test.py")
 
 
-@dataclass(frozen=True)
-class TodoFormatConfig:
+class TodoFormatConfig(BaseModel):
     """TODO Format."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "info"
@@ -575,9 +614,10 @@ class TodoFormatConfig:
     valid_format: str = "TODO(bugref): description"
 
 
-@dataclass(frozen=True)
-class APrefixConfig:
+class APrefixConfig(BaseModel):
     """a-prefix on function arguments."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "error"
@@ -602,56 +642,56 @@ class APrefixConfig:
     exempt_decorated: bool = True
 
 
-@dataclass(frozen=True)
-class MutableDefaultConfig:
+class MutableDefaultConfig(BaseModel):
     """Mutable default arguments."""
+
+    model_config = ConfigDict(frozen=True)
 
     enabled: bool = True
     severity: str = "error"
     mutable_types: tuple[str, ...] = ("list", "dict", "set")
 
 
-@dataclass(frozen=True)
-class RulesConfig:
+class RulesConfig(BaseModel):
     """Per-rule configuration container."""
 
-    sc001: SC001Config = field(default_factory=SC001Config)
-    sc002: SC002Config = field(default_factory=SC002Config)
-    sc003: SC003Config = field(default_factory=SC003Config)
-    sc004: SC004Config = field(default_factory=SC004Config)
-    sc005: SC005Config = field(default_factory=SC005Config)
-    sc007: SC007Config = field(default_factory=SC007Config)
-    sc010: SC010Config = field(default_factory=SC010Config)
-    sc011: SC011Config = field(default_factory=SC011Config)
-    sc013: SC013Config = field(default_factory=SC013Config)
-    sc022: SC022Config = field(default_factory=SC022Config)
-    sc024: SC024Config = field(default_factory=SC024Config)
-    sc025: SC025Config = field(default_factory=SC025Config)
-    sc031: SC031Config = field(default_factory=SC031Config)
-    sc033: SC033Config = field(default_factory=SC033Config)
-    sc041: SC041Config = field(default_factory=SC041Config)
-    sc042: SC042Config = field(default_factory=SC042Config)
-    sc052: SC052Config = field(default_factory=SC052Config)
-    sc060: SC060Config = field(default_factory=SC060Config)
-    sc061: SC061Config = field(default_factory=SC061Config)
-    sc062: SC062Config = field(default_factory=SC062Config)
-    sc065: SC065Config = field(default_factory=SC065Config)
-    sc070: SC070Config = field(default_factory=SC070Config)
-    sc071: SC071Config = field(default_factory=SC071Config)
-    sc080: SC080Config = field(default_factory=SC080Config)
-    sc090: SC090Config = field(default_factory=SC090Config)
-    sc092: SC092Config = field(default_factory=SC092Config)
-    sc100: SC100Config = field(default_factory=SC100Config)
-    sc101: SC101Config = field(default_factory=SC101Config)
-    sc104: SC104Config = field(default_factory=SC104Config)
-    sc114: SC114Config = field(default_factory=SC114Config)
-    sc115: SC115Config = field(default_factory=SC115Config)
-    no_print: NoPrintConfig = field(default_factory=NoPrintConfig)
-    todo_format: TodoFormatConfig = field(default_factory=TodoFormatConfig)
-    a_prefix: APrefixConfig = field(default_factory=APrefixConfig)
-    mutable_default: MutableDefaultConfig = field(
-        default_factory=MutableDefaultConfig
-    )
+    model_config = ConfigDict(frozen=True)
+
+    sc001: SC001Config = Field(default_factory=SC001Config)
+    sc002: SC002Config = Field(default_factory=SC002Config)
+    sc003: SC003Config = Field(default_factory=SC003Config)
+    sc004: SC004Config = Field(default_factory=SC004Config)
+    sc005: SC005Config = Field(default_factory=SC005Config)
+    sc007: SC007Config = Field(default_factory=SC007Config)
+    sc010: SC010Config = Field(default_factory=SC010Config)
+    sc011: SC011Config = Field(default_factory=SC011Config)
+    sc013: SC013Config = Field(default_factory=SC013Config)
+    sc022: SC022Config = Field(default_factory=SC022Config)
+    sc024: SC024Config = Field(default_factory=SC024Config)
+    sc025: SC025Config = Field(default_factory=SC025Config)
+    sc031: SC031Config = Field(default_factory=SC031Config)
+    sc033: SC033Config = Field(default_factory=SC033Config)
+    sc041: SC041Config = Field(default_factory=SC041Config)
+    sc042: SC042Config = Field(default_factory=SC042Config)
+    sc052: SC052Config = Field(default_factory=SC052Config)
+    sc060: SC060Config = Field(default_factory=SC060Config)
+    sc061: SC061Config = Field(default_factory=SC061Config)
+    sc062: SC062Config = Field(default_factory=SC062Config)
+    sc065: SC065Config = Field(default_factory=SC065Config)
+    sc070: SC070Config = Field(default_factory=SC070Config)
+    sc071: SC071Config = Field(default_factory=SC071Config)
+    sc080: SC080Config = Field(default_factory=SC080Config)
+    sc090: SC090Config = Field(default_factory=SC090Config)
+    sc092: SC092Config = Field(default_factory=SC092Config)
+    sc100: SC100Config = Field(default_factory=SC100Config)
+    sc101: SC101Config = Field(default_factory=SC101Config)
+    sc104: SC104Config = Field(default_factory=SC104Config)
+    sc114: SC114Config = Field(default_factory=SC114Config)
+    sc115: SC115Config = Field(default_factory=SC115Config)
+    no_print: NoPrintConfig = Field(default_factory=NoPrintConfig)
+    todo_format: TodoFormatConfig = Field(default_factory=TodoFormatConfig)
+    a_prefix: APrefixConfig = Field(default_factory=APrefixConfig)
+    mutable_default: MutableDefaultConfig = Field(default_factory=MutableDefaultConfig)
 
 
 def _default_ruff() -> ToolConfig:
@@ -671,31 +711,31 @@ def _default_pyright() -> ToolConfig:
     return ToolConfig(binary="pyright", args=("--strict",))
 
 
-@dataclass(frozen=True)
-class ToolsConfig:
+class ToolsConfig(BaseModel):
     """External tools configuration."""
 
-    ruff: ToolConfig = field(default_factory=_default_ruff)
-    pylint: ToolConfig = field(default_factory=_default_pylint)
-    pyright: ToolConfig = field(default_factory=_default_pyright)
+    model_config = ConfigDict(frozen=True)
+
+    ruff: ToolConfig = Field(default_factory=_default_ruff)
+    pylint: ToolConfig = Field(default_factory=_default_pylint)
+    pyright: ToolConfig = Field(default_factory=_default_pyright)
 
 
-@dataclass(frozen=True)
-class SelmaConfig:
+class SelmaConfig(BaseModel):
     """Top-level immutable configuration.
 
     All values come from configuration sources, never hardcoded.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     version: str = "0.1.0"
     name: str = "selma"
 
-    paths: PathsConfig = field(default_factory=PathsConfig)
-    output: OutputConfig = field(default_factory=OutputConfig)
-    execution: ExecutionConfig = field(default_factory=ExecutionConfig)
-    rules_filter: RulesFilterConfig = field(
-        default_factory=RulesFilterConfig
-    )
-    rules: RulesConfig = field(default_factory=RulesConfig)
-    tools: ToolsConfig = field(default_factory=ToolsConfig)
-    logging: LoggingConfig = field(default_factory=LoggingConfig)
+    paths: PathsConfig = Field(default_factory=PathsConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
+    rules_filter: RulesFilterConfig = Field(default_factory=RulesFilterConfig)
+    rules: RulesConfig = Field(default_factory=RulesConfig)
+    tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)

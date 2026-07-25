@@ -2,21 +2,25 @@
   "lineage_id": "SC-042",
   "id": "SC-042",
   "type": "prohibition",
-  "message": "Silent failure — exception caught but not logged or converted to Result",
+  "message": "No silent failures — every caught exception must be logged or converted to Result.failure()",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "type", "operator": "exists"},
-      {"field": "name", "operator": "exists"}
+      {"field": "body", "operator": "not_empty"}
     ],
-    "message_template": "Silent exception handling detected — log or convert to Result.failure()"
+    "message_template": "Silent exception handling detected — log the exception or convert to Result.failure() with a descriptive message"
   },
-  "weight": "high",
+  "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Silent failures hide bugs and make debugging impossible.",
-  "remediation": "Log the exception or convert to Result.failure() with descriptive message.",
+  "rationale": "Silent failures are invisible failures. They accumulate. They create the illusion of success while the system silently degrades. An empty except block is always a defect.",
+  "remediation": "Log the exception with structured logging or convert to Result.failure(message=f'Exception type: {e}') with a descriptive message.",
+  "guidance": {
+    "correct_example": "def load(a_path: str) -> Result[dict]:\n    b_continue = True\n    result: Result[dict] = INVALID_RESULT\n    try:\n        data = json.load(open(a_path))\n    except FileNotFoundError as e:\n        result = Result.failure(f'File not found: {a_path}: {e}')\n        b_continue = False\n    except json.JSONDecodeError as e:\n        result = Result.failure(f'Invalid JSON in {a_path}: {e}')\n        b_continue = False\n    if b_continue:\n        result = Result.success(data)\n    return result",
+    "incorrect_example": "def load(a_path: str) -> Result[dict]:\n    try:\n        data = json.load(open(a_path))\n        return Result.success(data)\n    except Exception:\n        pass",
+    "explanation": "The correct version converts every exception to a Result.failure() with a descriptive message. The incorrect version silently swallows exceptions, hiding bugs."
+  },
   "parameters": {}
 }

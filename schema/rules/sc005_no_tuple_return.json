@@ -16,7 +16,12 @@
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Bare tuples have no named fields and are ambiguous at call sites.",
-  "remediation": "Use Result[T] or a dataclass with named fields.",
+  "rationale": "Tuple returns couple callers to positional semantics. Adding or reordering fields breaks all callers silently. Named types are self-documenting and refactor-safe.",
+  "remediation": "Use Result[T] or a dataclass with named fields instead of tuples.",
+  "guidance": {
+    "correct_example": "@dataclass\nclass UserProfile:\n    name: str\n    email: str\n    role: str\n\ndef get_profile(a_id: int) -> Result[UserProfile]:\n    user = db.query(a_id)\n    if user is None:\n        return Result.failure(f'User {a_id} not found')\n    profile = UserProfile(name=user.name, email=user.email, role=user.role)\n    return Result.success(profile)",
+    "incorrect_example": "def get_profile(a_id: int) -> tuple[str, str, str]:\n    user = db.query(a_id)\n    return (user.name, user.email, user.role)",
+    "explanation": "The correct version uses a typed dataclass. The incorrect version returns a bare tuple where adding/removing fields silently breaks callers."
+  },
   "parameters": {}
 }

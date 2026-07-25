@@ -60,7 +60,9 @@ class TestViolationToDict:
     def test_to_dict_includes_guidance_when_requested(self) -> None:
         """to_dict with a_include_guidance=True should include guidance."""
         g = _make_guidance()
-        v = Violation(filepath="main.py", line=10, col=5, code="SC001", message="bad", guidance=g)
+        v = Violation(
+            filepath="main.py", line=10, col=5, code="SC001", message="bad", guidance=g
+        )
         d = v.to_dict(a_include_guidance=True)
         assert "guidance" in d
         assert d["guidance"]["title"] == "Test Rule"
@@ -68,7 +70,9 @@ class TestViolationToDict:
     def test_to_dict_excludes_guidance_by_default(self) -> None:
         """to_dict without a_include_guidance should not include guidance."""
         g = _make_guidance()
-        v = Violation(filepath="main.py", line=10, col=5, code="SC001", message="bad", guidance=g)
+        v = Violation(
+            filepath="main.py", line=10, col=5, code="SC001", message="bad", guidance=g
+        )
         d = v.to_dict()
         assert "guidance" not in d
 

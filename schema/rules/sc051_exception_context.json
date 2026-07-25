@@ -1,0 +1,22 @@
+{
+  "lineage_id": "SC-051",
+  "id": "SC-051",
+  "type": "obligation",
+  "message": "Exception context not preserved in logging",
+  "evaluator_type": "ast_node_match",
+  "evaluator_config": {
+    "target_node": "ExceptHandler",
+    "conditions": [
+      {"field": "type", "operator": "exists"},
+      {"field": "name", "operator": "exists"}
+    ],
+    "message_template": "Exception handler must log str(e) or use exc_info=True for context"
+  },
+  "weight": "medium",
+  "priority": "operational",
+  "status": "active",
+  "created_at": "2026-07-25T00:00:00Z",
+  "rationale": "Losing exception context makes debugging difficult.",
+  "remediation": "Log str(e) and use exc_info=True, or re-raise with 'raise ... from e'.",
+  "parameters": {"require_exc_info": true}
+}
