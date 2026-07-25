@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import ast
 import fnmatch
-import sys
+import logging
 from pathlib import Path
 
 from scripts.lint.core.visitor import LintVisitor
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import LintConfig
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -37,9 +39,15 @@ class LintEngine:
         if not self._is_excluded(a_filepath):
             try:
                 source = Path(a_filepath).read_text(encoding="utf-8")
+            except OSError as exc:
+                logger.warning("Failed to read %s: %s", a_filepath, exc)
+                violations = [Violation(a_filepath, 0, 0, "IO_ERROR", str(exc), "error")]
+                return violations
+
+            try:
                 tree = ast.parse(source, filename=a_filepath)
             except (SyntaxError, UnicodeDecodeError) as exc:
-                violations = [Violation(a_filepath, 0, "PARSE", str(exc), "error")]
+                violations = [Violation(a_filepath, 0, 0, "PARSE", str(exc), "error")]
             else:
                 rules = self._rules_for_file(a_filepath)
                 visitor = LintVisitor(rules, a_filepath)
