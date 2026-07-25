@@ -1,4 +1,5 @@
 """Lint engine: orchestrates file reading, AST parsing, and rule dispatch."""
+
 from __future__ import annotations
 
 import ast
@@ -6,17 +7,18 @@ import fnmatch
 import logging
 from pathlib import Path
 
-from scripts.lint.core.result import INVALID_RESULT
+from scripts.lint.config import LintConfig
 from scripts.lint.core.result import Result
-from scripts.lint.core.visitor import LintVisitor
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
-from scripts.lint.config import LintConfig
+from scripts.lint.core.visitor import LintVisitor
 
 logger = logging.getLogger(__name__)
 
 
 class LintEngine:
+    """Orchestrates file reading, AST parsing, and rule dispatch."""
+
     def __init__(self, rules: list[Rule], config: LintConfig | None = None) -> None:
         self._all_rules = rules
         self._config = config or LintConfig()
@@ -32,16 +34,18 @@ class LintEngine:
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)
+        result: Result[bool] = Result.success(False)  # noqa: FBT003
         for pattern in self._exclude_paths:
-            if fnmatch.fnmatch(filepath, pattern) or fnmatch.fnmatch(filepath, f"*/{pattern}/*"):
+            if fnmatch.fnmatch(filepath, pattern) or fnmatch.fnmatch(
+                filepath, f"*/{pattern}/*"
+            ):
                 b_continue = False
-                result = Result.success(True)
+                result = Result.success(True)  # noqa: FBT003
         if b_continue:
-            result = Result.success(False)
+            result = Result.success(False)  # noqa: FBT003
         return result
 
-    def _rules_for_file(self, filepath: str) -> Result[list[Rule]]:
+    def _rules_for_file(self, _filepath: str) -> Result[list[Rule]]:
         """Return the list of rules applicable to the given filepath.
 
         Precondition: filepath is a non-empty string.
@@ -57,7 +61,9 @@ class LintEngine:
             b_continue = False
             result = Result.success(self._all_rules)
         if b_continue:
-            result = Result.success([r for r in self._all_rules if r.code not in excluded_codes])
+            result = Result.success(
+                [r for r in self._all_rules if r.code not in excluded_codes]
+            )
         return result
 
     def lint_file(self, a_filepath: str | Path) -> Result[list[Violation]]:
@@ -74,23 +80,27 @@ class LintEngine:
         violations: list[Violation] = []
         result: Result[list[Violation]]
         excluded = self._is_excluded(a_filepath)
-        is_excluded = excluded.is_success() and excluded.value
+        is_excluded = excluded.is_success().value and excluded.value
         if not is_excluded:
             try:
                 source = Path(a_filepath).read_text(encoding="utf-8")
             except OSError as exc:
                 b_continue = False
                 logger.warning("Failed to read %s: %s", a_filepath, exc)
-                violations = [Violation(a_filepath, 0, 0, "IO_ERROR", str(exc), "error")]
+                violations = [
+                    Violation(a_filepath, 0, 0, "IO_ERROR", str(exc), "error")
+                ]
             if b_continue:
                 try:
                     tree = ast.parse(source, filename=a_filepath)
                 except (SyntaxError, UnicodeDecodeError) as exc:
                     b_continue = False
-                    violations = [Violation(a_filepath, 0, 0, "PARSE", str(exc), "error")]
+                    violations = [
+                        Violation(a_filepath, 0, 0, "PARSE", str(exc), "error")
+                    ]
                 if b_continue:
                     rules_result = self._rules_for_file(a_filepath)
-                    if rules_result.is_success():
+                    if rules_result.is_success().value:
                         visitor = LintVisitor(rules_result.value, a_filepath)
                         visitor.visit(tree)
                         violations = visitor.violations
@@ -114,12 +124,12 @@ class LintEngine:
                 p = Path(path)
                 if p.is_file() and p.suffix == ".py":
                     file_result = self.lint_file(p)
-                    if file_result.is_success():
+                    if file_result.is_success().value:
                         violations.extend(file_result.value)
                 elif p.is_dir():
                     for py_file in sorted(p.rglob("*.py")):
                         file_result = self.lint_file(py_file)
-                        if file_result.is_success():
+                        if file_result.is_success().value:
                             violations.extend(file_result.value)
         result = Result.success(violations)
         return result

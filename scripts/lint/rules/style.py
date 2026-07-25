@@ -1,4 +1,5 @@
 """Style rules: a-prefix, function contracts, mutable defaults."""
+
 from __future__ import annotations
 
 import ast
@@ -13,15 +14,44 @@ class APrefixRule(Rule):
 
     @property
     def code(self) -> str:
-        return "a-prefix"
+        """Short rule identifier, e.g. 'SC001'.
+
+        Precondition: None.
+        Postcondition: Returns the rule code string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "a-prefix"
+        return b_result
 
     @property
     def description(self) -> str:
-        return "a_ prefix on all function arguments"
+        """One-line human description.
+
+        Precondition: None.
+        Postcondition: Returns the rule description string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "a_ prefix on all function arguments"
+        return b_result
 
     _EXEMPT = frozenset({"self", "cls", "args", "kwargs"})
 
-    def _check_args(self, a_args: ast.arguments, a_filepath: str, a_func_name: str) -> Result[list[Violation]]:
+    def _check_args(
+        self,
+        a_args: ast.arguments,
+        a_filepath: str,
+        a_func_name: str,
+    ) -> Result[list[Violation]]:
         """Check individual argument names for a_ prefix compliance.
 
         Precondition: a_args is a valid ast.arguments node.
@@ -36,26 +66,62 @@ class APrefixRule(Rule):
         if b_continue:
             for arg in a_args.args + a_args.posonlyargs:
                 name = arg.arg
-                if name in self._EXEMPT or name.startswith("a_") or name.startswith("_a_") or name.startswith("*"):
+                if name in self._EXEMPT or name.startswith(("a_", "_a_", "*")):
                     continue
-                violations.append(Violation(
-                    a_filepath, arg.lineno, arg.col_offset,
-                    self.code,
-                    f"Argument '{name}' in '{a_func_name}' must start with 'a_'",
-                ))
+                violations.append(
+                    Violation(
+                        a_filepath,
+                        arg.lineno,
+                        arg.col_offset,
+                        self.code,
+                        f"Argument '{name}' in '{a_func_name}' must start with 'a_'",
+                    )
+                )
             for arg in a_args.kwonlyargs:
                 name = arg.arg
-                if name in self._EXEMPT or name.startswith("a_") or name.startswith("_a_"):
+                if name in self._EXEMPT or name.startswith(("a_", "_a_")):
                     continue
-                violations.append(Violation(
-                    a_filepath, arg.lineno, arg.col_offset,
-                    self.code,
-                    f"Argument '{name}' in '{a_func_name}' must start with 'a_'",
-                ))
+                violations.append(
+                    Violation(
+                        a_filepath,
+                        arg.lineno,
+                        arg.col_offset,
+                        self.code,
+                        f"Argument '{name}' in '{a_func_name}' must start with 'a_'",
+                    )
+                )
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
+    def _check_function(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that all function arguments have a_ prefix.
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        violations: list[Violation] = []
+        result: Result[list[Violation]] = Result.success(violations)
+        if b_continue:
+            is_dunder = a_node.name.startswith("__") and a_node.name.endswith("__")
+            is_private = a_node.name.startswith("_")
+            if not is_dunder and not is_private:
+                args_result = self._check_args(a_node.args, a_filepath, a_node.name)
+                if args_result.is_success().value:
+                    violations = args_result.value
+            result = Result.success(violations)
+        return result
+
+    def check_FunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.FunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
         """Check that all function arguments have a_ prefix.
 
         Precondition: a_node is a FunctionDef AST node.
@@ -65,18 +131,23 @@ class APrefixRule(Rule):
         Failure: Never fails (always returns Ok).
         """
         b_continue = True
-        violations: list[Violation] = []
-        result: Result[list[Violation]] = Result.success(violations)
         if b_continue:
-            if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
-                if not a_node.name.startswith("_"):
-                    args_result = self._check_args(a_node.args, a_filepath, a_node.name)
-                    if args_result.is_success():
-                        violations = args_result.value
-            result = Result.success(violations)
-        return result
+            return self._check_function(a_node, a_filepath)
 
-    check_AsyncFunctionDef = check_FunctionDef
+    def check_AsyncFunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
+        """Check that all async function arguments have a_ prefix.
+
+        Precondition: a_node is an AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        if b_continue:
+            return self._check_function(a_node, a_filepath)
 
 
 class FunctionContractRule(Rule):
@@ -84,20 +155,54 @@ class FunctionContractRule(Rule):
 
     @property
     def code(self) -> str:
-        return "SC013"
+        """Short rule identifier, e.g. 'SC001'.
+
+        Precondition: None.
+        Postcondition: Returns the rule code string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "SC013"
+        return b_result
 
     @property
     def description(self) -> str:
-        return "Function docstring contracts"
+        """One-line human description.
 
-    _REQUIRED_SECTIONS = frozenset({
-        "precondition", "postcondition", "side effect", "resource", "failure",
-    })
+        Precondition: None.
+        Postcondition: Returns the rule description string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "Function docstring contracts"
+        return b_result
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
-        """Check that functions have docstrings with all 5 mandatory contract sections.
+    _REQUIRED_SECTIONS = frozenset(
+        {
+            "precondition",
+            "postcondition",
+            "side effect",
+            "resource",
+            "failure",
+        }
+    )
 
-        Precondition: a_node is a FunctionDef AST node.
+    def _check_function(  # noqa: C901
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that functions have docstrings with contract sections.
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node.
         Postcondition: Returns Ok with list of violations found.
         Side effect: None.
         Resource: None.
@@ -107,36 +212,86 @@ class FunctionContractRule(Rule):
         violations: list[Violation] = []
         result: Result[list[Violation]] = Result.success(violations)
         if b_continue:
-            if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
+            is_dunder = a_node.name.startswith("__") and a_node.name.endswith("__")
+            if not is_dunder:
                 exempt = False
                 for dec in a_node.decorator_list:
-                    if isinstance(dec, ast.Name) and dec.id in ("property", "staticmethod", "classmethod"):
+                    if isinstance(dec, ast.Name) and dec.id in (
+                        "property",
+                        "staticmethod",
+                        "classmethod",
+                    ):
                         exempt = True
                         break
-                    if isinstance(dec, ast.Attribute) and dec.attr in ("setter", "getter", "deleter"):
+                    if isinstance(dec, ast.Attribute) and dec.attr in (
+                        "setter",
+                        "getter",
+                        "deleter",
+                    ):
                         exempt = True
                         break
                 if not exempt:
                     docstring = ast.get_docstring(a_node)
                     if not docstring:
-                        violations = [Violation(
-                            a_filepath, a_node.lineno, a_node.col_offset,
-                            self.code,
-                            f"Function '{a_node.name}' missing docstring",
-                        )]
+                        violations = [
+                            Violation(
+                                a_filepath,
+                                a_node.lineno,
+                                a_node.col_offset,
+                                self.code,
+                                f"Function '{a_node.name}' missing docstring",
+                            )
+                        ]
                     else:
                         doc_lower = docstring.lower()
-                        missing = [s for s in self._REQUIRED_SECTIONS if s not in doc_lower]
+                        missing = [
+                            s for s in self._REQUIRED_SECTIONS if s not in doc_lower
+                        ]
                         if missing:
-                            violations = [Violation(
-                                a_filepath, a_node.lineno, a_node.col_offset,
-                                self.code,
-                                f"Function '{a_node.name}' docstring missing contract sections: {', '.join(missing)}",
-                            )]
+                            joined = ", ".join(missing)
+                            violations = [
+                                Violation(
+                                    a_filepath,
+                                    a_node.lineno,
+                                    a_node.col_offset,
+                                    self.code,
+                                    f"Function '{a_node.name}' "
+                                    "docstring missing contract "
+                                    f"sections: {joined}",
+                                )
+                            ]
             result = Result.success(violations)
         return result
 
-    check_AsyncFunctionDef = check_FunctionDef
+    def check_FunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.FunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
+        """Check that functions have docstrings with all 5 mandatory sections.
+
+        Precondition: a_node is a FunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        if b_continue:
+            return self._check_function(a_node, a_filepath)
+
+    def check_AsyncFunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
+        """Check that async functions have docstrings with all 5 sections.
+
+        Precondition: a_node is an AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        if b_continue:
+            return self._check_function(a_node, a_filepath)
 
 
 class NoMutableDefaultRule(Rule):
@@ -144,13 +299,72 @@ class NoMutableDefaultRule(Rule):
 
     @property
     def code(self) -> str:
-        return "mutable-default"
+        """Short rule identifier, e.g. 'SC001'.
+
+        Precondition: None.
+        Postcondition: Returns the rule code string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "mutable-default"
+        return b_result
 
     @property
     def description(self) -> str:
-        return "No mutable default arguments"
+        """One-line human description.
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
+        Precondition: None.
+        Postcondition: Returns the rule description string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "No mutable default arguments"
+        return b_result
+
+    def _check_function(
+        self,
+        a_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        a_filepath: str,
+    ) -> Result[list[Violation]]:
+        """Check that function defaults are not mutable.
+
+        Precondition: a_node is a FunctionDef or AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        violations: list[Violation] = []
+        result: Result[list[Violation]] = Result.success(violations)
+        if b_continue:
+            violations.extend(
+                Violation(
+                    a_filepath,
+                    d.lineno,
+                    d.col_offset,
+                    self.code,
+                    "Mutable default argument "
+                    "forbidden; use None and "
+                    "initialize inside function",
+                )
+                for d in (a_node.args.defaults + a_node.args.kw_defaults)
+                if d is not None and isinstance(d, (ast.List, ast.Dict, ast.Set))
+            )
+            result = Result.success(violations)
+        return result
+
+    def check_FunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.FunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
         """Check that function defaults are not mutable.
 
         Precondition: a_node is a FunctionDef AST node.
@@ -160,17 +374,20 @@ class NoMutableDefaultRule(Rule):
         Failure: Never fails (always returns Ok).
         """
         b_continue = True
-        violations: list[Violation] = []
-        result: Result[list[Violation]] = Result.success(violations)
         if b_continue:
-            for default in a_node.args.defaults + a_node.args.kw_defaults:
-                if default is not None and isinstance(default, (ast.List, ast.Dict, ast.Set)):
-                    violations.append(Violation(
-                        a_filepath, default.lineno, default.col_offset,
-                        self.code,
-                        "Mutable default argument forbidden; use None and initialize inside function",
-                    ))
-            result = Result.success(violations)
-        return result
+            return self._check_function(a_node, a_filepath)
 
-    check_AsyncFunctionDef = check_FunctionDef
+    def check_AsyncFunctionDef(  # noqa: N802, RET503
+        self, a_node: ast.AsyncFunctionDef, a_filepath: str
+    ) -> Result[list[Violation]]:
+        """Check that async function defaults are not mutable.
+
+        Precondition: a_node is an AsyncFunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
+        if b_continue:
+            return self._check_function(a_node, a_filepath)

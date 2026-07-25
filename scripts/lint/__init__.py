@@ -1,2 +1,3 @@
-from __future__ import annotations
+"""Selma custom AST linter package."""
 
+from __future__ import annotations

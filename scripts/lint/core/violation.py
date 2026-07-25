@@ -1,11 +1,14 @@
+"""Structured lint violation record."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 
-
 @dataclass(frozen=True, slots=True)
 class Violation:
+    """A single lint violation found during analysis."""
+
     filepath: str
     line: int
     col: int
@@ -14,4 +17,7 @@ class Violation:
     severity: str = "error"
 
     def __str__(self) -> str:
-        return f"{self.filepath}:{self.line}:{self.col}: {self.severity}: {self.message} ({self.code})"
+        return (
+            f"{self.filepath}:{self.line}:{self.col}: "
+            f"{self.severity}: {self.message} ({self.code})"
+        )

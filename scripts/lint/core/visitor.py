@@ -1,9 +1,11 @@
 """AST visitor with rule dispatch and parent context tracking."""
+
 from __future__ import annotations
 
 import ast
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from typing import Any
 
 from scripts.lint.core.result import Result
 
@@ -32,6 +34,8 @@ def get_visitor() -> Result[Any]:
 
 
 class LintVisitor(ast.NodeVisitor):
+    """AST visitor with rule dispatch and parent context tracking."""
+
     def __init__(self, rules: list[Rule], filepath: str) -> None:
         self.rules = rules
         self.filepath = filepath
@@ -94,7 +98,7 @@ class LintVisitor(ast.NodeVisitor):
                 hook = f"check_{node_type}"
                 if hasattr(rule, hook):
                     hook_result = getattr(rule, hook)(a_node, self.filepath)
-                    if hook_result.is_success() and hook_result.value:
+                    if hook_result.is_success().value and hook_result.value:
                         self.violations.extend(hook_result.value)
             super().generic_visit(a_node)
         return result
@@ -109,9 +113,11 @@ class LintVisitor(ast.NodeVisitor):
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)
+        result: Result[bool] = Result.success(False)  # noqa: FBT003
         if b_continue:
-            result = Result.success(any(isinstance(p, ast.With) for p in self._parent_stack))
+            result = Result.success(
+                any(isinstance(p, ast.With) for p in self._parent_stack)
+            )
         return result
 
     def is_with_context(self, a_node: ast.AST) -> Result[bool]:
@@ -124,7 +130,7 @@ class LintVisitor(ast.NodeVisitor):
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)
+        result: Result[bool] = Result.success(False)  # noqa: FBT003
         if b_continue:
             result = Result.success(id(a_node) in self._with_calls)
         return result

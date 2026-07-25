@@ -1,10 +1,12 @@
 """Read lint configuration from pyproject.toml [tool.selma.lint]."""
+
 from __future__ import annotations
 
+from dataclasses import dataclass
+from dataclasses import field
 import logging
-import tomllib
-from dataclasses import dataclass, field
 from pathlib import Path
+import tomllib
 
 from scripts.lint.core.result import Result
 
@@ -13,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class RunnerConfig:
+    """Binary paths for external lint tools."""
+
     ruff: str = "ruff"
     pylint: str = "pylint"
     pyright: str = "pyright"
@@ -20,45 +24,78 @@ class RunnerConfig:
 
 @dataclass(frozen=True, slots=True)
 class ExcludeConfig:
+    """Path and code exclusion lists."""
+
     paths: tuple[str, ...] = ()
     codes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class ComplexityConfig:
+    """Function complexity thresholds."""
+
     max_lines: int = 60
 
 
 @dataclass(frozen=True, slots=True)
 class ResourcesConfig:
+    """Resource calls that require context managers."""
+
     calls: tuple[str, ...] = (
-        "open", "Popen", "Lock", "RLock", "connect",
-        "NamedTemporaryFile", "TemporaryFile", "TemporaryDirectory",
-        "socket", "urlopen",
+        "open",
+        "Popen",
+        "Lock",
+        "RLock",
+        "connect",
+        "NamedTemporaryFile",
+        "TemporaryFile",
+        "TemporaryDirectory",
+        "socket",
+        "urlopen",
     )
 
 
 @dataclass(frozen=True, slots=True)
 class DeterminismConfig:
+    """Non-deterministic function calls to forbid."""
+
     forbidden: tuple[str, ...] = (
-        "datetime.now", "datetime.utcnow",
-        "time.time", "time.monotonic", "time.localtime", "time.gmtime",
-        "random.random", "random.randint", "random.choice", "random.sample",
-        "random.shuffle", "random.gauss",
+        "datetime.now",
+        "datetime.utcnow",
+        "time.time",
+        "time.monotonic",
+        "time.localtime",
+        "time.gmtime",
+        "random.random",
+        "random.randint",
+        "random.choice",
+        "random.sample",
+        "random.shuffle",
+        "random.gauss",
         "uuid.uuid4",
     )
 
 
 @dataclass(frozen=True, slots=True)
 class SecurityConfig:
+    """Secret pattern names to detect in assignments."""
+
     secret_patterns: tuple[str, ...] = (
-        "password", "secret", "api_key", "apikey", "token",
-        "private_key", "access_key", "auth_token",
+        "password",
+        "secret",
+        "api_key",
+        "apikey",
+        "token",
+        "private_key",
+        "access_key",
+        "auth_token",
     )
 
 
 @dataclass(frozen=True, slots=True)
 class RulesConfig:
+    """Rule configuration with sub-sections."""
+
     disabled: tuple[str, ...] = ()
     complexity: ComplexityConfig = field(default_factory=ComplexityConfig)
     resources: ResourcesConfig = field(default_factory=ResourcesConfig)
@@ -68,6 +105,8 @@ class RulesConfig:
 
 @dataclass(frozen=True, slots=True)
 class LintConfig:
+    """Top-level lint configuration loaded from pyproject.toml."""
+
     paths: tuple[str, ...] = ("src", "tests")
     runner: RunnerConfig = field(default_factory=RunnerConfig)
     exclude: ExcludeConfig = field(default_factory=ExcludeConfig)
@@ -115,7 +154,7 @@ def load_config(a_project_root: str | Path | None = None) -> Result[LintConfig]:
     config = LintConfig()
     if pyproject.exists():
         try:
-            with open(pyproject, "rb") as f:
+            with pyproject.open("rb") as f:
                 data = tomllib.load(f)
         except OSError as exc:
             b_continue = False
@@ -156,17 +195,22 @@ def load_config(a_project_root: str | Path | None = None) -> Result[LintConfig]:
                         max_lines=complexity_raw.get("max-lines", 60),
                     ),
                     resources=ResourcesConfig(
-                        calls=tuple(resources_raw.get("calls", [])) or ResourcesConfig.calls,
+                        calls=tuple(resources_raw.get("calls", []))
+                        or ResourcesConfig.calls,
                     ),
                     determinism=DeterminismConfig(
-                        forbidden=tuple(determinism_raw.get("forbidden", [])) or DeterminismConfig.forbidden,
+                        forbidden=tuple(determinism_raw.get("forbidden", []))
+                        or DeterminismConfig.forbidden,
                     ),
                     security=SecurityConfig(
-                        secret_patterns=tuple(security_raw.get("secret-patterns", [])) or SecurityConfig.secret_patterns,
+                        secret_patterns=tuple(security_raw.get("secret-patterns", []))
+                        or SecurityConfig.secret_patterns,
                     ),
                 )
 
-                config = LintConfig(paths=paths, runner=runner, exclude=exclude, rules=rules)
+                config = LintConfig(
+                    paths=paths, runner=runner, exclude=exclude, rules=rules
+                )
 
             result = Result.success(config)
 

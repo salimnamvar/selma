@@ -1,4 +1,5 @@
 """Base class for external tool runners."""
+
 from __future__ import annotations
 
 from abc import ABC
@@ -12,6 +13,8 @@ from scripts.lint.core.result import Result
 
 @dataclass(frozen=True, slots=True)
 class ToolResult:
+    """Structured result from an external tool execution."""
+
     tool: str
     ok: bool
     stdout: str
@@ -20,10 +23,24 @@ class ToolResult:
 
 
 class ToolRunner(ABC):
+    """Abstract base class for external tool runners."""
+
     @property
     @abstractmethod
     def name(self) -> str:
-        """Human-readable tool name."""
+        """Human-readable tool name.
+
+        Precondition: None.
+        Postcondition: Returns the tool name string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = ""
+        return b_result
 
     @abstractmethod
     def run(self, a_paths: list[str], **kwargs: object) -> Result[ToolResult]:
@@ -35,6 +52,11 @@ class ToolRunner(ABC):
         Resource: subprocess handle.
         Failure: returns Result.failure on execution error.
         """
+        b_continue = True
+        result: Result[ToolResult] = Result.failure("abstract method")
+        if b_continue:
+            result = Result.failure("abstract method")
+        return result
 
     def _resolve_bin(self, hint: str | None = None) -> Result[str]:
         """Resolve the binary path for this tool.
@@ -68,11 +90,17 @@ class ToolRunner(ABC):
         Failure: returns Result.failure on file-not-found or timeout.
         """
         b_continue = True
-        result: Result[ToolResult] = Result.success(ToolResult(
-            tool=self.name, ok=False, stdout="", stderr="", returncode=1,
-        ))
+        result: Result[ToolResult] = Result.success(
+            ToolResult(
+                tool=self.name,
+                ok=False,
+                stdout="",
+                stderr="",
+                returncode=1,
+            )
+        )
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # noqa: S603, PLW1510
                 args,
                 capture_output=True,
                 text=True,
@@ -86,11 +114,13 @@ class ToolRunner(ABC):
             b_continue = False
             result = Result.failure(str(exc))
         if b_continue:
-            result = Result.success(ToolResult(
-                tool=self.name,
-                ok=proc.returncode == 0,
-                stdout=proc.stdout,
-                stderr=proc.stderr,
-                returncode=proc.returncode,
-            ))
+            result = Result.success(
+                ToolResult(
+                    tool=self.name,
+                    ok=proc.returncode == 0,
+                    stdout=proc.stdout,
+                    stderr=proc.stderr,
+                    returncode=proc.returncode,
+                )
+            )
         return result

@@ -1,4 +1,5 @@
 """Auto-discover and register all lint rules."""
+
 from __future__ import annotations
 
 from scripts.lint.config import LintConfig
@@ -15,7 +16,6 @@ from scripts.lint.rules.error_handling import SpecificExceptionRule
 from scripts.lint.rules.imports import ImportInFunctionRule
 from scripts.lint.rules.resources import ResourceContextManagerRule
 from scripts.lint.rules.returns import ExplicitReturnTypeRule
-from scripts.lint.rules.returns import InvalidResultSentinelRule
 from scripts.lint.rules.returns import NoStarImportRule
 from scripts.lint.rules.returns import ResultReturnRule
 from scripts.lint.rules.security import NoEvalExecRule
@@ -52,7 +52,6 @@ def all_rules(a_config: LintConfig | None = None) -> Result[list[Rule]]:
             ResultReturnRule(),
             ExplicitReturnTypeRule(),
             NoStarImportRule(),
-            InvalidResultSentinelRule(),
             # Assertions
             AssertValidationRule(),
             # Complexity (configurable)

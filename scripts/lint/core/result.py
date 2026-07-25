@@ -1,14 +1,14 @@
 """Structured Result type for Safe Coding Doctrine compliance (SC-003).
 
 Every function SHALL return a typed Result[T] with is_success(), value, and message.
-This module provides the canonical Result implementation and INVALID_RESULT sentinel.
+This module provides the canonical Result implementation.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
 from typing import Generic
 from typing import TypeVar
 
@@ -34,13 +34,37 @@ class Result(Generic[_T]):
     value: _T | None
     message: str
 
-    def is_success(self) -> bool:
-        """Return whether the operation succeeded."""
-        return self._is_success
+    def is_success(self) -> Result[bool]:
+        """Return whether the operation succeeded.
 
-    def is_failure(self) -> bool:
-        """Return whether the operation failed."""
-        return not self._is_success
+        Precondition: None.
+        Postcondition: Returns Result.success(True) if succeeded,
+            Result.success(False) otherwise.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: bool = False
+        if b_continue:
+            b_result = self._is_success
+        return Result.success(b_result)
+
+    def is_failure(self) -> Result[bool]:
+        """Return whether the operation failed.
+
+        Precondition: None.
+        Postcondition: Returns Result.success(True) if failed,
+            Result.success(False) otherwise.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: bool = False
+        if b_continue:
+            b_result = not self._is_success
+        return Result.success(b_result)
 
     def __bool__(self) -> bool:
         """True when the result represents success. Enables ``if result:`` guards."""
@@ -62,8 +86,8 @@ class Result(Generic[_T]):
 
         Failure Modes: None.
         """
-        b_continue: bool = True
-        result: Result[_U] = INVALID_RESULT  # type: ignore[assignment]
+        b_continue = True
+        result: Result[_U] = Result.failure("unreachable placeholder")
 
         if b_continue and not self._is_success:
             result = Result.failure(self.message)
@@ -89,8 +113,8 @@ class Result(Generic[_T]):
 
         Failure Modes: None.
         """
-        b_continue: bool = True
-        result: Result[_U] = INVALID_RESULT  # type: ignore[assignment]
+        b_continue = True
+        result: Result[_U] = Result.failure("unreachable placeholder")
 
         if b_continue and not self._is_success:
             result = Result.failure(self.message)
@@ -101,41 +125,43 @@ class Result(Generic[_T]):
 
         return result
 
-    def unwrap(self) -> _T:
-        """Return the success value, or raise ValueError on failure.
+    def unwrap(self) -> Result[_T]:
+        """Return the success value, or Result.failure on failure.
 
         Preconditions:
-            - Caller has verified is_success() or accepts the risk of ValueError.
+            - Caller has verified is_success() or accepts the risk of failure.
 
         Postconditions:
-            Returns the wrapped value on success.
+            Returns Result.success with the wrapped value on success,
+            or Result.failure on failure.
 
         Side Effects: None.
 
         Resource Ownership: None.
 
-        Failure Modes: Raises ValueError when called on a failure result.
+        Failure Modes: Returns Result.failure when called on a failure result.
         """
-        b_continue: bool = True
-        result: Any = None
+        b_continue = True
+        result: Result[_T] = Result.failure("unreachable placeholder")
 
         if b_continue and self._is_success and self.value is not None:
-            result = self.value
+            result = Result.success(self.value)
             b_continue = False
 
         if b_continue:
-            raise ValueError(f"Called unwrap() on failure: {self.message}")
+            result = Result.failure(f"Called unwrap() on failure: {self.message}")
 
         return result
 
-    def unwrap_or(self, a_default: _T) -> _T:
-        """Return the success value, or a_default on failure.
+    def unwrap_or(self, a_default: _T) -> Result[_T]:
+        """Return the success value, or Result.success with a_default on failure.
 
         Preconditions:
             - a_default is a valid fallback of type _T.
 
         Postconditions:
-            Returns the wrapped value on success, a_default on failure.
+            Returns Result.success with the wrapped value on success,
+            or Result.success(a_default) on failure.
 
         Side Effects: None.
 
@@ -143,11 +169,11 @@ class Result(Generic[_T]):
 
         Failure Modes: None.
         """
-        b_continue: bool = True
-        result: _T = a_default
+        b_continue = True
+        result: Result[_T] = Result.success(a_default)
 
         if b_continue and self._is_success and self.value is not None:
-            result = self.value
+            result = Result.success(self.value)
 
         return result
 
@@ -168,7 +194,13 @@ class Result(Generic[_T]):
 
         Failure Modes: None — always succeeds.
         """
-        return Result(_is_success=True, value=a_value, message=a_message)
+        b_continue = True
+        result: Result[_U] = Result(
+            _is_success=False, value=None, message="unreachable"
+        )
+        if b_continue:
+            result = Result(_is_success=True, value=a_value, message=a_message)
+        return result
 
     @staticmethod
     def failure(a_message: str) -> Result[Any]:
@@ -186,11 +218,10 @@ class Result(Generic[_T]):
 
         Failure Modes: None — always creates failure result.
         """
-        return Result(_is_success=False, value=None, message=a_message)
-
-
-INVALID_RESULT: Result[Any] = Result(
-    _is_success=False,
-    value=None,
-    message="INVALID_RESULT: function postcondition cannot be satisfied",
-)
+        b_continue = True
+        result: Result[Any] = Result(
+            _is_success=False, value=None, message="unreachable"
+        )
+        if b_continue:
+            result = Result(_is_success=False, value=None, message=a_message)
+        return result

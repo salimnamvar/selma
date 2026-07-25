@@ -1,4 +1,5 @@
 """SC-080, SC-082: Resource management — context managers required."""
+
 from __future__ import annotations
 
 import ast
@@ -18,13 +19,39 @@ class ResourceContextManagerRule(Rule):
 
     @property
     def code(self) -> str:
-        return "SC080"
+        """Short rule identifier, e.g. 'SC001'.
+
+        Precondition: None.
+        Postcondition: Returns the rule code string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "SC080"
+        return b_result
 
     @property
     def description(self) -> str:
-        return "Context managers for all resources"
+        """One-line human description.
 
-    def check_Call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
+        Precondition: None.
+        Postcondition: Returns the rule description string.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails.
+        """
+        b_continue = True
+        b_result: str = ""
+        if b_continue:
+            b_result = "Context managers for all resources"
+        return b_result
+
+    def check_Call(  # noqa: N802
+        self, a_node: ast.Call, a_filepath: str
+    ) -> Result[list[Violation]]:
         """Check that resource calls are used with context managers.
 
         Precondition: a_node is a Call AST node.
@@ -45,16 +72,21 @@ class ResourceContextManagerRule(Rule):
 
             if func_name in self._calls:
                 visitor_result = get_visitor()
-                if visitor_result.is_success():
+                if visitor_result.is_success().value:
                     visitor = visitor_result.value
                     if visitor is not None:
                         ctx_result = visitor.is_with_context(a_node)
-                        is_ctx = ctx_result.is_success() and ctx_result.value
+                        is_ctx = ctx_result.is_success().value and ctx_result.value
                         if not is_ctx:
-                            violations = [Violation(
-                                a_filepath, a_node.lineno, a_node.col_offset,
-                                self.code,
-                                f"'{func_name}()' must be used with a context manager (with statement)",
-                            )]
+                            violations = [
+                                Violation(
+                                    a_filepath,
+                                    a_node.lineno,
+                                    a_node.col_offset,
+                                    self.code,
+                                    f"'{func_name}()' must be used with a context"
+                                    " manager (with statement)",
+                                )
+                            ]
             result = Result.success(violations)
         return result

@@ -1,2 +1,3 @@
-from __future__ import annotations
+"""Selma scripts package."""
 
+from __future__ import annotations

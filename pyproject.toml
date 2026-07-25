@@ -172,75 +172,6 @@ ignore = [
   "S101",    # assert — required by Safe Coding Doctrine (SC-003) for postcondition checks
 ]
 
-# ── Per-file Ignores ──────────────────────────────────────────────────────────
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = [
-    "ANN",     # type annotations not required in tests
-    "ARG001",  # unused argument — mock callbacks
-    "ARG002",  # unused argument — mock callbacks
-    "ARG005",  # unused lambda argument — mock callbacks
-    "B017",    # blind exception assert — validation tests
-    "BLE001",  # blind exception — test mocks
-    "C901",    # complexity — test helpers
-    "D100",    # missing module docstring — tests
-    "D101",    # missing class docstring — tests
-    "D102",    # missing method docstring — tests
-    "D103",    # missing function docstring — tests
-    "D104",    # missing package docstring — tests
-    "D106",    # missing nested class docstring — tests
-    "D107",    # missing __init__ docstring — tests
-    "D415",    # docstring first line punctuation — tests
-    "E501",    # line too long — test data fixtures
-    "EM101",   # exception must not use string literal — test assertions
-    "F401",    # unused imports — test fixtures intentionally import unused modules
-    "FBT001",  # boolean positional — test helpers
-    "FBT002",  # boolean default — test helpers
-    "FBT003",  # boolean positional in function call — test helpers
-    "I001",    # unsorted imports — test fixtures
-    "INP001",  # implicit namespace package — test fixtures
-    "N807",    # function name should not start and end with __ — test fixtures
-    "PLC0415", # import not at top level — test isolation
-    "PLR2004", # magic values in comparisons — common in tests
-    "PLW0108", # lambda may be unnecessary — test helpers
-    "PT011",   # pytest.raises too broad — validation tests
-    "PT017",   # assertion on exception — test pattern
-    "S101",    # assert usage — expected in tests
-    "S104",    # binding to all interfaces — test config
-    "S105",    # hardcoded password — test fixtures
-    "S108",    # insecure temp files — test data
-    "S608",    # SQL injection — test queries
-    "SLF001",  # private member access — testing internals
-    "T201",    # print statement — allowed in tests
-    "TC002",   # type-checking import — runtime pytest usage
-]
-"__init__.py" = ["F401", "TID252"]
-"scripts/**/*.py" = [
-    "ANN",     # type annotations not required in scripts
-    "T201",    # print statement — allowed in scripts
-    "B008",    # function call in argument defaults — typer idiom
-    "FBT001",  # boolean positional — CLI flags
-    "FBT002",  # boolean default — CLI flags
-    "FBT003",  # boolean positional in function call — CLI flags
-    "PLC0415", # import not at top level — circular import guards
-    "F821",    # undefined name — TYPE_CHECKING blocks
-    "D100",    # missing module docstring — scripts
-    "D101",    # missing class docstring — scripts
-    "D103",    # missing function docstring — scripts
-    "D104",    # missing package docstring — scripts
-    "E501",    # line too long — scripts have long strings
-    "N802",    # function name should be lowercase — AST visitor convention
-    "N815",    # variable in class scope should not be mixedCase — AST visitor convention
-    "C901",    # complexity — AST visitors are inherently complex
-    "PERF401", # use list comprehension — readability over micro-optimization
-    "SIM102",  # use single if — nested ifs are clearer for AST visitors
-    "PIE810",  # call startswith once with tuple — readability
-    "F401",    # unused imports — TYPE_CHECKING blocks
-    "TC005",   # empty type checking block — TYPE_CHECKING guards
-    "PLW1510", # subprocess.run without check — explicit check=False needed
-    "S603",    # subprocess call — trusted input in scripts
-    "ARG002",  # unused method argument — interface compliance
-]
-
 # ── isort (Google Style) ─────────────────────────────────────────────────────
 [tool.ruff.lint.isort]
 known-first-party = ["selma"]
@@ -336,7 +267,7 @@ reportImplicitStringConcatenation = true
 # Selma Custom Linter — Python AST rules
 # ──────────────────────────────────────────────────────────────────────────────
 [tool.selma.lint]
-paths = ["src", "tests"]
+paths = ["src", "tests", "scripts"]
 
 [tool.selma.lint.runner]
 ruff = "ruff"
@@ -344,7 +275,7 @@ pylint = "pylint"
 pyright = "pyright"
 
 [tool.selma.lint.exclude]
-paths = ["tests/fixtures"]
+paths = []
 codes = []
 
 [tool.selma.lint.rules]
