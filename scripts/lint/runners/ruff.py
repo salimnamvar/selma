@@ -39,7 +39,13 @@ class RuffCheckRunner(ToolRunner):
         """
         b_continue = True
         result: Result[ToolResult] = Result.success(
-            ToolResult("ruff", False, "", "ruff not found", 127)  # noqa: FBT003
+            ToolResult(
+                tool="ruff",
+                ok=False,
+                stdout="",
+                stderr="ruff not found",
+                returncode=127,
+            )
         )
         ruff_result = self._resolve_bin(a_bin_path)
         if ruff_result.is_failure().value:
@@ -82,7 +88,13 @@ class RuffFormatRunner(ToolRunner):
         """
         b_continue = True
         result: Result[ToolResult] = Result.success(
-            ToolResult("ruff", False, "", "ruff not found", 127)  # noqa: FBT003
+            ToolResult(
+                tool="ruff",
+                ok=False,
+                stdout="",
+                stderr="ruff not found",
+                returncode=127,
+            )
         )
         ruff_result = self._resolve_bin(a_bin_path)
         if ruff_result.is_failure().value:

@@ -45,7 +45,13 @@ class PyrightRunner(ToolRunner):
         """
         b_continue = True
         result: Result[ToolResult] = Result.success(
-            ToolResult("pyright", True, "", "pyright not found, skipping", 0)  # noqa: FBT003
+            ToolResult(
+                tool="pyright",
+                ok=True,
+                stdout="",
+                stderr="pyright not found, skipping",
+                returncode=0,
+            )
         )
         pyright_result = self._resolve_bin(a_bin_path)
         if pyright_result.is_failure().value:

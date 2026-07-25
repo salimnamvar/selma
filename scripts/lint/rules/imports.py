@@ -44,7 +44,7 @@ class ImportInFunctionRule(Rule):
             b_result = "No imports inside functions"
         return b_result
 
-    def check_FunctionDef(  # noqa: N802
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no imports exist inside function bodies.
@@ -77,7 +77,7 @@ class ImportInFunctionRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_AsyncFunctionDef(  # noqa: N802
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no imports exist inside async function bodies.

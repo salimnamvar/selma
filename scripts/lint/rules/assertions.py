@@ -69,7 +69,7 @@ class AssertValidationRule(Rule):
                         break
         return Result.success(b_result)
 
-    def _is_invariant_assert(  # noqa: C901
+    def _is_invariant_assert(
         self, a_node: ast.Assert, a_func: ast.FunctionDef
     ) -> Result[bool]:
         """Check whether an assert is checking an internal invariant.
@@ -118,7 +118,7 @@ class AssertValidationRule(Rule):
                 b_result = True
         return Result.success(b_result)
 
-    def check_Assert(  # noqa: N802
+    def check_Assert(
         self, a_node: ast.Assert, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that assert is not used for input validation.

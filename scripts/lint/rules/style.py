@@ -119,7 +119,7 @@ class APrefixRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that all function arguments have a_ prefix.
@@ -133,8 +133,9 @@ class APrefixRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that all async function arguments have a_ prefix.
@@ -148,6 +149,7 @@ class APrefixRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
 
 class FunctionContractRule(Rule):
@@ -195,7 +197,7 @@ class FunctionContractRule(Rule):
         }
     )
 
-    def _check_function(  # noqa: C901
+    def _check_function(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
         a_filepath: str,
@@ -263,7 +265,7 @@ class FunctionContractRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions have docstrings with all 5 mandatory sections.
@@ -277,8 +279,9 @@ class FunctionContractRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions have docstrings with all 5 sections.
@@ -292,6 +295,7 @@ class FunctionContractRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
 
 class NoMutableDefaultRule(Rule):
@@ -362,7 +366,7 @@ class NoMutableDefaultRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that function defaults are not mutable.
@@ -376,8 +380,9 @@ class NoMutableDefaultRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async function defaults are not mutable.
@@ -391,3 +396,4 @@ class NoMutableDefaultRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])

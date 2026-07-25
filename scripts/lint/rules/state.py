@@ -27,7 +27,7 @@ def _is_contextvar_assignment(
     Failure: Never returns Failure.
     """
     b_continue = True
-    result: Result[bool] = Result.success(False)  # noqa: FBT003
+    result: Result[bool] = Result.success(a_value=False)
     if b_continue:
         value = getattr(a_node, "value", None)
         if value is not None and isinstance(value, ast.Call):
@@ -37,7 +37,7 @@ def _is_contextvar_assignment(
                 isinstance(func, ast.Attribute) and func.attr in _CONTEXTVAR_CALL_NAMES
             )
             if is_cv or is_cv_attr:
-                result = Result.success(True)  # noqa: FBT003
+                result = Result.success(a_value=True)
     return result
 
 
@@ -54,7 +54,7 @@ def _is_frozen_dataclass_instantiation(
     Failure: Never returns Failure.
     """
     b_continue = True
-    result: Result[bool] = Result.success(False)  # noqa: FBT003
+    result: Result[bool] = Result.success(a_value=False)
     if b_continue:
         value = getattr(a_node, "value", None)
         if value is not None and isinstance(value, ast.Call):
@@ -62,7 +62,7 @@ def _is_frozen_dataclass_instantiation(
             name_ok = isinstance(func, ast.Name) and func.id[0:1].isupper()
             attr_ok = isinstance(func, ast.Attribute) and func.attr[0:1].isupper()
             if name_ok or attr_ok:
-                result = Result.success(True)  # noqa: FBT003
+                result = Result.success(a_value=True)
     return result
 
 
@@ -79,10 +79,10 @@ def _is_mutable_value(
     Failure: Never returns Failure.
     """
     b_continue = True
-    result: Result[bool] = Result.success(False)  # noqa: FBT003
+    result: Result[bool] = Result.success(a_value=False)
     if b_continue and a_node is not None:
         if isinstance(a_node, _MUTABLE_VALUE_NODES):
-            result = Result.success(True)  # noqa: FBT003
+            result = Result.success(a_value=True)
         elif isinstance(a_node, ast.Call):
             name_match = isinstance(a_node.func, ast.Name) and a_node.func.id in (
                 "dict",
@@ -96,7 +96,7 @@ def _is_mutable_value(
                 a_node.func, ast.Attribute
             ) and a_node.func.attr in ("fromkeys", "copy")
             if name_match or attr_match:
-                result = Result.success(True)  # noqa: FBT003
+                result = Result.success(a_value=True)
     return result
 
 
@@ -111,7 +111,7 @@ def _unwrap_bool(a_result: Result[bool]) -> Result[bool]:
     Failure: Never returns Failure.
     """
     b_continue = True
-    result: Result[bool] = Result.success(False)  # noqa: FBT003
+    result: Result[bool] = Result.success(a_value=False)
     if b_continue and a_result.is_success().value:
         result = Result.success(a_result.value)
     return result
@@ -179,7 +179,7 @@ class DeterminismRule(Rule):
                 result = self._resolve_module(a_node.value)
         return result
 
-    def check_Call(  # noqa: N802, C901
+    def check_Call(
         self, a_node: ast.Call, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check for non-deterministic function calls.
@@ -289,7 +289,7 @@ class NoModuleLevelMutableRule(Rule):
             b_result = "No module-level variables"
         return b_result
 
-    def check_Module(  # noqa: N802, C901
+    def check_Module(
         self, a_node: ast.Module, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no mutable module-level variables are defined.

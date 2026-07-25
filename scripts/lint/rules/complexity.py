@@ -71,7 +71,7 @@ class FunctionLengthRule(Rule):
             b_result = f"Function length <= {self._max} lines"
         return b_result
 
-    def check_FunctionDef(  # noqa: N802
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that function does not exceed maximum executable lines.
@@ -104,7 +104,7 @@ class FunctionLengthRule(Rule):
             result = Result.success(violations)
         return result
 
-    def check_AsyncFunctionDef(  # noqa: N802
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async function does not exceed maximum executable lines.

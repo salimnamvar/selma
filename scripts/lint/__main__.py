@@ -42,7 +42,7 @@ def _print_result(v: Violation, fmt: str) -> Result[None]:
         b_continue = False
     if b_continue:
         if fmt == "json":
-            print(  # noqa: T201
+            print(
                 json.dumps(
                     {
                         "file": v.filepath,
@@ -55,9 +55,9 @@ def _print_result(v: Violation, fmt: str) -> Result[None]:
                 )
             )
         elif fmt == "gcc":
-            print(f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}")  # noqa: T201
+            print(f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}")
         else:
-            print(v)  # noqa: T201
+            print(v)
     return ret
 
 
@@ -76,9 +76,9 @@ def _print_tool_result(result: ToolResult) -> Result[None]:
         b_continue = False
     if b_continue:
         if result.stdout:
-            print(result.stdout, end="")  # noqa: T201
+            print(result.stdout, end="")
         if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)  # noqa: T201
+            print(result.stderr, end="", file=sys.stderr)
     return ret
 
 
@@ -94,20 +94,20 @@ def _run_tool_check(
     Failure: returns Failure if tool execution errors.
     """
     b_continue = True
-    failed: Result[bool] = Result.success(False)  # noqa: FBT003
+    failed: Result[bool] = Result.success(a_value=False)
     run_result = a_runner.run(a_paths, **kwargs)
     if run_result.is_failure().value:
         b_continue = False
-        print(run_result.message, file=sys.stderr)  # noqa: T201
-        failed = Result.success(True)  # noqa: FBT003
+        print(run_result.message, file=sys.stderr)
+        failed = Result.success(a_value=True)
     if b_continue:
         _print_tool_result(run_result.value)
         if not run_result.value.ok:
-            failed = Result.success(True)  # noqa: FBT003
+            failed = Result.success(a_value=True)
     return failed
 
 
-def main() -> Result[int]:  # noqa: C901
+def main() -> Result[int]:
     """Parse CLI arguments and run lint checks.
 
     Precondition: sys.argv contains valid CLI arguments.

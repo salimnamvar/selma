@@ -113,26 +113,6 @@ class LintConfig:
     rules: RulesConfig = field(default_factory=RulesConfig)
 
 
-def _parse_determinism(forbidden: list[str]) -> Result[dict[str, set[str]]]:
-    """Parse determinism forbidden list into module-to-methods mapping.
-
-    Precondition: forbidden is a list of dot-separated module.method strings.
-    Postcondition: returns dict mapping module names to sets of method names.
-    Side effect: none.
-    Resource: none.
-    Failure: never fails, returns Ok with parsed mapping.
-    """
-    b_continue = True
-    result: dict[str, set[str]] = {}
-    for entry in forbidden:
-        if "." in entry:
-            mod, method = entry.split(".", 1)
-            result.setdefault(mod, set()).add(method)
-    if b_continue:
-        pass
-    return Result.success(result)
-
-
 def load_config(a_project_root: str | Path | None = None) -> Result[LintConfig]:
     """Load lint configuration from pyproject.toml.
 

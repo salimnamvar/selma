@@ -34,15 +34,15 @@ class LintEngine:
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)  # noqa: FBT003
+        result: Result[bool] = Result.success(a_value=False)
         for pattern in self._exclude_paths:
             if fnmatch.fnmatch(filepath, pattern) or fnmatch.fnmatch(
                 filepath, f"*/{pattern}/*"
             ):
                 b_continue = False
-                result = Result.success(True)  # noqa: FBT003
+                result = Result.success(a_value=True)
         if b_continue:
-            result = Result.success(False)  # noqa: FBT003
+            result = Result.success(a_value=False)
         return result
 
     def _rules_for_file(self, _filepath: str) -> Result[list[Rule]]:

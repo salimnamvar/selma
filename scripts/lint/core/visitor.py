@@ -103,6 +103,18 @@ class LintVisitor(ast.NodeVisitor):
             super().generic_visit(a_node)
         return result
 
+    @property
+    def parent_stack(self) -> tuple[ast.AST, ...]:
+        """Return the current parent node stack as an immutable tuple.
+
+        Precondition: none.
+        Postcondition: returns tuple of ancestor AST nodes.
+        Side effect: none.
+        Resource: none.
+        Failure: never fails.
+        """
+        return tuple(self._parent_stack)
+
     def is_inside_with(self) -> Result[bool]:
         """Check whether the current node is inside a with-statement.
 
@@ -113,7 +125,7 @@ class LintVisitor(ast.NodeVisitor):
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)  # noqa: FBT003
+        result: Result[bool] = Result.success(a_value=False)
         if b_continue:
             result = Result.success(
                 any(isinstance(p, ast.With) for p in self._parent_stack)
@@ -130,7 +142,7 @@ class LintVisitor(ast.NodeVisitor):
         Failure: never fails.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)  # noqa: FBT003
+        result: Result[bool] = Result.success(a_value=False)
         if b_continue:
             result = Result.success(id(a_node) in self._with_calls)
         return result

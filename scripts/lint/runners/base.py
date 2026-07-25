@@ -16,7 +16,7 @@ class ToolResult:
     """Structured result from an external tool execution."""
 
     tool: str
-    ok: bool
+    success: bool
     stdout: str
     stderr: str
     returncode: int
@@ -93,19 +93,20 @@ class ToolRunner(ABC):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool=self.name,
-                ok=False,
+                success=False,
                 stdout="",
                 stderr="",
                 returncode=1,
             )
         )
         try:
-            proc = subprocess.run(  # noqa: S603, PLW1510
+            proc = subprocess.run(
                 args,
                 capture_output=True,
                 text=True,
                 cwd=cwd,
                 timeout=300,
+                check=False,
             )
         except FileNotFoundError as exc:
             b_continue = False
@@ -117,7 +118,7 @@ class ToolRunner(ABC):
             result = Result.success(
                 ToolResult(
                     tool=self.name,
-                    ok=proc.returncode == 0,
+                    success=proc.returncode == 0,
                     stdout=proc.stdout,
                     stderr=proc.stderr,
                     returncode=proc.returncode,

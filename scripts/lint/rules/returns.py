@@ -164,7 +164,7 @@ class ResultReturnRule(Rule):
                     break
         return Result.success(b_result)
 
-    def _check_function(  # noqa: C901
+    def _check_function(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
         a_filepath: str,
@@ -207,14 +207,16 @@ class ResultReturnRule(Rule):
                         )
                     )
         exempt_result = (
-            self._is_exempt(a_node.name) if b_continue else Result.success(False)  # noqa: FBT003
+            self._is_exempt(a_node.name)
+            if b_continue
+            else Result.success(a_value=False)
         )
         if b_continue and exempt_result.is_success().value and exempt_result.value:
             b_skip = True
         prop_result = (
             self._is_property_or_abstract(a_node)  # type: ignore[arg-type]
             if b_continue and not b_skip
-            else Result.success(False)  # noqa: FBT003
+            else Result.success(a_value=False)
         )
         if (
             b_continue
@@ -261,7 +263,7 @@ class ResultReturnRule(Rule):
                     )
         return Result.success(violations)
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions do not return tuples and use Result[T].
@@ -277,8 +279,9 @@ class ResultReturnRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions do not return tuples and use Result[T].
@@ -294,6 +297,7 @@ class ResultReturnRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
 
 class ExplicitReturnTypeRule(Rule):
@@ -371,7 +375,7 @@ class ExplicitReturnTypeRule(Rule):
             ]
         return Result.success(violations)
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that functions have explicit return type annotations.
@@ -387,8 +391,9 @@ class ExplicitReturnTypeRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async functions have explicit return type annotations.
@@ -404,6 +409,7 @@ class ExplicitReturnTypeRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_function(a_node, a_filepath)
+        return Result.success([])
 
 
 class NoStarImportRule(Rule):
@@ -441,7 +447,7 @@ class NoStarImportRule(Rule):
             b_result = "No wildcard imports"
         return b_result
 
-    def check_ImportFrom(  # noqa: N802
+    def check_ImportFrom(
         self, a_node: ast.ImportFrom, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no wildcard imports are used.

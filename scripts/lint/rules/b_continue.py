@@ -61,7 +61,7 @@ class BContinueRule(Rule):
             b_result = "b_continue one-way transition rules"
         return b_result
 
-    def _check_b_continue(  # noqa: C901
+    def _check_b_continue(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
         a_filepath: str,
@@ -185,7 +185,7 @@ class BContinueRule(Rule):
                     )
         return Result.success(violations)
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check b_continue usage rules in a function.
@@ -201,8 +201,9 @@ class BContinueRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_b_continue(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check b_continue usage rules in an async function.
@@ -218,3 +219,4 @@ class BContinueRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_b_continue(a_node, a_filepath)
+        return Result.success([])

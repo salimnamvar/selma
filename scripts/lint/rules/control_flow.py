@@ -122,7 +122,7 @@ def _get_raise_exception_name(
     return Result.success(name)
 
 
-def _collect_exits(  # noqa: C901
+def _collect_exits(
     node: ast.AST,
 ) -> Result[tuple[int, int, int, int, list[str]]]:
     """Count all exit mechanisms in a function body.
@@ -219,7 +219,7 @@ class SingleExitRule(Rule):
             b_result = "Single exit door per function"
         return b_result
 
-    def _check_exits(  # noqa: C901
+    def _check_exits(
         self,
         a_node: ast.FunctionDef | ast.AsyncFunctionDef,
         a_filepath: str,
@@ -321,7 +321,7 @@ class SingleExitRule(Rule):
                     )
         return Result.success(violations)
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that function has exactly one exit door.
@@ -338,8 +338,9 @@ class SingleExitRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_exits(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that async function has exactly one exit door.
@@ -356,6 +357,7 @@ class SingleExitRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_exits(a_node, a_filepath)
+        return Result.success([])
 
 
 class ZeroRaiseRule(Rule):
@@ -458,7 +460,7 @@ class ZeroRaiseRule(Rule):
             )
         return Result.success(violations)
 
-    def check_FunctionDef(  # noqa: N802, RET503
+    def check_FunctionDef(
         self, a_node: ast.FunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that no raise statements exist in non-dunder functions.
@@ -475,8 +477,9 @@ class ZeroRaiseRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_raise(a_node, a_filepath)
+        return Result.success([])
 
-    def check_AsyncFunctionDef(  # noqa: N802, RET503
+    def check_AsyncFunctionDef(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check no raise statements in non-dunder async functions.
@@ -493,3 +496,4 @@ class ZeroRaiseRule(Rule):
         b_continue = True
         if b_continue:
             return self._check_raise(a_node, a_filepath)
+        return Result.success([])

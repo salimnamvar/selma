@@ -57,18 +57,18 @@ class SpecificExceptionRule(Rule):
         Failure: Returns Ok(False) if no visitor is available.
         """
         b_continue = True
-        result: Result[bool] = Result.success(False)  # noqa: FBT003
+        result: Result[bool] = Result.success(a_value=False)
         if b_continue:
             visitor = get_visitor()
             if visitor.is_success().value and visitor.value:
-                for parent in reversed(visitor.value._parent_stack):  # noqa: SLF001
+                for parent in reversed(visitor.value.parent_stack):
                     if isinstance(parent, ast.Try):
                         if parent.handlers and parent.handlers[-1] is a_node:
-                            result = Result.success(True)  # noqa: FBT003
+                            result = Result.success(a_value=True)
                         break
         return result
 
-    def check_ExceptHandler(  # noqa: N802
+    def check_ExceptHandler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that except clauses catch specific exception types.
@@ -153,7 +153,7 @@ class NoSilentFailureRule(Rule):
             b_result = "No silent failures (empty except blocks)"
         return b_result
 
-    def check_ExceptHandler(  # noqa: N802
+    def check_ExceptHandler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that except blocks are not empty or pass-only.
@@ -226,7 +226,7 @@ class NoReraiseRule(Rule):
             b_result = "No exception re-raising"
         return b_result
 
-    def check_ExceptHandler(  # noqa: N802
+    def check_ExceptHandler(
         self, a_node: ast.ExceptHandler, a_filepath: str
     ) -> Result[list[Violation]]:
         """Check that caught exceptions are not re-raised.

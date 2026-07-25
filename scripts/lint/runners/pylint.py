@@ -47,7 +47,13 @@ class PylintRunner(ToolRunner):
         """
         b_continue = True
         result: Result[ToolResult] = Result.success(
-            ToolResult("pylint", True, "", "pylint not found, skipping", 0)  # noqa: FBT003
+            ToolResult(
+                tool="pylint",
+                ok=True,
+                stdout="",
+                stderr="pylint not found, skipping",
+                returncode=0,
+            )
         )
         pylint_result = self._resolve_bin(a_bin_path)
         if pylint_result.is_failure().value:
@@ -62,11 +68,11 @@ class PylintRunner(ToolRunner):
             if not Path(rcfile).exists():
                 result = Result.success(
                     ToolResult(
-                        "pylint",
-                        True,  # noqa: FBT003
-                        "",
-                        f"pylintrc not found at {rcfile}, skipping",
-                        0,
+                        tool="pylint",
+                        ok=True,
+                        stdout="",
+                        stderr=f"pylintrc not found at {rcfile}, skipping",
+                        returncode=0,
                     )
                 )
             else:
