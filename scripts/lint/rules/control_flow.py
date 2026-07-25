@@ -19,12 +19,16 @@ def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__")
 
 
-def _collect_exits(node: ast.AST) -> list[ast.AST]:
-    exits: list[ast.AST] = []
+def _collect_returns(node: ast.AST) -> list[ast.Return]:
+    """Collect all Return nodes within a function body, excluding nested functions."""
+    returns: list[ast.Return] = []
     for child in ast.walk(node):
-        if isinstance(child, (ast.Return, ast.Raise)):
-            exits.append(child)
-    return exits
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if child is not node:
+                continue
+        if isinstance(child, ast.Return):
+            returns.append(child)
+    return returns
 
 
 class SingleExitRule(Rule):
@@ -39,15 +43,15 @@ class SingleExitRule(Rule):
         return "Single exit point per function"
 
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
-        """Check that function has exactly one exit point."""
+        """Check that function has exactly one return statement."""
         violations: list[Violation] = []
         if not _is_dunder(a_node.name):
-            exits = _collect_exits(a_node)
-            if len(exits) > 1:
+            returns = _collect_returns(a_node)
+            if len(returns) > 1:
                 violations = [Violation(
                     a_filepath, a_node.lineno, a_node.col_offset,
                     self.code,
-                    f"Function '{a_node.name}' has {len(exits)} exit points (expected 1)",
+                    f"Function '{a_node.name}' has {len(returns)} return statements (expected 1)",
                 )]
         return violations
 
