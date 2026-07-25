@@ -70,7 +70,7 @@ class FunctionContractRule(Rule):
     })
 
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
-        """Check that functions have docstrings with contract sections."""
+        """Check that functions have docstrings with all 5 mandatory contract sections."""
         violations: list[Violation] = []
         if not (a_node.name.startswith("__") and a_node.name.endswith("__")):
             exempt = False
@@ -91,12 +91,12 @@ class FunctionContractRule(Rule):
                     )]
                 else:
                     doc_lower = docstring.lower()
-                    found = sum(1 for s in self._REQUIRED_SECTIONS if s in doc_lower)
-                    if found < 3:
+                    missing = [s for s in self._REQUIRED_SECTIONS if s not in doc_lower]
+                    if missing:
                         violations = [Violation(
                             a_filepath, a_node.lineno, a_node.col_offset,
                             self.code,
-                            f"Function '{a_node.name}' docstring missing contract sections (found {found}/5, need >= 3)",
+                            f"Function '{a_node.name}' docstring missing contract sections: {', '.join(missing)}",
                         )]
         return violations
 
