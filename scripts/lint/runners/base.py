@@ -21,6 +21,11 @@ class ToolResult:
     stderr: str
     returncode: int
 
+    @property
+    def ok(self) -> bool:
+        """Alias for success for backward compatibility."""
+        return self.success
+
 
 class ToolRunner(ABC):
     """Abstract base class for external tool runners."""

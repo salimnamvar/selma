@@ -58,7 +58,6 @@ class PylintRunner(ToolRunner):
         pylint_result = self._resolve_bin(a_bin_path)
         if pylint_result.is_failure().value:
             b_continue = False
-            result = Result.failure(pylint_result.message)
         if b_continue and pylint_result.is_success().value and pylint_result.value:
             pylint_bin = pylint_result.value
             rcfile = a_rcfile

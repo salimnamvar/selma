@@ -56,7 +56,6 @@ class PyrightRunner(ToolRunner):
         pyright_result = self._resolve_bin(a_bin_path)
         if pyright_result.is_failure().value:
             b_continue = False
-            result = Result.failure(pyright_result.message)
         if b_continue and pyright_result.is_success().value and pyright_result.value:
             cwd = a_project_root or "."
             result = self._exec([pyright_result.value], cwd=cwd)

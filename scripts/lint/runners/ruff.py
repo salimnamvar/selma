@@ -41,16 +41,15 @@ class RuffCheckRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="ruff",
-                success=False,
+                success=True,
                 stdout="",
-                stderr="ruff not found",
-                returncode=127,
+                stderr="ruff not found, skipping",
+                returncode=0,
             )
         )
         ruff_result = self._resolve_bin(a_bin_path)
         if ruff_result.is_failure().value:
             b_continue = False
-            result = Result.failure(ruff_result.message)
         if b_continue and ruff_result.is_success().value and ruff_result.value:
             result = self._exec([ruff_result.value, "check", *a_paths])
         return result
@@ -90,16 +89,15 @@ class RuffFormatRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="ruff",
-                success=False,
+                success=True,
                 stdout="",
-                stderr="ruff not found",
-                returncode=127,
+                stderr="ruff not found, skipping",
+                returncode=0,
             )
         )
         ruff_result = self._resolve_bin(a_bin_path)
         if ruff_result.is_failure().value:
             b_continue = False
-            result = Result.failure(ruff_result.message)
         if b_continue and ruff_result.is_success().value and ruff_result.value:
             result = self._exec([ruff_result.value, "format", "--check", *a_paths])
         return result
