@@ -36,70 +36,74 @@ class BContinueRule(Rule):
     def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
         """Check b_continue usage rules in a function."""
         if _is_dunder(a_node.name):
-            result: list[Violation] = []
-        elif not _returns_result(a_node):
-            result = []
-        else:
-            violations: list[Violation] = []
-            assignments: list[ast.Assign] = []
-            guards: list[ast.If | ast.While] = []
-
-            param_names = {arg.arg for arg in a_node.args.args + a_node.args.posonlyargs + a_node.args.kwonlyargs}
-            if "b_continue" in param_names:
-                violations.append(Violation(
-                    a_filepath, a_node.lineno, a_node.col_offset,
-                    f"{self.code}-param",
-                    "b_continue must not be a function parameter",
-                ))
-
+            return []
+        requires_b_continue = _returns_result(a_node)
+        if not requires_b_continue:
             for child in ast.walk(a_node):
-                if isinstance(child, ast.Attribute):
-                    if isinstance(child.value, ast.Name) and child.value.id == "self" and child.attr == "b_continue":
-                        violations.append(Violation(
-                            a_filepath, child.lineno, child.col_offset,
-                            f"{self.code}-attr",
-                            "b_continue must not be accessed as an instance attribute",
-                        ))
-                if isinstance(child, ast.Assign):
-                    for target in child.targets:
-                        if isinstance(target, ast.Name) and target.id == "b_continue":
-                            assignments.append(child)
-                elif isinstance(child, (ast.If, ast.While)):
-                    if "b_continue" in ast.dump(child.test):
-                        guards.append(child)
+                if isinstance(child, ast.Try):
+                    requires_b_continue = True
+                    break
+        if not requires_b_continue:
+            return []
 
-            if not assignments:
+        violations: list[Violation] = []
+        assignments: list[ast.Assign] = []
+        guards: list[ast.If | ast.While] = []
+
+        param_names = {arg.arg for arg in a_node.args.args + a_node.args.posonlyargs + a_node.args.kwonlyargs}
+        if "b_continue" in param_names:
+            violations.append(Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
+                f"{self.code}-param",
+                "b_continue must not be a function parameter",
+            ))
+
+        for child in ast.walk(a_node):
+            if isinstance(child, ast.Attribute):
+                if isinstance(child.value, ast.Name) and child.value.id == "self" and child.attr == "b_continue":
+                    violations.append(Violation(
+                        a_filepath, child.lineno, child.col_offset,
+                        f"{self.code}-attr",
+                        "b_continue must not be accessed as an instance attribute",
+                    ))
+            if isinstance(child, ast.Assign):
+                for target in child.targets:
+                    if isinstance(target, ast.Name) and target.id == "b_continue":
+                        assignments.append(child)
+            elif isinstance(child, (ast.If, ast.While)):
+                if "b_continue" in ast.dump(child.test):
+                    guards.append(child)
+
+        if not assignments:
+            violations.append(Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
+                f"{self.code}-missing",
+                f"Function '{a_node.name}' lacks b_continue",
+            ))
+        else:
+            first = assignments[0]
+            if not (isinstance(first.value, ast.Constant) and first.value.value is True):
+                violations.append(Violation(
+                    a_filepath, first.lineno, first.col_offset,
+                    f"{self.code}-init",
+                    "b_continue must be initialized to True",
+                ))
+
+            for assign in assignments[1:]:
+                if isinstance(assign.value, ast.Constant) and assign.value.value is True:
+                    violations.append(Violation(
+                        a_filepath, assign.lineno, assign.col_offset,
+                        f"{self.code}-reset",
+                        "b_continue reset to True forbidden",
+                    ))
+
+            if assignments and not guards:
                 violations.append(Violation(
                     a_filepath, a_node.lineno, a_node.col_offset,
-                    f"{self.code}-missing",
-                    f"Function '{a_node.name}' lacks b_continue",
+                    f"{self.code}-unused",
+                    "b_continue initialized but never used as guard",
                 ))
-            else:
-                first = assignments[0]
-                if not (isinstance(first.value, ast.Constant) and first.value.value is True):
-                    violations.append(Violation(
-                        a_filepath, first.lineno, first.col_offset,
-                        f"{self.code}-init",
-                        "b_continue must be initialized to True",
-                    ))
 
-                for assign in assignments[1:]:
-                    if isinstance(assign.value, ast.Constant) and assign.value.value is True:
-                        violations.append(Violation(
-                            a_filepath, assign.lineno, assign.col_offset,
-                            f"{self.code}-reset",
-                            "b_continue reset to True forbidden",
-                        ))
-
-                if assignments and not guards:
-                    violations.append(Violation(
-                        a_filepath, a_node.lineno, a_node.col_offset,
-                        f"{self.code}-unused",
-                        "b_continue initialized but never used as guard",
-                    ))
-
-            result = violations
-
-        return result
+        return violations
 
     check_AsyncFunctionDef = check_FunctionDef
