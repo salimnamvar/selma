@@ -43,8 +43,8 @@ def _print_tool_result(result: ToolResult) -> None:
         print(result.stderr, end="", file=sys.stderr)
 
 
-def main() -> None:
-    """Parse CLI arguments and run lint checks."""
+def main() -> int:
+    """Parse CLI arguments and run lint checks. Returns exit code."""
     parser = argparse.ArgumentParser(
         prog="selma-lint",
         description="Python AST-based linter enforcing selma coding standards",
@@ -111,8 +111,8 @@ def main() -> None:
         if violations:
             failed = True
 
-    sys.exit(1 if failed else 0)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
