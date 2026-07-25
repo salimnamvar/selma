@@ -134,8 +134,10 @@ def _classify_call_exit(node: ast.Call) -> Result[tuple[bool, bool]]:
     b_continue = True
     is_sys = False
     is_os = False
-    if b_continue and isinstance(node.func, ast.Attribute) and isinstance(
-        node.func.value, ast.Name
+    if (
+        b_continue
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
     ):
         is_sys = node.func.value.id == "sys" and node.func.attr == "exit"
         is_os = node.func.value.id == "os" and node.func.attr == "_exit"
@@ -144,35 +146,37 @@ def _classify_call_exit(node: ast.Call) -> Result[tuple[bool, bool]]:
 
 def _get_exit_increments(
     child: ast.AST,
-) -> tuple[int, int, int, int, str | None]:
+) -> Result[tuple[int, int, int, int, str | None]]:
     """Classify a single AST child as an exit mechanism.
 
     Precondition: child is an AST node from ast.walk().
-    Postcondition: Returns (return_inc, raise_inc, sys_inc, os_inc,
-        raise_name_or_none).
+    Postcondition: Returns Ok with (return_inc, raise_inc, sys_inc,
+        os_inc, raise_name_or_none).
     Side effect: None.
     Resource: None.
     Failure: Never fails (pure function).
     """
-    if isinstance(child, ast.Return):
-        return (1, 0, 0, 0, None)
-    if isinstance(child, ast.Raise):
+    b_continue = True
+    ret = (0, 0, 0, 0, None)
+    if b_continue and isinstance(child, ast.Return):
+        ret = (1, 0, 0, 0, None)
+    if b_continue and isinstance(child, ast.Raise):
         name_result = _get_raise_exception_name(child)
         name = (
             name_result.value
             if name_result.is_success().value and name_result.value
             else None
         )
-        return (0, 1, 0, 0, name)
-    if isinstance(child, ast.Call):
+        ret = (0, 1, 0, 0, name)
+    if b_continue and isinstance(child, ast.Call):
         class_result = _classify_call_exit(child)
         if class_result.is_success().value:
             is_sys, is_os = class_result.value
             if is_sys:
-                return (0, 0, 1, 0, None)
-            if is_os:
-                return (0, 0, 0, 1, None)
-    return (0, 0, 0, 0, None)
+                ret = (0, 0, 1, 0, None)
+            elif is_os:
+                ret = (0, 0, 0, 1, None)
+    return Result.success(ret)
 
 
 def _classify_child_exit(
@@ -193,7 +197,9 @@ def _classify_child_exit(
         child_result = _is_child_function(child, parent)
         b_is_child = child_result.is_success().value and child_result.value
         if not b_is_child:
-            ret = _get_exit_increments(child)
+            incr_result = _get_exit_increments(child)
+            if incr_result.is_success().value:
+                ret = incr_result.value
     return Result.success(ret)
 
 
@@ -503,29 +509,31 @@ class SingleExitRule(Rule):
         b_continue = True
         violations: list[Violation] = []
         if b_continue:
-            total = (
-                a_return_count
-                + a_raise_count
-                + a_sys_exit_count
-                + a_os_exit_count
-            )
+            total = a_return_count + a_raise_count + a_sys_exit_count + a_os_exit_count
             if total > 1:
                 breakdown_result = self._build_exit_breakdown(
-                    a_return_count, a_raise_count,
-                    a_sys_exit_count, a_os_exit_count,
+                    a_return_count,
+                    a_raise_count,
+                    a_sys_exit_count,
+                    a_os_exit_count,
                 )
                 if breakdown_result.is_success().value:
                     multi_result = self._check_multi_exit(
-                        total, breakdown_result.value,
-                        a_node, a_filepath,
+                        total,
+                        breakdown_result.value,
+                        a_node,
+                        a_filepath,
                     )
                     if multi_result.is_success().value:
                         violations.extend(multi_result.value)
             elif total == 1:
                 single_result = self._check_single_exit(
-                    a_raise_count, a_sys_exit_count,
-                    a_os_exit_count, a_raise_names,
-                    a_node, a_filepath,
+                    a_raise_count,
+                    a_sys_exit_count,
+                    a_os_exit_count,
+                    a_raise_names,
+                    a_node,
+                    a_filepath,
                 )
                 if single_result.is_success().value:
                     violations.extend(single_result.value)
@@ -595,10 +603,7 @@ class SingleExitRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_exits(a_node, a_filepath)
-        return Result.success([])
+        return self._check_exits(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -614,10 +619,7 @@ class SingleExitRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_exits(a_node, a_filepath)
-        return Result.success([])
+        return self._check_exits(a_node, a_filepath)
 
 
 class ZeroRaiseRule(Rule):
@@ -734,10 +736,7 @@ class ZeroRaiseRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_raise(a_node, a_filepath)
-        return Result.success([])
+        return self._check_raise(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -753,7 +752,4 @@ class ZeroRaiseRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_raise(a_node, a_filepath)
-        return Result.success([])
+        return self._check_raise(a_node, a_filepath)

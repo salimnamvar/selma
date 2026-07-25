@@ -49,9 +49,7 @@ class ResourceContextManagerRule(Rule):
             b_result = "Context managers for all resources"
         return b_result
 
-    def check_call(
-        self, a_node: ast.Call, a_filepath: str
-    ) -> Result[list[Violation]]:
+    def check_call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
         """Check that resource calls are used with context managers.
 
         Precondition: a_node is a Call AST node.

@@ -45,9 +45,7 @@ class NoEvalExecRule(Rule):
             b_result = "No eval() or exec()"
         return b_result
 
-    def check_call(
-        self, a_node: ast.Call, a_filepath: str
-    ) -> Result[list[Violation]]:
+    def check_call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
         """Check that eval/exec/compile are not called.
 
         Precondition: a_node is a valid Call AST node in the file
@@ -112,9 +110,7 @@ class ParameterizedQueryRule(Rule):
             b_result = "Parameterized queries (no SQL injection)"
         return b_result
 
-    def check_call(
-        self, a_node: ast.Call, a_filepath: str
-    ) -> Result[list[Violation]]:
+    def check_call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
         """Check that .execute() uses parameterized queries.
 
         Precondition: a_node is a valid Call AST node in the file

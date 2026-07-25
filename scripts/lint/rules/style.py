@@ -130,10 +130,7 @@ class APrefixRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -146,10 +143,7 @@ class APrefixRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
 
 class FunctionContractRule(Rule):
@@ -258,9 +252,7 @@ class FunctionContractRule(Rule):
                 ]
             else:
                 doc_lower = docstring.lower()
-                missing = [
-                    s for s in self._REQUIRED_SECTIONS if s not in doc_lower
-                ]
+                missing = [s for s in self._REQUIRED_SECTIONS if s not in doc_lower]
                 if missing:
                     joined = ", ".join(missing)
                     violations = [
@@ -314,10 +306,7 @@ class FunctionContractRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -330,10 +319,7 @@ class FunctionContractRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
 
 class NoMutableDefaultRule(Rule):
@@ -415,10 +401,7 @@ class NoMutableDefaultRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -431,7 +414,4 @@ class NoMutableDefaultRule(Rule):
         Resource: None.
         Failure: Never fails (always returns Ok).
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)

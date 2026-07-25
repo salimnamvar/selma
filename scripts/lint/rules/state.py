@@ -209,9 +209,7 @@ class DeterminismRule(Rule):
                 ]
         if b_continue and isinstance(a_node.func.value, ast.Attribute):
             outer_result = self._resolve_module(a_node.func.value.value)
-            outer_mod = (
-                outer_result.value if outer_result.is_success().value else None
-            )
+            outer_mod = outer_result.value if outer_result.is_success().value else None
             if (
                 outer_mod
                 and outer_mod in self._forbidden
@@ -263,9 +261,7 @@ class DeterminismRule(Rule):
                     break
         return Result.success(violations)
 
-    def check_call(
-        self, a_node: ast.Call, a_filepath: str
-    ) -> Result[list[Violation]]:
+    def check_call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
         """Check for non-deterministic function calls.
 
         Precondition: a_node is a valid Call AST node in the file
@@ -420,9 +416,7 @@ class NoModuleLevelMutableRule(Rule):
             exempt_result = self._is_exempt_target(name)
             if (
                 not (exempt_result.is_success().value and exempt_result.value)
-                and _unwrap_bool(
-                    _is_mutable_value(a_stmt.value)
-                ).value
+                and _unwrap_bool(_is_mutable_value(a_stmt.value)).value
             ):
                 violations.append(
                     Violation(

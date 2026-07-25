@@ -49,7 +49,7 @@ class PylintRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="pylint",
-                ok=True,
+                success=True,
                 stdout="",
                 stderr="pylint not found, skipping",
                 returncode=0,
@@ -69,7 +69,7 @@ class PylintRunner(ToolRunner):
                 result = Result.success(
                     ToolResult(
                         tool="pylint",
-                        ok=True,
+                        success=True,
                         stdout="",
                         stderr=f"pylintrc not found at {rcfile}, skipping",
                         returncode=0,

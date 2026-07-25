@@ -105,7 +105,7 @@ def _run_tool_check(
         failed = Result.success(a_value=True)
     if b_continue:
         _print_tool_result(run_result.value)
-        if not run_result.value.ok:
+        if not run_result.value.success:
             failed = Result.success(a_value=True)
     return failed
 
@@ -177,10 +177,9 @@ def _resolve_paths(
     ret: Result[list[str]] = Result.success([])
     if b_continue:
         raw = a_args_paths or list(a_config_paths)
-        ret = Result.success([
-            str(a_service_root / p) if not Path(p).is_absolute() else p
-            for p in raw
-        ])
+        ret = Result.success(
+            [str(a_service_root / p) if not Path(p).is_absolute() else p for p in raw]
+        )
     return ret
 
 
@@ -275,7 +274,9 @@ def _run_checks(
     failed = False
     if b_continue:
         tools_result = _run_external_tools(
-            a_args.only, a_paths, a_service_root,
+            a_args.only,
+            a_paths,
+            a_service_root,
             a_skip_tools=a_args.skip_tools,
         )
         if tools_result.is_success().value and tools_result.value:
@@ -339,8 +340,11 @@ def main() -> Result[int]:
             exclude_codes.update(args.exclude_codes)
 
         result = _run_checks(
-            args, config, paths_result.value,
-            service_root, exclude_codes,
+            args,
+            config,
+            paths_result.value,
+            service_root,
+            exclude_codes,
         )
 
     return result

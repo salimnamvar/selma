@@ -159,6 +159,7 @@ ignore = [
   "D107",    # missing docstring in __init__ — class docstring suffices
   "TD003",   # missing issue link — handled by custom check
   "EXE001",  # shebang — handled by clean.sh
+  "S603",    # subprocess call — inputs are controlled, shell=False
 
   # ── Pydantic / typing compatibility ──
   "TC001",   # type-checking import — breaks pydantic with from __future__ import annotations

@@ -115,7 +115,11 @@ class LintVisitor(ast.NodeVisitor):
         Resource: none.
         Failure: never fails.
         """
-        return tuple(self._parent_stack)
+        b_continue = True
+        b_result: tuple[ast.AST, ...] = ()
+        if b_continue:
+            b_result = tuple(self._parent_stack)
+        return b_result
 
     def is_inside_with(self) -> Result[bool]:
         """Check whether the current node is inside a with-statement.

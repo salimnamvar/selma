@@ -257,13 +257,9 @@ class ResultReturnRule(Rule):
                 result_type_result.is_success().value and result_type_result.value
             )
             if not is_none and not is_result_type and has_return_value:
-                violations.append(
-                    self._make_result_type_violation(a_node, a_filepath)
-                )
+                violations.append(self._make_result_type_violation(a_node, a_filepath))
             elif not is_none and a_node.returns is None and has_return_value:
-                violations.append(
-                    self._make_missing_type_violation(a_node, a_filepath)
-                )
+                violations.append(self._make_missing_type_violation(a_node, a_filepath))
         return Result.success(violations)
 
     def _make_result_type_violation(
@@ -280,9 +276,7 @@ class ResultReturnRule(Rule):
         Failure: Never fails (pure function).
         """
         b_continue = True
-        ret: Result[Violation] = Result.success(
-            Violation("", 0, 0, "", "")
-        )
+        ret: Result[Violation] = Result.success(Violation("", 0, 0, "", ""))
         if b_continue:
             ret = Result.success(
                 Violation(
@@ -310,9 +304,7 @@ class ResultReturnRule(Rule):
         Failure: Never fails (pure function).
         """
         b_continue = True
-        ret: Result[Violation] = Result.success(
-            Violation("", 0, 0, "", "")
-        )
+        ret: Result[Violation] = Result.success(Violation("", 0, 0, "", ""))
         if b_continue:
             ret = Result.success(
                 Violation(
@@ -320,8 +312,7 @@ class ResultReturnRule(Rule):
                     a_node.lineno,
                     a_node.col_offset,
                     self.code,
-                    f"Function '{a_node.name}' missing "
-                    "return type (must be Result[T])",
+                    f"Function '{a_node.name}' missing return type (must be Result[T])",
                 )
             )
         return ret
@@ -353,9 +344,7 @@ class ResultReturnRule(Rule):
             if exempt_result.is_success().value and exempt_result.value:
                 b_skip = True
         if b_continue and not b_skip:
-            compliance_result = self._check_result_type_compliance(
-                a_node, a_filepath
-            )
+            compliance_result = self._check_result_type_compliance(a_node, a_filepath)
             if compliance_result.is_success().value:
                 violations.extend(compliance_result.value)
         return Result.success(violations)
@@ -373,10 +362,7 @@ class ResultReturnRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -391,10 +377,7 @@ class ResultReturnRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
 
 class ExplicitReturnTypeRule(Rule):
@@ -485,10 +468,7 @@ class ExplicitReturnTypeRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
     def check_async_function_def(
         self, a_node: ast.AsyncFunctionDef, a_filepath: str
@@ -503,10 +483,7 @@ class ExplicitReturnTypeRule(Rule):
         Failure: Never returns Failure; all errors are encoded as
             violations in Ok.
         """
-        b_continue = True
-        if b_continue:
-            return self._check_function(a_node, a_filepath)
-        return Result.success([])
+        return self._check_function(a_node, a_filepath)
 
 
 class NoStarImportRule(Rule):

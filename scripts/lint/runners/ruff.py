@@ -41,7 +41,7 @@ class RuffCheckRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="ruff",
-                ok=False,
+                success=False,
                 stdout="",
                 stderr="ruff not found",
                 returncode=127,
@@ -90,7 +90,7 @@ class RuffFormatRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="ruff",
-                ok=False,
+                success=False,
                 stdout="",
                 stderr="ruff not found",
                 returncode=127,

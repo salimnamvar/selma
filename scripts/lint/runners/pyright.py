@@ -47,7 +47,7 @@ class PyrightRunner(ToolRunner):
         result: Result[ToolResult] = Result.success(
             ToolResult(
                 tool="pyright",
-                ok=True,
+                success=True,
                 stdout="",
                 stderr="pyright not found, skipping",
                 returncode=0,
