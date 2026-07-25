@@ -15,36 +15,99 @@ from pathlib import Path
 
 from scripts.lint.config import load_config
 from scripts.lint.core.engine import LintEngine
+from scripts.lint.core.result import Result
 from scripts.lint.core.violation import Violation
-from scripts.lint.rules import all_rules
-from scripts.lint.runners.ruff import RuffCheckRunner, RuffFormatRunner
-from scripts.lint.runners.pylint import PylintRunner
-from scripts.lint.runners.pyright import PyrightRunner
 from scripts.lint.runners.base import ToolResult
+from scripts.lint.runners.base import ToolRunner
+from scripts.lint.runners.pyright import PyrightRunner
+from scripts.lint.runners.pylint import PylintRunner
+from scripts.lint.runners.ruff import RuffCheckRunner
+from scripts.lint.runners.ruff import RuffFormatRunner
+from scripts.lint.rules import all_rules
 
 
+def _print_result(v: Violation, fmt: str) -> Result[None]:
+    """Print a violation in the specified output format.
 
-def _print_result(v: Violation, fmt: str) -> None:
-    if fmt == "json":
-        print(json.dumps({
-            "file": v.filepath, "line": v.line, "col": v.col,
-            "code": v.code, "message": v.message, "severity": v.severity,
-        }))
-    elif fmt == "gcc":
-        print(f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}")
-    else:
-        print(v)
+    Precondition: v is a valid Violation, fmt is 'json', 'gcc', or 'default'.
+    Postcondition: violation printed to stdout.
+    Side effect: writes to stdout.
+    Resource: stdout file descriptor.
+    Failure: never fails, always returns Ok.
+    """
+    b_continue = True
+    ret: Result[None] = Result.success(None)
+    if fmt not in ("json", "gcc", "default"):
+        b_continue = False
+    if b_continue:
+        if fmt == "json":
+            print(json.dumps({
+                "file": v.filepath, "line": v.line, "col": v.col,
+                "code": v.code, "message": v.message, "severity": v.severity,
+            }))
+        elif fmt == "gcc":
+            print(f"{v.filepath}:{v.line}:{v.col}: {v.severity} [{v.code}] {v.message}")
+        else:
+            print(v)
+    return ret
 
 
-def _print_tool_result(result: ToolResult) -> None:
-    if result.stdout:
-        print(result.stdout, end="")
-    if result.stderr:
-        print(result.stderr, end="", file=sys.stderr)
+def _print_tool_result(result: ToolResult) -> Result[None]:
+    """Print tool stdout and stderr to appropriate streams.
+
+    Precondition: result is a valid ToolResult.
+    Postcondition: tool output printed to stdout and stderr.
+    Side effect: writes to stdout and stderr.
+    Resource: stdout and stderr file descriptors.
+    Failure: never fails, always returns Ok.
+    """
+    b_continue = True
+    ret: Result[None] = Result.success(None)
+    if not isinstance(result, ToolResult):
+        b_continue = False
+    if b_continue:
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
+    return ret
 
 
-def main() -> int:
-    """Parse CLI arguments and run lint checks. Returns exit code."""
+def _run_tool_check(a_runner: ToolRunner, a_paths: list[str], **kwargs: object) -> Result[bool]:
+    """Run a tool check and print results.
+
+    Precondition: a_runner is a valid ToolRunner instance.
+    Postcondition: returns Ok(True) on failure, Ok(False) on success.
+    Side effect: prints tool output to stdout/stderr.
+    Resource: subprocess handles, file descriptors.
+    Failure: returns Failure if tool execution errors.
+    """
+    b_continue = True
+    failed: Result[bool] = Result.success(False)
+    run_result = a_runner.run(a_paths, **kwargs)
+    if run_result.is_failure():
+        b_continue = False
+        print(run_result.message, file=sys.stderr)
+        failed = Result.success(True)
+    if b_continue:
+        _print_tool_result(run_result.value)
+        if not run_result.value.ok:
+            failed = Result.success(True)
+    return failed
+
+
+def main() -> Result[int]:
+    """Parse CLI arguments and run lint checks.
+
+    Precondition: sys.argv contains valid CLI arguments.
+    Postcondition: lint results printed, returns exit code.
+    Side effect: writes to stdout/stderr, reads pyproject.toml.
+    Resource: subprocess handles, file descriptors.
+    Failure: always returns Ok with appropriate exit code.
+    """
+    b_continue = True
+    result: Result[int] = Result.success(0)
+
     parser = argparse.ArgumentParser(
         prog="selma-lint",
         description="Python AST-based linter enforcing selma coding standards",
@@ -60,59 +123,69 @@ def main() -> int:
     args = parser.parse_args()
 
     service_root = Path(args.config).parent if args.config else Path(__file__).resolve().parent.parent.parent
-    config = load_config(service_root)
+    config_result = load_config(service_root)
 
-    paths = args.paths or list(config.paths)
-    paths = [str(service_root / p) if not Path(p).is_absolute() else p for p in paths]
+    if config_result.is_failure():
+        b_continue = False
+        result = Result.failure(config_result.message)
 
-    exclude_codes = set(config.exclude.codes)
-    if args.exclude_codes:
-        exclude_codes.update(args.exclude_codes)
+    if b_continue:
+        config = config_result.value
+        paths = args.paths or list(config.paths)
+        paths = [str(service_root / p) if not Path(p).is_absolute() else p for p in paths]
 
-    failed = False
+        exclude_codes = set(config.exclude.codes)
+        if args.exclude_codes:
+            exclude_codes.update(args.exclude_codes)
 
-    # --- External tool checks ---
-    if not args.skip_tools and args.only in (None, "ruff-check"):
-        result = RuffCheckRunner().run(paths)
-        _print_tool_result(result)
-        if not result.ok:
-            failed = True
+        failed = False
 
-    if not args.skip_tools and args.only in (None, "ruff-format"):
-        result = RuffFormatRunner().run(paths)
-        _print_tool_result(result)
-        if not result.ok:
-            failed = True
+        # --- External tool checks ---
+        if not args.skip_tools and args.only in (None, "ruff-check"):
+            tr = _run_tool_check(RuffCheckRunner(), paths)
+            if tr.is_success() and tr.value:
+                failed = True
 
-    if not args.skip_tools and args.only in (None, "pylint"):
-        result = PylintRunner().run(paths, project_root=str(service_root))
-        _print_tool_result(result)
-        if not result.ok:
-            failed = True
+        if not args.skip_tools and args.only in (None, "ruff-format"):
+            tr = _run_tool_check(RuffFormatRunner(), paths)
+            if tr.is_success() and tr.value:
+                failed = True
 
-    if not args.skip_tools and args.only in (None, "pyright"):
-        result = PyrightRunner().run(paths, project_root=str(service_root))
-        _print_tool_result(result)
-        if not result.ok:
-            failed = True
+        if not args.skip_tools and args.only in (None, "pylint"):
+            tr = _run_tool_check(PylintRunner(), paths, project_root=str(service_root))
+            if tr.is_success() and tr.value:
+                failed = True
 
-    # --- Custom AST rules ---
-    if not args.skip_ast and args.only in (None, "ast"):
-        rules = all_rules(config)
-        if args.codes:
-            rules = [r for r in rules if r.code in args.codes]
-        if exclude_codes:
-            rules = [r for r in rules if r.code not in exclude_codes]
+        if not args.skip_tools and args.only in (None, "pyright"):
+            tr = _run_tool_check(PyrightRunner(), paths, project_root=str(service_root))
+            if tr.is_success() and tr.value:
+                failed = True
 
-        engine = LintEngine(rules, config)
-        violations = engine.lint_paths(paths)
-        for v in violations:
-            _print_result(v, args.format)
-        if violations:
-            failed = True
+        # --- Custom AST rules ---
+        if not args.skip_ast and args.only in (None, "ast"):
+            rules_result = all_rules(config)
+            rules = rules_result.value if rules_result.is_success() else []
+            if args.codes:
+                rules = [r for r in rules if r.code in args.codes]
+            if exclude_codes:
+                rules = [r for r in rules if r.code not in exclude_codes]
 
-    return 1 if failed else 0
+            engine = LintEngine(rules, config)
+            violations_result = engine.lint_paths(paths)
+            violations = violations_result.value if violations_result.is_success() else []
+            for v in violations:
+                _print_result(v, args.format)
+            if violations:
+                failed = True
+
+        result = Result.success(1 if failed else 0)
+
+    return result
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit_result = main()
+    if exit_result.is_success():
+        sys.exit(exit_result.value)
+    else:
+        sys.exit(1)

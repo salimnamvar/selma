@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import ast
 
+from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 
 
-
 class ResultReturnRule(Rule):
-    """SC-003/005: Functions must return Result[T], not tuples."""
+    """SC-003/005: Functions returning values must use Result[T], no tuple returns."""
 
     @property
     def code(self) -> str:
@@ -28,15 +28,46 @@ class ResultReturnRule(Rule):
             return a_node.value.id == "Result"
         return False
 
+    def _is_none_annotation(self, a_node: ast.expr | None) -> bool:
+        if a_node is None:
+            return True
+        if isinstance(a_node, ast.Constant) and a_node.value is None:
+            return True
+        if isinstance(a_node, ast.Name) and a_node.id == "None":
+            return True
+        return False
+
+    def _has_return_value(self, a_node: ast.FunctionDef) -> bool:
+        for child in ast.walk(a_node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if child is not a_node:
+                    continue
+            if isinstance(child, ast.Return) and child.value is not None:
+                return True
+        return False
+
     def _is_exempt(self, a_name: str) -> bool:
         if a_name.startswith("__") and a_name.endswith("__"):
             return True
         return False
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+    def _is_property_or_abstract(self, a_node: ast.FunctionDef) -> bool:
+        for dec in a_node.decorator_list:
+            if isinstance(dec, ast.Name) and dec.id in ("property", "staticmethod", "classmethod"):
+                return True
+            if isinstance(dec, ast.Attribute) and dec.attr in ("setter", "getter", "deleter", "abstractmethod"):
+                return True
+            if isinstance(dec, ast.Name) and dec.id == "abstractmethod":
+                return True
+        return False
+
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
         """Check that functions do not return tuples and use Result[T]."""
         violations: list[Violation] = []
         for child in ast.walk(a_node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if child is not a_node:
+                    continue
             if isinstance(child, ast.Return) and child.value is not None:
                 if isinstance(child.value, ast.Tuple):
                     violations.append(Violation(
@@ -44,25 +75,26 @@ class ResultReturnRule(Rule):
                         "SC005",
                         f"Function '{a_node.name}' returns a tuple; use Result[T]",
                     ))
-        if not self._is_exempt(a_node.name):
-            if a_node.returns is None:
-                has_return_value = any(
-                    isinstance(c, ast.Return) and c.value is not None
-                    for c in ast.walk(a_node)
-                )
-                if has_return_value:
-                    violations.append(Violation(
-                        a_filepath, a_node.lineno, a_node.col_offset,
-                        self.code,
-                        f"Function '{a_node.name}' missing return type annotation (must be Result[T])",
-                    ))
-            elif not self._is_result_type(a_node.returns):
-                violations.append(Violation(
-                    a_filepath, a_node.lineno, a_node.col_offset,
-                    self.code,
-                    f"Function '{a_node.name}' return type is not Result[T]",
-                ))
-        return violations
+        if self._is_exempt(a_node.name) or self._is_property_or_abstract(a_node):
+            return Result.success(violations)
+        has_return_value = self._has_return_value(a_node)
+        if self._is_none_annotation(a_node.returns):
+            pass
+        elif self._is_result_type(a_node.returns):
+            pass
+        elif a_node.returns is not None and has_return_value:
+            violations.append(Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
+                self.code,
+                f"Function '{a_node.name}' returns values but type is not Result[T]",
+            ))
+        elif a_node.returns is None and has_return_value:
+            violations.append(Violation(
+                a_filepath, a_node.lineno, a_node.col_offset,
+                self.code,
+                f"Function '{a_node.name}' missing return type (must be Result[T])",
+            ))
+        return Result.success(violations)
 
     check_AsyncFunctionDef = check_FunctionDef
 
@@ -78,23 +110,23 @@ class ExplicitReturnTypeRule(Rule):
     def description(self) -> str:
         return "Explicit return type annotation"
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
         """Check that functions have explicit return type annotations."""
         violations: list[Violation] = []
         if a_node.name.startswith("__") and a_node.name.endswith("__"):
-            return violations
+            return Result.success(violations)
         for dec in a_node.decorator_list:
             if isinstance(dec, ast.Name) and dec.id == "abstractmethod":
-                return violations
+                return Result.success(violations)
             if isinstance(dec, ast.Attribute) and dec.attr == "abstractmethod":
-                return violations
+                return Result.success(violations)
         if a_node.returns is None:
             violations = [Violation(
                 a_filepath, a_node.lineno, a_node.col_offset,
                 self.code,
                 f"Function '{a_node.name}' missing return type annotation",
             )]
-        return violations
+        return Result.success(violations)
 
     check_AsyncFunctionDef = check_FunctionDef
 
@@ -110,7 +142,7 @@ class NoStarImportRule(Rule):
     def description(self) -> str:
         return "No wildcard imports"
 
-    def check_ImportFrom(self, a_node: ast.ImportFrom, a_filepath: str) -> list[Violation]:
+    def check_ImportFrom(self, a_node: ast.ImportFrom, a_filepath: str) -> Result[list[Violation]]:
         """Check that no wildcard imports are used."""
         violations: list[Violation] = []
         for alias in a_node.names:
@@ -122,11 +154,11 @@ class NoStarImportRule(Rule):
                     f"Wildcard import from '{module}' forbidden",
                 )]
                 break
-        return violations
+        return Result.success(violations)
 
 
 class InvalidResultSentinelRule(Rule):
-    """SC-004: Module-level INVALID_RESULT sentinel (frozen, immutable — no SC-070 conflict)."""
+    """SC-004: Module-level INVALID_RESULT sentinel required when module has Result[T] functions."""
 
     @property
     def code(self) -> str:
@@ -136,26 +168,45 @@ class InvalidResultSentinelRule(Rule):
     def description(self) -> str:
         return "INVALID_RESULT module-level sentinel required"
 
-    def check_Module(self, a_node: ast.Module, a_filepath: str) -> list[Violation]:
-        """Verify the module defines INVALID_RESULT."""
-        has_sentinel = False
+    def _is_result_type(self, a_node: ast.expr | None) -> bool:
+        if a_node is None:
+            return False
+        if isinstance(a_node, ast.Name) and a_node.id == "Result":
+            return True
+        if isinstance(a_node, ast.Subscript) and isinstance(a_node.value, ast.Name):
+            return a_node.value.id == "Result"
+        return False
+
+    def _has_result_functions(self, a_node: ast.Module) -> bool:
+        for stmt in ast.walk(a_node):
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if self._is_result_type(stmt.returns):
+                    return True
+        return False
+
+    def _has_sentinel(self, a_node: ast.Module) -> bool:
         for stmt in a_node.body:
             if isinstance(stmt, ast.Assign):
                 for target in stmt.targets:
                     if isinstance(target, ast.Name) and target.id == "INVALID_RESULT":
-                        has_sentinel = True
-                        break
+                        return True
             elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
                 if stmt.target.id == "INVALID_RESULT":
-                    has_sentinel = True
-                    break
-            if has_sentinel:
-                break
+                    return True
+            elif isinstance(stmt, ast.ImportFrom):
+                for alias in stmt.names:
+                    if alias.name == "INVALID_RESULT":
+                        return True
+        return False
 
-        if not has_sentinel:
-            return [Violation(
-                a_filepath, 1, 0,
-                self.code,
-                "Module missing required INVALID_RESULT sentinel",
-            )]
-        return []
+    def check_Module(self, a_node: ast.Module, a_filepath: str) -> Result[list[Violation]]:
+        """Verify INVALID_RESULT exists if module has Result[T] functions."""
+        if not self._has_result_functions(a_node):
+            return Result.success([])
+        if self._has_sentinel(a_node):
+            return Result.success([])
+        return Result.success([Violation(
+            a_filepath, 1, 0,
+            self.code,
+            "Module has Result[T] functions but missing INVALID_RESULT sentinel",
+        )])

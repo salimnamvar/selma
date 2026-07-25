@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import shutil
 import subprocess
 
+from scripts.lint.core.result import Result
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,43 +26,71 @@ class ToolRunner(ABC):
         """Human-readable tool name."""
 
     @abstractmethod
-    def run(self, a_paths: list[str], **kwargs: object) -> ToolResult:
-        """Execute the tool on given paths and return structured result."""
+    def run(self, a_paths: list[str], **kwargs: object) -> Result[ToolResult]:
+        """Execute the tool on given paths and return structured result.
 
-    def _resolve_bin(self, hint: str | None = None) -> str | None:
+        Precondition: a_paths is a non-empty list of file paths.
+        Postcondition: returns structured tool execution result.
+        Side effect: spawns an external process.
+        Resource: subprocess handle.
+        Failure: returns Result.failure on execution error.
+        """
+
+    def _resolve_bin(self, hint: str | None = None) -> Result[str]:
+        """Resolve the binary path for this tool.
+
+        Precondition: hint is None or a file path string.
+        Postcondition: returns resolved binary path or failure.
+        Side effect: queries PATH via shutil.which.
+        Resource: none.
+        Failure: returns failure when binary not found.
+        """
+        b_continue = True
+        result: Result[str] = Result.failure("binary not found")
+        resolved = None
         if hint and (shutil.which(hint) or hint.startswith("/")):
-            return hint
-        return shutil.which(self.name)
+            resolved = hint
+        else:
+            resolved = shutil.which(self.name)
+        if resolved is None:
+            b_continue = False
+        if b_continue:
+            result = Result.success(resolved)
+        return result
 
-    def _exec(self, args: list[str], cwd: str | None = None) -> ToolResult:
+    def _exec(self, args: list[str], cwd: str | None = None) -> Result[ToolResult]:
+        """Execute an external tool as a subprocess.
+
+        Precondition: args is a non-empty command list.
+        Postcondition: returns structured tool execution result.
+        Side effect: spawns a subprocess.
+        Resource: subprocess handle, 300s timeout.
+        Failure: returns Result.failure on file-not-found or timeout.
+        """
+        b_continue = True
+        result: Result[ToolResult] = Result.success(ToolResult(
+            tool=self.name, ok=False, stdout="", stderr="", returncode=1,
+        ))
         try:
-            result = subprocess.run(
+            proc = subprocess.run(
                 args,
                 capture_output=True,
                 text=True,
                 cwd=cwd,
                 timeout=300,
             )
-            return ToolResult(
+        except FileNotFoundError as exc:
+            b_continue = False
+            result = Result.failure(str(exc))
+        except subprocess.TimeoutExpired as exc:
+            b_continue = False
+            result = Result.failure(str(exc))
+        if b_continue:
+            result = Result.success(ToolResult(
                 tool=self.name,
-                ok=result.returncode == 0,
-                stdout=result.stdout,
-                stderr=result.stderr,
-                returncode=result.returncode,
-            )
-        except FileNotFoundError:
-            return ToolResult(
-                tool=self.name,
-                ok=False,
-                stdout="",
-                stderr=f"{self.name} not found: {args[0]}",
-                returncode=127,
-            )
-        except subprocess.TimeoutExpired:
-            return ToolResult(
-                tool=self.name,
-                ok=False,
-                stdout="",
-                stderr=f"{self.name} timed out after 300s",
-                returncode=124,
-            )
+                ok=proc.returncode == 0,
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                returncode=proc.returncode,
+            ))
+        return result

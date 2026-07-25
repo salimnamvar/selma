@@ -1,7 +1,7 @@
-from scripts.lint.core.engine import LintEngine
-from scripts.lint.core.rule import Rule
-from scripts.lint.core.violation import Violation
-from scripts.lint.core.visitor import LintVisitor
+"""Core abstractions for the linter."""
+from __future__ import annotations
 
+from scripts.lint.core.result import INVALID_RESULT
+from scripts.lint.core.result import Result
 
-__all__ = ["LintEngine", "LintVisitor", "Rule", "Violation"]
+__all__ = ["INVALID_RESULT", "LintEngine", "LintVisitor", "Result", "Rule", "Violation"]

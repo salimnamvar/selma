@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import ast
 
+from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
 from scripts.lint.config import SecurityConfig
-
 
 
 class NoEvalExecRule(Rule):
@@ -20,8 +20,15 @@ class NoEvalExecRule(Rule):
     def description(self) -> str:
         return "No eval() or exec()"
 
-    def check_Call(self, a_node: ast.Call, a_filepath: str) -> list[Violation]:
-        """Check that eval/exec/compile are not called."""
+    def check_Call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
+        """Check that eval/exec/compile are not called.
+
+        Precondition: a_node is a valid Call AST node in the file at a_filepath.
+        Postcondition: Returns Ok containing violations found, or Ok([]) if compliant.
+        Side effect: None.
+        Resource: None.
+        Failure: Never returns Failure; all errors are encoded as violations in Ok.
+        """
         violations: list[Violation] = []
         if isinstance(a_node.func, ast.Name) and a_node.func.id in ("eval", "exec", "compile"):
             violations = [Violation(
@@ -29,7 +36,7 @@ class NoEvalExecRule(Rule):
                 self.code,
                 f"Forbidden call to '{a_node.func.id}()'",
             )]
-        return violations
+        return Result.success(violations)
 
 
 class ParameterizedQueryRule(Rule):
@@ -43,8 +50,15 @@ class ParameterizedQueryRule(Rule):
     def description(self) -> str:
         return "Parameterized queries (no SQL injection)"
 
-    def check_Call(self, a_node: ast.Call, a_filepath: str) -> list[Violation]:
-        """Check that .execute() uses parameterized queries."""
+    def check_Call(self, a_node: ast.Call, a_filepath: str) -> Result[list[Violation]]:
+        """Check that .execute() uses parameterized queries.
+
+        Precondition: a_node is a valid Call AST node in the file at a_filepath.
+        Postcondition: Returns Ok containing violations found, or Ok([]) if compliant.
+        Side effect: None.
+        Resource: None.
+        Failure: Never returns Failure; all errors are encoded as violations in Ok.
+        """
         violations: list[Violation] = []
         if isinstance(a_node.func, ast.Attribute) and a_node.func.attr == "execute":
             if a_node.args and isinstance(a_node.args[0], (ast.JoinedStr, ast.Call)):
@@ -67,7 +81,7 @@ class ParameterizedQueryRule(Rule):
                         self.code,
                         "Possible SQL injection: use parameterized queries",
                     )]
-        return violations
+        return Result.success(violations)
 
 
 class NoSecretsRule(Rule):
@@ -84,41 +98,67 @@ class NoSecretsRule(Rule):
     def description(self) -> str:
         return "No hardcoded secrets"
 
-    def _check_name(self, a_name: str, node: ast.AST, a_filepath: str) -> list[Violation]:
+    def _check_name(self, a_name: str, node: ast.AST, a_filepath: str) -> Result[list[Violation]]:
+        """Check whether a named assignment contains a hardcoded secret.
+
+        Precondition: a_name is a valid identifier; node is an Assign or AnnAssign AST node.
+        Postcondition: Returns Ok containing a violation if a secret pattern matches, or Ok([]) otherwise.
+        Side effect: None.
+        Resource: Reads self._patterns (frozenset of secret patterns).
+        Failure: Never returns Failure; all errors are encoded as violations in Ok.
+        """
+        violations: list[Violation] = []
         name_lower = a_name.lower()
         if any(p in name_lower for p in self._patterns):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
                     if isinstance(target, ast.Name) and target.id == a_name:
                         if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                            return [Violation(
+                            violations = [Violation(
                                 a_filepath, node.lineno, node.col_offset,
                                 self.code,
                                 f"Possible hardcoded secret in '{a_name}'; use environment variable",
                             )]
+                            break
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == a_name:
                 if node.value and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                    return [Violation(
+                    violations = [Violation(
                         a_filepath, node.lineno, node.col_offset,
                         self.code,
                         f"Possible hardcoded secret in '{a_name}'; use environment variable",
                     )]
-        return []
+        return Result.success(violations)
 
-    def check_Assign(self, a_node: ast.Assign, a_filepath: str) -> list[Violation]:
-        """Check assignments for hardcoded secrets."""
+    def check_Assign(self, a_node: ast.Assign, a_filepath: str) -> Result[list[Violation]]:
+        """Check assignments for hardcoded secrets.
+
+        Precondition: a_node is a valid Assign AST node in the file at a_filepath.
+        Postcondition: Returns Ok containing violations found, or Ok([]) if compliant.
+        Side effect: None.
+        Resource: Reads self._patterns via _check_name.
+        Failure: Never returns Failure; all errors are encoded as violations in Ok.
+        """
         violations: list[Violation] = []
         for target in a_node.targets:
             if isinstance(target, ast.Name):
-                result = self._check_name(target.id, a_node, a_filepath)
-                if result:
-                    violations = result
+                name_result = self._check_name(target.id, a_node, a_filepath)
+                name_violations = name_result.value if name_result.is_success() else []
+                if name_violations:
+                    violations = name_violations
                     break
-        return violations
+        return Result.success(violations)
 
-    def check_AnnAssign(self, a_node: ast.AnnAssign, a_filepath: str) -> list[Violation]:
-        """Check annotated assignments for hardcoded secrets."""
+    def check_AnnAssign(self, a_node: ast.AnnAssign, a_filepath: str) -> Result[list[Violation]]:
+        """Check annotated assignments for hardcoded secrets.
+
+        Precondition: a_node is a valid AnnAssign AST node in the file at a_filepath.
+        Postcondition: Returns Ok containing violations found, or Ok([]) if compliant.
+        Side effect: None.
+        Resource: Reads self._patterns via _check_name.
+        Failure: Never returns Failure; all errors are encoded as violations in Ok.
+        """
         violations: list[Violation] = []
         if isinstance(a_node.target, ast.Name):
-            violations = self._check_name(a_node.target.id, a_node, a_filepath)
-        return violations
+            name_result = self._check_name(a_node.target.id, a_node, a_filepath)
+            violations = name_result.value if name_result.is_success() else []
+        return Result.success(violations)

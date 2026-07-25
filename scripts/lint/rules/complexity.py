@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import ast
 
+from scripts.lint.config import ComplexityConfig
+from scripts.lint.core.result import Result
 from scripts.lint.core.rule import Rule
 from scripts.lint.core.violation import Violation
-from scripts.lint.config import ComplexityConfig
-
 
 _EXECUTABLE_NODES = (
     ast.Assign, ast.AugAssign, ast.AnnAssign,
@@ -31,19 +31,30 @@ class FunctionLengthRule(Rule):
     def description(self) -> str:
         return f"Function length <= {self._max} lines"
 
-    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> list[Violation]:
-        """Check that function does not exceed maximum executable lines."""
-        lines: set[int] = set()
-        for child in ast.walk(a_node):
-            if isinstance(child, _EXECUTABLE_NODES) and hasattr(child, "lineno"):
-                lines.add(child.lineno)
+    def check_FunctionDef(self, a_node: ast.FunctionDef, a_filepath: str) -> Result[list[Violation]]:
+        """Check that function does not exceed maximum executable lines.
+
+        Precondition: a_node is a FunctionDef AST node.
+        Postcondition: Returns Ok with list of violations found.
+        Side effect: None.
+        Resource: None.
+        Failure: Never fails (always returns Ok).
+        """
+        b_continue = True
         violations: list[Violation] = []
-        if len(lines) > self._max:
-            violations = [Violation(
-                a_filepath, a_node.lineno, a_node.col_offset,
-                self.code,
-                f"Function '{a_node.name}' has {len(lines)} executable lines (max {self._max})",
-            )]
-        return violations
+        result: Result[list[Violation]] = Result.success(violations)
+        if b_continue:
+            lines: set[int] = set()
+            for child in ast.walk(a_node):
+                if isinstance(child, _EXECUTABLE_NODES) and hasattr(child, "lineno"):
+                    lines.add(child.lineno)
+            if len(lines) > self._max:
+                violations = [Violation(
+                    a_filepath, a_node.lineno, a_node.col_offset,
+                    self.code,
+                    f"Function '{a_node.name}' has {len(lines)} executable lines (max {self._max})",
+                )]
+            result = Result.success(violations)
+        return result
 
     check_AsyncFunctionDef = check_FunctionDef
