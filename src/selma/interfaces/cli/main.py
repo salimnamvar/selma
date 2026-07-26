@@ -14,19 +14,20 @@ import selma as _selma_pkg
 from selma.application.dto.lint_request import LintRequest
 from selma.composition import Container
 from selma.domain.value_objects.file_path import FilePath
+from selma.domain.value_objects.severity import Severity
 from selma.infrastructure.rule_repository.json_rule_repository import JsonRuleRepository
 
 
 def _collect_file_paths(a_path_strings: list[str]) -> list[FilePath]:
     """Collect Python file paths from argument strings."""
     file_paths: list[FilePath] = []
-    for a_path_str in a_path_strings:
-        a_path = Path(a_path_str)
-        if a_path.is_file() and a_path.suffix == ".py":
-            file_paths.append(FilePath(str(a_path)))
-        elif a_path.is_dir():
+    for path_str in a_path_strings:
+        path = Path(path_str)
+        if path.is_file() and path.suffix == ".py":
+            file_paths.append(FilePath(str(path)))
+        elif path.is_dir():
             file_paths.extend(
-                FilePath(str(a_py)) for a_py in sorted(a_path.rglob("*.py"))
+                FilePath(str(py_file)) for py_file in sorted(path.rglob("*.py"))
             )
     return file_paths
 
@@ -39,76 +40,76 @@ def main() -> int:
     """
     b_continue = True
     result = 0
-    a_parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="selma",
         description=("Selma — Schema-driven AST linter enforcing Safe Coding Doctrine"),
     )
-    a_parser.add_argument("--version", action="version", version="Selma v0.1.0")
-    a_parser.add_argument("paths", nargs="*", help="Files or directories to lint")
-    a_parser.add_argument(
+    parser.add_argument("--version", action="version", version="Selma v0.1.0")
+    parser.add_argument("paths", nargs="*", help="Files or directories to lint")
+    parser.add_argument(
         "-f",
         "--format",
         choices=["default", "json", "gcc", "guidance"],
         default="default",
     )
-    a_parser.add_argument(
+    parser.add_argument(
         "--guide",
         action="store_true",
         help="Include guidance in output",
     )
-    a_parser.add_argument(
+    parser.add_argument(
         "--skip-tools",
         action="store_true",
         help="Skip external tools",
     )
-    a_parser.add_argument(
+    parser.add_argument(
         "--skip-ast",
         action="store_true",
         help="Skip AST rules",
     )
-    a_parser.add_argument("--only", help="Run only one check")
-    a_parser.add_argument(
+    parser.add_argument("--only", help="Run only one check")
+    parser.add_argument(
         "--codes",
         nargs="*",
         help="Only run rules with these codes",
     )
-    a_parser.add_argument(
+    parser.add_argument(
         "--exclude-codes",
         nargs="*",
         help="Exclude rules with these codes",
     )
-    a_parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
 
-    args = a_parser.parse_args()
+    args = parser.parse_args()
 
     if b_continue and not args.paths:
         b_continue = False
-        a_parser.print_help()
+        parser.print_help()
         result = 0
 
     if b_continue:
         _pkg_dir = Path(_selma_pkg.__file__).parent
         rules_dir = _pkg_dir.parent.parent / "schema" / "rules"
 
-        a_container = Container()
-        a_rule_repository = JsonRuleRepository(
+        container = Container()
+        rule_repository = JsonRuleRepository(
             a_rules_dir=rules_dir,
         )
-        a_use_case = a_container.get_lint_use_case(
-            a_rule_repository=a_rule_repository,
+        use_case = container.get_lint_use_case(
+            a_rule_repository=rule_repository,
         )
 
-        a_exclude_codes = (
+        exclude_codes: frozenset[str] = (
             frozenset(args.exclude_codes) if args.exclude_codes else frozenset()
         )
-        a_codes = frozenset(args.codes) if args.codes else frozenset()
+        codes: frozenset[str] = frozenset(args.codes) if args.codes else frozenset()
 
-        a_file_paths = _collect_file_paths(args.paths)
+        file_paths = _collect_file_paths(args.paths)
 
-        a_request = LintRequest(
-            paths=tuple(a_file_paths),
-            exclude_codes=a_exclude_codes,
-            codes=a_codes,
+        request = LintRequest(
+            paths=tuple(file_paths),
+            exclude_codes=exclude_codes,
+            codes=codes,
             format=args.format,
             guide=args.guide,
             skip_tools=args.skip_tools,
@@ -116,22 +117,28 @@ def main() -> int:
             only=args.only,
         )
 
-        a_lint_result = a_use_case.execute(a_request)
-        if a_lint_result.is_success():
-            a_response = a_lint_result.unwrap()
-            a_reporter = a_container.get_reporter(
+        lint_result = use_case.execute(request)
+        if lint_result.is_success():
+            response = lint_result.unwrap()
+            if args.verbose:
+                report_findings = response.findings
+            else:
+                report_findings = tuple(
+                    f for f in response.findings if f.severity != Severity.INFORMATIONAL
+                )
+            reporter = container.get_reporter(
                 args.format,
             )
-            a_report_result = a_reporter.report(
-                a_response.findings,
+            report_result = reporter.report(
+                report_findings,
             )
-            if a_report_result.is_success():
-                print(a_report_result.unwrap())  # noqa: T201
-            if a_response.finding_count > 0:
+            if report_result.is_success():
+                print(report_result.unwrap())  # noqa: T201
+            if response.finding_count > 0:
                 result = 1
         else:
             print(  # noqa: T201
-                f"Error: {a_lint_result.message}",
+                f"Error: {lint_result.message}",
                 file=sys.stderr,
             )
             result = 1
