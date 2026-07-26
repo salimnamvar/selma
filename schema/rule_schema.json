@@ -421,10 +421,36 @@
                       "type": "object",
                       "properties": {
                         "field": { "type": "string" },
-                        "operator": { "type": "string", "enum": ["eq", "neq", "exists", "not_exists", "matches", "not_matches", "contains", "contains_node", "not_empty", "star_import", "equals"] },
-                        "value": { "description": "Value to compare against (string, number, or pattern)" }
+                        "operator": {
+                          "type": "string",
+                          "enum": [
+                            "eq", "neq", "equals", "not_equals",
+                            "exists", "not_exists",
+                            "matches", "not_matches",
+                            "contains", "not_contains", "contains_node", "subtree_contains_node",
+                            "not_empty", "star_import",
+                            "unparse_matches", "unparse_not_matches",
+                            "unparse_contains", "unparse_not_contains",
+                            "unparse_in", "unparse_not_in",
+                            "has_mutable_defaults",
+                            "params_missing_prefix", "params_any_unannotated",
+                            "body_contains_any", "body_not_contains_any",
+                            "calls_own_name", "calls_any",
+                            "param_names_intersect", "param_names_disjoint",
+                            "has_decorator", "not_has_decorator",
+                            "call_message_missing_or_empty",
+                            "attr_call_on_shared_state",
+                            "except_type_names_intersect", "except_type_names_disjoint",
+                            "except_bound_name_unused",
+                            "name_not_matches_any"
+                          ]
+                        },
+                        "value": { "description": "Value to compare against (string, number, list, object, or pattern)" },
+                        "all_of": { "type": "array", "items": { "type": "object" } },
+                        "any_of": { "type": "array", "items": { "type": "object" } },
+                        "not": { "type": "object" }
                       },
-                      "required": ["field", "operator"]
+                      "required": []
                     },
                     "minItems": 1
                   },

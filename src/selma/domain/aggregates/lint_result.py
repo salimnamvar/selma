@@ -47,7 +47,8 @@ class LintResult(BaseModel):
         """
         if self._is_complete:
             raise LintResultAlreadyComplete("Cannot add finding to completed result")
-        self._findings.append(a_finding)
+        # Immutable rebuild avoids in-place mutation methods (SC-092).
+        self._findings = [*self._findings, a_finding]
 
     def complete(self) -> None:
         """Mark result as complete. No more findings allowed."""

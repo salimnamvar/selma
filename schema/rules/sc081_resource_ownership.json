@@ -7,16 +7,26 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "body", "operator": "not_contains_node", "value": "Assign"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "Assign"
+      }
     ],
     "message_template": "Function '{name}' creates resources but should document ownership transfer"
   },
   "weight": "low",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Undocumented ownership leads to double-free or resource leaks.",
   "remediation": "Document resource ownership in docstring: who creates, who closes, who owns.",
-  "parameters": {"require_ownership_doc": true}
+  "parameters": {
+    "require_ownership_doc": true
+  }
 }

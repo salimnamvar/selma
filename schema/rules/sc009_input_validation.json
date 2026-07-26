@@ -7,17 +7,30 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "args.args", "operator": "not_empty"},
-      {"field": "body", "operator": "not_contains_node", "value": "IsInstance"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "args.args",
+        "operator": "not_empty"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "IsInstance"
+      }
     ],
     "message_template": "Function '{name}' has parameters but no isinstance/TypeValidator call"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Unvalidated inputs lead to runtime errors and security vulnerabilities.",
   "remediation": "Add isinstance checks or TypeValidator calls at function entry for all parameters.",
-  "parameters": {"exempt_dunders": true}
+  "parameters": {
+    "exempt_dunders": true
+  }
 }

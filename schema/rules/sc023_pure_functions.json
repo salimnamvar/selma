@@ -2,21 +2,31 @@
   "lineage_id": "SC-023",
   "id": "SC-023",
   "type": "obligation",
-  "message": "Function has side effects — prefer pure functions",
+  "message": "Function has side effects \u2014 prefer pure functions",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "body", "operator": "not_contains_node", "value": "Return"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "Return"
+      }
     ],
-    "message_template": "Function '{name}' should be pure — prefer functions with explicit return values"
+    "message_template": "Function '{name}' should be pure \u2014 prefer functions with explicit return values"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Pure functions are easier to test, reason about, and compose.",
   "remediation": "Refactor to return results instead of mutating state. Pass dependencies as parameters.",
-  "parameters": {"exempt_dunders": true}
+  "parameters": {
+    "exempt_dunders": true
+  }
 }

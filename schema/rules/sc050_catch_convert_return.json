@@ -7,14 +7,21 @@
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "type", "operator": "exists"},
-      {"field": "body", "operator": "not_contains_node", "value": "Return"}
+      {
+        "field": "type",
+        "operator": "exists"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "Return"
+      }
     ],
     "message_template": "Except handler must convert exception to Result.failure() or handle and return"
   },
   "weight": "high",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Uncaught exceptions in except blocks can propagate unexpectedly.",
   "remediation": "Convert exceptions to Result.failure() or handle and return an appropriate value.",

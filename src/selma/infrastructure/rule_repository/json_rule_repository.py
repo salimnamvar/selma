@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.domain.entities.rule import EvaluatorConfig
@@ -15,6 +16,8 @@ from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
 from selma.domain.value_objects.severity import Severity
+from selma.infrastructure.config.rule_schema_models import RuleDocumentModel
+from selma.infrastructure.config.rule_schema_validator import RuleSchemaValidator
 
 _DEFAULT_RULES_DIR = Path("schema/rules")
 
@@ -28,6 +31,7 @@ class JsonRuleRepository(RuleRepository):
     def __init__(self, a_rules_dir: Path | None = None) -> None:
         self._rules_dir = a_rules_dir or _DEFAULT_RULES_DIR
         self._cached_rules: tuple[RuleDefinition, ...] | None = None
+        self._schema_validator = RuleSchemaValidator()
 
     def find_all(
         self,
@@ -142,7 +146,8 @@ class JsonRuleRepository(RuleRepository):
                         rules.extend(load_result.unwrap())
 
         if b_continue:
-            result = Result.success(tuple(rules))
+            active = tuple(rule for rule in rules if rule.is_active())
+            result = Result.success(active)
 
         return result
 
@@ -182,108 +187,98 @@ class JsonRuleRepository(RuleRepository):
         return result
 
     def _parse_rule(self, a_raw: dict[str, Any]) -> Result[RuleDefinition]:
-        """Parse a raw JSON rule dict into a RuleDefinition."""
+        """Validate via jsonschema + Pydantic, then map to domain RuleDefinition."""
         b_continue = True
         result: Result[RuleDefinition] = Result.failure("unreachable")
 
-        lineage_id = a_raw.get("lineage_id", "")
-        if b_continue and not lineage_id:
+        validation = self._schema_validator.validate_document(a_raw)
+        if validation.is_failure():
             b_continue = False
-            result = Result.failure("Rule missing lineage_id")
+            result = Result.failure(validation.message)
 
-        rule_id = a_raw.get("id", "")
-        if b_continue and not rule_id:
-            b_continue = False
-            result = Result.failure("Rule missing id")
-
-        rule_type = a_raw.get("type", "")
-        if b_continue and not rule_type:
-            b_continue = False
-            result = Result.failure(f"Rule {lineage_id} missing type")
-
-        message = a_raw.get("message", "")
-        if b_continue and not message:
-            b_continue = False
-            result = Result.failure(f"Rule {lineage_id} missing message")
-
-        evaluator_type = a_raw.get("evaluator_type", "")
-        if b_continue and not evaluator_type:
-            b_continue = False
-            result = Result.failure(f"Rule {lineage_id} missing evaluator_type")
-
-        evaluator_config = EvaluatorConfig()
-        ec_raw = a_raw.get("evaluator_config", {})
         if b_continue:
-            ec_result = self._parse_evaluator_config(ec_raw)
-            if b_continue and ec_result.is_failure():
+            document = validation.unwrap()
+            mapped = self._map_document(document)
+            if mapped.is_failure():
                 b_continue = False
-                msg = f"Rule {lineage_id}: {ec_result.message}"
-                result = Result.failure(msg)
-            if b_continue and ec_result.is_success():
-                evaluator_config = ec_result.unwrap()
-
-        status = a_raw.get("status", "active")
-        created_at = a_raw.get("created_at", "")
-        rationale = a_raw.get("rationale", "")
-        remediation = a_raw.get("remediation", "")
-        parameters = a_raw.get("parameters", {})
-        depends_on = tuple(a_raw.get("depends_on", []))
-        conflicts_with = tuple(a_raw.get("conflicts_with", []))
-
-        weight_str = a_raw.get("weight", "medium")
-        valid_weights = frozenset(
-            {
-                "critical",
-                "high",
-                "medium",
-                "low",
-                "informational",
-            }
-        )
-        weight = (
-            Severity(weight_str) if weight_str in valid_weights else Severity.MEDIUM
-        )
-
-        priority = a_raw.get("priority", "operational")
-
-        if b_continue:
-            rule = RuleDefinition(
-                lineage_id=lineage_id,
-                id=rule_id,
-                rule_type=rule_type,
-                message=message,
-                evaluator_type=evaluator_type,
-                evaluator_config=evaluator_config,
-                weight=weight,
-                priority=priority,
-                status=status,
-                created_at=created_at,
-                rationale=rationale,
-                remediation=remediation,
-                parameters=parameters,
-                depends_on=depends_on,
-                conflicts_with=conflicts_with,
-            )
-            result = Result.success(rule)
+                result = Result.failure(mapped.message)
+            if b_continue:
+                result = Result.success(mapped.unwrap())
 
         return result
 
-    def _parse_evaluator_config(self, a_raw: dict[str, Any]) -> Result[EvaluatorConfig]:
-        """Parse raw evaluator config dict into EvaluatorConfig."""
+    def _map_document(self, a_doc: RuleDocumentModel) -> Result[RuleDefinition]:
+        b_continue = True
+        result: Result[RuleDefinition] = Result.failure("unreachable")
+        ec_raw = a_doc.evaluator_config.model_dump(by_alias=True, exclude_none=False)
+        ec_result = self._parse_evaluator_config(ec_raw)
+        if ec_result.is_failure():
+            b_continue = False
+            result = Result.failure(ec_result.message)
+        if b_continue:
+            weight_str = (
+                a_doc.weight.value
+                if isinstance(a_doc.weight, Severity)
+                else str(a_doc.weight)
+            )
+            valid_weights = frozenset(
+                {"critical", "high", "medium", "low", "informational"}
+            )
+            weight = (
+                Severity(weight_str) if weight_str in valid_weights else Severity.MEDIUM
+            )
+            rule = RuleDefinition(
+                lineage_id=a_doc.lineage_id,
+                id=a_doc.id,
+                rule_type=a_doc.type,
+                message=a_doc.message,
+                evaluator_type=a_doc.evaluator_type,
+                evaluator_config=ec_result.unwrap(),
+                weight=weight,
+                priority=a_doc.priority,
+                status=a_doc.status,
+                created_at=a_doc.created_at,
+                rationale=a_doc.rationale,
+                remediation=a_doc.remediation,
+                parameters=dict(a_doc.parameters),
+                depends_on=tuple(a_doc.depends_on),
+                conflicts_with=tuple(a_doc.conflicts_with),
+            )
+            result = Result.success(rule)
+        return result
+
+    def _parse_evaluator_config(
+        self,
+        a_raw: dict[str, Any],
+        a_depth: int = 0,
+        a_max_depth: int = 32,
+    ) -> Result[EvaluatorConfig]:
+        """Parse raw evaluator config dict into EvaluatorConfig.
+
+        a_depth / a_max_depth guard nested sub_evaluators (SC-114).
+        """
         b_continue = True
         result: Result[EvaluatorConfig] = Result.failure("unreachable")
 
-        pattern = a_raw.get("pattern")
-        flags = a_raw.get("flags")
-        field = a_raw.get("field")
-        operator = a_raw.get("operator")
-        value = a_raw.get("value")
-        threshold = a_raw.get("threshold")
-        logic = a_raw.get("logic")
-        target_node = a_raw.get("target_node")
-        walk_nodes = tuple(a_raw.get("walk_nodes", []))
-        conditions = tuple(a_raw.get("conditions", []))
-        fc_raw: list[dict[str, str]] = a_raw.get("forbidden_calls", [])
+        if b_continue and a_depth >= a_max_depth:
+            b_continue = False
+            result = Result.failure(
+                f"Evaluator config nesting exceeds max depth {a_max_depth}"
+            )
+
+        pattern = a_raw.get("pattern") if b_continue else None
+        flags = a_raw.get("flags") if b_continue else None
+        field = a_raw.get("field") if b_continue else None
+        operator = a_raw.get("operator") if b_continue else None
+        value = a_raw.get("value") if b_continue else None
+        threshold = a_raw.get("threshold") if b_continue else None
+        logic = a_raw.get("logic") if b_continue else None
+        target_node = a_raw.get("target_node") if b_continue else None
+        walk_nodes = tuple(a_raw.get("walk_nodes", [])) if b_continue else ()
+        conditions = tuple(a_raw.get("conditions", [])) if b_continue else ()
+        fc_raw: list[dict[str, str]] = (
+            a_raw.get("forbidden_calls", []) if b_continue else []
+        )
         forbidden_calls = tuple(
             {
                 "name": fc.get("name", ""),
@@ -291,25 +286,44 @@ class JsonRuleRepository(RuleRepository):
             }
             for fc in fc_raw
         )
-        forbidden_functions = tuple(a_raw.get("forbidden_functions", []))
-        resource_calls = tuple(a_raw.get("resource_calls", []))
-        execute_methods = tuple(a_raw.get("execute_methods", []))
-        sql_keywords = tuple(a_raw.get("sql_keywords", []))
-        io_calls = tuple(a_raw.get("io_calls", []))
-        check_first_arg = a_raw.get("check_first_arg", {})
-        count = a_raw.get("count", {})
-        message_template = a_raw.get("message_template", "")
-        exempt_dunders = a_raw.get("exempt_dunders", True)
-        exempt_generators = a_raw.get("exempt_generators", True)
-        exempt_names = tuple(a_raw.get("exempt_names", []))
-        max_lines = a_raw.get("max_lines", 60)
+        forbidden_functions = (
+            tuple(a_raw.get("forbidden_functions", [])) if b_continue else ()
+        )
+        resource_calls = tuple(a_raw.get("resource_calls", [])) if b_continue else ()
+        execute_methods = tuple(a_raw.get("execute_methods", [])) if b_continue else ()
+        sql_keywords = tuple(a_raw.get("sql_keywords", [])) if b_continue else ()
+        io_calls = tuple(a_raw.get("io_calls", [])) if b_continue else ()
+        check_first_arg: dict[str, bool] = {}
+        count: dict[str, object] = {}
+        if b_continue:
+            raw_cfa = a_raw.get("check_first_arg", {})
+            if isinstance(raw_cfa, dict):
+                check_first_arg = cast("dict[str, bool]", raw_cfa)
+            raw_cnt = a_raw.get("count", {})
+            if isinstance(raw_cnt, dict):
+                count = cast("dict[str, object]", raw_cnt)
+        message_template = a_raw.get("message_template", "") if b_continue else ""
+        exempt_dunders = a_raw.get("exempt_dunders", True) if b_continue else True
+        exempt_generators = a_raw.get("exempt_generators", True) if b_continue else True
+        exempt_names = tuple(a_raw.get("exempt_names", [])) if b_continue else ()
+        max_lines = a_raw.get("max_lines", 60) if b_continue else 60
 
-        sub_raw = a_raw.get("sub_evaluators", [])
+        sub_raw: list[dict[str, Any]] = []
+        if b_continue:
+            raw_subs_obj = a_raw.get("sub_evaluators", [])
+            if isinstance(raw_subs_obj, list):
+                for item in cast("list[object]", raw_subs_obj):
+                    if isinstance(item, dict):
+                        sub_raw.append(cast("dict[str, Any]", item))
         sub_evaluators: tuple[EvaluatorConfig, ...] = ()
-        if sub_raw:
+        if b_continue and sub_raw:
             parsed_subs: list[EvaluatorConfig] = []
             for sub_item in sub_raw:
-                sub_result = self._parse_evaluator_config(sub_item)
+                sub_result = self._parse_evaluator_config(
+                    sub_item,
+                    a_depth=a_depth + 1,
+                    a_max_depth=a_max_depth,
+                )
                 if b_continue and sub_result.is_failure():
                     b_continue = False
                     msg = f"Sub-evaluator: {sub_result.message}"

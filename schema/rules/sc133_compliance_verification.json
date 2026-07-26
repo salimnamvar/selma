@@ -7,15 +7,20 @@
   "evaluator_config": {
     "target_node": "Module",
     "conditions": [
-      {"field": "body", "operator": "exists"}
+      {
+        "field": "body",
+        "operator": "exists"
+      }
     ],
     "message_template": "Compliance with safe coding rules must be verified periodically"
   },
   "weight": "informational",
   "priority": "advisory",
-  "status": "active",
+  "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Periodic verification ensures rules remain effective and relevant.",
   "remediation": "Schedule regular compliance audits and update rules as needed.",
-  "parameters": {"audit_frequency": "quarterly"}
+  "parameters": {
+    "audit_frequency": "quarterly"
+  }
 }

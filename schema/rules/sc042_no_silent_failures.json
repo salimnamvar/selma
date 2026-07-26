@@ -2,18 +2,21 @@
   "lineage_id": "SC-042",
   "id": "SC-042",
   "type": "prohibition",
-  "message": "No silent failures — every caught exception must be logged or converted to Result.failure()",
+  "message": "No silent failures \u2014 every caught exception must be logged or converted to Result.failure()",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "body", "operator": "not_empty"}
+      {
+        "field": "body",
+        "operator": "not_empty"
+      }
     ],
-    "message_template": "Silent exception handling detected — log the exception or convert to Result.failure() with a descriptive message"
+    "message_template": "Silent exception handling detected \u2014 log the exception or convert to Result.failure() with a descriptive message"
   },
   "weight": "critical",
   "priority": "constitutional",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Silent failures are invisible failures. They accumulate. They create the illusion of success while the system silently degrades. An empty except block is always a defect.",
   "remediation": "Log the exception with structured logging or convert to Result.failure(message=f'Exception type: {e}') with a descriptive message.",

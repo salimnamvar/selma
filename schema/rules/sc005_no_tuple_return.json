@@ -8,7 +8,7 @@
     "target_node": "Return",
     "conditions": [
       {"field": "value", "operator": "exists"},
-      {"field": "value", "operator": "contains_node", "value": "Tuple"}
+      {"field": "value", "operator": "unparse_matches", "value": "^\\("}
     ],
     "message_template": "Bare tuple return detected — wrap in Result[T] or dataclass"
   },

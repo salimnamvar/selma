@@ -7,7 +7,12 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"}
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {
+        "field": ".",
+        "operator": "has_mutable_defaults",
+        "value": ["list", "dict", "set"]
+      }
     ],
     "message_template": "Function '{name}' has mutable default argument — use None with guard"
   },

@@ -7,14 +7,21 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "body", "operator": "not_exists"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "body",
+        "operator": "not_exists"
+      }
     ],
     "message_template": "Function '{name}' missing contract docstring (preconditions/postconditions)"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "A function without a contract is a function whose behavior is undefined. Contracts make implicit assumptions explicit, enabling safe composition and refactoring.",
   "remediation": "Add docstring with Preconditions, Postconditions, Side Effects, Resource, and Failure sections.",

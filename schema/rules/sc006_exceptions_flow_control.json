@@ -7,7 +7,43 @@
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "type", "operator": "exists"}
+      {"field": "type", "operator": "exists"},
+      {
+        "field": ".",
+        "operator": "except_type_names_intersect",
+        "value": [
+          "StopIteration",
+          "StopAsyncIteration",
+          "GeneratorExit",
+          "KeyError",
+          "IndexError",
+          "AttributeError",
+          "ValueError",
+          "TypeError"
+        ]
+      },
+      {
+        "field": ".",
+        "operator": "except_type_names_disjoint",
+        "value": [
+          "OSError",
+          "IOError",
+          "Exception",
+          "BaseException",
+          "JSONDecodeError",
+          "UnicodeDecodeError",
+          "SyntaxError",
+          "FileNotFoundError",
+          "PermissionError",
+          "TimeoutExpired",
+          "TOMLDecodeError"
+        ]
+      },
+      {
+        "field": ".",
+        "operator": "body_not_contains_any",
+        "value": ["Result.failure", "Result.success", "raise", "logger.", "logging."]
+      }
     ],
     "message_template": "Exception used for flow control — use conditional logic for expected cases"
   },

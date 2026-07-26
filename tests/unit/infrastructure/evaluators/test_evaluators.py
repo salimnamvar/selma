@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 
 from selma.infrastructure.evaluators.ast_call_check import AstCallCheckEvaluator
 from selma.infrastructure.evaluators.ast_context_check import AstContextCheckEvaluator
@@ -10,6 +11,7 @@ from selma.infrastructure.evaluators.ast_module_check import AstModuleCheckEvalu
 from selma.infrastructure.evaluators.ast_node_match import AstNodeMatchEvaluator
 from selma.infrastructure.evaluators.ast_scope_check import AstScopeCheckEvaluator
 from selma.infrastructure.evaluators.ast_walk import AstWalkEvaluator
+from selma.infrastructure.rule_repository.json_rule_repository import JsonRuleRepository
 
 
 def _parse(source: str) -> ast.AST:
@@ -178,6 +180,189 @@ class Foo:
         evaluator = AstNodeMatchEvaluator()
         findings = evaluator.evaluate(tree, config, rule)
         assert findings == []
+
+    def test_style2_only_mutable_defaults(self) -> None:
+        source = """
+def safe(a_x: int = 1) -> int:
+    return a_x
+
+def bad(a_items: list = []) -> int:
+    return len(a_items)
+"""
+        tree = _parse(source)
+        config = {
+            "target_node": "FunctionDef",
+            "conditions": [
+                {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+                {
+                    "field": ".",
+                    "operator": "has_mutable_defaults",
+                    "value": ["list", "dict", "set"],
+                },
+            ],
+            "message_template": "Function '{name}' has mutable default",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        assert len(findings) == 1
+        assert "bad" in findings[0].message
+
+    def test_style1_requires_a_prefix(self) -> None:
+        source = """
+def ok(a_x: int) -> int:
+    return a_x
+
+def bad(x: int) -> int:
+    return x
+
+def skip_builtin(self, cls, args, kwargs, a_value: int) -> int:
+    return a_value
+"""
+        tree = _parse(source)
+        config = {
+            "target_node": "FunctionDef",
+            "conditions": [
+                {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+                {
+                    "field": ".",
+                    "operator": "params_missing_prefix",
+                    "value": {
+                        "prefix": "a_",
+                        "allow_private_underscore": True,
+                        "skip_names": ["self", "cls", "args", "kwargs"],
+                    },
+                },
+            ],
+            "message_template": "Function '{name}' arguments must use a_ prefix",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        assert len(findings) == 1
+        assert "bad" in findings[0].message
+
+    def test_sc003_tuple_return_flagged(self) -> None:
+        source = """
+def bad(a_x: int) -> tuple[int, str]:
+    return (a_x, "ok")
+
+def ok(a_x: int) -> int:
+    return a_x
+"""
+        tree = _parse(source)
+        config = {
+            "target_node": "FunctionDef",
+            "conditions": [
+                {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+                {"field": "returns", "operator": "exists"},
+                {
+                    "field": "returns",
+                    "operator": "unparse_not_contains",
+                    "value": "Result",
+                },
+                {
+                    "any_of": [
+                        {
+                            "field": "returns",
+                            "operator": "unparse_matches",
+                            "value": "tuple",
+                        },
+                        {
+                            "field": ".",
+                            "operator": "subtree_contains_node",
+                            "value": "Raise",
+                        },
+                    ]
+                },
+            ],
+            "message_template": "Function '{name}' returns values but type is not Result[T]",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        assert len(findings) == 1
+        assert "bad" in findings[0].message
+
+    def test_sc114_only_unbounded_recursion(self) -> None:
+        source = """
+def total(a_n: int) -> int:
+    return a_n + 1
+
+def recurse(a_n: int) -> int:
+    if a_n <= 0:
+        return 0
+    return recurse(a_n - 1)
+
+def guarded(a_n: int, a_depth: int = 0, a_max_depth: int = 10) -> int:
+    if a_depth >= a_max_depth:
+        return 0
+    if a_n <= 0:
+        return 0
+    return guarded(a_n - 1, a_depth + 1, a_max_depth)
+"""
+        tree = _parse(source)
+        config = {
+            "target_node": "FunctionDef",
+            "conditions": [
+                {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+                {"field": ".", "operator": "calls_own_name"},
+                {
+                    "field": ".",
+                    "operator": "param_names_disjoint",
+                    "value": ["a_depth", "a_max_depth", "depth", "max_depth"],
+                },
+                {
+                    "field": ".",
+                    "operator": "body_not_contains_any",
+                    "value": [
+                        "a_depth",
+                        "a_max_depth",
+                        "max_depth",
+                        "sys.getrecursionlimit",
+                    ],
+                },
+            ],
+            "message_template": "Recursive function '{name}' missing depth limit",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        assert len(findings) == 1
+        assert "recurse" in findings[0].message
+
+    def test_sc065_empty_failure_message(self) -> None:
+        source = """
+def bad() -> object:
+    return Result.failure("")
+
+def ok() -> object:
+    return Result.failure("missing file")
+"""
+        tree = _parse(source)
+        config = {
+            "target_node": "Call",
+            "conditions": [
+                {"field": "func", "operator": "exists"},
+                {"field": "func.attr", "operator": "equals", "value": "failure"},
+                {
+                    "field": ".",
+                    "operator": "call_message_missing_or_empty",
+                    "value": {
+                        "keyword_names": ["a_message", "message"],
+                        "empty_values": ["", None],
+                    },
+                },
+            ],
+            "message_template": "Result.failure() called without descriptive message",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        assert len(findings) == 1
+
+    def test_deprecated_rules_not_loaded(self) -> None:
+        repo = JsonRuleRepository(Path("schema/rules"))
+        result = repo.find_all()
+        assert result.is_success()
+        ids = {rule.lineage_id for rule in result.unwrap()}
+        assert "SC-121" not in ids
+        assert "STYLE-1" in ids
 
 
 class TestAstScopeCheckEvaluator:

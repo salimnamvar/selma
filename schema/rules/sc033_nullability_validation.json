@@ -7,14 +7,21 @@
   "evaluator_config": {
     "target_node": "Attribute",
     "conditions": [
-      {"field": "value", "operator": "exists"},
-      {"field": "value", "operator": "contains_node", "value": "Name"}
+      {
+        "field": "value",
+        "operator": "exists"
+      },
+      {
+        "field": "value",
+        "operator": "contains_node",
+        "value": "Name"
+      }
     ],
     "message_template": "Potential null dereference on attribute access"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "None is Python's universal null. An unhandled None propagates through the codebase, causing failures at distant, unrelated points. Catching None at the entry point localizes the failure.",
   "remediation": "Add explicit 'if value is not None:' guard before attribute access.",

@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC
 from abc import abstractmethod
 import ast
+import re
 from typing import Any
 
 from selma.domain.entities.finding import Finding
@@ -67,9 +68,14 @@ class EvaluatorBase(ABC):
         b_continue = True
         result = a_template
         if b_continue and a_context:
-            try:
-                result = a_template.format(**a_context)
-            except (KeyError, IndexError):
+            # Only format when every simple placeholder key is present
+            # (SC-006: do not use exceptions for expected missing-key cases).
+            field_names = set(re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", a_template))
+            if field_names and field_names.issubset(set(a_context.keys())):
+                result = a_template.format(**{k: a_context[k] for k in field_names})
+            elif not field_names:
+                result = a_template
+            else:
                 result = a_template
         return result
 

@@ -8,7 +8,15 @@
     "target_node": "Call",
     "conditions": [
       {"field": "func", "operator": "exists"},
-      {"field": "func.attr", "operator": "equals", "value": "failure"}
+      {"field": "func.attr", "operator": "equals", "value": "failure"},
+      {
+        "field": ".",
+        "operator": "call_message_missing_or_empty",
+        "value": {
+          "keyword_names": ["a_message", "message"],
+          "empty_values": ["", null]
+        }
+      }
     ],
     "message_template": "Result.failure() called without descriptive message"
   },
@@ -16,12 +24,12 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Empty failure messages make debugging impossible. Without context, a developer cannot determine what went wrong or why.",
+  "rationale": "Empty failure messages make debugging impossible.",
   "remediation": "Add descriptive message: Result.failure('What went wrong and why').",
   "guidance": {
-    "correct_example": "if a_value is None:\n    return Result.failure(f'Parameter a_value is None — expected {ExpectedType.__name__}')",
-    "incorrect_example": "if a_value is None:\n    return Result.failure('')",
-    "explanation": "The correct version includes a descriptive message explaining what went wrong. The incorrect version has an empty message, making debugging impossible."
+    "correct_example": "return Result.failure(f'Parameter a_value is None')",
+    "incorrect_example": "return Result.failure('')",
+    "explanation": "Failure messages must describe what went wrong."
   },
   "parameters": {}
 }

@@ -7,16 +7,26 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "body", "operator": "not_contains_node", "value": "Assert"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "Assert"
+      }
     ],
     "message_template": "Function '{name}' should use assert for internal invariants"
   },
   "weight": "low",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Asserts document and verify internal invariants during development.",
   "remediation": "Use assert to verify invariants that should always be true at that point in code.",
-  "parameters": {"for_internal_use_only": true}
+  "parameters": {
+    "for_internal_use_only": true
+  }
 }

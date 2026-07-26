@@ -51,18 +51,22 @@ class Result(BaseModel, Generic[_T]):
         return self._is_success
 
     def map(self, a_fn: Callable[[_T], _U]) -> Result[_U]:
-        """Transform the success value, preserving failure unchanged."""
+        """Transform the success value, preserving failure unchanged.
+
+        Success with value=None is valid (SC-003); the mapper receives None.
+        """
         if not self._is_success:
             return Result.failure(self.message)
-        assert self.value is not None
-        return Result.success(a_fn(self.value), self.message)
+        return Result.success(a_fn(self.value), self.message)  # type: ignore[arg-type]
 
     def flat_map(self, a_fn: Callable[[_T], Result[_U]]) -> Result[_U]:
-        """Chain a function that itself returns a Result."""
+        """Chain a function that itself returns a Result.
+
+        Success with value=None is valid; the chained function receives None.
+        """
         if not self._is_success:
             return Result.failure(self.message)
-        assert self.value is not None
-        return a_fn(self.value)
+        return a_fn(self.value)  # type: ignore[arg-type]
 
     def unwrap(self) -> _T:
         """Return the success value, or raise ValueError on failure."""

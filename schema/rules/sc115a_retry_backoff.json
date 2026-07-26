@@ -6,15 +6,21 @@
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
-      {"module": "time", "method": "sleep"}
+      {
+        "module": "time",
+        "method": "sleep"
+      }
     ],
     "message_template": "Retry loops must use exponential backoff to avoid thundering herd"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Fixed-interval retries can overwhelm services during recovery.",
   "remediation": "Use exponential backoff with jitter. Cap maximum delay.",
-  "parameters": {"backoff_multiplier": 2, "max_delay_seconds": 60}
+  "parameters": {
+    "backoff_multiplier": 2,
+    "max_delay_seconds": 60
+  }
 }

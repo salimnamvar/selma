@@ -48,11 +48,12 @@ class AstCallCheckEvaluator(EvaluatorBase):
                 b_continue = False
             if b_continue and forbidden_calls:
                 match = self._check_forbidden_module_call(node, forbidden_calls)
-                if b_continue and match:
+                if b_continue and match is not None:
+                    module_name, method_name = match.split(".", 1)
                     ctx = {
-                        "module": match[0],
-                        "method": match[1],
-                        "function": f"{match[0]}.{match[1]}",
+                        "module": module_name,
+                        "method": method_name,
+                        "function": match,
                     }
                     msg = self._render_message(message_template, ctx)
                     findings.append(
@@ -125,10 +126,13 @@ class AstCallCheckEvaluator(EvaluatorBase):
     def _check_forbidden_module_call(
         a_node: ast.Call,
         a_forbidden_calls: list[dict[str, str]],
-    ) -> tuple[str, str] | None:
-        """Check if a call matches a forbidden module.method pattern."""
+    ) -> str | None:
+        """Check if a call matches a forbidden module.method pattern.
+
+        Returns 'module.method' on match, else None.
+        """
         b_continue = True
-        result: tuple[str, str] | None = None
+        result: str | None = None
         if b_continue and isinstance(a_node.func, ast.Attribute):
             method = a_node.func.attr
             module = _resolve_module_name(a_node.func.value)
@@ -140,7 +144,7 @@ class AstCallCheckEvaluator(EvaluatorBase):
                         and forbidden.get("method") == method
                     ):
                         b_continue = False
-                        result = (module, method)
+                        result = f"{module}.{method}"
         return result
 
     @staticmethod

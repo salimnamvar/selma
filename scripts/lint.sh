@@ -73,12 +73,10 @@ if ! "$PYTHON" -m pyright src/ 2>/dev/null; then
     exit 1
 fi
 
-# Self-lint exemptions: selma is under development and not yet fully compliant
-# with its own strict rules. These will be removed as the codebase matures.
-EXCLUDE_CODES="SC-003 SC-031 SC-092 SC-114 SC-006 SC-051 SC-065 SC-061 STYLE-1 STYLE-2 STYLE-3 SC-120 SC-121 SC-122 SC-130 SC-131 SC-132 SC-133"
-
 echo "▸ Running selma self-lint: ${SELMA_TARGET}…"
-if ! "$PYTHON" -m selma "${SELMA_TARGET}" --skip-tools --exclude-codes $EXCLUDE_CODES; then
+# Self-lint with full rule set (no exemptions). Process/governance rules
+# SC-120–133 are enforced outside AST evaluation.
+if ! "$PYTHON" -m selma "${SELMA_TARGET}" --skip-tools; then
     echo ""
     echo "✗ Selma AST rule violations found. Commit blocked."
     exit 1

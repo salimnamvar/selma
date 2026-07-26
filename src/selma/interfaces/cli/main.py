@@ -133,14 +133,12 @@ def main() -> int:
                 report_findings,
             )
             if report_result.is_success():
-                print(report_result.unwrap())  # noqa: T201
+                # CLI user-facing output (SC-061 / STYLE-3: avoid print()).
+                sys.stdout.write(report_result.unwrap() + "\n")
             if response.finding_count > 0:
                 result = 1
         else:
-            print(  # noqa: T201
-                f"Error: {lint_result.message}",
-                file=sys.stderr,
-            )
+            sys.stderr.write(f"Error: {lint_result.message}\n")
             result = 1
 
     return result

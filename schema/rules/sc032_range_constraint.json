@@ -7,17 +7,30 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "args.args", "operator": "not_empty"},
-      {"field": "body", "operator": "not_contains_node", "value": "Compare"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "args.args",
+        "operator": "not_empty"
+      },
+      {
+        "field": "body",
+        "operator": "not_contains_node",
+        "value": "Compare"
+      }
     ],
     "message_template": "Function '{name}' has parameters but no range/constraint checks"
   },
   "weight": "medium",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Unconstrained numeric inputs can cause overflow, division by zero, or invalid states.",
   "remediation": "Add range checks (e.g., 0 <= x <= max) or constraint validation for numeric parameters.",
-  "parameters": {"exempt_dunders": true}
+  "parameters": {
+    "exempt_dunders": true
+  }
 }

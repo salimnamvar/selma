@@ -7,16 +7,25 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "decorator_list", "operator": "not_exists"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "decorator_list",
+        "operator": "not_exists"
+      }
     ],
     "message_template": "Function '{name}' should include AI generation marker in comments or decorators"
   },
   "weight": "low",
   "priority": "advisory",
-  "status": "active",
+  "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "AI-generated code requires human review and compliance verification.",
   "remediation": "Add comment or decorator indicating AI generation: # AI-Generated: <model> <date>",
-  "parameters": {"marker_format": "# AI-Generated:"}
+  "parameters": {
+    "marker_format": "# AI-Generated:"
+  }
 }

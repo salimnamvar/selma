@@ -110,7 +110,9 @@ class LintUseCase:
             b_continue = False
             result = self._rule_repository.find_by_codes(tuple(a_request.codes))
 
-        all_rules_result: Result[tuple[RuleDefinition, ...]] = Result.failure("")
+        all_rules_result: Result[tuple[RuleDefinition, ...]] = Result.failure(
+            "Rules not yet loaded"
+        )
         if b_continue:
             all_rules_result = self._rule_repository.find_all()
             if all_rules_result.is_failure():

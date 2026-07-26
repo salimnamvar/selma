@@ -126,11 +126,11 @@ class ASTInterpreter:
             enriched = []
         if b_continue:
             severity = Severity.MEDIUM
-            weight = a_rule.get("weight", "medium")
-            try:
+            weight = str(a_rule.get("weight", "medium"))
+            # Validate against known members without try/except (SC-006).
+            valid_weights = {member.value for member in Severity}
+            if weight in valid_weights:
                 severity = Severity(weight)
-            except ValueError:
-                severity = Severity.MEDIUM
             for finding in a_findings:
                 enriched.append(
                     Finding(

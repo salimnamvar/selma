@@ -7,16 +7,25 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "body", "operator": "not_empty"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "body",
+        "operator": "not_empty"
+      }
     ],
     "message_template": "Function '{name}' should document postconditions in docstring"
   },
   "weight": "low",
   "priority": "operational",
-  "status": "active",
+  "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
   "rationale": "Postconditions clarify what the function guarantees after execution.",
   "remediation": "Add a 'Postconditions:' section to the function docstring listing guaranteed outcomes.",
-  "parameters": {"docstring_section": "Postconditions"}
+  "parameters": {
+    "docstring_section": "Postconditions"
+  }
 }

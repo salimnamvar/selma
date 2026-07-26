@@ -8,7 +8,12 @@
     "target_node": "ExceptHandler",
     "conditions": [
       {"field": "type", "operator": "exists"},
-      {"field": "name", "operator": "exists"}
+      {"field": "name", "operator": "exists"},
+      {
+        "field": ".",
+        "operator": "except_bound_name_unused",
+        "value": ["exc_info"]
+      }
     ],
     "message_template": "Exception handler must log str(e) or use exc_info=True for context"
   },

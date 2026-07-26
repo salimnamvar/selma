@@ -7,7 +7,16 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"}
+      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+      {
+        "field": ".",
+        "operator": "params_missing_prefix",
+        "value": {
+          "prefix": "a_",
+          "allow_private_underscore": true,
+          "skip_names": ["self", "cls", "args", "kwargs"]
+        }
+      }
     ],
     "message_template": "Function '{name}' arguments must use a_ prefix (except self/cls)"
   },
@@ -20,7 +29,7 @@
   "guidance": {
     "correct_example": "def calculate(a_value: float, a_multiplier: float = 1.0) -> Result[float]:\n    if not isinstance(a_value, (int, float)):\n        return Result.failure('Expected number')\n    return Result.success(a_value * a_multiplier)",
     "incorrect_example": "def calculate(value: float, multiplier: float = 1.0) -> Result[float]:\n    if not isinstance(value, (int, float)):\n        return Result.failure('Expected number')\n    return Result.success(value * multiplier)",
-    "explanation": "The correct version uses a_ prefix for parameters (a_value, a_multiplier). The incorrect version uses bare names that blend with local variables."
+    "explanation": "The correct version uses a_ prefix for parameters (a_value, a_multiplier). The incorrect version uses bare names that blend with local variables. Built-in parameter names self, cls, args, and kwargs are exempt."
   },
   "parameters": {
     "exempt_dunders": true,
@@ -28,6 +37,7 @@
     "exempt_cls": true,
     "exempt_private": true,
     "exempt_no_args": true,
-    "exempt_init": true
+    "exempt_init": true,
+    "skip_names": ["self", "cls", "args", "kwargs"]
   }
 }

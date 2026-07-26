@@ -8,19 +8,41 @@
     "target_node": "FunctionDef",
     "conditions": [
       {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "returns", "operator": "exists"}
+      {"field": "returns", "operator": "exists"},
+      {"field": "returns", "operator": "unparse_not_contains", "value": "Result"},
+      {"field": "returns", "operator": "unparse_not_in", "value": ["None", "NoReturn"]},
+      {
+        "field": "name",
+        "operator": "name_not_matches_any",
+        "value": ["^(is_|has_|_is_|_has_)", "^(unwrap|unwrap_or)$"]
+      },
+      {"field": ".", "operator": "not_has_decorator", "value": "property"},
+      {
+        "any_of": [
+          {"field": "returns", "operator": "unparse_matches", "value": "tuple"},
+          {"field": ".", "operator": "subtree_contains_node", "value": "Raise"},
+          {
+            "field": ".",
+            "operator": "calls_any",
+            "value": {
+              "names": ["open", "urlopen", "Popen", "check_output", "check_call", "connect", "executemany", "subprocess", "asyncio"],
+              "attrs": ["read_text", "read_bytes", "write_text", "write_bytes", "load", "loads", "dump", "dumps"]
+            }
+          }
+        ]
+      }
     ],
     "message_template": "Function '{name}' returns values but type is not Result[T]"
   },
   "weight": "critical",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "rationale": "Tuple returns are ambiguous. Callers must remember positional semantics. Typed results are self-documenting and statically analyzable.",
+  "rationale": "Tuple returns are ambiguous. Callers must remember positional semantics. Typed results are self-documenting and statically analyzable. Fallible operations that raise or perform I/O SHALL return Result[T].",
   "remediation": "Return a typed Result[T] with is_success(), value, and message fields.",
   "guidance": {
-    "correct_example": "from dataclasses import dataclass\nfrom typing import TypeVar, Generic, Optional\n\nclass Result(Generic[T]):\n    _is_success: bool\n    value: Optional[T]\n    message: str\n\n    def is_success(self) -> bool:\n        return self._is_success\n\n    @staticmethod\n    def success(value: T, message: str = 'Success') -> Result[T]:\n        return Result(_is_success=True, value=value, message=message)\n\n    @staticmethod\n    def failure(message: str) -> Result[None]:\n        return Result(_is_success=False, value=None, message=message)",
+    "correct_example": "def fetch_user(a_id: int) -> Result[User]:\n    user = db.query(a_id)\n    if user is None:\n        return Result.failure(f'User {a_id} not found')\n    return Result.success(user)",
     "incorrect_example": "def fetch_user(a_id: int) -> tuple[bool, User | None, str]:\n    user = db.query(a_id)\n    if user is None:\n        return (False, None, 'User not found')\n    return (True, user, 'Success')",
-    "explanation": "The correct version uses a typed Result[T] dataclass. The incorrect version returns a bare tuple where callers must remember positional semantics."
+    "explanation": "The correct version uses a typed Result[T]. The incorrect version returns a bare tuple where callers must remember positional semantics."
   },
   "parameters": {
     "exempt_dunders": true,
