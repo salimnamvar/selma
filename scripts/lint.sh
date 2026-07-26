@@ -10,30 +10,39 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-# Ensure conda is on PATH for hook environments
-if [[ -z "${CONDA_PREFIX:-}" && -z "${VIRTUAL_ENV:-}" ]]; then
+# Resolve the correct python — prefer active env, fall back to selma env
+_selma_python=""
+if [[ -n "${CONDA_PREFIX:-}" ]]; then
+    # CONDA_PREFIX may point to base conda (no selma there); check
+    if "$CONDA_PREFIX/bin/python" -c "import selma" 2>/dev/null; then
+        _selma_python="$CONDA_PREFIX/bin/python"
+    fi
+fi
+if [[ -z "$_selma_python" && -n "${VIRTUAL_ENV:-}" ]]; then
+    if "$VIRTUAL_ENV/bin/python" -c "import selma" 2>/dev/null; then
+        _selma_python="$VIRTUAL_ENV/bin/python"
+    fi
+fi
+if [[ -z "$_selma_python" ]]; then
+    # Ensure conda is on PATH for hook environments
     for _conda_dir in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3" "$HOME/mambaforge" "/opt/conda"; do
         if [[ -x "${_conda_dir}/bin/conda" ]]; then
             export PATH="${_conda_dir}/bin:${_conda_dir}/condabin:${PATH}"
             break
         fi
     done
+    if command -v conda &>/dev/null; then
+        _selma_env="$(conda info --base 2>/dev/null)/envs/selma"
+        if [[ -x "${_selma_env}/bin/python" ]]; then
+            _selma_python="${_selma_env}/bin/python"
+        fi
+    fi
+fi
+if [[ -z "$_selma_python" ]]; then
+    _selma_python="python"
 fi
 
-if [[ -n "${CONDA_PREFIX:-}" ]]; then
-    PYTHON="${CONDA_PREFIX}/bin/python"
-elif [[ -n "${VIRTUAL_ENV:-}" ]]; then
-    PYTHON="${VIRTUAL_ENV}/bin/python"
-elif command -v conda &>/dev/null; then
-    _selma_env="$(conda info --base 2>/dev/null)/envs/selma"
-    if [[ -x "${_selma_env}/bin/python" ]]; then
-        PYTHON="${_selma_env}/bin/python"
-    else
-        PYTHON="python"
-    fi
-else
-    PYTHON="python"
-fi
+PYTHON="$_selma_python"
 
 if ! "$PYTHON" -c "import selma" 2>/dev/null; then
     echo "✗ Python at '${PYTHON}' does not have selma installed."
