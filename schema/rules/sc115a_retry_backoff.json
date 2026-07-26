@@ -1,6 +1,6 @@
 {
-  "lineage_id": "SC-115",
-  "id": "SC-115-A",
+  "lineage_id": "SC-115A",
+  "id": "SC-115A",
   "type": "obligation",
   "message": "Retry logic without exponential backoff",
   "evaluator_type": "ast_call_check",

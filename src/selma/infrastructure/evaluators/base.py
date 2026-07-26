@@ -42,29 +42,19 @@ class EvaluatorBase(ABC):
         """
 
     @staticmethod
-    def _node_name(a_node: ast.AST) -> str:
+    def node_name(a_node: ast.AST) -> str:
         """Return the class name of an AST node."""
         return type(a_node).__name__
 
     @staticmethod
     def _get_line(a_node: ast.AST) -> int:
         """Return the line number of an AST node, defaulting to 0."""
-        b_continue = True
-        result = 0
-        if b_continue and hasattr(a_node, "lineno"):
-            b_continue = False
-            result = a_node.lineno  # type: ignore[union-attr]
-        return result
+        return getattr(a_node, "lineno", 0)
 
     @staticmethod
     def _get_col(a_node: ast.AST) -> int:
         """Return the column offset of an AST node, defaulting to 0."""
-        b_continue = True
-        result = 0
-        if b_continue and hasattr(a_node, "col_offset"):
-            b_continue = False
-            result = a_node.col_offset  # type: ignore[union-attr]
-        return result
+        return getattr(a_node, "col_offset", 0)
 
     @staticmethod
     def _get_attr(a_node: ast.AST, a_attr: str, a_default: Any = None) -> Any:
@@ -109,7 +99,7 @@ class EvaluatorBase(ABC):
         return result
 
     @staticmethod
-    def _is_dunder(a_name: str) -> bool:
+    def is_dunder(a_name: str) -> bool:
         """Check if a name is a dunder (double underscore) method."""
         b_continue = True
         result = False
@@ -119,7 +109,7 @@ class EvaluatorBase(ABC):
         return result
 
     @staticmethod
-    def _has_decorator(a_node: ast.AST, a_decorator_name: str) -> bool:
+    def has_decorator(a_node: ast.AST, a_decorator_name: str) -> bool:
         """Check if an AST node has a specific decorator."""
         b_continue = True
         result = False

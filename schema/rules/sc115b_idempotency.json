@@ -1,6 +1,6 @@
 {
-  "lineage_id": "SC-115",
-  "id": "SC-115-B",
+  "lineage_id": "SC-115B",
+  "id": "SC-115B",
   "type": "obligation",
   "message": "Non-idempotent operation without idempotency key",
   "evaluator_type": "ast_node_match",

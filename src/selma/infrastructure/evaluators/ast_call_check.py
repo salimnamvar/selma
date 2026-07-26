@@ -34,71 +34,69 @@ class AstCallCheckEvaluator(EvaluatorBase):
         """Check function calls for forbidden patterns."""
         b_continue = True
         findings: list[Finding] = []
-        a_forbidden_calls = a_config.get("forbidden_calls", [])
-        a_forbidden_functions = a_config.get("forbidden_functions", [])
-        a_target_methods = a_config.get("target_methods", [])
-        a_check_first_arg = a_config.get("check_first_arg", {})
-        a_exempt_if = a_config.get("exempt_if", {})
-        a_message_template = a_config.get("message_template", "")
-        for a_node in ast.walk(a_tree):
+        forbidden_calls = a_config.get("forbidden_calls", [])
+        forbidden_functions = a_config.get("forbidden_functions", [])
+        target_methods = a_config.get("target_methods", [])
+        check_first_arg = a_config.get("check_first_arg", {})
+        exempt_if = a_config.get("exempt_if", {})
+        message_template = a_config.get("message_template", "")
+        for node in ast.walk(a_tree):
+            if not isinstance(node, ast.Call):
+                continue
             b_continue = True
-            if b_continue and not isinstance(a_node, ast.Call):
+            if b_continue and self._is_exempt_call(node, exempt_if, a_tree):
                 b_continue = False
-            if b_continue and self._is_exempt_call(a_node, a_exempt_if, a_tree):
-                b_continue = False
-            if b_continue and a_forbidden_calls:
-                a_match = self._check_forbidden_module_call(a_node, a_forbidden_calls)
-                if b_continue and a_match:
-                    a_ctx = {
-                        "module": a_match[0],
-                        "method": a_match[1],
-                        "function": f"{a_match[0]}.{a_match[1]}",
+            if b_continue and forbidden_calls:
+                match = self._check_forbidden_module_call(node, forbidden_calls)
+                if b_continue and match:
+                    ctx = {
+                        "module": match[0],
+                        "method": match[1],
+                        "function": f"{match[0]}.{match[1]}",
                     }
-                    a_msg = self._render_message(a_message_template, a_ctx)
+                    msg = self._render_message(message_template, ctx)
                     findings.append(
                         Finding(
                             rule_id=a_rule.get("lineage_id", ""),
                             file="",
-                            line=self._get_line(a_node),
-                            col=self._get_col(a_node),
-                            message=a_msg,
+                            line=self._get_line(node),
+                            col=self._get_col(node),
+                            message=msg,
                         )
                     )
                     b_continue = False
-            if b_continue and a_forbidden_functions:
-                a_func_name = self._get_call_name(a_node)
-                if b_continue and a_func_name in a_forbidden_functions:
-                    a_ctx = {
-                        "function": a_func_name,
+            if b_continue and forbidden_functions:
+                func_name = self._get_call_name(node)
+                if b_continue and func_name in forbidden_functions:
+                    ctx = {
+                        "function": func_name,
                         "module": "",
-                        "method": a_func_name,
+                        "method": func_name,
                     }
-                    a_msg = self._render_message(a_message_template, a_ctx)
+                    msg = self._render_message(message_template, ctx)
                     findings.append(
                         Finding(
                             rule_id=a_rule.get("lineage_id", ""),
                             file="",
-                            line=self._get_line(a_node),
-                            col=self._get_col(a_node),
-                            message=a_msg,
+                            line=self._get_line(node),
+                            col=self._get_col(node),
+                            message=msg,
                         )
                     )
                     b_continue = False
-            if b_continue and a_target_methods and a_check_first_arg:
-                a_method = self._get_method_name(a_node)
-                if b_continue and a_method in a_target_methods:
-                    if b_continue and self._first_arg_violates(
-                        a_node, a_check_first_arg
-                    ):
-                        a_ctx = {"function": a_method, "module": "", "method": a_method}
-                        a_msg = self._render_message(a_message_template, a_ctx)
+            if b_continue and target_methods and check_first_arg:
+                method = self._get_method_name(node)
+                if b_continue and method in target_methods:
+                    if b_continue and self._first_arg_violates(node, check_first_arg):
+                        ctx = {"function": method, "module": "", "method": method}
+                        msg = self._render_message(message_template, ctx)
                         findings.append(
                             Finding(
                                 rule_id=a_rule.get("lineage_id", ""),
                                 file="",
-                                line=self._get_line(a_node),
-                                col=self._get_col(a_node),
-                                message=a_msg,
+                                line=self._get_line(node),
+                                col=self._get_col(node),
+                                message=msg,
                             )
                         )
         return findings
@@ -112,13 +110,13 @@ class AstCallCheckEvaluator(EvaluatorBase):
         """Check if a call node is exempt based on exemption rules."""
         b_continue = True
         result = False
-        a_param_names = a_exempt_if.get("function_has_parameter_named", [])
-        if b_continue and a_param_names:
-            a_enclosing = _find_enclosing_function(a_node, a_tree)
-            if b_continue and a_enclosing is not None:
-                a_args = _get_function_param_names(a_enclosing)
-                for a_pname in a_args:
-                    if b_continue and a_pname in a_param_names:
+        param_names = a_exempt_if.get("function_has_parameter_named", [])
+        if b_continue and param_names:
+            enclosing = _find_enclosing_function(a_node, a_tree)
+            if b_continue and enclosing is not None:
+                args = _get_function_param_names(enclosing)
+                for pname in args:
+                    if b_continue and pname in param_names:
                         b_continue = False
                         result = True
         return result
@@ -132,17 +130,17 @@ class AstCallCheckEvaluator(EvaluatorBase):
         b_continue = True
         result: tuple[str, str] | None = None
         if b_continue and isinstance(a_node.func, ast.Attribute):
-            a_method = a_node.func.attr
-            a_module = _resolve_module_name(a_node.func.value)
-            if b_continue and a_module:
-                for a_forbidden in a_forbidden_calls:
+            method = a_node.func.attr
+            module = _resolve_module_name(a_node.func.value)
+            if b_continue and module:
+                for forbidden in a_forbidden_calls:
                     if (
                         b_continue
-                        and a_forbidden.get("module") == a_module
-                        and a_forbidden.get("method") == a_method
+                        and forbidden.get("module") == module
+                        and forbidden.get("method") == method
                     ):
                         b_continue = False
-                        result = (a_module, a_method)
+                        result = (module, method)
         return result
 
     @staticmethod
@@ -180,33 +178,33 @@ class AstCallCheckEvaluator(EvaluatorBase):
             b_continue = False
             result = False
         if b_continue:
-            a_first = a_node.args[0]
+            first = a_node.args[0]
             if b_continue and a_check.get("forbid_fstring", False):
-                if b_continue and isinstance(a_first, ast.JoinedStr):
+                if b_continue and isinstance(first, ast.JoinedStr):
                     b_continue = False
                     result = True
             if b_continue and a_check.get("forbid_format_call", False):
                 if (
                     b_continue
-                    and isinstance(a_first, ast.Call)
-                    and isinstance(a_first.func, ast.Attribute)
+                    and isinstance(first, ast.Call)
+                    and isinstance(first.func, ast.Attribute)
                 ):
-                    if b_continue and a_first.func.attr == "format":
+                    if b_continue and first.func.attr == "format":
                         b_continue = False
                         result = True
             if b_continue and a_check.get("forbid_percent_format", False):
                 if (
                     b_continue
-                    and isinstance(a_first, ast.BinOp)
-                    and isinstance(a_first.op, ast.Mod)
+                    and isinstance(first, ast.BinOp)
+                    and isinstance(first.op, ast.Mod)
                 ):
                     b_continue = False
                     result = True
             if b_continue and a_check.get("forbid_string_concat", False):
                 if (
                     b_continue
-                    and isinstance(a_first, ast.BinOp)
-                    and isinstance(a_first.op, ast.Add)
+                    and isinstance(first, ast.BinOp)
+                    and isinstance(first.op, ast.Add)
                 ):
                     b_continue = False
                     result = True
@@ -222,7 +220,7 @@ def _resolve_module_name(a_node: ast.AST) -> str:
         result = a_node.id
     if b_continue and isinstance(a_node, ast.Attribute):
         b_continue = False
-        parts = []
+        parts: list[str] = []
         current: ast.AST = a_node
         while isinstance(current, ast.Attribute):
             parts.append(current.attr)
@@ -239,32 +237,34 @@ def _resolve_module_name(a_node: ast.AST) -> str:
 
 def _find_enclosing_function(
     a_node: ast.AST, a_tree: ast.AST
-) -> ast.FunctionDef | None:
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
     """Find the enclosing FunctionDef for a given node by walking parent references."""
     b_continue = True
-    result: ast.FunctionDef | None = None
-    for a_parent in ast.walk(a_tree):
-        if b_continue and isinstance(a_parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for a_child in ast.walk(a_parent):
-                if b_continue and a_child is a_node:
+    result: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+    for parent in ast.walk(a_tree):
+        if b_continue and isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for child in ast.walk(parent):
+                if b_continue and child is a_node:
                     b_continue = False
-                    result = a_parent
+                    result = parent
     return result
 
 
-def _get_function_param_names(a_func: ast.FunctionDef) -> list[str]:
+def _get_function_param_names(
+    a_func: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[str]:
     """Get the parameter names of a FunctionDef."""
     b_continue = True
     result: list[str] = []
     if b_continue:
-        for a_arg in a_func.args.args:
-            result.append(a_arg.arg)
-        for a_arg in a_func.args.posonlyargs:
-            result.append(a_arg.arg)
+        for arg in a_func.args.args:
+            result.append(arg.arg)
+        for arg in a_func.args.posonlyargs:
+            result.append(arg.arg)
         if a_func.args.vararg:
             result.append(a_func.args.vararg.arg)
-        for a_arg in a_func.args.kwonlyargs:
-            result.append(a_arg.arg)
+        for arg in a_func.args.kwonlyargs:
+            result.append(arg.arg)
         if a_func.args.kwarg:
             result.append(a_func.args.kwarg.arg)
     return result

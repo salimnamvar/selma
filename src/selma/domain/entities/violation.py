@@ -31,7 +31,7 @@ class Violation(BaseModel):
             f"{self.severity}: {self.message} ({self.code})"
         )
 
-    def to_dict(self, a_include_guidance: bool = False) -> dict:
+    def to_dict(self, a_include_guidance: bool = False) -> dict[str, object]:
         """Convert to dictionary for JSON output."""
         d: dict[str, object] = {
             "file": self.filepath,

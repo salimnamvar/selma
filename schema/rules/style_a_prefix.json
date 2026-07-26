@@ -26,6 +26,8 @@
     "exempt_dunders": true,
     "exempt_self": true,
     "exempt_cls": true,
-    "exempt_private": true
+    "exempt_private": true,
+    "exempt_no_args": true,
+    "exempt_init": true
   }
 }

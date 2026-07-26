@@ -33,37 +33,35 @@ class AstWalkEvaluator(EvaluatorBase):
         """Walk AST counting specific node types within root nodes."""
         b_continue = True
         findings: list[Finding] = []
-        a_root_node = a_config.get("root_node", "")
-        a_walk_nodes = a_config.get("walk_nodes", [])
-        a_walk_config = a_config.get("walk_config", {})
-        a_count_config = a_config.get("count", {})
-        a_count_breakdown = a_config.get("count_breakdown", {})
-        a_message_template = a_config.get("message_template", "")
-        a_threshold_value = a_count_config.get("value", 0)
-        a_threshold_op = a_count_config.get("operator", "gt")
-        for a_node in ast.walk(a_tree):
+        root_node = a_config.get("root_node", "")
+        walk_nodes = a_config.get("walk_nodes", [])
+        walk_config = a_config.get("walk_config", {})
+        count_config = a_config.get("count", {})
+        count_breakdown = a_config.get("count_breakdown", {})
+        message_template = a_config.get("message_template", "")
+        threshold_value = count_config.get("value", 0)
+        threshold_op = count_config.get("operator", "gt")
+        for node in ast.walk(a_tree):
             b_continue = True
-            if b_continue and self._node_name(a_node) != a_root_node:
+            if b_continue and self.node_name(node) != root_node:
                 b_continue = False
-            if b_continue and self._is_excluded(a_node, a_walk_config, a_config):
+            if b_continue and self._is_excluded(node, walk_config, a_config):
                 b_continue = False
             if b_continue:
-                a_count = self._count_child_nodes(a_node, a_walk_nodes, a_walk_config)
+                count = self._count_child_nodes(node, walk_nodes, walk_config)
                 if b_continue and self._check_operator(
-                    a_count, a_threshold_op, a_threshold_value
+                    count, threshold_op, threshold_value
                 ):
-                    a_breakdown = self._build_breakdown(
-                        a_node, a_walk_nodes, a_count_breakdown
-                    )
-                    a_ctx = self._build_context(a_node, a_count, a_breakdown)
-                    a_msg = self._render_message(a_message_template, a_ctx)
+                    breakdown = self._build_breakdown(node, walk_nodes, count_breakdown)
+                    ctx = self._build_context(node, count, breakdown)
+                    msg = self._render_message(message_template, ctx)
                     findings.append(
                         Finding(
                             rule_id=a_rule.get("lineage_id", ""),
                             file="",
-                            line=self._get_line(a_node),
-                            col=self._get_col(a_node),
-                            message=a_msg,
+                            line=self._get_line(node),
+                            col=self._get_col(node),
+                            message=msg,
                         )
                     )
         return findings
@@ -78,23 +76,23 @@ class AstWalkEvaluator(EvaluatorBase):
         b_continue = True
         result = False
         if b_continue and a_walk_config.get("exclude_dunders", False):
-            a_name = getattr(a_node, "name", "")
-            if b_continue and self._is_dunder(a_name):
+            name = getattr(a_node, "name", "")
+            if b_continue and EvaluatorBase.is_dunder(name):
                 b_continue = False
                 result = True
         if b_continue and a_walk_config.get("exclude_generators", False):
-            if b_continue and self._is_generator(a_node):
+            if b_continue and AstWalkEvaluator._is_generator(a_node):
                 b_continue = False
                 result = True
         if b_continue and a_walk_config.get("exclude_framework_adapters", False):
-            a_params = a_config.get("parameters", {})
-            a_adapter_keywords = a_params.get(
+            params = a_config.get("parameters", {})
+            adapter_keywords = params.get(
                 "adapter_keywords", ["exception", "error", "http"]
             )
-            a_name = getattr(a_node, "name", "")
+            name = getattr(a_node, "name", "")
             if b_continue:
-                for a_kw in a_adapter_keywords:
-                    if b_continue and a_kw.lower() in a_name.lower():
+                for kw in adapter_keywords:
+                    if b_continue and kw.lower() in name.lower():
                         b_continue = False
                         result = True
         return result
@@ -110,8 +108,8 @@ class AstWalkEvaluator(EvaluatorBase):
             b_continue = False
             result = False
         if b_continue:
-            for a_child in ast.walk(a_node):
-                if b_continue and isinstance(a_child, (ast.Yield, ast.YieldFrom)):
+            for child in ast.walk(a_node):
+                if b_continue and isinstance(child, (ast.Yield, ast.YieldFrom)):
                     b_continue = False
                     result = True
         return result
@@ -124,21 +122,21 @@ class AstWalkEvaluator(EvaluatorBase):
     ) -> int:
         """Count matching child nodes within a root node, respecting exclusions."""
         b_continue = True
-        a_count = 0
-        a_exclude_nested = a_walk_config.get("exclude_nested_functions", False)
-        for a_child in ast.walk(a_node):
+        count = 0
+        exclude_nested = a_walk_config.get("exclude_nested_functions", False)
+        for child in ast.walk(a_node):
             b_continue = True
-            if b_continue and a_exclude_nested and isinstance(a_child, ast.FunctionDef):
+            if b_continue and exclude_nested and isinstance(child, ast.FunctionDef):
                 b_continue = False
             if (
                 b_continue
-                and a_exclude_nested
-                and isinstance(a_child, ast.AsyncFunctionDef)
+                and exclude_nested
+                and isinstance(child, ast.AsyncFunctionDef)
             ):
                 b_continue = False
-            if b_continue and self._node_name(a_child) in a_walk_nodes:
-                a_count += 1
-        return a_count
+            if b_continue and EvaluatorBase.node_name(child) in a_walk_nodes:
+                count += 1
+        return count
 
     @staticmethod
     def _build_breakdown(
@@ -154,10 +152,10 @@ class AstWalkEvaluator(EvaluatorBase):
             result = ""
         if b_continue:
             parts: list[str] = []
-            for a_child in ast.walk(a_node):
-                a_name = self._node_name(a_child)
-                if a_name in a_count_breakdown:
-                    parts.append(a_count_breakdown[a_name])
+            for child in ast.walk(a_node):
+                name = EvaluatorBase.node_name(child)
+                if name in a_count_breakdown:
+                    parts.append(a_count_breakdown[name])
             if b_continue:
                 b_continue = False
                 result = ", ".join(parts) if parts else ""
@@ -170,11 +168,10 @@ class AstWalkEvaluator(EvaluatorBase):
         a_breakdown: str,
     ) -> dict[str, Any]:
         """Build template context dict from a node and count."""
-        b_continue = True
-        a_name = getattr(a_node, "name", "<unknown>")
+        name = getattr(a_node, "name", "<unknown>")
         result: dict[str, Any] = {
-            "root.name": a_name,
-            "name": a_name,
+            "root.name": name,
+            "name": name,
             "count": a_count,
             "breakdown": a_breakdown,
         }

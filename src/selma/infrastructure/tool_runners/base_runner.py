@@ -44,6 +44,7 @@ class BaseToolRunner(ToolRunner):
                 b_continue = False
                 result = Result.failure(f"{self.name} not found in PATH")
         if b_continue:
+            assert resolved is not None
             result = Result.success(resolved)
         return result
 

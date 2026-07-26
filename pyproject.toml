@@ -320,7 +320,7 @@ file_timeout = 30
 
 # ─── Rules (top-level filtering) ───────────────────────────────────────────
 [tool.selma.rules]
-disabled = ["SC-033", "SC-114"]
+disabled = []
 codes = []
 exclude_codes = []
 

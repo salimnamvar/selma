@@ -54,7 +54,7 @@ class JsonRuleRepository(RuleRepository):
                 result = Result.failure(load_result.message)
             if b_continue and load_result.is_success():
                 self._cached_rules = load_result.value
-                result = Result.success(load_result.value)
+                result = Result.success(load_result.unwrap())
 
         return result
 
@@ -77,10 +77,10 @@ class JsonRuleRepository(RuleRepository):
             result = Result.failure(all_rules_result.message)
         if b_continue:
             found: RuleDefinition | None = None
-            for a_rule in all_rules_result.value:
-                if b_continue and RuleId(a_rule.lineage_id) == a_id:
+            for rule in all_rules_result.unwrap():
+                if b_continue and RuleId(rule.lineage_id) == a_id:
                     b_continue = False
-                    found = a_rule
+                    found = rule
             if b_continue:
                 result = Result.failure(f"Rule not found: {a_id}")
             if not b_continue and found is not None:
@@ -109,9 +109,9 @@ class JsonRuleRepository(RuleRepository):
         if b_continue:
             codes_set = frozenset(a_codes)
             matched = tuple(
-                a_rule
-                for a_rule in all_rules_result.value
-                if a_rule.lineage_id in codes_set or a_rule.id in codes_set
+                rule
+                for rule in all_rules_result.unwrap()
+                if rule.lineage_id in codes_set or rule.id in codes_set
             )
             result = Result.success(matched)
 
@@ -131,15 +131,15 @@ class JsonRuleRepository(RuleRepository):
 
         if b_continue:
             json_files = sorted(self._rules_dir.glob("*.json"))
-            for a_file in json_files:
+            for file_path in json_files:
                 if b_continue:
-                    load_result = self._load_rule_file(a_file)
+                    load_result = self._load_rule_file(file_path)
                     if b_continue and load_result.is_failure():
                         b_continue = False
-                        msg = f"Failed to load {a_file.name}: {load_result.message}"
+                        msg = f"Failed to load {file_path.name}: {load_result.message}"
                         result = Result.failure(msg)
                     if b_continue and load_result.is_success():
-                        rules.extend(load_result.value)
+                        rules.extend(load_result.unwrap())
 
         if b_continue:
             result = Result.success(tuple(rules))
@@ -166,14 +166,14 @@ class JsonRuleRepository(RuleRepository):
                 if not raw_rules and "lineage_id" in data:
                     raw_rules = [data]
                 parsed: list[RuleDefinition] = []
-                for a_raw in raw_rules:
+                for raw_rule in raw_rules:
                     if b_continue:
-                        parse_result = self._parse_rule(a_raw)
+                        parse_result = self._parse_rule(raw_rule)
                         if b_continue and parse_result.is_failure():
                             b_continue = False
                             result = Result.failure(parse_result.message)
                         if b_continue and parse_result.is_success():
-                            parsed.append(parse_result.value)
+                            parsed.append(parse_result.unwrap())
                 if b_continue:
                     result = Result.success(tuple(parsed))
         except (OSError, json.JSONDecodeError) as e:
@@ -220,7 +220,7 @@ class JsonRuleRepository(RuleRepository):
                 msg = f"Rule {lineage_id}: {ec_result.message}"
                 result = Result.failure(msg)
             if b_continue and ec_result.is_success():
-                evaluator_config = ec_result.value
+                evaluator_config = ec_result.unwrap()
 
         status = a_raw.get("status", "active")
         created_at = a_raw.get("created_at", "")
@@ -283,14 +283,13 @@ class JsonRuleRepository(RuleRepository):
         target_node = a_raw.get("target_node")
         walk_nodes = tuple(a_raw.get("walk_nodes", []))
         conditions = tuple(a_raw.get("conditions", []))
-        fc_raw = a_raw.get("forbidden_calls", [])
+        fc_raw: list[dict[str, str]] = a_raw.get("forbidden_calls", [])
         forbidden_calls = tuple(
             {
                 "name": fc.get("name", ""),
                 "module": fc.get("module", ""),
             }
             for fc in fc_raw
-            if isinstance(fc, dict)
         )
         forbidden_functions = tuple(a_raw.get("forbidden_functions", []))
         resource_calls = tuple(a_raw.get("resource_calls", []))
@@ -309,14 +308,14 @@ class JsonRuleRepository(RuleRepository):
         sub_evaluators: tuple[EvaluatorConfig, ...] = ()
         if sub_raw:
             parsed_subs: list[EvaluatorConfig] = []
-            for a_sub in sub_raw:
-                sub_result = self._parse_evaluator_config(a_sub)
+            for sub_item in sub_raw:
+                sub_result = self._parse_evaluator_config(sub_item)
                 if b_continue and sub_result.is_failure():
                     b_continue = False
                     msg = f"Sub-evaluator: {sub_result.message}"
                     result = Result.failure(msg)
                 if b_continue and sub_result.is_success():
-                    parsed_subs.append(sub_result.value)
+                    parsed_subs.append(sub_result.unwrap())
             if b_continue:
                 sub_evaluators = tuple(parsed_subs)
 
@@ -324,7 +323,7 @@ class JsonRuleRepository(RuleRepository):
             config = EvaluatorConfig(
                 pattern=pattern,
                 flags=flags,
-                field=field,
+                target_field=field,
                 operator=operator,
                 value=value,
                 threshold=threshold,

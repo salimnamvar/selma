@@ -31,34 +31,31 @@ class AstContextCheckEvaluator(EvaluatorBase):
         """Check that target function calls appear inside required context."""
         b_continue = True
         findings: list[Finding] = []
-        a_target_node = a_config.get("target_node", "Call")
-        a_target_functions = a_config.get("target_functions", [])
-        a_context = a_config.get("context", {})
-        a_message_template = a_config.get("message_template", "")
-        for a_node in ast.walk(a_tree):
+        target_node = a_config.get("target_node", "Call")
+        target_functions = a_config.get("target_functions", [])
+        context = a_config.get("context", {})
+        message_template = a_config.get("message_template", "")
+        for node in ast.walk(a_tree):
+            if self.node_name(node) != target_node:
+                continue
+            if not isinstance(node, ast.Call):
+                continue
             b_continue = True
-            if b_continue and self._node_name(a_node) != a_target_node:
+            func_name = _extract_call_name(node)
+            if b_continue and func_name not in target_functions:
                 b_continue = False
-            if b_continue and not isinstance(a_node, ast.Call):
-                b_continue = False
-            if b_continue:
-                a_func_name = _extract_call_name(a_node)
-                if b_continue and a_func_name not in a_target_functions:
-                    b_continue = False
-                if b_continue and not _is_in_required_context(
-                    a_node, a_tree, a_context
-                ):
-                    a_ctx = {"function": a_func_name, "name": a_func_name}
-                    a_msg = self._render_message(a_message_template, a_ctx)
-                    findings.append(
-                        Finding(
-                            rule_id=a_rule.get("lineage_id", ""),
-                            file="",
-                            line=self._get_line(a_node),
-                            col=self._get_col(a_node),
-                            message=a_msg,
-                        )
+            if b_continue and not _is_in_required_context(node, a_tree, context):
+                ctx = {"function": func_name, "name": func_name}
+                msg = self._render_message(message_template, ctx)
+                findings.append(
+                    Finding(
+                        rule_id=a_rule.get("lineage_id", ""),
+                        file="",
+                        line=self._get_line(node),
+                        col=self._get_col(node),
+                        message=msg,
                     )
+                )
         return findings
 
 
@@ -83,20 +80,20 @@ def _is_in_required_context(
     """Check if a node is inside a required context (with statement or try/finally)."""
     b_continue = True
     result = False
-    a_must_be_inside = a_context.get("must_be_inside", [])
-    a_or_try_finally = a_context.get("or_try_finally", False)
-    a_parents = _find_parents(a_node, a_tree)
+    _a_must_be_inside = a_context.get("must_be_inside", [])
+    or_try_finally = a_context.get("or_try_finally", False)
+    parents = _find_parents(a_node, a_tree)
     if b_continue:
-        for a_parent in a_parents:
+        for parent in parents:
             b_continue_inner = True
-            if b_continue_inner and isinstance(a_parent, ast.With):
+            if b_continue_inner and isinstance(parent, ast.With):
                 b_continue_inner = False
                 result = True
-            if b_continue_inner and a_or_try_finally and isinstance(a_parent, ast.Try):
-                if b_continue_inner and a_parent.finalbody:
+            if b_continue_inner and or_try_finally and isinstance(parent, ast.Try):
+                if b_continue_inner and parent.finalbody:
                     b_continue_inner = False
                     result = True
-                if b_continue_inner and a_parent.handlers:
+                if b_continue_inner and parent.handlers:
                     b_continue_inner = False
                     result = True
             if result:
@@ -106,18 +103,10 @@ def _is_in_required_context(
 
 def _find_parents(a_node: ast.AST, a_tree: ast.AST) -> list[ast.AST]:
     """Find all parent nodes of a given node by walking the tree."""
-    b_continue = True
     result: list[ast.AST] = []
-    for a_parent in ast.walk(a_tree):
-        if b_continue:
-            for a_child in ast.iter_child_nodes(a_parent):
-                if b_continue and a_child is a_node:
-                    result.append(a_parent)
-                    break
-                if b_continue:
-                    for a_descendant in ast.walk(a_child):
-                        if b_continue and a_descendant is a_node:
-                            result.append(a_parent)
-                            b_continue = False
-                            break
+    for parent in ast.walk(a_tree):
+        for descendant in ast.walk(parent):
+            if descendant is a_node and descendant is not parent:
+                result.append(parent)
+                break
     return result

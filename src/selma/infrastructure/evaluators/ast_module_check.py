@@ -29,24 +29,24 @@ class AstModuleCheckEvaluator(EvaluatorBase):
         """Run module-level checks."""
         b_continue = True
         findings: list[Finding] = []
-        a_check = a_config.get("check", {})
-        a_message_template = a_config.get("message_template", "")
-        a_check_type = a_check.get("type", "")
-        if b_continue and a_check_type == "sentinel_exists":
-            a_sentinel_name = a_check.get("sentinel_name", "INVALID_RESULT")
-            a_condition = a_check.get("condition", "")
-            if b_continue and a_condition == "module_has_result_returning_functions":
-                if b_continue and not _has_sentinel(a_tree, a_sentinel_name):
+        check = a_config.get("check", {})
+        message_template = a_config.get("message_template", "")
+        check_type = check.get("type", "")
+        if b_continue and check_type == "sentinel_exists":
+            sentinel_name = check.get("sentinel_name", "INVALID_RESULT")
+            condition = check.get("condition", "")
+            if b_continue and condition == "module_has_result_returning_functions":
+                if b_continue and not _has_sentinel(a_tree, sentinel_name):
                     if b_continue and _has_result_returning_functions(a_tree):
-                        a_ctx = {"sentinel": a_sentinel_name, "name": a_sentinel_name}
-                        a_msg = self._render_message(a_message_template, a_ctx)
+                        ctx = {"sentinel": sentinel_name, "name": sentinel_name}
+                        msg = self._render_message(message_template, ctx)
                         findings.append(
                             Finding(
                                 rule_id=a_rule.get("lineage_id", ""),
                                 file="",
                                 line=1,
                                 col=0,
-                                message=a_msg,
+                                message=msg,
                             )
                         )
         return findings
@@ -56,21 +56,17 @@ def _has_sentinel(a_tree: ast.AST, a_name: str) -> bool:
     """Check if a module-level assignment with the given name exists."""
     b_continue = True
     result = False
-    for a_node in ast.iter_child_nodes(a_tree):
-        if b_continue and isinstance(a_node, ast.Assign):
-            for a_target in a_node.targets:
-                if (
-                    b_continue
-                    and isinstance(a_target, ast.Name)
-                    and a_target.id == a_name
-                ):
+    for node in ast.iter_child_nodes(a_tree):
+        if b_continue and isinstance(node, ast.Assign):
+            for target in node.targets:
+                if b_continue and isinstance(target, ast.Name) and target.id == a_name:
                     b_continue = False
                     result = True
-        if b_continue and isinstance(a_node, ast.AnnAssign):
+        if b_continue and isinstance(node, ast.AnnAssign):
             if (
                 b_continue
-                and isinstance(a_node.target, ast.Name)
-                and a_node.target.id == a_name
+                and isinstance(node.target, ast.Name)
+                and node.target.id == a_name
             ):
                 b_continue = False
                 result = True
@@ -81,11 +77,11 @@ def _has_result_returning_functions(a_tree: ast.AST) -> bool:
     """Check if any function in the module has a Result return type annotation."""
     b_continue = True
     result = False
-    for a_node in ast.walk(a_tree):
-        if b_continue and isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if b_continue and a_node.returns is not None:
-                a_ret_str = ast.dump(a_node.returns)
-                if b_continue and "Result" in a_ret_str:
+    for node in ast.walk(a_tree):
+        if b_continue and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if b_continue and node.returns is not None:
+                ret_str = ast.dump(node.returns)
+                if b_continue and "Result" in ret_str:
                     b_continue = False
                     result = True
     return result

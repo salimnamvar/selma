@@ -35,5 +35,5 @@ class PyrightRunner(BaseToolRunner):
             )
         if b_continue:
             cwd = str(kwargs.get("a_project_root", "."))
-            result = self._exec([bin_result.value], a_cwd=cwd)
+            result = self._exec([bin_result.unwrap()], a_cwd=cwd)
         return result

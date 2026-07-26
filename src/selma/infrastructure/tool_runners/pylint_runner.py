@@ -35,6 +35,7 @@ class PylintRunner(BaseToolRunner):
                     returncode=0,
                 )
             )
+        rcfile = ""
         if b_continue:
             rcfile = str(kwargs.get("a_rcfile", ""))
             if not rcfile:
@@ -55,7 +56,7 @@ class PylintRunner(BaseToolRunner):
             src = a_paths[0] if a_paths else "src"
             result = self._exec(
                 [
-                    bin_result.value,
+                    bin_result.unwrap(),
                     f"--rcfile={rcfile}",
                     "--recursive=y",
                     "--fail-under=8",

@@ -22,7 +22,7 @@ class LintResult(BaseModel):
     """
 
     source_file: SourceFile
-    _findings: list[Finding] = PrivateAttr(default_factory=list)
+    _findings: list[Finding] = PrivateAttr()
     _is_complete: bool = PrivateAttr(default=False)
 
     def model_post_init(self, __context: object) -> None:

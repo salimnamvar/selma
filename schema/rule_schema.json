@@ -261,12 +261,12 @@
         "properties": {
           "lineage_id": {
             "type": "string",
-            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
-            "description": "Immutable root identifier. Assigned once, never reused. Used for audit trail."
+            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?$",
+            "description": "Immutable root identifier. Assigned once, never reused. Used for audit trail. Optional letter suffix for sub-rules (e.g. SC-115A)."
           },
           "id": {
             "type": "string",
-            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?(-[A-Z0-9]+)*$",
             "description": "Active execution identifier. May change on fork/merge/split. Used for CG-IR compilation."
           },
           "type": {
@@ -728,12 +728,12 @@
     },
     "lineage_id": {
       "type": "string",
-      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?$",
       "description": "Immutable root identifier for individual rule objects."
     },
     "id": {
       "type": "string",
-      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?(-[A-Z0-9]+)*$",
       "description": "Active execution identifier for individual rule objects."
     },
     "type": {

@@ -30,34 +30,34 @@ class AstScopeCheckEvaluator(EvaluatorBase):
         """Check variable patterns within function scope."""
         b_continue = True
         findings: list[Finding] = []
-        a_root_node = a_config.get("root_node", "FunctionDef")
-        a_check = a_config.get("check", {})
-        a_message_template = a_config.get("message_template", "")
-        a_exemptions = a_rule.get("parameters", {})
-        for a_node in ast.walk(a_tree):
+        root_node = a_config.get("root_node", "FunctionDef")
+        check = a_config.get("check", {})
+        message_template = a_config.get("message_template", "")
+        exemptions = a_rule.get("parameters", {})
+        for node in ast.walk(a_tree):
             b_continue = True
-            if b_continue and self._node_name(a_node) != a_root_node:
+            if b_continue and self.node_name(node) != root_node:
                 b_continue = False
-            if b_continue and a_exemptions.get("exempt_dunders", False):
-                a_name = getattr(a_node, "name", "")
-                if b_continue and self._is_dunder(a_name):
+            if b_continue and exemptions.get("exempt_dunders", False):
+                name = getattr(node, "name", "")
+                if b_continue and self.is_dunder(name):
                     b_continue = False
             if b_continue:
-                violations = self._check_variable_rules(a_node, a_check)
-                for a_violation in violations:
-                    a_ctx = {
-                        "root.name": getattr(a_node, "name", "<unknown>"),
-                        "name": getattr(a_node, "name", "<unknown>"),
-                        "violation_type": a_violation,
+                violations = self._check_variable_rules(node, check)
+                for violation in violations:
+                    ctx = {
+                        "root.name": getattr(node, "name", "<unknown>"),
+                        "name": getattr(node, "name", "<unknown>"),
+                        "violation_type": violation,
                     }
-                    a_msg = self._render_message(a_message_template, a_ctx)
+                    msg = self._render_message(message_template, ctx)
                     findings.append(
                         Finding(
                             rule_id=a_rule.get("lineage_id", ""),
                             file="",
-                            line=self._get_line(a_node),
-                            col=self._get_col(a_node),
-                            message=a_msg,
+                            line=self._get_line(node),
+                            col=self._get_col(node),
+                            message=msg,
                         )
                     )
         return findings
@@ -70,51 +70,50 @@ class AstScopeCheckEvaluator(EvaluatorBase):
         """Run all variable pattern rules and return list of violation types."""
         b_continue = True
         violations: list[str] = []
-        a_target_name = a_check.get("target_name", "")
-        a_rules = a_check.get("rules", [])
-        if b_continue and not a_target_name:
+        target_name = a_check.get("target_name", "")
+        rules = a_check.get("rules", [])
+        if b_continue and not target_name:
             b_continue = False
         if b_continue:
-            assignments = _find_assignments(a_node, a_target_name)
-            usages = _find_usages(a_node, a_target_name)
-            globals_used = _find_global_usage(a_node, a_target_name)
-            deletes = _find_deletes(a_node, a_target_name)
-            for a_rule_def in a_rules:
+            assignments = _find_assignments(a_node, target_name)
+            globals_used = _find_global_usage(a_node, target_name)
+            deletes = _find_deletes(a_node, target_name)
+            for rule_def in rules:
                 b_continue_inner = True
-                a_rule_name = a_rule_def.get("rule", "")
-                if b_continue_inner and a_rule_name == "must_exist":
+                rule_name = rule_def.get("rule", "")
+                if b_continue_inner and rule_name == "must_exist":
                     b_continue_inner = False
                     if not assignments:
                         violations.append("must_exist")
-                if b_continue_inner and a_rule_name == "first_value_is_true":
+                if b_continue_inner and rule_name == "first_value_is_true":
                     b_continue_inner = False
                     if assignments and not _first_value_is_true(assignments):
                         violations.append("first_value_is_true")
-                if b_continue_inner and a_rule_name == "no_reset_to_true":
+                if b_continue_inner and rule_name == "no_reset_to_true":
                     b_continue_inner = False
                     if not _no_reset_to_true(assignments):
                         violations.append("no_reset_to_true")
-                if b_continue_inner and a_rule_name == "used_in_guard":
+                if b_continue_inner and rule_name == "used_in_guard":
                     b_continue_inner = False
-                    if assignments and not _used_in_guard(a_node, a_target_name):
+                    if assignments and not _used_in_guard(a_node, target_name):
                         violations.append("used_in_guard")
-                if b_continue_inner and a_rule_name == "not_as_parameter":
+                if b_continue_inner and rule_name == "not_as_parameter":
                     b_continue_inner = False
-                    if _used_as_parameter(a_node, a_target_name):
+                    if _used_as_parameter(a_node, target_name):
                         violations.append("not_as_parameter")
-                if b_continue_inner and a_rule_name == "not_global":
+                if b_continue_inner and rule_name == "not_global":
                     b_continue_inner = False
                     if globals_used:
                         violations.append("not_global")
-                if b_continue_inner and a_rule_name == "not_attribute":
+                if b_continue_inner and rule_name == "not_attribute":
                     b_continue_inner = False
-                    if _used_as_attribute(a_node, a_target_name):
+                    if _used_as_attribute(a_node, target_name):
                         violations.append("not_attribute")
-                if b_continue_inner and a_rule_name == "not_deleted":
+                if b_continue_inner and rule_name == "not_deleted":
                     b_continue_inner = False
                     if deletes:
                         violations.append("not_deleted")
-                if b_continue_inner and a_rule_name == "bool_assignment_only":
+                if b_continue_inner and rule_name == "bool_assignment_only":
                     b_continue_inner = False
                     if not _all_bool_assignments(assignments):
                         violations.append("bool_assignment_only")
@@ -126,41 +125,25 @@ def _find_assignments(a_node: ast.AST, a_name: str) -> list[ast.AST]:
     b_continue = True
     result: list[ast.AST] = []
     if b_continue:
-        for a_child in ast.walk(a_node):
+        for child in ast.walk(a_node):
             b_continue_inner = True
-            if b_continue_inner and isinstance(a_child, ast.Assign):
-                for a_target in a_child.targets:
+            if b_continue_inner and isinstance(child, ast.Assign):
+                for target in child.targets:
                     if (
                         b_continue_inner
-                        and isinstance(a_target, ast.Name)
-                        and a_target.id == a_name
+                        and isinstance(target, ast.Name)
+                        and target.id == a_name
                     ):
                         b_continue_inner = False
-                        result.append(a_child)
-            if b_continue_inner and isinstance(a_child, ast.AugAssign):
+                        result.append(child)
+            if b_continue_inner and isinstance(child, ast.AugAssign):
                 if (
                     b_continue_inner
-                    and isinstance(a_child.target, ast.Name)
-                    and a_child.target.id == a_name
+                    and isinstance(child.target, ast.Name)
+                    and child.target.id == a_name
                 ):
                     b_continue_inner = False
-                    result.append(a_child)
-    return result
-
-
-def _find_usages(a_node: ast.AST, a_name: str) -> list[ast.AST]:
-    """Find all Name loads of a target name within a node."""
-    b_continue = True
-    result: list[ast.AST] = []
-    if b_continue:
-        for a_child in ast.walk(a_node):
-            if (
-                b_continue
-                and isinstance(a_child, ast.Name)
-                and a_child.id == a_name
-                and isinstance(a_child.ctx, ast.Load)
-            ):
-                result.append(a_child)
+                    result.append(child)
     return result
 
 
@@ -168,9 +151,9 @@ def _find_global_usage(a_node: ast.AST, a_name: str) -> bool:
     """Check if target name is declared as global."""
     b_continue = True
     result = False
-    for a_child in ast.walk(a_node):
-        if b_continue and isinstance(a_child, ast.Global):
-            if b_continue and a_name in a_child.names:
+    for child in ast.walk(a_node):
+        if b_continue and isinstance(child, ast.Global):
+            if b_continue and a_name in child.names:
                 b_continue = False
                 result = True
     return result
@@ -180,15 +163,11 @@ def _find_deletes(a_node: ast.AST, a_name: str) -> list[ast.AST]:
     """Find all del statements targeting a name."""
     b_continue = True
     result: list[ast.AST] = []
-    for a_child in ast.walk(a_node):
-        if b_continue and isinstance(a_child, ast.Delete):
-            for a_target in a_child.targets:
-                if (
-                    b_continue
-                    and isinstance(a_target, ast.Name)
-                    and a_target.id == a_name
-                ):
-                    result.append(a_child)
+    for child in ast.walk(a_node):
+        if b_continue and isinstance(child, ast.Delete):
+            for target in child.targets:
+                if b_continue and isinstance(target, ast.Name) and target.id == a_name:
+                    result.append(child)
     return result
 
 
@@ -200,16 +179,13 @@ def _first_value_is_true(a_assignments: list[ast.AST]) -> bool:
         b_continue = False
         result = False
     if b_continue:
-        a_first = a_assignments[0]
-        a_value = None
-        if isinstance(a_first, ast.Assign) and a_first.value:
-            a_value = a_first.value
-        if b_continue and isinstance(a_value, ast.Constant):
+        first = a_assignments[0]
+        value = None
+        if isinstance(first, ast.Assign) and first.value:
+            value = first.value
+        if b_continue and isinstance(value, ast.Constant):
             b_continue = False
-            result = a_value.value is True
-        if b_continue and isinstance(a_value, ast.NameConstant):
-            b_continue = False
-            result = a_value.value is True
+            result = value.value is True
     return result
 
 
@@ -217,21 +193,17 @@ def _no_reset_to_true(a_assignments: list[ast.AST]) -> bool:
     """Check that b_continue is never reset to True after first assignment."""
     b_continue = True
     result = True
-    a_seen_false = False
-    for a_assign in a_assignments:
-        if b_continue and isinstance(a_assign, ast.Assign):
-            a_value = a_assign.value
+    seen_false = False
+    for assign in a_assignments:
+        if b_continue and isinstance(assign, ast.Assign):
+            value = assign.value
+            if b_continue and isinstance(value, ast.Constant) and value.value is False:
+                seen_false = True
             if (
                 b_continue
-                and isinstance(a_value, ast.Constant)
-                and a_value.value is False
-            ):
-                a_seen_false = True
-            if (
-                b_continue
-                and a_seen_false
-                and isinstance(a_value, ast.Constant)
-                and a_value.value is True
+                and seen_false
+                and isinstance(value, ast.Constant)
+                and value.value is True
             ):
                 b_continue = False
                 result = False
@@ -242,19 +214,15 @@ def _used_in_guard(a_node: ast.AST, a_name: str) -> bool:
     """Check if target name is used in an if statement guard."""
     b_continue = True
     result = False
-    for a_child in ast.iter_child_nodes(a_node):
-        if b_continue and isinstance(a_child, (ast.If, ast.While)):
-            a_test = a_child.test
-            if b_continue and isinstance(a_test, ast.Name) and a_test.id == a_name:
+    for child in ast.iter_child_nodes(a_node):
+        if b_continue and isinstance(child, (ast.If, ast.While)):
+            test = child.test
+            if b_continue and isinstance(test, ast.Name) and test.id == a_name:
                 b_continue = False
                 result = True
-            if b_continue and isinstance(a_test, ast.BoolOp):
-                for a_val in a_test.values:
-                    if (
-                        b_continue
-                        and isinstance(a_val, ast.Name)
-                        and a_val.id == a_name
-                    ):
+            if b_continue and isinstance(test, ast.BoolOp):
+                for val in test.values:
+                    if b_continue and isinstance(val, ast.Name) and val.id == a_name:
                         b_continue = False
                         result = True
     return result
@@ -264,10 +232,10 @@ def _used_as_parameter(a_node: ast.AST, a_name: str) -> bool:
     """Check if target name is passed as a function argument."""
     b_continue = True
     result = False
-    for a_child in ast.walk(a_node):
-        if b_continue and isinstance(a_child, ast.Call):
-            for a_arg in a_child.args:
-                if b_continue and isinstance(a_arg, ast.Name) and a_arg.id == a_name:
+    for child in ast.walk(a_node):
+        if b_continue and isinstance(child, ast.Call):
+            for arg in child.args:
+                if b_continue and isinstance(arg, ast.Name) and arg.id == a_name:
                     b_continue = False
                     result = True
     return result
@@ -277,12 +245,12 @@ def _used_as_attribute(a_node: ast.AST, a_name: str) -> bool:
     """Check if target name is used as obj.attr."""
     b_continue = True
     result = False
-    for a_child in ast.walk(a_node):
-        if b_continue and isinstance(a_child, ast.Attribute):
+    for child in ast.walk(a_node):
+        if b_continue and isinstance(child, ast.Attribute):
             if (
                 b_continue
-                and isinstance(a_child.value, ast.Name)
-                and a_child.value.id == a_name
+                and isinstance(child.value, ast.Name)
+                and child.value.id == a_name
             ):
                 b_continue = False
                 result = True
@@ -293,19 +261,19 @@ def _all_bool_assignments(a_assignments: list[ast.AST]) -> bool:
     """Check if all assignments are boolean literals or boolean expressions."""
     b_continue = True
     result = True
-    for a_assign in a_assignments:
-        if b_continue and isinstance(a_assign, ast.Assign):
-            a_value = a_assign.value
-            if b_continue and isinstance(a_value, (ast.Constant, ast.NameConstant)):
-                if b_continue and not isinstance(a_value.value, bool):
+    for assign in a_assignments:
+        if b_continue and isinstance(assign, ast.Assign):
+            value = assign.value
+            if b_continue and isinstance(value, ast.Constant):
+                if b_continue and not isinstance(value.value, bool):
                     b_continue = False
                     result = False
-            if b_continue and isinstance(a_value, ast.BoolOp):
+            if b_continue and isinstance(value, ast.BoolOp):
                 pass
             if (
                 b_continue
-                and isinstance(a_value, ast.UnaryOp)
-                and isinstance(a_value.op, ast.Not)
+                and isinstance(value, ast.UnaryOp)
+                and isinstance(value.op, ast.Not)
             ):
                 pass
     return result

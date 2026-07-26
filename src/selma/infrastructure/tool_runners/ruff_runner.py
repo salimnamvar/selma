@@ -34,7 +34,7 @@ class RuffCheckRunner(BaseToolRunner):
                 )
             )
         if b_continue:
-            result = self._exec([bin_result.value, "check", *a_paths])
+            result = self._exec([bin_result.unwrap(), "check", *a_paths])
         return result
 
 
@@ -62,5 +62,5 @@ class RuffFormatRunner(BaseToolRunner):
                 )
             )
         if b_continue:
-            result = self._exec([bin_result.value, "format", "--check", *a_paths])
+            result = self._exec([bin_result.unwrap(), "format", "--check", *a_paths])
         return result

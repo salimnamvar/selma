@@ -39,8 +39,8 @@ class ASTInterpreter:
 
     def __init__(self) -> None:
         self._evaluators: dict[str, EvaluatorBase] = {}
-        for a_name, a_cls in _EVALUATOR_MAP.items():
-            self._evaluators[a_name] = a_cls()
+        for name, cls in _EVALUATOR_MAP.items():
+            self._evaluators[name] = cls()
 
     def evaluate(
         self,
@@ -65,20 +65,20 @@ class ASTInterpreter:
         """
         b_continue = True
         result: Result[list[Finding]] = Result.failure("unreachable")
-        a_evaluator_type = a_rule.get("evaluator_type", "")
-        a_config = a_rule.get("evaluator_config", {})
-        if b_continue and a_evaluator_type not in self._evaluators:
+        evaluator_type = a_rule.get("evaluator_type", "")
+        config = a_rule.get("evaluator_config", {})
+        if b_continue and evaluator_type not in self._evaluators:
             b_continue = False
-            logger.warning("Unknown evaluator type: %s", a_evaluator_type)
-            result = Result.failure(f"Unknown evaluator type: {a_evaluator_type}")
+            logger.warning("Unknown evaluator type: %s", evaluator_type)
+            result = Result.failure(f"Unknown evaluator type: {evaluator_type}")
         if b_continue:
-            a_evaluator = self._evaluators[a_evaluator_type]
+            evaluator = self._evaluators[evaluator_type]
             try:
-                findings = a_evaluator.evaluate(a_tree, a_config, a_rule, a_source_code)
+                findings = evaluator.evaluate(a_tree, config, a_rule, a_source_code)
                 enriched = self._enrich_findings(findings, a_file_path, a_rule)
                 result = Result.success(enriched)
             except Exception as exc:
-                logger.warning("Evaluator %s failed: %s", a_evaluator_type, exc)
+                logger.warning("Evaluator %s failed: %s", evaluator_type, exc)
                 b_continue = False
                 result = Result.failure(f"Evaluator error: {exc}")
         return result
@@ -105,10 +105,10 @@ class ASTInterpreter:
         """
         b_continue = True
         all_findings: list[Finding] = []
-        for a_rule in a_rules:
-            a_eval_result = self.evaluate(a_tree, a_rule, a_file_path, a_source_code)
-            if b_continue and a_eval_result.is_success():
-                all_findings.extend(a_eval_result.unwrap())
+        for rule in a_rules:
+            eval_result = self.evaluate(a_tree, rule, a_file_path, a_source_code)
+            if b_continue and eval_result.is_success():
+                all_findings.extend(eval_result.unwrap())
         result = Result.success(all_findings)
         return result
 
@@ -125,22 +125,22 @@ class ASTInterpreter:
             b_continue = False
             enriched = []
         if b_continue:
-            a_severity = Severity.MEDIUM
-            a_weight = a_rule.get("weight", "medium")
+            severity = Severity.MEDIUM
+            weight = a_rule.get("weight", "medium")
             try:
-                a_severity = Severity(a_weight)
+                severity = Severity(weight)
             except ValueError:
-                a_severity = Severity.MEDIUM
-            for a_finding in a_findings:
+                severity = Severity.MEDIUM
+            for finding in a_findings:
                 enriched.append(
                     Finding(
-                        rule_id=a_finding.rule_id,
+                        rule_id=finding.rule_id,
                         file=a_file_path,
-                        line=a_finding.line,
-                        col=a_finding.col,
-                        message=a_finding.message,
-                        severity=a_severity,
-                        guidance=a_finding.guidance,
+                        line=finding.line,
+                        col=finding.col,
+                        message=finding.message,
+                        severity=severity,
+                        guidance=finding.guidance,
                         filepath=a_file_path,
                     )
                 )

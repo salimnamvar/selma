@@ -16,7 +16,9 @@ def load_schema() -> dict:
         return json.load(f)
 
 
-def validate_rule(rule_path: Path, schema: dict, validator: Draft7Validator) -> list[str]:
+def validate_rule(
+    rule_path: Path, schema: dict, validator: Draft7Validator
+) -> list[str]:
     """Validate a single rule file. Returns list of error messages."""
     errors = []
     try:
@@ -69,12 +71,14 @@ def main() -> int:
             lid = rule.get("lineage_id")
             if lid:
                 if lid in lineage_ids:
-                    warnings.append(f"Duplicate lineage_id '{lid}': {lineage_ids[lid]} and {rule_file.name}")
+                    warnings.append(
+                        f"Duplicate lineage_id '{lid}': {lineage_ids[lid]} and {rule_file.name}"
+                    )
                 lineage_ids[lid] = rule_file.name
         except (json.JSONDecodeError, KeyError):
             pass
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Results: {passed} passed, {failed} failed out of {total} rules")
 
     if warnings:

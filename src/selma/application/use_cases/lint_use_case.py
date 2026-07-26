@@ -73,11 +73,11 @@ class LintUseCase:
 
         all_findings: list[Finding] = []
         if b_continue:
-            rules = rules_result.value
+            rules = rules_result.unwrap()
             for path in a_request.paths:
                 file_result = self._lint_file(path, rules, a_request)
                 if file_result.is_success():
-                    all_findings.extend(file_result.value)
+                    all_findings.extend(file_result.unwrap())
 
         if b_continue:
             response = LintResponse(
@@ -118,7 +118,7 @@ class LintUseCase:
                 result = all_rules_result
 
         if b_continue:
-            rules = all_rules_result.value
+            rules = all_rules_result.unwrap()
             if a_request.exclude_codes:
                 rules = tuple(
                     r for r in rules if r.lineage_id not in a_request.exclude_codes
@@ -146,10 +146,10 @@ class LintUseCase:
             b_continue = False
             result = Result.failure(f"Failed to parse {a_path}: {parse_result.message}")
 
-        tree: ast.AST | None = None
+        tree: ast.AST
         findings: list[Finding] = []
         if b_continue:
-            tree = parse_result.value
+            tree = parse_result.unwrap()
             for rule in a_rules:
                 try:
                     rule_findings = self._evaluate_rule(rule, tree, a_path)
@@ -186,17 +186,18 @@ class LintUseCase:
         b_continue = True
         result: list[Finding] = []
 
-        a_rule_dict: dict[str, Any] = {
+        rule_dict: dict[str, Any] = {
             "evaluator_type": a_rule.evaluator_type,
             "evaluator_config": a_rule.evaluator_config.model_dump(),
             "weight": a_rule.weight.value,
             "lineage_id": a_rule.lineage_id,
             "message": a_rule.message,
+            "parameters": a_rule.parameters,
         }
 
         eval_result = self._interpreter.evaluate(
             a_tree=a_tree,
-            a_rule=a_rule_dict,
+            a_rule=rule_dict,
             a_file_path=str(a_path),
         )
         if b_continue and eval_result.is_success():

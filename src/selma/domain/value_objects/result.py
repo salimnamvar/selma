@@ -54,12 +54,14 @@ class Result(BaseModel, Generic[_T]):
         """Transform the success value, preserving failure unchanged."""
         if not self._is_success:
             return Result.failure(self.message)
+        assert self.value is not None
         return Result.success(a_fn(self.value), self.message)
 
     def flat_map(self, a_fn: Callable[[_T], Result[_U]]) -> Result[_U]:
         """Chain a function that itself returns a Result."""
         if not self._is_success:
             return Result.failure(self.message)
+        assert self.value is not None
         return a_fn(self.value)
 
     def unwrap(self) -> _T:
@@ -84,7 +86,7 @@ class Result(BaseModel, Generic[_T]):
     @staticmethod
     def failure(a_message: str) -> Result[Any]:
         """Create a failure result with no value."""
-        r = Result(value=None, message=a_message)
+        r: Result[Any] = Result(value=None, message=a_message)
         object.__setattr__(r, "_is_success", False)
         return r
 

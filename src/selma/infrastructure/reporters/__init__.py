@@ -13,7 +13,7 @@ class DefaultReporter(FindingReporter):
     """Default human-readable reporter."""
 
     def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
-        lines = []
+        lines: list[str] = []
         for f in a_findings:
             lines.append(str(f))
         return Result.success("\n".join(lines))
@@ -26,7 +26,7 @@ class JsonReporter(FindingReporter):
         self._guide = a_guide
 
     def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
-        output = []
+        output: list[dict[str, object]] = []
         for f in a_findings:
             d: dict[str, object] = {
                 "file": f.filepath or f.file,
@@ -57,10 +57,10 @@ class GccReporter(FindingReporter):
     """GCC-style reporter."""
 
     def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
-        lines = []
+        lines: list[str] = []
         for f in a_findings:
             lines.append(
                 f"{f.filepath or f.file}:{f.line}:{f.col}: "
-                f"{f.severity} [{f.rule_id}] {f.message}"
+                + f"{f.severity} [{f.rule_id}] {f.message}"
             )
         return Result.success("\n".join(lines))

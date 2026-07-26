@@ -1,6 +1,9 @@
 """Configuration loader — loads from pyproject.toml, env vars, CLI args.
 
 Priority: CLI Arguments > Environment Variables > pyproject.toml > Defaults
+
+Rule definitions are NOT loaded here — they come from schema/rules/*.json
+via JsonRuleRepository. This loader handles infrastructure config only.
 """
 
 from __future__ import annotations
@@ -15,9 +18,7 @@ from selma.infrastructure.config.models import ExecutionConfig
 from selma.infrastructure.config.models import LoggingConfig
 from selma.infrastructure.config.models import OutputConfig
 from selma.infrastructure.config.models import PathsConfig
-from selma.infrastructure.config.models import RulesConfig
 from selma.infrastructure.config.models import RulesFilterConfig
-from selma.infrastructure.config.models import SC010Config
 from selma.infrastructure.config.models import SelmaConfig
 from selma.infrastructure.config.models import ToolConfig
 from selma.infrastructure.config.models import ToolsConfig
@@ -43,13 +44,11 @@ class ConfigLoader:
         Priority: CLI > env > toml > defaults.
 
         Preconditions:
-            - a_config_path points to a valid pyproject.toml if
-              provided.
+            - a_config_path points to a valid pyproject.toml if provided.
             - a_cli_args is a dict of CLI arguments if provided.
 
         Postconditions:
-            - Returns Result.success with validated SelmaConfig,
-              or Result.failure.
+            Returns Result.success with validated SelmaConfig, or Result.failure.
 
         Side Effects: None.
         Resource: None.
@@ -66,7 +65,7 @@ class ConfigLoader:
                 msg = f"TOML error: {toml_result.message}"
                 result = Result.failure(msg)
             if b_continue and toml_result.is_success():
-                config = self._merge_toml(config, toml_result.value)
+                config = self._merge_toml(config, toml_result.unwrap())
 
         if b_continue:
             config = self._load_env(config)
@@ -95,19 +94,7 @@ class ConfigLoader:
         return SelmaConfig()
 
     def _load_toml(self, a_path: Path) -> Result[dict[str, Any]]:
-        """Load from pyproject.toml [tool.selma] section.
-
-        Preconditions:
-            - a_path exists and is readable.
-
-        Postconditions:
-            - Returns Result.success with toml dict, or
-              Result.failure.
-
-        Side Effects: None.
-        Resource: Reads file.
-        Failure: Returns Failure on I/O or parse error.
-        """
+        """Load from pyproject.toml [tool.selma] section."""
         b_continue = True
         result: Result[dict[str, Any]] = Result.failure("unreachable")
         try:
@@ -132,7 +119,7 @@ class ConfigLoader:
         result = self._merge_paths_toml(result, a_toml)
         result = self._merge_output_toml(result, a_toml)
         result = self._merge_execution_toml(result, a_toml)
-        result = self._merge_rules_toml(result, a_toml)
+        result = self._merge_rules_filter_toml(result, a_toml)
         result = self._merge_tools_toml(result, a_toml)
         return self._merge_logging_toml(result, a_toml)
 
@@ -142,10 +129,9 @@ class ConfigLoader:
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
         """Merge paths from TOML."""
-        b_continue = True
         result = a_config
         data = a_toml.get("paths")
-        if b_continue and data:
+        if data:
             paths = PathsConfig(
                 include=tuple(data.get("include", a_config.paths.include)),
                 exclude=tuple(data.get("exclude", a_config.paths.exclude)),
@@ -158,7 +144,6 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=result.logging,
             )
@@ -170,10 +155,9 @@ class ConfigLoader:
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
         """Merge output from TOML."""
-        b_continue = True
         result = a_config
         data = a_toml.get("output")
-        if b_continue and data:
+        if data:
             output = OutputConfig(
                 format=data.get("format", result.output.format),
                 guide=data.get("guide", result.output.guide),
@@ -187,7 +171,6 @@ class ConfigLoader:
                 output=output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=result.logging,
             )
@@ -199,10 +182,9 @@ class ConfigLoader:
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
         """Merge execution from TOML."""
-        b_continue = True
         result = a_config
         data = a_toml.get("execution")
-        if b_continue and data:
+        if data:
             ex = result.execution
             only_val = data.get("only", ex.only)
             if only_val == "":
@@ -221,29 +203,26 @@ class ConfigLoader:
                 output=result.output,
                 execution=execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=result.logging,
             )
         return result
 
-    def _merge_rules_toml(
+    def _merge_rules_filter_toml(
         self,
         a_config: SelmaConfig,
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
-        """Merge rules from TOML."""
-        b_continue = True
+        """Merge rules filter from TOML."""
         result = a_config
         data = a_toml.get("rules")
-        if b_continue and data:
+        if data:
             rf = result.rules_filter
             rules_filter = RulesFilterConfig(
                 disabled=tuple(data.get("disabled", rf.disabled)),
                 codes=tuple(data.get("codes", rf.codes)),
                 exclude_codes=tuple(data.get("exclude_codes", rf.exclude_codes)),
             )
-            rules = self._merge_rules_data(result.rules, data)
             result = SelmaConfig(
                 version=result.version,
                 name=result.name,
@@ -251,71 +230,9 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=rules_filter,
-                rules=rules,
                 tools=result.tools,
                 logging=result.logging,
             )
-        return result
-
-    def _merge_rules_data(
-        self,
-        a_rules: RulesConfig,
-        a_data: dict[str, Any],
-    ) -> RulesConfig:
-        """Merge rule-specific TOML data."""
-        b_continue = True
-        result = a_rules
-
-        sc010_data = a_data.get("sc010")
-        if b_continue and sc010_data:
-            old = result.sc010
-            result = RulesConfig(
-                sc001=result.sc001,
-                sc002=result.sc002,
-                sc003=result.sc003,
-                sc004=result.sc004,
-                sc005=result.sc005,
-                sc007=result.sc007,
-                sc010=SC010Config(
-                    enabled=sc010_data.get("enabled", old.enabled),
-                    severity=sc010_data.get("severity", old.severity),
-                    max_lines=sc010_data.get("max_lines", old.max_lines),
-                    count_nested=sc010_data.get("count_nested", old.count_nested),
-                    exclude_non_executable=sc010_data.get(
-                        "exclude_non_executable",
-                        old.exclude_non_executable,
-                    ),
-                ),
-                sc011=result.sc011,
-                sc013=result.sc013,
-                sc022=result.sc022,
-                sc024=result.sc024,
-                sc025=result.sc025,
-                sc031=result.sc031,
-                sc033=result.sc033,
-                sc041=result.sc041,
-                sc042=result.sc042,
-                sc052=result.sc052,
-                sc060=result.sc060,
-                sc061=result.sc061,
-                sc062=result.sc062,
-                sc065=result.sc065,
-                sc070=result.sc070,
-                sc071=result.sc071,
-                sc080=result.sc080,
-                sc090=result.sc090,
-                sc092=result.sc092,
-                sc100=result.sc100,
-                sc101=result.sc101,
-                sc104=result.sc104,
-                sc114=result.sc114,
-                sc115=result.sc115,
-                no_print=result.no_print,
-                todo_format=result.todo_format,
-                a_prefix=result.a_prefix,
-                mutable_default=result.mutable_default,
-            )
-
         return result
 
     def _merge_tools_toml(
@@ -324,10 +241,9 @@ class ConfigLoader:
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
         """Merge tools from TOML."""
-        b_continue = True
         result = a_config
         data = a_toml.get("tools")
-        if b_continue and data:
+        if data:
             tools = self._merge_tools_data(result.tools, data)
             result = SelmaConfig(
                 version=result.version,
@@ -336,7 +252,6 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=tools,
                 logging=result.logging,
             )
@@ -348,11 +263,10 @@ class ConfigLoader:
         a_data: dict[str, Any],
     ) -> ToolsConfig:
         """Merge tool-specific TOML data."""
-        b_continue = True
         result = a_tools
 
         ruff_data = a_data.get("ruff")
-        if b_continue and ruff_data:
+        if ruff_data:
             old = result.ruff
             result = ToolsConfig(
                 ruff=ToolConfig(
@@ -367,7 +281,7 @@ class ConfigLoader:
             )
 
         pylint_data = a_data.get("pylint")
-        if b_continue and pylint_data:
+        if pylint_data:
             old = result.pylint
             result = ToolsConfig(
                 ruff=result.ruff,
@@ -382,7 +296,7 @@ class ConfigLoader:
             )
 
         pyright_data = a_data.get("pyright")
-        if b_continue and pyright_data:
+        if pyright_data:
             old = result.pyright
             result = ToolsConfig(
                 ruff=result.ruff,
@@ -404,10 +318,9 @@ class ConfigLoader:
         a_toml: dict[str, Any],
     ) -> SelmaConfig:
         """Merge logging from TOML."""
-        b_continue = True
         result = a_config
         data = a_toml.get("logging")
-        if b_continue and data:
+        if data:
             log_config = LoggingConfig(
                 level=data.get("level", result.logging.level),
                 format=data.get("format", result.logging.format),
@@ -420,7 +333,6 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=log_config,
             )
@@ -435,15 +347,14 @@ class ConfigLoader:
         result = self._env_paths(result)
         result = self._env_output(result)
         result = self._env_execution(result)
-        result = self._env_rules(result)
+        result = self._env_rules_filter(result)
         return self._env_logging(result)
 
     def _env_paths(self, a_config: SelmaConfig) -> SelmaConfig:
         """Load paths from env."""
-        b_continue = True
         result = a_config
         val = os.environ.get(f"{_ENV_PREFIX}PATHS")
-        if b_continue and val:
+        if val:
             paths = PathsConfig(
                 include=tuple(p.strip() for p in val.split(",")),
                 exclude=result.paths.exclude,
@@ -456,7 +367,6 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=result.logging,
             )
@@ -470,27 +380,21 @@ class ConfigLoader:
         result = a_config
         format_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FORMAT")
         if format_val:
-            result = self._set_output(
-                result,
-                a_format=format_val,
-            )
+            result = self._set_output(result, a_format=format_val)
         guide_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_GUIDE")
         if guide_val:
             result = self._set_output(
                 result,
-                guide=guide_val.lower() in ("true", "1", "yes"),
+                a_guide=guide_val.lower() in ("true", "1", "yes"),
             )
         file_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FILE")
         if file_val:
-            result = self._set_output(
-                result,
-                file=file_val,
-            )
+            result = self._set_output(result, a_file=file_val)
         color_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_COLOR")
         if color_val:
             result = self._set_output(
                 result,
-                color=color_val.lower() in ("true", "1", "yes"),
+                a_color=color_val.lower() in ("true", "1", "yes"),
             )
         return result
 
@@ -499,17 +403,17 @@ class ConfigLoader:
         a_config: SelmaConfig,
         *,
         a_format: str | None = None,
-        guide: bool | None = None,
-        file: str | None = None,
-        color: bool | None = None,
+        a_guide: bool | None = None,
+        a_file: str | None = None,
+        a_color: bool | None = None,
     ) -> SelmaConfig:
         """Set output config values."""
         o = a_config.output
         output = OutputConfig(
             format=a_format if a_format is not None else o.format,
-            guide=guide if guide is not None else o.guide,
-            file=file if file is not None else o.file,
-            color=color if color is not None else o.color,
+            guide=a_guide if a_guide is not None else o.guide,
+            file=a_file if a_file is not None else o.file,
+            color=a_color if a_color is not None else o.color,
         )
         return SelmaConfig(
             version=a_config.version,
@@ -518,7 +422,6 @@ class ConfigLoader:
             output=output,
             execution=a_config.execution,
             rules_filter=a_config.rules_filter,
-            rules=a_config.rules,
             tools=a_config.tools,
             logging=a_config.logging,
         )
@@ -533,40 +436,42 @@ class ConfigLoader:
         if skip_tools:
             result = self._set_execution(
                 result,
-                skip_tools=skip_tools.lower() in ("true", "1", "yes"),
+                a_skip_tools=skip_tools.lower() in ("true", "1", "yes"),
             )
         skip_ast = os.environ.get(f"{_ENV_PREFIX}EXECUTION_SKIP_AST")
         if skip_ast:
             result = self._set_execution(
                 result,
-                skip_ast=skip_ast.lower() in ("true", "1", "yes"),
+                a_skip_ast=skip_ast.lower() in ("true", "1", "yes"),
             )
         only = os.environ.get(f"{_ENV_PREFIX}EXECUTION_ONLY")
         if only:
-            result = self._set_execution(result, only=only)
+            result = self._set_execution(result, a_only=only)
         max_workers = os.environ.get(f"{_ENV_PREFIX}EXECUTION_MAX_WORKERS")
         if max_workers:
-            result = self._set_execution(result, max_workers=int(max_workers))
+            result = self._set_execution(result, a_max_workers=int(max_workers))
         return result
 
     def _set_execution(
         self,
         a_config: SelmaConfig,
         *,
-        skip_tools: bool | None = None,
-        skip_ast: bool | None = None,
-        only: str | None = None,
-        max_workers: int | None = None,
-        file_timeout: int | None = None,
+        a_skip_tools: bool | None = None,
+        a_skip_ast: bool | None = None,
+        a_only: str | None = None,
+        a_max_workers: int | None = None,
+        a_file_timeout: int | None = None,
     ) -> SelmaConfig:
         """Set execution config values."""
         e = a_config.execution
         execution = ExecutionConfig(
-            skip_tools=(skip_tools if skip_tools is not None else e.skip_tools),
-            skip_ast=(skip_ast if skip_ast is not None else e.skip_ast),
-            only=only if only is not None else e.only,
-            max_workers=(max_workers if max_workers is not None else e.max_workers),
-            file_timeout=(file_timeout if file_timeout is not None else e.file_timeout),
+            skip_tools=(a_skip_tools if a_skip_tools is not None else e.skip_tools),
+            skip_ast=(a_skip_ast if a_skip_ast is not None else e.skip_ast),
+            only=a_only if a_only is not None else e.only,
+            max_workers=(a_max_workers if a_max_workers is not None else e.max_workers),
+            file_timeout=(
+                a_file_timeout if a_file_timeout is not None else e.file_timeout
+            ),
         )
         return SelmaConfig(
             version=a_config.version,
@@ -575,55 +480,51 @@ class ConfigLoader:
             output=a_config.output,
             execution=execution,
             rules_filter=a_config.rules_filter,
-            rules=a_config.rules,
             tools=a_config.tools,
             logging=a_config.logging,
         )
 
-    def _env_rules(
+    def _env_rules_filter(
         self,
         a_config: SelmaConfig,
     ) -> SelmaConfig:
-        """Load rules from env."""
+        """Load rules filter from env."""
         result = a_config
         disabled = os.environ.get(f"{_ENV_PREFIX}RULES_DISABLED")
         if disabled:
             result = self._set_rules_filter(
                 result,
-                disabled=tuple(c.strip() for c in disabled.split(",")),
+                a_disabled=tuple(c.strip() for c in disabled.split(",")),
             )
         codes = os.environ.get(f"{_ENV_PREFIX}RULES_CODES")
         if codes:
             result = self._set_rules_filter(
                 result,
-                codes=tuple(c.strip() for c in codes.split(",")),
+                a_codes=tuple(c.strip() for c in codes.split(",")),
             )
         exclude = os.environ.get(f"{_ENV_PREFIX}RULES_EXCLUDE_CODES")
         if exclude:
             result = self._set_rules_filter(
                 result,
-                exclude_codes=tuple(c.strip() for c in exclude.split(",")),
+                a_exclude_codes=tuple(c.strip() for c in exclude.split(",")),
             )
-        sc010_max = os.environ.get(f"{_ENV_PREFIX}RULES_SC010_MAX_LINES")
-        if sc010_max:
-            result = self._set_sc010_max(result, int(sc010_max))
         return result
 
     def _set_rules_filter(
         self,
         a_config: SelmaConfig,
         *,
-        disabled: tuple[str, ...] | None = None,
-        codes: tuple[str, ...] | None = None,
-        exclude_codes: tuple[str, ...] | None = None,
+        a_disabled: tuple[str, ...] | None = None,
+        a_codes: tuple[str, ...] | None = None,
+        a_exclude_codes: tuple[str, ...] | None = None,
     ) -> SelmaConfig:
         """Set rules filter config values."""
         rf = a_config.rules_filter
         rules_filter = RulesFilterConfig(
-            disabled=(disabled if disabled is not None else rf.disabled),
-            codes=(codes if codes is not None else rf.codes),
+            disabled=(a_disabled if a_disabled is not None else rf.disabled),
+            codes=(a_codes if a_codes is not None else rf.codes),
             exclude_codes=(
-                exclude_codes if exclude_codes is not None else rf.exclude_codes
+                a_exclude_codes if a_exclude_codes is not None else rf.exclude_codes
             ),
         )
         return SelmaConfig(
@@ -633,69 +534,6 @@ class ConfigLoader:
             output=a_config.output,
             execution=a_config.execution,
             rules_filter=rules_filter,
-            rules=a_config.rules,
-            tools=a_config.tools,
-            logging=a_config.logging,
-        )
-
-    def _set_sc010_max(
-        self,
-        a_config: SelmaConfig,
-        a_max_lines: int,
-    ) -> SelmaConfig:
-        """Set SC010 max_lines."""
-        old = a_config.rules.sc010
-        rules = RulesConfig(
-            sc001=a_config.rules.sc001,
-            sc002=a_config.rules.sc002,
-            sc003=a_config.rules.sc003,
-            sc004=a_config.rules.sc004,
-            sc005=a_config.rules.sc005,
-            sc007=a_config.rules.sc007,
-            sc010=SC010Config(
-                enabled=old.enabled,
-                severity=old.severity,
-                max_lines=a_max_lines,
-                count_nested=old.count_nested,
-                exclude_non_executable=(old.exclude_non_executable),
-            ),
-            sc011=a_config.rules.sc011,
-            sc013=a_config.rules.sc013,
-            sc022=a_config.rules.sc022,
-            sc024=a_config.rules.sc024,
-            sc025=a_config.rules.sc025,
-            sc031=a_config.rules.sc031,
-            sc033=a_config.rules.sc033,
-            sc041=a_config.rules.sc041,
-            sc042=a_config.rules.sc042,
-            sc052=a_config.rules.sc052,
-            sc060=a_config.rules.sc060,
-            sc061=a_config.rules.sc061,
-            sc062=a_config.rules.sc062,
-            sc065=a_config.rules.sc065,
-            sc070=a_config.rules.sc070,
-            sc071=a_config.rules.sc071,
-            sc080=a_config.rules.sc080,
-            sc090=a_config.rules.sc090,
-            sc092=a_config.rules.sc092,
-            sc100=a_config.rules.sc100,
-            sc101=a_config.rules.sc101,
-            sc104=a_config.rules.sc104,
-            sc114=a_config.rules.sc114,
-            sc115=a_config.rules.sc115,
-            no_print=a_config.rules.no_print,
-            todo_format=a_config.rules.todo_format,
-            a_prefix=a_config.rules.a_prefix,
-            mutable_default=a_config.rules.mutable_default,
-        )
-        return SelmaConfig(
-            version=a_config.version,
-            name=a_config.name,
-            paths=a_config.paths,
-            output=a_config.output,
-            execution=a_config.execution,
-            rules_filter=a_config.rules_filter,
-            rules=rules,
             tools=a_config.tools,
             logging=a_config.logging,
         )
@@ -708,25 +546,25 @@ class ConfigLoader:
         result = a_config
         level = os.environ.get(f"{_ENV_PREFIX}LOGGING_LEVEL")
         if level:
-            result = self._set_logging(result, level=level)
+            result = self._set_logging(result, a_level=level)
         log_file = os.environ.get(f"{_ENV_PREFIX}LOGGING_FILE")
         if log_file:
-            result = self._set_logging(result, file=log_file)
+            result = self._set_logging(result, a_file=log_file)
         return result
 
     def _set_logging(
         self,
         a_config: SelmaConfig,
         *,
-        level: str | None = None,
-        file: str | None = None,
+        a_level: str | None = None,
+        a_file: str | None = None,
     ) -> SelmaConfig:
         """Set logging config values."""
         log_cfg = a_config.logging
         log_config = LoggingConfig(
-            level=level if level is not None else log_cfg.level,
+            level=a_level if a_level is not None else log_cfg.level,
             format=log_cfg.format,
-            file=file if file is not None else log_cfg.file,
+            file=a_file if a_file is not None else log_cfg.file,
         )
         return SelmaConfig(
             version=a_config.version,
@@ -735,7 +573,6 @@ class ConfigLoader:
             output=a_config.output,
             execution=a_config.execution,
             rules_filter=a_config.rules_filter,
-            rules=a_config.rules,
             tools=a_config.tools,
             logging=log_config,
         )
@@ -751,40 +588,40 @@ class ConfigLoader:
         if format_val:
             result = self._set_output(result, a_format=format_val)
         if a_args.get("guide"):
-            result = self._set_output(result, guide=True)
+            result = self._set_output(result, a_guide=True)
         output_file = a_args.get("output")
         if output_file:
-            result = self._set_output(result, file=output_file)
+            result = self._set_output(result, a_file=output_file)
         if a_args.get("no_color"):
-            result = self._set_output(result, color=False)
+            result = self._set_output(result, a_color=False)
         if a_args.get("skip_tools"):
-            result = self._set_execution(result, skip_tools=True)
+            result = self._set_execution(result, a_skip_tools=True)
         if a_args.get("skip_ast"):
-            result = self._set_execution(result, skip_ast=True)
+            result = self._set_execution(result, a_skip_ast=True)
         only_val = a_args.get("only")
         if only_val:
-            result = self._set_execution(result, only=only_val)
+            result = self._set_execution(result, a_only=only_val)
         codes_val = a_args.get("codes")
         if codes_val:
-            result = self._set_rules_filter(result, codes=tuple(codes_val))
+            result = self._set_rules_filter(result, a_codes=tuple(codes_val))
         exclude_val = a_args.get("exclude_codes")
         if exclude_val:
             result = self._set_rules_filter(
                 result,
-                exclude_codes=tuple(exclude_val),
+                a_exclude_codes=tuple(exclude_val),
             )
         disable_val = a_args.get("disable")
         if disable_val:
             result = self._set_rules_filter(
                 result,
-                disabled=tuple(disable_val),
+                a_disabled=tuple(disable_val),
             )
         max_workers = a_args.get("max_workers")
         if max_workers:
-            result = self._set_execution(result, max_workers=int(max_workers))
+            result = self._set_execution(result, a_max_workers=int(max_workers))
         file_timeout = a_args.get("file_timeout")
         if file_timeout:
-            result = self._set_execution(result, file_timeout=int(file_timeout))
+            result = self._set_execution(result, a_file_timeout=int(file_timeout))
         paths_val = a_args.get("paths")
         if paths_val:
             paths = PathsConfig(
@@ -799,7 +636,6 @@ class ConfigLoader:
                 output=result.output,
                 execution=result.execution,
                 rules_filter=result.rules_filter,
-                rules=result.rules,
                 tools=result.tools,
                 logging=result.logging,
             )
