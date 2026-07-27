@@ -15,7 +15,6 @@ from selma.application.dto.lint_request import LintRequest
 from selma.composition import Container
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.severity import Severity
-from selma.infrastructure.rule_repository.json_rule_repository import JsonRuleRepository
 
 
 def _collect_file_paths(a_path_strings: list[str]) -> list[FilePath]:
@@ -92,11 +91,8 @@ def main() -> int:
         rules_dir = _pkg_dir.parent.parent / "schema" / "rules"
 
         container = Container()
-        rule_repository = JsonRuleRepository(
+        use_case = container.get_lint_use_case_with_defaults(
             a_rules_dir=rules_dir,
-        )
-        use_case = container.get_lint_use_case(
-            a_rule_repository=rule_repository,
         )
 
         exclude_codes: frozenset[str] = (

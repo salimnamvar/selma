@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from selma.application.ports.event_publisher_port import EventPublisher
+from selma.application.ports.rule_repository_port import RuleRepository
 from selma.application.use_cases.lint_use_case import LintUseCase
 from selma.infrastructure.evaluators.ast_interpreter import ASTInterpreter
 from selma.infrastructure.parsers.python_ast_parser import PythonAstParser
 from selma.infrastructure.reporters import DefaultReporter
 from selma.infrastructure.reporters import GccReporter
 from selma.infrastructure.reporters import JsonReporter
+from selma.infrastructure.rule_repository.json_rule_repository import JsonRuleRepository
 from selma.infrastructure.tool_runners.pylint_runner import PylintRunner
 from selma.infrastructure.tool_runners.pyright_runner import PyrightRunner
 from selma.infrastructure.tool_runners.ruff_runner import RuffCheckRunner
@@ -35,16 +40,24 @@ class Container:
 
     def get_lint_use_case(
         self,
-        a_rule_repository: object | None = None,
-        a_event_publisher: object | None = None,
+        a_rule_repository: RuleRepository,
+        a_event_publisher: EventPublisher | None = None,
     ) -> LintUseCase:
-        """Get a configured LintUseCase."""
+        """Get a configured LintUseCase with explicit repository."""
         return LintUseCase(
             a_parser=self._parser,
-            a_rule_repository=a_rule_repository,  # type: ignore[arg-type]
+            a_rule_repository=a_rule_repository,
             a_evaluator=self._evaluator,
-            a_event_publisher=a_event_publisher,  # type: ignore[arg-type]
+            a_event_publisher=a_event_publisher,
         )
+
+    def get_lint_use_case_with_defaults(
+        self,
+        a_rules_dir: Path,
+    ) -> LintUseCase:
+        """Get a configured LintUseCase with default rule repository."""
+        rule_repository = JsonRuleRepository(a_rules_dir=a_rules_dir)
+        return self.get_lint_use_case(a_rule_repository=rule_repository)
 
     def get_parser(self) -> PythonAstParser:
         return self._parser
