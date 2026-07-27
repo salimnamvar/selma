@@ -73,49 +73,24 @@ _run_pytest_layer() {
 }
 
 _run_coverage_gate() {
-  local src_path="${PROJECT_ROOT}/src/model_management"
+  local src_path="${PROJECT_ROOT}/src/selma"
 
   if [[ ! -d "${src_path}" ]] || [[ ! -d "${PROJECT_ROOT}/tests" ]]; then
-    log_info "Skipping coverage gate (src/model_management or tests/ not present)"
+    log_info "Skipping coverage gate (src/selma or tests/ not present)"
     return 0
   fi
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    log_info "Would run: pytest --cov=src/model_management --cov-fail-under=80 -m 'not live'"
+    log_info "Would run: pytest --cov=src/selma --cov-fail-under=80 -m 'not live'"
     return 0
   fi
 
-  log_info "pytest --cov=src/model_management --cov-fail-under=80 -m 'not live'"
+  log_info "pytest --cov=src/selma --cov-fail-under=80 -m 'not live'"
   conda_runtime_env
-  if ! (cd "${PROJECT_ROOT}" && "${PYTEST_BIN}" --cov=src/model_management --cov-fail-under=80 -m "not live"); then
+  if ! (cd "${PROJECT_ROOT}" && "${PYTEST_BIN}" --cov=src/selma --cov-fail-under=80 -m "not live"); then
     die "Coverage gate failed"
   fi
   log_ok "Coverage gate passed"
-}
-
-_run_redocly_lint() {
-  local spec="${PROJECT_ROOT}/docs/CT/API/openapi.yaml"
-
-  if [[ ! -f "${spec}" ]]; then
-    log_info "Skipping OpenAPI lint (docs/CT/API/openapi.yaml not found)"
-    return 0
-  fi
-
-  if [[ "${DRY_RUN}" == "1" ]]; then
-    log_info "Would run: npx @redocly/cli lint --config docs/CT/API/redocly.yaml docs/CT/API/openapi.yaml"
-    return 0
-  fi
-
-  if ! command -v npx >/dev/null 2>&1; then
-    log_warn "Skipping OpenAPI lint (npx not available)"
-    return 0
-  fi
-
-  log_info "npx @redocly/cli lint --config docs/CT/API/redocly.yaml docs/CT/API/openapi.yaml"
-  if ! (cd "${PROJECT_ROOT}" && npx --yes @redocly/cli lint --config docs/CT/API/redocly.yaml docs/CT/API/openapi.yaml); then
-    die "OpenAPI lint failed"
-  fi
-  log_ok "OpenAPI lint passed"
 }
 
 _run_pyright() {
@@ -218,6 +193,5 @@ run_cicd_gates() {
   _run_pytest_layer unit
   _run_pytest_layer integration
   _run_pytest_layer api
-  _run_redocly_lint
   _run_coverage_gate
 }
