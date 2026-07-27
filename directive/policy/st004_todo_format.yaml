@@ -5,15 +5,15 @@
 # Normative source: .nasim/rules/code/safe-coding.md
 
 doctrine:
-  name: style-3-style_no_print
+  name: st-004-st004_todo_format
   version: 8.2.4
-  description: 'Human governance doctrine for STYLE-3: print() used in production code. Guidance and reasoning
-    only — not machine-executable.'
+  description: 'Human governance doctrine for ST-004: TODO/FIXME must follow format: # TODO(name): description.
+    Guidance and reasoning only — not machine-executable.'
   spec_version: 8.2.4
   schema_version: 8.2.4
   schema_id: universal-rule-schema
-  machine_id: STYLE-3
-  paired_rule_file: directive/rule/style_no_print.json
+  machine_id: ST-004
+  paired_rule_file: directive/rule/st004_todo_format.json
   purpose_layer: governance_intent_guidance_examples_reasoning
   runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
     or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
@@ -21,7 +21,7 @@ cross_layer_binding:
   normative_source: .nasim/rules/code/safe-coding.md
   policy_purpose: Governance intent, examples, reasoning, and human guidance
   schema_purpose: Structural projection of machine-evaluable invariants
-  lint_source: directive/rule/style_no_print.json
+  lint_source: directive/rule/st004_todo_format.json
   enforcement: Policy influences humans and authoring tools only. Compile-time/runtime evaluation uses
     JSON rules exclusively.
 contamination_guard:
@@ -29,14 +29,16 @@ contamination_guard:
     evaluator_hint, evaluator_type, evaluator_config, weight, depends_on, conflicts_with, status, created_at,
     expires_at, remediation (as executable carrier), target, lineage.'
   allowed_machine_references:
-  - Machine ID STYLE-3 (cross-reference to rule.lineage_id only)
+  - Machine ID ST-004 (cross-reference to rule.lineage_id only)
 preamble:
   title: Preamble
-  purpose: Establish human-readable obligations for STYLE-3 (print() used in production code) so authors,
-    reviewers, and AI agents can reason about intent without reading evaluator configuration.
-  scope: Project style conventions complementary to the Safe Coding Doctrine.
-  existential_need: print() has no log levels, no structured output, and no configurability. It cannot
-    be filtered, routed, or analyzed in production.
+  purpose: 'Establish human-readable obligations for ST-004 (TODO/FIXME must follow format: # TODO(name):
+    description) so authors, reviewers, and AI agents can reason about intent without reading evaluator
+    configuration.'
+  scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
+    code, unless a documented exemption applies.
+  existential_need: Unformatted TODOs are hard to track and assign ownership. A consistent format enables
+    automated tracking and assignment.
 governance:
   title: Governance & Amendment
   authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
@@ -47,63 +49,59 @@ governance:
   - Never add evaluator_type/evaluator_config or other prohibited fields to this file.
   versioning: MAJOR.MINOR.PATCH aligned with policy_contract_version 8.x
   identity:
-    machine_id: STYLE-3
+    machine_id: ST-004
     maps_to: rule.lineage_id
-    paired_execution_id_note: Execution ID in schema layer is STYLE-3-NO-PRINT; not redefined as executable
-      data here.
+    paired_execution_id_note: Execution ID in schema layer is ST-004; not redefined as executable data
+      here.
 definitions:
   title: Definitions
   terms:
   - term: Machine ID
-    definition: Immutable lineage identifier STYLE-3 for this directive.
+    definition: Immutable lineage identifier ST-004 for this directive.
     exclusion: Not an execution ID and not a runtime lookup key for evaluation.
   - term: Paired Rule
-    definition: Machine-evaluable document at directive/rule/style_no_print.json.
+    definition: Machine-evaluable document at directive/rule/st004_todo_format.json.
     exclusion: This policy YAML is not a lint source.
-  - term: print() used in production code
-    definition: print() used in production code
+  - term: 'TODO/FIXME must follow format: # TODO(name): description'
+    definition: 'TODO/FIXME must follow format: # TODO(name): description'
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
-  description: This directive supports clarity and consistency complementary to Safe Coding.
+  description: This directive operationalizes one or more Safe Coding Doctrine core principles.
   items:
-  - id: STYLE
+  - id: P3
     title: Explicit Over Implicit
-    description: Style conventions make contracts and review expectations visible.
+    description: Every contract, every side effect, every resource ownership transfer, and every state
+      mutation SHALL be declared explicitly. Implicit behavior is forbidden.
 directives:
   title: Directives (Rules & Standards)
   specific_directives:
-  - type: Prohibition
-    description: print() used in production code
-    machine_id: STYLE-3
+  - type: Obligation
+    description: 'TODO/FIXME must follow format: # TODO(name): description'
+    machine_id: ST-004
     context_conditions: See rule JSON exemptions if any.
-    title: print() used in production code
+    title: 'TODO/FIXME must follow format: # TODO(name): description'
   flexible_standards: []
 sanctions:
   title: Sanctions & Remedies
   rows:
-  - violation_context: print() used in production code
-    enforcement_action: Machine lint finding via style_no_print.json when automatically enforceable; otherwise
-      See paired machine rule.
-    remediation_path: Replace with structlog.info() or logging.info().
+  - violation_context: 'TODO/FIXME must follow format: # TODO(name): description'
+    enforcement_action: Machine lint finding via st004_todo_format.json when automatically enforceable;
+      otherwise See paired machine rule.
+    remediation_path: 'Use format: # TODO(yourname): description or # FIXME(yourname): description'
 guidance:
   title: Guidance, Examples, and Reasoning
   purpose: For human and AI reasoning only. Do not execute this section as a linter.
-  reasoning: print() has no log levels, no structured output, and no configurability. It cannot be filtered,
-    routed, or analyzed in production.
-  explanation: The correct version uses structlog with structured output. The incorrect version uses print()
-    which has no log levels and cannot be configured in production.
+  reasoning: Unformatted TODOs are hard to track and assign ownership. A consistent format enables automated
+    tracking and assignment.
+  explanation: The correct version includes the author's name and a descriptive message. The incorrect
+    version has no name or description, making ownership unclear.
   correct_example: |-
-    import structlog
-    logger = structlog.get_logger()
-
-    def process(a_data: dict) -> Result[str]:
-        logger.info('processing', keys=list(a_data.keys()))
-        return Result.success('done')
+    # TODO(alice): Add retry logic for transient failures
+    # FIXME(bob): Handle edge case when list is empty
   incorrect_example: |-
-    def process(a_data: dict) -> Result[str]:
-        print(f'Processing {a_data}')
-        return Result.success('done')
+    # TODO: fix this
+    # FIXME: broken
   related_machine_ids: []
   exceptions: See rule JSON exemptions if any.
 references:
@@ -111,6 +109,6 @@ references:
   source_doctrine: .nasim/rules/code/safe-coding.md
   policy_schema: schema/policy_doctrine.yaml
   rule_schema: schema/rule_schema.json
-  paired_rule: directive/rule/style_no_print.json
-  anchor_ref: section:directives/style_no_print
+  paired_rule: directive/rule/st004_todo_format.json
+  anchor_ref: section:directives/st004_todo_format
   related: []

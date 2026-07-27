@@ -1,6 +1,6 @@
 {
-  "lineage_id": "STYLE-2",
-  "id": "STYLE-2-MUTABLE-DEFAULT",
+  "lineage_id": "ST-002",
+  "id": "ST-002",
   "type": "prohibition",
   "message": "Mutable default argument in function signature",
   "evaluator_type": "ast_node_match",
@@ -28,7 +28,7 @@
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "anchor_ref": "section:directives/style_mutable_default",
+  "anchor_ref": "section:directives/st002_mutable_default",
   "rationale": "Mutable default arguments are shared across all calls. The default object is created once at function definition time, not per call, causing subtle bugs when the mutable is modified.",
   "remediation": "Use None as default and create the mutable inside: def func(a_items=None): items = a_items or []",
   "parameters": {

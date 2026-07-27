@@ -1,6 +1,6 @@
 {
-  "lineage_id": "STYLE-3",
-  "id": "STYLE-3-NO-PRINT",
+  "lineage_id": "ST-003",
+  "id": "ST-003",
   "type": "prohibition",
   "message": "print() used in production code",
   "evaluator_type": "ast_call_check",
@@ -14,7 +14,7 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "anchor_ref": "section:directives/style_no_print",
+  "anchor_ref": "section:directives/st003_no_print",
   "rationale": "print() has no log levels, no structured output, and no configurability. It cannot be filtered, routed, or analyzed in production.",
   "remediation": "Replace with structlog.info() or logging.info().",
   "parameters": {

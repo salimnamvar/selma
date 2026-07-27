@@ -5,15 +5,15 @@
 # Normative source: .nasim/rules/code/safe-coding.md
 
 doctrine:
-  name: style-1-style_a_prefix
+  name: st-001-st001_a_prefix
   version: 8.2.4
-  description: 'Human governance doctrine for STYLE-1: Function arguments must use a_ prefix. Guidance
+  description: 'Human governance doctrine for ST-001: Function arguments must use a_ prefix. Guidance
     and reasoning only — not machine-executable.'
   spec_version: 8.2.4
   schema_version: 8.2.4
   schema_id: universal-rule-schema
-  machine_id: STYLE-1
-  paired_rule_file: directive/rule/style_a_prefix.json
+  machine_id: ST-001
+  paired_rule_file: directive/rule/st001_a_prefix.json
   purpose_layer: governance_intent_guidance_examples_reasoning
   runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
     or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
@@ -21,7 +21,7 @@ cross_layer_binding:
   normative_source: .nasim/rules/code/safe-coding.md
   policy_purpose: Governance intent, examples, reasoning, and human guidance
   schema_purpose: Structural projection of machine-evaluable invariants
-  lint_source: directive/rule/style_a_prefix.json
+  lint_source: directive/rule/st001_a_prefix.json
   enforcement: Policy influences humans and authoring tools only. Compile-time/runtime evaluation uses
     JSON rules exclusively.
 contamination_guard:
@@ -29,12 +29,13 @@ contamination_guard:
     evaluator_hint, evaluator_type, evaluator_config, weight, depends_on, conflicts_with, status, created_at,
     expires_at, remediation (as executable carrier), target, lineage.'
   allowed_machine_references:
-  - Machine ID STYLE-1 (cross-reference to rule.lineage_id only)
+  - Machine ID ST-001 (cross-reference to rule.lineage_id only)
 preamble:
   title: Preamble
-  purpose: Establish human-readable obligations for STYLE-1 (Function arguments must use a_ prefix) so
+  purpose: Establish human-readable obligations for ST-001 (Function arguments must use a_ prefix) so
     authors, reviewers, and AI agents can reason about intent without reading evaluator configuration.
-  scope: Project style conventions complementary to the Safe Coding Doctrine.
+  scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
+    code, unless a documented exemption applies.
   existential_need: 'Consistent argument naming improves code readability and searchability. The a_ prefix
     distinguishes parameters from local variables at a glance. CLI entry points (Typer/Click @command/@callback/@group)
     are exempt: their parameter names are the public CLI surface (flags and positional args), not internal
@@ -49,35 +50,36 @@ governance:
   - Never add evaluator_type/evaluator_config or other prohibited fields to this file.
   versioning: MAJOR.MINOR.PATCH aligned with policy_contract_version 8.x
   identity:
-    machine_id: STYLE-1
+    machine_id: ST-001
     maps_to: rule.lineage_id
-    paired_execution_id_note: Execution ID in schema layer is STYLE-1-PREFIX; not redefined as executable
-      data here.
+    paired_execution_id_note: Execution ID in schema layer is ST-001; not redefined as executable data
+      here.
 definitions:
   title: Definitions
   terms:
   - term: Machine ID
-    definition: Immutable lineage identifier STYLE-1 for this directive.
+    definition: Immutable lineage identifier ST-001 for this directive.
     exclusion: Not an execution ID and not a runtime lookup key for evaluation.
   - term: Paired Rule
-    definition: Machine-evaluable document at directive/rule/style_a_prefix.json.
+    definition: Machine-evaluable document at directive/rule/st001_a_prefix.json.
     exclusion: This policy YAML is not a lint source.
   - term: Function arguments must use a_ prefix
     definition: Function arguments must use a_ prefix
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
-  description: This directive supports clarity and consistency complementary to Safe Coding.
+  description: This directive operationalizes one or more Safe Coding Doctrine core principles.
   items:
-  - id: STYLE
+  - id: P3
     title: Explicit Over Implicit
-    description: Style conventions make contracts and review expectations visible.
+    description: Every contract, every side effect, every resource ownership transfer, and every state
+      mutation SHALL be declared explicitly. Implicit behavior is forbidden.
 directives:
   title: Directives (Rules & Standards)
   specific_directives:
   - type: Obligation
     description: Function arguments must use a_ prefix
-    machine_id: STYLE-1
+    machine_id: ST-001
     context_conditions: See rule JSON exemptions if any.
     title: Function arguments must use a_ prefix
   flexible_standards: []
@@ -85,7 +87,7 @@ sanctions:
   title: Sanctions & Remedies
   rows:
   - violation_context: Function arguments must use a_ prefix
-    enforcement_action: Machine lint finding via style_a_prefix.json when automatically enforceable; otherwise
+    enforcement_action: Machine lint finding via st001_a_prefix.json when automatically enforceable; otherwise
       See paired machine rule.
     remediation_path: 'Rename arguments: def func(a_name: str, a_count: int):. Do not apply a_ to Typer/Click
       command parameters; use plain names that match the CLI interface (task, query, output).'
@@ -131,6 +133,6 @@ references:
   source_doctrine: .nasim/rules/code/safe-coding.md
   policy_schema: schema/policy_doctrine.yaml
   rule_schema: schema/rule_schema.json
-  paired_rule: directive/rule/style_a_prefix.json
-  anchor_ref: section:directives/style_a_prefix
+  paired_rule: directive/rule/st001_a_prefix.json
+  anchor_ref: section:directives/st001_a_prefix
   related: []

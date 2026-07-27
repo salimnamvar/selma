@@ -1,6 +1,6 @@
 {
-  "lineage_id": "STYLE-4",
-  "id": "STYLE-4-TODO-FORMAT",
+  "lineage_id": "ST-004",
+  "id": "ST-004",
   "type": "obligation",
   "message": "TODO/FIXME must follow format: # TODO(name): description",
   "evaluator_type": "ast_walk",
@@ -22,7 +22,7 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "anchor_ref": "section:directives/style_todo_format",
+  "anchor_ref": "section:directives/st004_todo_format",
   "rationale": "Unformatted TODOs are hard to track and assign ownership. A consistent format enables automated tracking and assignment.",
   "remediation": "Use format: # TODO(yourname): description or # FIXME(yourname): description",
   "parameters": {

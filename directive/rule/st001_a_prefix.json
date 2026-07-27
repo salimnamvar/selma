@@ -1,6 +1,6 @@
 {
-  "lineage_id": "STYLE-1",
-  "id": "STYLE-1-PREFIX",
+  "lineage_id": "ST-001",
+  "id": "ST-001",
   "type": "obligation",
   "message": "Function arguments must use a_ prefix",
   "evaluator_type": "ast_node_match",
@@ -54,7 +54,7 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
-  "anchor_ref": "section:directives/style_a_prefix",
+  "anchor_ref": "section:directives/st001_a_prefix",
   "rationale": "Consistent argument naming improves code readability and searchability. The a_ prefix distinguishes parameters from local variables at a glance. CLI entry points (Typer/Click @command/@callback/@group) are exempt: their parameter names are the public CLI surface (flags and positional args), not internal API parameters, so a_ would leak into help text and call sites.",
   "remediation": "Rename arguments: def func(a_name: str, a_count: int):. Do not apply a_ to Typer/Click command parameters; use plain names that match the CLI interface (task, query, output).",
   "parameters": {

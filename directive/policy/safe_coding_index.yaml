@@ -325,22 +325,22 @@ directives:
     title: Compliance Verification
     policy_file: directive/policy/sc133_compliance_verification.yaml
     rule_file: directive/rule/sc133_compliance_verification.json
-  - machine_id: STYLE-1
+  - machine_id: ST-001
     title: Function arguments must use a_ prefix
-    policy_file: directive/policy/style_a_prefix.yaml
-    rule_file: directive/rule/style_a_prefix.json
-  - machine_id: STYLE-2
+    policy_file: directive/policy/st001_a_prefix.yaml
+    rule_file: directive/rule/st001_a_prefix.json
+  - machine_id: ST-002
     title: Mutable default argument in function signature
-    policy_file: directive/policy/style_mutable_default.yaml
-    rule_file: directive/rule/style_mutable_default.json
-  - machine_id: STYLE-3
+    policy_file: directive/policy/st002_mutable_default.yaml
+    rule_file: directive/rule/st002_mutable_default.json
+  - machine_id: ST-003
     title: print() used in production code
-    policy_file: directive/policy/style_no_print.yaml
-    rule_file: directive/rule/style_no_print.json
-  - machine_id: STYLE-4
+    policy_file: directive/policy/st003_no_print.yaml
+    rule_file: directive/rule/st003_no_print.json
+  - machine_id: ST-004
     title: 'TODO/FIXME must follow format: # TODO(name): description'
-    policy_file: directive/policy/style_todo_format.yaml
-    rule_file: directive/rule/style_todo_format.json
+    policy_file: directive/policy/st004_todo_format.yaml
+    rule_file: directive/rule/st004_todo_format.json
 sanctions:
   title: Sanctions & Remedies
   rows:

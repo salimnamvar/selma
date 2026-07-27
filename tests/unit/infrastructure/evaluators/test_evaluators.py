@@ -240,6 +240,87 @@ def skip_builtin(self, cls, args, kwargs, a_value: int) -> int:
         assert len(findings) == 1
         assert "bad" in findings[0].message
 
+    def test_style1_exempts_cli_entry_points_not_whole_module(self) -> None:
+        """CLI flag params (--task, --input) skip a_; plain helpers still require it.
+
+        Exemption is by Typer/Click decorator (@command/@callback/@group), not by
+        file path — helpers in the same CLI module still need a_ on arguments.
+        """
+        source = """
+@app.command()
+def context(
+    task: str = typer.Option("general", "--task"),
+    input: str | None = typer.Option(None, "--input"),
+    paths: list[str] = typer.Argument(default=None),
+) -> None:
+    helper(task)
+
+@app.callback()
+def root(verbose: bool = typer.Option(False, "--verbose")) -> None:
+    pass
+
+@cli.group()
+def tools(name: str) -> None:
+    pass
+
+def helper(value: str) -> str:
+    return value
+
+def helper_ok(a_value: str) -> str:
+    return a_value
+"""
+        tree = _parse(source)
+        # Mirrors directive/rule/st001_a_prefix.json evaluator_config conditions.
+        config = {
+            "target_node": "FunctionDef",
+            "conditions": [
+                {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
+                {
+                    "not": {
+                        "any_of": [
+                            {
+                                "field": ".",
+                                "operator": "has_decorator",
+                                "value": "command",
+                            },
+                            {
+                                "field": ".",
+                                "operator": "has_decorator",
+                                "value": "callback",
+                            },
+                            {
+                                "field": ".",
+                                "operator": "has_decorator",
+                                "value": "group",
+                            },
+                        ]
+                    }
+                },
+                {
+                    "field": ".",
+                    "operator": "params_missing_prefix",
+                    "value": {
+                        "prefix": "a_",
+                        "allow_private_underscore": True,
+                        "skip_names": ["self", "cls", "args", "kwargs"],
+                    },
+                },
+            ],
+            "message_template": (
+                "Function '{name}' arguments must use a_ prefix "
+                "(except self/cls; CLI entry points exempt)"
+            ),
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "ST-001"})
+        found_names = " ".join(f.message for f in findings)
+        assert len(findings) == 1
+        assert "helper" in found_names
+        assert "context" not in found_names
+        assert "root" not in found_names
+        assert "tools" not in found_names
+        assert "helper_ok" not in found_names
+
     def test_sc003_tuple_return_flagged(self) -> None:
         source = """
 def bad(a_x: int) -> tuple[int, str]:
@@ -365,7 +446,7 @@ def ok() -> object:
         assert result.is_success()
         ids = {rule.lineage_id for rule in result.unwrap()}
         assert "SC-121" not in ids
-        assert "STYLE-1" in ids
+        assert "ST-001" in ids
 
 
 class TestAstScopeCheckEvaluator:
