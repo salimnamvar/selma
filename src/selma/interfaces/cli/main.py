@@ -15,6 +15,7 @@ from selma.composition import Container
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
+from selma.infrastructure.bootstrap import lifespan
 from selma.infrastructure.config import ConfigLoader
 from selma.infrastructure.config.models import SelmaConfig
 
@@ -183,59 +184,62 @@ def main() -> Result[int]:
             config = config_result.unwrap()
 
     if b_continue and config is not None:
-        container = Container()
-        use_case = container.get_lint_use_case_with_defaults(
-            a_rules_dir=config.directive.rule_dir,
-            a_schema_path=config.schema_paths.rule_schema,
-            a_policy_dir=config.directive.policy_dir,
-        )
+        with lifespan(config.logging):
+            container = Container()
+            use_case = container.get_lint_use_case_with_defaults(
+                a_rules_dir=config.directive.rule_dir,
+                a_schema_path=config.schema_paths.rule_schema,
+                a_policy_dir=config.directive.policy_dir,
+            )
 
-        exclude_codes: frozenset[str] = (
-            frozenset(args.exclude_codes)
-            if args.exclude_codes
-            else frozenset(config.rules_filter.exclude_codes)
-        )
-        codes: frozenset[str] = (
-            frozenset(args.codes)
-            if args.codes
-            else frozenset(config.rules_filter.codes)
-        )
+            exclude_codes: frozenset[str] = (
+                frozenset(args.exclude_codes)
+                if args.exclude_codes
+                else frozenset(config.rules_filter.exclude_codes)
+            )
+            codes: frozenset[str] = (
+                frozenset(args.codes)
+                if args.codes
+                else frozenset(config.rules_filter.codes)
+            )
 
-        file_paths = _collect_file_paths(args.paths)
+            file_paths = _collect_file_paths(args.paths)
 
-        request = LintRequest(
-            paths=tuple(file_paths),
-            exclude_codes=exclude_codes,
-            codes=codes,
-            format=config.output.format,
-            guide=config.output.guide,
-            skip_tools=config.execution.skip_tools,
-            skip_ast=config.execution.skip_ast,
-            only=config.execution.only,
-        )
+            request = LintRequest(
+                paths=tuple(file_paths),
+                exclude_codes=exclude_codes,
+                codes=codes,
+                format=config.output.format,
+                guide=config.output.guide,
+                skip_tools=config.execution.skip_tools,
+                skip_ast=config.execution.skip_ast,
+                only=config.execution.only,
+            )
 
-        lint_result = use_case.execute(request)
-        if lint_result.is_success():
-            response = lint_result.unwrap()
-            if args.verbose:
-                report_findings = response.findings
-            else:
-                report_findings = tuple(
-                    f for f in response.findings if f.severity != Severity.INFORMATIONAL
+            lint_result = use_case.execute(request)
+            if lint_result.is_success():
+                response = lint_result.unwrap()
+                if args.verbose:
+                    report_findings = response.findings
+                else:
+                    report_findings = tuple(
+                        f
+                        for f in response.findings
+                        if f.severity != Severity.INFORMATIONAL
+                    )
+                reporter = container.get_reporter(
+                    config.output.format,
                 )
-            reporter = container.get_reporter(
-                config.output.format,
-            )
-            report_result = reporter.report(
-                report_findings,
-            )
-            if report_result.is_success():
-                sys.stdout.write(report_result.unwrap() + "\n")
-            if response.finding_count > 0:
+                report_result = reporter.report(
+                    report_findings,
+                )
+                if report_result.is_success():
+                    sys.stdout.write(report_result.unwrap() + "\n")
+                if response.finding_count > 0:
+                    exit_code = 1
+            else:
+                sys.stderr.write(f"Error: {lint_result.message}\n")
                 exit_code = 1
-        else:
-            sys.stderr.write(f"Error: {lint_result.message}\n")
-            exit_code = 1
 
     return Result.success(exit_code)
 

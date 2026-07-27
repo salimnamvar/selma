@@ -44,6 +44,23 @@
             "cls",
             "args",
             "kwargs"
+          ],
+          "exempt_methods": [
+            "filter",
+            "emit",
+            "format",
+            "formatTime",
+            "_format_time",
+            "formatException",
+            "write",
+            "read",
+            "close",
+            "flush",
+            "seek",
+            "tell",
+            "readline",
+            "readlines",
+            "writelines"
           ]
         }
       }

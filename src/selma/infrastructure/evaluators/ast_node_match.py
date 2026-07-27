@@ -415,6 +415,9 @@ def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
 def _params_missing_prefix(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
     if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return False
+    exempt_methods = set(_as_str_list(a_cfg.get("exempt_methods", [])))
+    if a_node.name in exempt_methods:
+        return False
     prefix = str(a_cfg.get("prefix", "a_"))
     allow_private = bool(a_cfg.get("allow_private_underscore", True))
     skip = _skip_param_names(a_cfg)

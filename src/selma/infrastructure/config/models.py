@@ -105,8 +105,28 @@ class LoggingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     level: str = Field(description="Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
-    format: str = Field(description="Log format string")
+    logger_name: str = Field(
+        description="Application logger name for propagating loggers.",
+    )
+    diagnostic_format: str = Field(
+        description="Log format for diagnostic records (< INFO). Includes filename:lineno.",
+    )
+    operational_format: str = Field(
+        description="Log format for operational records (>= INFO). No filename:lineno.",
+    )
     file: str | None = Field(description="Log file path (stderr if None)")
+    enabled: bool = Field(
+        description="Enable non-blocking logging via queue.",
+    )
+    log_dir: str | None = Field(
+        description="Directory for rotating log files. None disables file logging.",
+    )
+    max_bytes: int = Field(
+        description="Max log file size before rotation (bytes).",
+    )
+    backup_count: int = Field(
+        description="Number of rotated log files to keep.",
+    )
 
 
 class ToolConfig(BaseModel):

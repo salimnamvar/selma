@@ -657,5 +657,11 @@ fail_under = 8
 # ─── Logging ───────────────────────────────────────────────────────────────
 [tool.selma.logging]
 level = "WARNING"
-format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logger_name = "selma"
+diagnostic_format = "%(levelname)s [%(run_id)s] %(asctime)s %(filename)s:%(lineno)d%(resource)s : %(message)s"
+operational_format = "%(levelname)s [%(run_id)s] %(asctime)s%(resource)s : %(message)s"
 file = ""
+enabled = true
+log_dir = ".log"
+max_bytes = 10485760
+backup_count = 5

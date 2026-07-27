@@ -611,8 +611,14 @@ class ConfigLoader:
         toml_data = a_toml.get("logging", {})
 
         env_level = os.environ.get(f"{_ENV_PREFIX}LOGGING_LEVEL")
-        env_format = os.environ.get(f"{_ENV_PREFIX}LOGGING_FORMAT")
+        env_logger_name = os.environ.get(f"{_ENV_PREFIX}LOGGING_LOGGER_NAME")
+        env_diag_fmt = os.environ.get(f"{_ENV_PREFIX}LOGGING_DIAGNOSTIC_FORMAT")
+        env_ops_fmt = os.environ.get(f"{_ENV_PREFIX}LOGGING_OPERATIONAL_FORMAT")
         env_file = os.environ.get(f"{_ENV_PREFIX}LOGGING_FILE")
+        env_enabled = os.environ.get(f"{_ENV_PREFIX}LOGGING_ENABLED")
+        env_log_dir = os.environ.get(f"{_ENV_PREFIX}LOGGING_LOG_DIR")
+        env_max_bytes = os.environ.get(f"{_ENV_PREFIX}LOGGING_MAX_BYTES")
+        env_backup_count = os.environ.get(f"{_ENV_PREFIX}LOGGING_BACKUP_COUNT")
 
         level = env_level or toml_data.get("level")
         if not level:
@@ -621,13 +627,65 @@ class ConfigLoader:
                 + "SELMA_LOGGING_LEVEL.",
             )
 
-        fmt = env_format or toml_data.get("format")
-        if not fmt:
+        logger_name = env_logger_name or toml_data.get("logger_name")
+        if not logger_name:
             return Result.failure(
-                "logging.format required. Set [tool.selma.logging.format] or "
-                + "SELMA_LOGGING_FORMAT.",
+                "logging.logger_name required. Set "
+                + "[tool.selma.logging.logger_name] or SELMA_LOGGING_LOGGER_NAME.",
+            )
+
+        diag_fmt = env_diag_fmt or toml_data.get("diagnostic_format")
+        if not diag_fmt:
+            return Result.failure(
+                "logging.diagnostic_format required. Set "
+                + "[tool.selma.logging.diagnostic_format] or SELMA_LOGGING_DIAGNOSTIC_FORMAT.",
+            )
+
+        ops_fmt = env_ops_fmt or toml_data.get("operational_format")
+        if not ops_fmt:
+            return Result.failure(
+                "logging.operational_format required. Set "
+                + "[tool.selma.logging.operational_format] or SELMA_LOGGING_OPERATIONAL_FORMAT.",
             )
 
         file = env_file or toml_data.get("file")
 
-        return Result.success(LoggingConfig(level=level, format=fmt, file=file))
+        enabled_raw = env_enabled or toml_data.get("enabled")
+        if enabled_raw is None:
+            return Result.failure(
+                "logging.enabled required. Set "
+                + "[tool.selma.logging.enabled] or SELMA_LOGGING_ENABLED.",
+            )
+        enabled = str(enabled_raw).lower() in ("true", "1", "yes")
+
+        log_dir = env_log_dir if env_log_dir is not None else toml_data.get("log_dir")
+        if log_dir == "":
+            log_dir = None
+
+        max_bytes_raw = env_max_bytes or toml_data.get("max_bytes")
+        if max_bytes_raw is None:
+            return Result.failure(
+                "logging.max_bytes required. Set "
+                + "[tool.selma.logging.max_bytes] or SELMA_LOGGING_MAX_BYTES.",
+            )
+
+        backup_count_raw = env_backup_count or toml_data.get("backup_count")
+        if backup_count_raw is None:
+            return Result.failure(
+                "logging.backup_count required. Set "
+                + "[tool.selma.logging.backup_count] or SELMA_LOGGING_BACKUP_COUNT.",
+            )
+
+        return Result.success(
+            LoggingConfig(
+                level=level,
+                logger_name=logger_name,
+                diagnostic_format=diag_fmt,
+                operational_format=ops_fmt,
+                file=file,
+                enabled=enabled,
+                log_dir=log_dir,
+                max_bytes=int(max_bytes_raw),
+                backup_count=int(backup_count_raw),
+            )
+        )
