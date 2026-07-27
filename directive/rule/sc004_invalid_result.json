@@ -10,15 +10,12 @@
     "message_template": "Module missing INVALID_RESULT sentinel per SC-004"
   },
   "weight": "critical",
+  "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc004_invalid_result",
   "rationale": "INVALID_RESULT is not a generic error. It is a declaration that the function's contract has been irreparably violated. It exists to prevent callers from treating a fundamentally broken state as a recoverable error.",
   "remediation": "Define a module-level INVALID_RESULT sentinel and use it as the initial default for result variables.",
-  "guidance": {
-    "correct_example": "INVALID_RESULT: Result[Any] = Result.failure('Irrecoverable state')\n\ndef process(a_data: dict) -> Result[str]:\n    result: Result[str] = INVALID_RESULT\n    b_continue = True\n    if not isinstance(a_data, dict):\n        result = Result.failure('Expected dict')\n        b_continue = False\n    if b_continue:\n        result = Result.success(a_data.get('name', ''))\n    return result",
-    "incorrect_example": "def process(a_data: dict) -> Result[str]:\n    result = None\n    if not isinstance(a_data, dict):\n        return Result.failure('Expected dict')\n    return Result.success(a_data.get('name', ''))",
-    "explanation": "The correct version defines a module-level INVALID_RESULT sentinel used as initial default. The incorrect version has no sentinel, making it unclear what result represents an unrecoverable state."
-  },
   "parameters": {
     "sentinel_name": "INVALID_RESULT"
   }

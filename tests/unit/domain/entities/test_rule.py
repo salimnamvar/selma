@@ -9,7 +9,7 @@ from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.severity import Severity
 
 
-def _make_rule(**overrides: object) -> RuleDefinition:
+def _make_rule(**a_overrides: object) -> RuleDefinition:
     """Create a RuleDefinition with sensible defaults."""
     defaults: dict[str, object] = {
         "lineage_id": "SC001",
@@ -19,7 +19,7 @@ def _make_rule(**overrides: object) -> RuleDefinition:
         "evaluator_type": "ast",
         "evaluator_config": EvaluatorConfig(),
     }
-    defaults.update(overrides)
+    defaults.update(a_overrides)
     return RuleDefinition(**defaults)  # type: ignore[arg-type]
 
 

@@ -5,8 +5,15 @@
   "message": "Resource cleanup not deterministic",
   "evaluator_type": "ast_context_check",
   "evaluator_config": {
-    "target_functions": ["open", "Popen", "connect", "socket"],
-    "must_be_inside": ["With"],
+    "target_functions": [
+      "open",
+      "Popen",
+      "connect",
+      "socket"
+    ],
+    "must_be_inside": [
+      "With"
+    ],
     "or_try_finally": true,
     "message_template": "Resource must use context manager for deterministic cleanup"
   },
@@ -14,7 +21,10 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc082_deterministic_cleanup",
   "rationale": "Non-deterministic cleanup can cause resource leaks under error conditions.",
   "remediation": "Use context managers (with statement) to guarantee deterministic cleanup.",
-  "parameters": {"prefer_with_statement": true}
+  "parameters": {
+    "prefer_with_statement": true
+  }
 }

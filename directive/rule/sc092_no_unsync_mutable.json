@@ -7,7 +7,10 @@
   "evaluator_config": {
     "target_node": "Call",
     "conditions": [
-      {"field": "func", "operator": "exists"},
+      {
+        "field": "func",
+        "operator": "exists"
+      },
       {
         "field": "func.attr",
         "operator": "matches",
@@ -17,24 +20,36 @@
         "field": ".",
         "operator": "attr_call_on_shared_state",
         "value": {
-          "methods": ["append", "extend", "insert", "remove", "pop", "update", "clear", "sort", "reverse"],
-          "self_names": ["self"],
-          "lock_markers": ["Lock", "RLock", "lock"]
+          "methods": [
+            "append",
+            "extend",
+            "insert",
+            "remove",
+            "pop",
+            "update",
+            "clear",
+            "sort",
+            "reverse"
+          ],
+          "self_names": [
+            "self"
+          ],
+          "lock_markers": [
+            "Lock",
+            "RLock",
+            "lock"
+          ]
         }
       }
     ],
-    "message_template": "Unsynchronized mutable access detected — use thread-safe wrapper"
+    "message_template": "Unsynchronized mutable access detected \u2014 use thread-safe wrapper"
   },
   "weight": "high",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc092_no_unsync_mutable",
   "rationale": "Python's GIL does not protect against logical data races on shared mutable state.",
   "remediation": "Wrap with threading.Lock or use queue.Queue for thread-safe access.",
-  "guidance": {
-    "correct_example": "with self._lock:\n    self._items.append(a_item)",
-    "incorrect_example": "self._items.append(a_item)",
-    "explanation": "Shared mutable access must be synchronized. Local list mutations are not shared state."
-  },
   "parameters": {}
 }

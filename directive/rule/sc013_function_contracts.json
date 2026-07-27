@@ -23,13 +23,9 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc013_function_contracts",
   "rationale": "A function without a contract is a function whose behavior is undefined. Contracts make implicit assumptions explicit, enabling safe composition and refactoring.",
   "remediation": "Add docstring with Preconditions, Postconditions, Side Effects, Resource, and Failure sections.",
-  "guidance": {
-    "correct_example": "def transfer(a_from: Account, a_to: Account, a_amount: float) -> Result[None]:\n    \"\"\"Transfer funds between accounts.\n\n    Preconditions:\n        - a_from has sufficient balance >= a_amount\n        - a_amount > 0\n    Postconditions:\n        - a_from.balance decreased by a_amount\n        - a_to.balance increased by a_amount\n    Side Effects:\n        - Updates database records for both accounts\n    Resource Ownership:\n        - Database connection acquired and released by caller\n    Failure Modes:\n        - Returns Result.failure if insufficient funds\n        - Returns Result.failure on database error\n    \"\"\"\n    pass",
-    "incorrect_example": "def transfer(a_from: Account, a_to: Account, a_amount: float) -> Result[None]:\n    pass",
-    "explanation": "The correct version documents preconditions, postconditions, side effects, resource ownership, and failure modes. The incorrect version has no contract, leaving behavior undefined."
-  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_properties": true,

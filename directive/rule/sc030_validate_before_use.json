@@ -28,6 +28,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc030_validate_before_use",
   "rationale": "Validating at entry prevents errors from propagating and creates clear failure points.",
   "remediation": "Add isinstance checks or validation calls as the first statements in the function body.",
   "parameters": {

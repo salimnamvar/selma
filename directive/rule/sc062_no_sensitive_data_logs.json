@@ -2,33 +2,47 @@
   "lineage_id": "SC-062",
   "id": "SC-062",
   "type": "prohibition",
-  "message": "Sensitive data logged — passwords, tokens, secrets must not appear in logs",
+  "message": "Sensitive data logged \u2014 passwords, tokens, secrets must not appear in logs",
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
-      {"module": "logging", "method": "info"},
-      {"module": "logging", "method": "warning"},
-      {"module": "logging", "method": "error"},
-      {"module": "logging", "method": "debug"}
+      {
+        "module": "logging",
+        "method": "info"
+      },
+      {
+        "module": "logging",
+        "method": "warning"
+      },
+      {
+        "module": "logging",
+        "method": "error"
+      },
+      {
+        "module": "logging",
+        "method": "debug"
+      }
     ],
     "check_first_arg": {
       "forbid_fstring": true,
       "forbid_format_call": true
     },
-    "message_template": "Sensitive data may be logged — sanitize before logging"
+    "message_template": "Sensitive data may be logged \u2014 sanitize before logging"
   },
   "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc062_no_sensitive_data_logs",
   "rationale": "Logs are stored, transmitted, and accessed by multiple systems. Sensitive data in logs creates a data leak vector that bypasses all access controls on the source system.",
   "remediation": "Sanitize sensitive fields before logging. Use redaction functions. Never log passwords, API keys, tokens, or secrets.",
-  "guidance": {
-    "correct_example": "import structlog\nlogger = structlog.get_logger()\n\ndef authenticate(a_username: str, a_password: str) -> Result[Token]:\n    logger.info('auth_attempt', username=a_username)\n    token = verify_credentials(a_username, a_password)\n    if token is None:\n        return Result.failure('Invalid credentials')\n    logger.info('auth_success', username=a_username)\n    return Result.success(token)",
-    "incorrect_example": "def authenticate(a_username: str, a_password: str) -> Result[Token]:\n    logger.info(f'Authenticating user={a_username} pass={a_password}')\n    token = verify_credentials(a_username, a_password)\n    return Result.success(token)",
-    "explanation": "The correct version logs only the username, never the password. The incorrect version logs the password in plaintext, creating a data leak in log files."
-  },
   "parameters": {
-    "sensitive_patterns": ["password", "token", "secret", "key", "credential"]
+    "sensitive_patterns": [
+      "password",
+      "token",
+      "secret",
+      "key",
+      "credential"
+    ]
   }
 }

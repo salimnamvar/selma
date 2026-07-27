@@ -2,29 +2,30 @@
   "lineage_id": "SC-007",
   "id": "SC-007",
   "type": "prohibition",
-  "message": "Assert used for validation — raise ValueError or use Result.failure()",
+  "message": "Assert used for validation \u2014 raise ValueError or use Result.failure()",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_node": "FunctionDef",
-    "walk_nodes": ["Assert"],
+    "walk_nodes": [
+      "Assert"
+    ],
     "walk_config": {
       "exclude_nested_functions": true,
       "exclude_dunders": true
     },
-    "count": {"operator": "gt", "value": 0},
-    "message_template": "Assert used in function '{name}' — use ValueError or Result.failure() for validation"
+    "count": {
+      "operator": "gt",
+      "value": 0
+    },
+    "message_template": "Assert used in function '{name}' \u2014 use ValueError or Result.failure() for validation"
   },
   "weight": "high",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc007_no_assert_validation",
   "rationale": "Assert statements are stripped when Python runs with -O (optimized mode). Using them for validation means validation disappears in production. Runtime validation must use explicit if checks that raise or return error results unconditionally.",
   "remediation": "Replace assert with explicit if/raise or Result.failure() with descriptive message.",
-  "guidance": {
-    "correct_example": "def calculate(a_value: float) -> Result[float]:\n    if not isinstance(a_value, (int, float)):\n        return Result.failure(f'Expected number, got {type(a_value).__name__}')\n    if a_value < 0:\n        return Result.failure('Value must be non-negative')\n    return Result.success(a_value * 2)",
-    "incorrect_example": "def calculate(a_value: float) -> float:\n    assert isinstance(a_value, (int, float)), 'Expected number'\n    assert a_value >= 0, 'Value must be non-negative'\n    return a_value * 2",
-    "explanation": "The correct version uses if checks that always run. The incorrect version uses assert which is stripped in optimized mode (-O), making validation disappear in production."
-  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_test_files": true

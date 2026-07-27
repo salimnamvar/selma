@@ -7,12 +7,20 @@
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "type", "operator": "exists"},
-      {"field": "name", "operator": "exists"},
+      {
+        "field": "type",
+        "operator": "exists"
+      },
+      {
+        "field": "name",
+        "operator": "exists"
+      },
       {
         "field": ".",
         "operator": "except_bound_name_unused",
-        "value": ["exc_info"]
+        "value": [
+          "exc_info"
+        ]
       }
     ],
     "message_template": "Exception handler must log str(e) or use exc_info=True for context"
@@ -21,7 +29,10 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc051_exception_context",
   "rationale": "Losing exception context makes debugging difficult.",
   "remediation": "Log str(e) and use exc_info=True, or re-raise with 'raise ... from e'.",
-  "parameters": {"require_exc_info": true}
+  "parameters": {
+    "require_exc_info": true
+  }
 }

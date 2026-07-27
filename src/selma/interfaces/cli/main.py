@@ -187,12 +187,19 @@ def main() -> Result[int]:
         use_case = container.get_lint_use_case_with_defaults(
             a_rules_dir=config.directive.rule_dir,
             a_schema_path=config.schema_paths.rule_schema,
+            a_policy_dir=config.directive.policy_dir,
         )
 
         exclude_codes: frozenset[str] = (
-            frozenset(args.exclude_codes) if args.exclude_codes else frozenset()
+            frozenset(args.exclude_codes)
+            if args.exclude_codes
+            else frozenset(config.rules_filter.exclude_codes)
         )
-        codes: frozenset[str] = frozenset(args.codes) if args.codes else frozenset()
+        codes: frozenset[str] = (
+            frozenset(args.codes)
+            if args.codes
+            else frozenset(config.rules_filter.codes)
+        )
 
         file_paths = _collect_file_paths(args.paths)
 

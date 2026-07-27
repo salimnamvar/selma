@@ -23,6 +23,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc120_ai_compliance",
   "rationale": "AI-generated code requires human review and compliance verification.",
   "remediation": "Add comment or decorator indicating AI generation: # AI-Generated: <model> <date>",
   "parameters": {

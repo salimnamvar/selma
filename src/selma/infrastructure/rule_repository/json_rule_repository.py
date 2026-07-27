@@ -1,6 +1,10 @@
 """JSON rule repository — loads rules from JSON files.
 
 Implements the RuleRepository port from the application layer.
+
+Machine lint logic comes exclusively from directive/rule/*.json.
+Optional policy YAML under directive/policy/ supplies human guidance
+(examples, reasoning) only — never evaluator configuration.
 """
 
 from __future__ import annotations
@@ -10,9 +14,12 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 
+import yaml
+
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.domain.entities.rule import EvaluatorConfig
 from selma.domain.entities.rule import RuleDefinition
+from selma.domain.value_objects.guidance import RuleGuidance
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
 from selma.domain.value_objects.severity import Severity
@@ -25,10 +32,17 @@ class JsonRuleRepository(RuleRepository):
 
     Implements RuleRepository port. Caches loaded rules.
     The rules directory and schema path MUST be provided — no hardcoded defaults.
+    Optional policy_dir attaches guidance from paired YAML doctrines (not lint).
     """
 
-    def __init__(self, a_rules_dir: Path, a_schema_path: Path) -> None:
+    def __init__(
+        self,
+        a_rules_dir: Path,
+        a_schema_path: Path,
+        a_policy_dir: Path | None = None,
+    ) -> None:
         self._rules_dir = a_rules_dir
+        self._policy_dir = a_policy_dir
         self._cached_rules: tuple[RuleDefinition, ...] | None = None
         self._schema_validator = RuleSchemaValidator(a_schema_path=a_schema_path)
 
@@ -172,7 +186,7 @@ class JsonRuleRepository(RuleRepository):
                 parsed: list[RuleDefinition] = []
                 for raw_rule in raw_rules:
                     if b_continue:
-                        parse_result = self._parse_rule(raw_rule)
+                        parse_result = self._parse_rule(raw_rule, a_path)
                         if b_continue and parse_result.is_failure():
                             b_continue = False
                             result = Result.failure(parse_result.message)
@@ -185,7 +199,9 @@ class JsonRuleRepository(RuleRepository):
 
         return result
 
-    def _parse_rule(self, a_raw: dict[str, Any]) -> Result[RuleDefinition]:
+    def _parse_rule(
+        self, a_raw: dict[str, Any], a_rule_path: Path
+    ) -> Result[RuleDefinition]:
         """Validate via jsonschema + Pydantic, then map to domain RuleDefinition."""
         b_continue = True
         result: Result[RuleDefinition] = Result.failure("unreachable")
@@ -197,7 +213,7 @@ class JsonRuleRepository(RuleRepository):
 
         if b_continue:
             document = validation.unwrap()
-            mapped = self._map_document(document)
+            mapped = self._map_document(document, a_rule_path)
             if mapped.is_failure():
                 b_continue = False
                 result = Result.failure(mapped.message)
@@ -206,7 +222,95 @@ class JsonRuleRepository(RuleRepository):
 
         return result
 
-    def _map_document(self, a_doc: RuleDocumentModel) -> Result[RuleDefinition]:
+    def _load_policy_guidance(
+        self, a_rule_path: Path, a_lineage_id: str, a_message: str
+    ) -> RuleGuidance | None:
+        """Load human guidance from paired policy YAML (never used for lint)."""
+        b_continue = True
+        result: RuleGuidance | None = None
+        if b_continue and self._policy_dir is None:
+            b_continue = False
+        if b_continue and self._policy_dir is not None:
+            policy_path = self._policy_dir / f"{a_rule_path.stem}.yaml"
+            if not policy_path.is_file():
+                b_continue = False
+        if b_continue and self._policy_dir is not None:
+            policy_path = self._policy_dir / f"{a_rule_path.stem}.yaml"
+            try:
+                with policy_path.open("r", encoding="utf-8") as handle:
+                    raw_obj = yaml.safe_load(handle)
+                if not isinstance(raw_obj, dict):
+                    b_continue = False
+                if b_continue:
+                    data = cast("dict[str, Any]", raw_obj)
+                    # Contamination guard: never accept machine evaluator fields
+                    # as guidance carriers even if a bad policy file contains them.
+                    for forbidden in (
+                        "evaluator_type",
+                        "evaluator_config",
+                        "evaluator_hint",
+                    ):
+                        if forbidden in data:
+                            b_continue = False
+                    if b_continue:
+                        guide = data.get("guidance")
+                        if not isinstance(guide, dict):
+                            guide = {}
+                        guide_d = cast("dict[str, Any]", guide)
+                        directives = data.get("directives")
+                        title = a_lineage_id
+                        if isinstance(directives, dict):
+                            specs = directives.get("specific_directives")
+                            if isinstance(specs, list) and specs:
+                                first = specs[0]
+                                if isinstance(first, dict):
+                                    title = str(
+                                        first.get("title")
+                                        or first.get("machine_id")
+                                        or a_lineage_id
+                                    )
+                        related_raw = guide_d.get("related_machine_ids") or []
+                        related: tuple[str, ...] = ()
+                        if isinstance(related_raw, list):
+                            related = tuple(str(x) for x in related_raw)
+                        refs = data.get("references")
+                        doctrine_section = ""
+                        if isinstance(refs, dict):
+                            doctrine_section = str(refs.get("anchor_ref") or "")
+                        fix_instructions = ""
+                        sanctions = data.get("sanctions")
+                        if isinstance(sanctions, dict):
+                            rows = sanctions.get("rows")
+                            if isinstance(rows, list) and rows:
+                                first_row = rows[0]
+                                if isinstance(first_row, dict):
+                                    fix_instructions = str(
+                                        first_row.get("remediation_path") or ""
+                                    )
+                        if not fix_instructions:
+                            fix_instructions = str(
+                                guide_d.get("explanation") or a_message
+                            )
+                        result = RuleGuidance(
+                            rule_code=a_lineage_id,
+                            title=title,
+                            description=str(guide_d.get("explanation") or a_message),
+                            rationale=str(guide_d.get("reasoning") or ""),
+                            severity="",
+                            fix_instructions=fix_instructions,
+                            correct_example=str(guide_d.get("correct_example") or ""),
+                            anti_pattern=str(guide_d.get("incorrect_example") or ""),
+                            related_rules=related,
+                            doctrine_section=doctrine_section,
+                            hints=(),
+                        )
+            except (OSError, yaml.YAMLError):
+                result = None
+        return result
+
+    def _map_document(
+        self, a_doc: RuleDocumentModel, a_rule_path: Path
+    ) -> Result[RuleDefinition]:
         b_continue = True
         result: Result[RuleDefinition] = Result.failure("unreachable")
         ec_raw = a_doc.evaluator_config.model_dump(by_alias=True, exclude_none=False)
@@ -226,6 +330,11 @@ class JsonRuleRepository(RuleRepository):
             weight = (
                 Severity(weight_str) if weight_str in valid_weights else Severity.MEDIUM
             )
+            guidance = self._load_policy_guidance(
+                a_rule_path=a_rule_path,
+                a_lineage_id=a_doc.lineage_id,
+                a_message=a_doc.message,
+            )
             rule = RuleDefinition(
                 lineage_id=a_doc.lineage_id,
                 id=a_doc.id,
@@ -239,6 +348,7 @@ class JsonRuleRepository(RuleRepository):
                 created_at=a_doc.created_at,
                 rationale=a_doc.rationale,
                 remediation=a_doc.remediation,
+                guidance=guidance,
                 parameters=dict(a_doc.parameters),
                 depends_on=tuple(a_doc.depends_on),
                 conflicts_with=tuple(a_doc.conflicts_with),

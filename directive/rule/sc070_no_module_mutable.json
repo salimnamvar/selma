@@ -7,22 +7,22 @@
   "evaluator_config": {
     "check": {
       "type": "no_mutable_globals",
-      "forbidden_types": ["list", "dict", "set"],
+      "forbidden_types": [
+        "list",
+        "dict",
+        "set"
+      ],
       "forbid_reassignable": true
     },
-    "message_template": "Module-level mutable state detected — use function-local or class-based state"
+    "message_template": "Module-level mutable state detected \u2014 use function-local or class-based state"
   },
   "weight": "high",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc070_no_module_mutable",
   "rationale": "Module-level mutable state is global state. It is shared across all callers, all threads, and all test runs. It creates invisible coupling between unrelated code paths and makes testing non-deterministic.",
   "remediation": "Use class-based state, dependency injection, or function-local state. Module-level constants (immutable values, frozen dataclasses) are permitted.",
-  "guidance": {
-    "correct_example": "from dataclasses import dataclass, field\n\n@dataclass(frozen=True)\nclass Config:\n    db_url: str\n    timeout: int = 30\n\ndef process(a_config: Config) -> Result[str]:\n    return Result.success(f'Connecting to {a_config.db_url}')",
-    "incorrect_example": "config = {'db_url': 'localhost', 'timeout': 30}\n\ndef process() -> Result[str]:\n    config['timeout'] = 60\n    return Result.success(f'Connecting to {config[\"db_url\"]}')",
-    "explanation": "The correct version uses a frozen dataclass (immutable) passed as a parameter. The incorrect version uses a mutable module-level dict, creating hidden coupling and test pollution."
-  },
   "parameters": {
     "exempt_constants": true,
     "exempt_type_aliases": true

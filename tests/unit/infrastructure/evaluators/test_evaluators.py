@@ -14,8 +14,8 @@ from selma.infrastructure.evaluators.ast_walk import AstWalkEvaluator
 from selma.infrastructure.rule_repository.json_rule_repository import JsonRuleRepository
 
 
-def _parse(source: str) -> ast.AST:
-    return ast.parse(source)
+def _parse(a_source: str) -> ast.AST:
+    return ast.parse(a_source)
 
 
 class TestAstWalkEvaluator:

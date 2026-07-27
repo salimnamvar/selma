@@ -7,17 +7,35 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "args", "operator": "exists"},
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "args",
+        "operator": "exists"
+      },
       {
         "field": ".",
         "operator": "params_any_unannotated",
-        "value": {"skip_names": ["self", "cls", "args", "kwargs"]}
+        "value": {
+          "skip_names": [
+            "self",
+            "cls",
+            "args",
+            "kwargs"
+          ]
+        }
       },
       {
         "field": ".",
         "operator": "body_not_contains_any",
-        "value": ["isinstance(", "TypeError", "Result.failure"]
+        "value": [
+          "isinstance(",
+          "TypeError",
+          "Result.failure"
+        ]
       }
     ],
     "message_template": "Function '{name}' accepts arguments without type validation"
@@ -26,16 +44,17 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc031_type_validation",
   "rationale": "Python type hints are not enforced at runtime. Unannotated parameters without runtime validation allow undefined behavior.",
   "remediation": "Annotate parameters or add isinstance() checks / Result.failure validation.",
-  "guidance": {
-    "correct_example": "def process(a_data: dict) -> Result[str]:\n    if not isinstance(a_data, dict):\n        return Result.failure(f'Expected dict, got {type(a_data).__name__}')\n    return Result.success(str(a_data.get('name')))",
-    "incorrect_example": "def process(a_data) -> Result[str]:\n    return Result.success(a_data.get('name'))",
-    "explanation": "Unannotated parameters must be validated at runtime."
-  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_typed": true,
-    "skip_names": ["self", "cls", "args", "kwargs"]
+    "skip_names": [
+      "self",
+      "cls",
+      "args",
+      "kwargs"
+    ]
   }
 }

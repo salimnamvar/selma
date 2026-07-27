@@ -7,8 +7,15 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": "returns", "operator": "not_exists"}
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "returns",
+        "operator": "not_exists"
+      }
     ],
     "message_template": "Function '{name}' missing explicit return type annotation"
   },
@@ -16,13 +23,9 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc024_explicit_return_types",
   "rationale": "Explicit return types are contracts. They tell the caller what to expect and enable static analysis to catch type mismatches.",
   "remediation": "Add return type annotation: def foo() -> Result[int]:",
-  "guidance": {
-    "correct_example": "def calculate(a_value: int) -> Result[int]:\n    if a_value < 0:\n        return Result.failure('Value must be non-negative')\n    return Result.success(a_value * 2)",
-    "incorrect_example": "def calculate(a_value: int):\n    if a_value < 0:\n        return Result.failure('Value must be non-negative')\n    return Result.success(a_value * 2)",
-    "explanation": "The correct version has an explicit return type annotation (-> Result[int]). The incorrect version omits it, preventing static analysis from catching type errors."
-  },
   "parameters": {
     "exempt_dunders": true,
     "exempt_properties": true,

@@ -24,6 +24,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc072_state_mutation_doc",
   "rationale": "Undocumented state mutations make code unpredictable.",
   "remediation": "Document all state mutations in the function's docstring under a 'Side Effects' section.",
   "parameters": {

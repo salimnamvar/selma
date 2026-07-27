@@ -18,6 +18,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc122_ai_review_protocol",
   "rationale": "AI-generated code requires human review to ensure quality and safety.",
   "remediation": "Review all AI-generated code in pull requests before merging.",
   "parameters": {

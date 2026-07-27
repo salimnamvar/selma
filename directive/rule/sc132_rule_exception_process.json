@@ -18,6 +18,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc132_rule_exception_process",
   "rationale": "Uncontrolled exceptions erode the rule system.",
   "remediation": "Document exceptions with justification, approver, and expiration date.",
   "parameters": {

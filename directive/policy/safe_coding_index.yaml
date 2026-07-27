@@ -1,0 +1,353 @@
+# Policy doctrine — governance intent, guidance, examples, reasoning ONLY.
+# MUST NOT be used for linting/evaluation at runtime.
+# Machine lint source: matching file under directive/rule/*.json
+# Schema contract: schema/policy_doctrine.yaml
+# Normative source: .nasim/rules/code/safe-coding.md
+
+doctrine:
+  name: safe-coding-policy-index
+  version: 8.2.4
+  description: Index of Safe Coding policy doctrines. Policy YAML is for guidance, examples, and reasoning
+    only. Linting sources are ONLY directive/rule/*.json.
+  spec_version: 8.2.4
+  schema_version: 8.2.4
+  schema_id: universal-rule-schema
+  runtime_prohibition: This file and all directive/policy/*.yaml files MUST NOT be read at lint runtime.
+cross_layer_binding:
+  normative_source: .nasim/rules/code/safe-coding.md
+  policy_purpose: Governance intent description
+  lint_source_glob: directive/rule/*.json
+  policy_glob: directive/policy/*.yaml
+preamble:
+  purpose: Catalog one policy doctrine per machine rule without duplicating evaluator logic.
+principles:
+  title: Foundational Principles
+  items:
+  - id: P1
+    title: Determinism Over Cleverness
+    description: Every function SHALL produce the same output for the same inputs under the same documented
+      conditions. No exceptions. Cleverness that sacrifices determinism is forbidden.
+  - id: P2
+    title: Localized Failure Handling
+    description: Every function SHALL handle its own failures. A function SHALL NOT propagate exceptions
+      to its caller for the caller to decide what to do. Failure handling is the responsibility of the
+      layer that detects the failure.
+  - id: P3
+    title: Explicit Over Implicit
+    description: Every contract, every side effect, every resource ownership transfer, and every state
+      mutation SHALL be declared explicitly. Implicit behavior is forbidden.
+  - id: P4
+    title: Fail-Safe Defaults
+    description: When a function encounters a condition it cannot resolve, it SHALL return a deterministic
+      failure result. It SHALL NOT leave the system in a partially mutated state. It SHALL NOT raise an
+      exception hoping the caller will clean up.
+  - id: P5
+    title: Validation as Entry Contract
+    description: Every function SHALL validate its inputs before executing any logic. Validation is not
+      optional. Validation is not behind feature flags. Validation runs in all environments, including
+      production.
+  - id: P6
+    title: Resource Ownership Is Explicit
+    description: Every resource SHALL have a single, documented owner. Ownership transfers SHALL be explicit.
+      Every resource SHALL be released deterministically, even in failure paths.
+  - id: P7
+    title: Single Truth Source
+    description: Every piece of data SHALL have exactly one authoritative source. Derived data SHALL be
+      computed, never independently maintained.
+directives:
+  title: Directive Catalog
+  specific_directives:
+  - machine_id: SC-001
+    title: Single-Exit Point
+    policy_file: directive/policy/sc001_single_exit.yaml
+    rule_file: directive/rule/sc001_single_exit.json
+  - machine_id: SC-002
+    title: Zero-Raise Policy
+    policy_file: directive/policy/sc002_zero_raise.yaml
+    rule_file: directive/rule/sc002_zero_raise.json
+  - machine_id: SC-003
+    title: Structured Result Return
+    policy_file: directive/policy/sc003_result_return.yaml
+    rule_file: directive/rule/sc003_result_return.json
+  - machine_id: SC-004
+    title: INVALID_RESULT Sentinel
+    policy_file: directive/policy/sc004_invalid_result.yaml
+    rule_file: directive/rule/sc004_invalid_result.json
+  - machine_id: SC-005
+    title: No Tuple Returns
+    policy_file: directive/policy/sc005_no_tuple_return.yaml
+    rule_file: directive/rule/sc005_no_tuple_return.json
+  - machine_id: SC-006
+    title: Exceptions Are Not Flow Control
+    policy_file: directive/policy/sc006_exceptions_flow_control.yaml
+    rule_file: directive/rule/sc006_exceptions_flow_control.json
+  - machine_id: SC-007
+    title: No Assert for Validation
+    policy_file: directive/policy/sc007_no_assert_validation.yaml
+    rule_file: directive/rule/sc007_no_assert_validation.json
+  - machine_id: SC-008
+    title: No Assertions Disabled by Flags
+    policy_file: directive/policy/sc008_no_assert_disabled.yaml
+    rule_file: directive/rule/sc008_no_assert_disabled.json
+  - machine_id: SC-009
+    title: Every Function Validates Inputs
+    policy_file: directive/policy/sc009_input_validation.yaml
+    rule_file: directive/rule/sc009_input_validation.json
+  - machine_id: SC-010
+    title: Function Length Limit
+    policy_file: directive/policy/sc010_function_length.yaml
+    rule_file: directive/rule/sc010_function_length.json
+  - machine_id: SC-011
+    title: b_continue Rules
+    policy_file: directive/policy/sc011_b_continue.yaml
+    rule_file: directive/rule/sc011_b_continue.json
+  - machine_id: SC-012
+    title: Canonical Error Handling Pattern
+    policy_file: directive/policy/sc012_canonical_error.yaml
+    rule_file: directive/rule/sc012_canonical_error.json
+  - machine_id: SC-013
+    title: Function Contracts
+    policy_file: directive/policy/sc013_function_contracts.yaml
+    rule_file: directive/rule/sc013_function_contracts.json
+  - machine_id: SC-020
+    title: Single Responsibility
+    policy_file: directive/policy/sc020_single_responsibility.yaml
+    rule_file: directive/rule/sc020_single_responsibility.json
+  - machine_id: SC-021
+    title: Closed Function State
+    policy_file: directive/policy/sc021_closed_function_state.yaml
+    rule_file: directive/rule/sc021_closed_function_state.json
+  - machine_id: SC-022
+    title: No Mutation of Inputs
+    policy_file: directive/policy/sc022_no_input_mutation.yaml
+    rule_file: directive/rule/sc022_no_input_mutation.json
+  - machine_id: SC-023
+    title: Pure Functions Preferentially
+    policy_file: directive/policy/sc023_pure_functions.yaml
+    rule_file: directive/rule/sc023_pure_functions.json
+  - machine_id: SC-024
+    title: Explicit Return Types
+    policy_file: directive/policy/sc024_explicit_return_types.yaml
+    rule_file: directive/rule/sc024_explicit_return_types.json
+  - machine_id: SC-025
+    title: No Star Imports
+    policy_file: directive/policy/sc025_no_star_imports.yaml
+    rule_file: directive/rule/sc025_no_star_imports.json
+  - machine_id: SC-030
+    title: Validate Before Use
+    policy_file: directive/policy/sc030_validate_before_use.yaml
+    rule_file: directive/rule/sc030_validate_before_use.json
+  - machine_id: SC-031
+    title: Type Validation
+    policy_file: directive/policy/sc031_type_validation.yaml
+    rule_file: directive/rule/sc031_type_validation.json
+  - machine_id: SC-032
+    title: Range and Constraint Validation
+    policy_file: directive/policy/sc032_range_constraint.yaml
+    rule_file: directive/rule/sc032_range_constraint.json
+  - machine_id: SC-033
+    title: Nullability Validation
+    policy_file: directive/policy/sc033_nullability_validation.yaml
+    rule_file: directive/rule/sc033_nullability_validation.json
+  - machine_id: SC-040
+    title: Localized Error Handling
+    policy_file: directive/policy/sc040_localized_error.yaml
+    rule_file: directive/rule/sc040_localized_error.json
+  - machine_id: SC-041
+    title: Specific Exception Handling
+    policy_file: directive/policy/sc041_specific_exception.yaml
+    rule_file: directive/rule/sc041_specific_exception.json
+  - machine_id: SC-042
+    title: No Silent Failures
+    policy_file: directive/policy/sc042_no_silent_failures.yaml
+    rule_file: directive/rule/sc042_no_silent_failures.json
+  - machine_id: SC-043
+    title: Resource Cleanup on Error
+    policy_file: directive/policy/sc043_resource_cleanup.yaml
+    rule_file: directive/rule/sc043_resource_cleanup.json
+  - machine_id: SC-050
+    title: Catch, Convert, Return
+    policy_file: directive/policy/sc050_catch_convert_return.yaml
+    rule_file: directive/rule/sc050_catch_convert_return.json
+  - machine_id: SC-051
+    title: Exception Context Preservation
+    policy_file: directive/policy/sc051_exception_context.yaml
+    rule_file: directive/rule/sc051_exception_context.json
+  - machine_id: SC-052
+    title: No Exception Re-Raising
+    policy_file: directive/policy/sc052_no_reraise.yaml
+    rule_file: directive/rule/sc052_no_reraise.json
+  - machine_id: SC-053
+    title: Third-Party Exception Handling
+    policy_file: directive/policy/sc053_third_party_exception.yaml
+    rule_file: directive/rule/sc053_third_party_exception.json
+  - machine_id: SC-060
+    title: Log at First Detection Layer
+    policy_file: directive/policy/sc060_log_first_layer.yaml
+    rule_file: directive/rule/sc060_log_first_layer.json
+  - machine_id: SC-061
+    title: Structured Logging
+    policy_file: directive/policy/sc061_structured_logging.yaml
+    rule_file: directive/rule/sc061_structured_logging.json
+  - machine_id: SC-062
+    title: No Sensitive Data in Logs
+    policy_file: directive/policy/sc062_no_sensitive_data_logs.yaml
+    rule_file: directive/rule/sc062_no_sensitive_data_logs.json
+  - machine_id: SC-063
+    title: Correlation ID Propagation
+    policy_file: directive/policy/sc063_correlation_id.yaml
+    rule_file: directive/rule/sc063_correlation_id.json
+  - machine_id: SC-064
+    title: Log Level Discipline
+    policy_file: directive/policy/sc064_log_level_discipline.yaml
+    rule_file: directive/rule/sc064_log_level_discipline.json
+  - machine_id: SC-065
+    title: Mandatory Failure Message
+    policy_file: directive/policy/sc065_mandatory_failure_logging.yaml
+    rule_file: directive/rule/sc065_mandatory_failure_logging.json
+  - machine_id: SC-070
+    title: No Module-Level Mutable State
+    policy_file: directive/policy/sc070_no_module_mutable.yaml
+    rule_file: directive/rule/sc070_no_module_mutable.json
+  - machine_id: SC-071
+    title: Deterministic Execution
+    policy_file: directive/policy/sc071_deterministic.yaml
+    rule_file: directive/rule/sc071_deterministic.json
+  - machine_id: SC-072
+    title: State Mutation Documentation
+    policy_file: directive/policy/sc072_state_mutation_doc.yaml
+    rule_file: directive/rule/sc072_state_mutation_doc.json
+  - machine_id: SC-073
+    title: Function-Local State Only
+    policy_file: directive/policy/sc073_function_local_state.yaml
+    rule_file: directive/rule/sc073_function_local_state.json
+  - machine_id: SC-080
+    title: Context Managers for All Resources
+    policy_file: directive/policy/sc080_context_managers.yaml
+    rule_file: directive/rule/sc080_context_managers.json
+  - machine_id: SC-081
+    title: Resource Ownership Transfer
+    policy_file: directive/policy/sc081_resource_ownership.yaml
+    rule_file: directive/rule/sc081_resource_ownership.json
+  - machine_id: SC-082
+    title: Deterministic Resource Cleanup
+    policy_file: directive/policy/sc082_deterministic_cleanup.yaml
+    rule_file: directive/rule/sc082_deterministic_cleanup.json
+  - machine_id: SC-090
+    title: Shared State Protection
+    policy_file: directive/policy/sc090_shared_state.yaml
+    rule_file: directive/rule/sc090_shared_state.json
+  - machine_id: SC-092
+    title: No Shared Mutable State Between Threads Without Synchronization
+    policy_file: directive/policy/sc092_no_unsync_mutable.yaml
+    rule_file: directive/rule/sc092_no_unsync_mutable.json
+  - machine_id: SC-100
+    title: No Secrets in Source Code
+    policy_file: directive/policy/sc100_no_secrets.yaml
+    rule_file: directive/rule/sc100_no_secrets.json
+  - machine_id: SC-101
+    title: Parameterized Queries
+    policy_file: directive/policy/sc101_parameterized_queries.yaml
+    rule_file: directive/rule/sc101_parameterized_queries.json
+  - machine_id: SC-102
+    title: Input Sanitization
+    policy_file: directive/policy/sc102_input_sanitization.yaml
+    rule_file: directive/rule/sc102_input_sanitization.json
+  - machine_id: SC-103
+    title: Least Privilege
+    policy_file: directive/policy/sc103_least_privilege.yaml
+    rule_file: directive/rule/sc103_least_privilege.json
+  - machine_id: SC-104
+    title: No eval or exec
+    policy_file: directive/policy/sc104_no_eval_exec.yaml
+    rule_file: directive/rule/sc104_no_eval_exec.json
+  - machine_id: SC-110
+    title: Preconditions
+    policy_file: directive/policy/sc110_preconditions.yaml
+    rule_file: directive/rule/sc110_preconditions.json
+  - machine_id: SC-111
+    title: Postconditions
+    policy_file: directive/policy/sc111_postconditions.yaml
+    rule_file: directive/rule/sc111_postconditions.json
+  - machine_id: SC-112
+    title: Internal Invariants
+    policy_file: directive/policy/sc112_internal_invariants.yaml
+    rule_file: directive/rule/sc112_internal_invariants.json
+  - machine_id: SC-113
+    title: Assertion Usage
+    policy_file: directive/policy/sc113_assertion_usage.yaml
+    rule_file: directive/rule/sc113_assertion_usage.json
+  - machine_id: SC-114
+    title: Recursion Limits
+    policy_file: directive/policy/sc114_recursion_limits.yaml
+    rule_file: directive/rule/sc114_recursion_limits.json
+  - machine_id: SC-115
+    title: Configurable Timeouts
+    policy_file: directive/policy/sc115_configurable_timeouts.yaml
+    rule_file: directive/rule/sc115_configurable_timeouts.json
+  - machine_id: SC-115A
+    title: Retry and Backoff
+    policy_file: directive/policy/sc115a_retry_backoff.yaml
+    rule_file: directive/rule/sc115a_retry_backoff.json
+  - machine_id: SC-115B
+    title: Idempotency
+    policy_file: directive/policy/sc115b_idempotency.yaml
+    rule_file: directive/rule/sc115b_idempotency.json
+  - machine_id: SC-116
+    title: Side Effects Documentation
+    policy_file: directive/policy/sc116_side_effects_doc.yaml
+    rule_file: directive/rule/sc116_side_effects_doc.json
+  - machine_id: SC-120
+    title: AI-Generated Code Compliance
+    policy_file: directive/policy/sc120_ai_compliance.yaml
+    rule_file: directive/rule/sc120_ai_compliance.json
+  - machine_id: SC-121
+    title: AI Agent Prompt Requirements
+    policy_file: directive/policy/sc121_ai_prompt_requirements.yaml
+    rule_file: directive/rule/sc121_ai_prompt_requirements.json
+  - machine_id: SC-122
+    title: AI Agent Review Protocol
+    policy_file: directive/policy/sc122_ai_review_protocol.yaml
+    rule_file: directive/rule/sc122_ai_review_protocol.json
+  - machine_id: SC-130
+    title: Automated Enforcement
+    policy_file: directive/policy/sc130_automated_enforcement.yaml
+    rule_file: directive/rule/sc130_automated_enforcement.json
+  - machine_id: SC-131
+    title: Code Review Gate
+    policy_file: directive/policy/sc131_code_review_gate.yaml
+    rule_file: directive/rule/sc131_code_review_gate.json
+  - machine_id: SC-132
+    title: Rule Exception Process
+    policy_file: directive/policy/sc132_rule_exception_process.yaml
+    rule_file: directive/rule/sc132_rule_exception_process.json
+  - machine_id: SC-133
+    title: Compliance Verification
+    policy_file: directive/policy/sc133_compliance_verification.yaml
+    rule_file: directive/rule/sc133_compliance_verification.json
+  - machine_id: STYLE-1
+    title: Function arguments must use a_ prefix
+    policy_file: directive/policy/style_a_prefix.yaml
+    rule_file: directive/rule/style_a_prefix.json
+  - machine_id: STYLE-2
+    title: Mutable default argument in function signature
+    policy_file: directive/policy/style_mutable_default.yaml
+    rule_file: directive/rule/style_mutable_default.json
+  - machine_id: STYLE-3
+    title: print() used in production code
+    policy_file: directive/policy/style_no_print.yaml
+    rule_file: directive/rule/style_no_print.json
+  - machine_id: STYLE-4
+    title: 'TODO/FIXME must follow format: # TODO(name): description'
+    policy_file: directive/policy/style_todo_format.yaml
+    rule_file: directive/rule/style_todo_format.json
+sanctions:
+  title: Sanctions & Remedies
+  rows:
+  - violation_context: Missing paired policy or rule for an SC directive
+    enforcement_action: Authoring gate — do not merge incomplete pairs
+    remediation_path: Add both directive/rule/*.json and directive/policy/*.yaml
+references:
+  source_doctrine: .nasim/rules/code/safe-coding.md
+  policy_schema: schema/policy_doctrine.yaml
+  rule_schema: schema/rule_schema.json

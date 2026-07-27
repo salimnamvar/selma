@@ -17,6 +17,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc115a_retry_backoff",
   "rationale": "Fixed-interval retries can overwhelm services during recovery.",
   "remediation": "Use exponential backoff with jitter. Cap maximum delay.",
   "parameters": {

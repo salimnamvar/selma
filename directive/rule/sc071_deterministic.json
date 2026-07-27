@@ -2,36 +2,72 @@
   "lineage_id": "SC-071",
   "id": "SC-071",
   "type": "prohibition",
-  "message": "Non-deterministic call forbidden — inject time/random source",
+  "message": "Non-deterministic call forbidden \u2014 inject time/random source",
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
-      {"module": "datetime", "method": "now"},
-      {"module": "datetime", "method": "utcnow"},
-      {"module": "time", "method": "time"},
-      {"module": "time", "method": "monotonic"},
-      {"module": "time", "method": "localtime"},
-      {"module": "time", "method": "gmtime"},
-      {"module": "random", "method": "random"},
-      {"module": "random", "method": "randint"},
-      {"module": "random", "method": "choice"},
-      {"module": "random", "method": "sample"},
-      {"module": "random", "method": "shuffle"},
-      {"module": "random", "method": "gauss"},
-      {"module": "uuid", "method": "uuid4"}
+      {
+        "module": "datetime",
+        "method": "now"
+      },
+      {
+        "module": "datetime",
+        "method": "utcnow"
+      },
+      {
+        "module": "time",
+        "method": "time"
+      },
+      {
+        "module": "time",
+        "method": "monotonic"
+      },
+      {
+        "module": "time",
+        "method": "localtime"
+      },
+      {
+        "module": "time",
+        "method": "gmtime"
+      },
+      {
+        "module": "random",
+        "method": "random"
+      },
+      {
+        "module": "random",
+        "method": "randint"
+      },
+      {
+        "module": "random",
+        "method": "choice"
+      },
+      {
+        "module": "random",
+        "method": "sample"
+      },
+      {
+        "module": "random",
+        "method": "shuffle"
+      },
+      {
+        "module": "random",
+        "method": "gauss"
+      },
+      {
+        "module": "uuid",
+        "method": "uuid4"
+      }
     ],
-    "message_template": "Non-deterministic call forbidden — inject parameter"
+    "message_template": "Non-deterministic call forbidden \u2014 inject parameter"
   },
   "weight": "critical",
+  "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc071_deterministic",
   "rationale": "Non-deterministic code is untestable and unreproducible. A test that passes sometimes and fails sometimes is a test that tells you nothing.",
   "remediation": "Inject time/random as parameters. Use datetime.datetime for timestamps, random.Random with seed for random values.",
-  "guidance": {
-    "correct_example": "from datetime import datetime\n\ndef create_timestamp(a_now: datetime | None = None) -> Result[str]:\n    now = a_now or datetime.now()\n    return Result.success(now.isoformat())",
-    "incorrect_example": "from datetime import datetime\n\ndef create_timestamp() -> Result[str]:\n    now = datetime.now()\n    return Result.success(now.isoformat())",
-    "explanation": "The correct version accepts a timestamp parameter (injectable for testing) with a default fallback. The incorrect version calls datetime.now() directly, making the function non-deterministic and untestable."
-  },
   "parameters": {
     "exempt_injection": true,
     "exempt_crypto": true

@@ -9,23 +9,53 @@
     "check": {
       "type": "input_mutation",
       "rules": [
-        {"rule": "no_list_mutation", "severity": "error", "methods": ["append", "extend", "insert", "remove", "pop", "clear", "sort", "reverse"]},
-        {"rule": "no_dict_mutation", "severity": "error", "methods": ["update", "pop", "popitem", "clear", "setdefault"]},
-        {"rule": "no_set_mutation", "severity": "error", "methods": ["add", "remove", "discard", "pop", "clear", "update"]}
+        {
+          "rule": "no_list_mutation",
+          "severity": "error",
+          "methods": [
+            "append",
+            "extend",
+            "insert",
+            "remove",
+            "pop",
+            "clear",
+            "sort",
+            "reverse"
+          ]
+        },
+        {
+          "rule": "no_dict_mutation",
+          "severity": "error",
+          "methods": [
+            "update",
+            "pop",
+            "popitem",
+            "clear",
+            "setdefault"
+          ]
+        },
+        {
+          "rule": "no_set_mutation",
+          "severity": "error",
+          "methods": [
+            "add",
+            "remove",
+            "discard",
+            "pop",
+            "clear",
+            "update"
+          ]
+        }
       ]
     },
-    "message_template": "Function '{name}' mutates input parameter — return new value instead"
+    "message_template": "Function '{name}' mutates input parameter \u2014 return new value instead"
   },
   "weight": "high",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc022_no_input_mutation",
   "rationale": "Input mutation creates hidden side effects. The caller cannot predict that its data will be modified. This violates the principle of least surprise and creates subtle coupling between caller and callee.",
   "remediation": "Return a new value instead of mutating input. Use copy.deepcopy() if needed.",
-  "guidance": {
-    "correct_example": "def add_item(a_items: list[str], a_item: str) -> list[str]:\n    new_items = list(a_items)\n    new_items.append(a_item)\n    return new_items",
-    "incorrect_example": "def add_item(a_items: list[str], a_item: str) -> None:\n    a_items.append(a_item)",
-    "explanation": "The correct version creates a new list and returns it, leaving the caller's data untouched. The incorrect version mutates the input, creating hidden side effects for the caller."
-  },
   "parameters": {}
 }

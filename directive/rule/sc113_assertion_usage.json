@@ -6,16 +6,24 @@
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_node": "FunctionDef",
-    "walk_nodes": ["Assert"],
-    "count": {"operator": "eq", "value": 0},
-    "message_template": "Function '{name}' has no assert statements — use assert for internal invariants",
+    "walk_nodes": [
+      "Assert"
+    ],
+    "count": {
+      "operator": "eq",
+      "value": 0
+    },
+    "message_template": "Function '{name}' has no assert statements \u2014 use assert for internal invariants",
     "exempt_dunders": true
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc113_assertion_usage",
   "rationale": "Asserts help catch logic errors during development.",
   "remediation": "Add assert statements to verify internal invariants at critical points.",
-  "parameters": {"exempt_dunders": true}
+  "parameters": {
+    "exempt_dunders": true
+  }
 }

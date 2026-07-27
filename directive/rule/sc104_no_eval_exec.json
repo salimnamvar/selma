@@ -2,24 +2,29 @@
   "lineage_id": "SC-104",
   "id": "SC-104",
   "type": "prohibition",
-  "message": "Forbidden call to eval/exec/compile — use safe alternative",
+  "message": "Forbidden call to eval/exec/compile \u2014 use safe alternative",
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
-    "forbidden_functions": ["eval", "exec", "compile"],
-    "exempt_module_methods": ["re.compile"],
-    "message_template": "Forbidden call to '{function}()' — use safe alternative"
+    "forbidden_functions": [
+      "eval",
+      "exec",
+      "compile"
+    ],
+    "exempt_module_methods": [
+      "re.compile"
+    ],
+    "message_template": "Forbidden call to '{function}()' \u2014 use safe alternative"
   },
   "weight": "critical",
+  "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc104_no_eval_exec",
   "rationale": "eval() and exec() execute arbitrary code, bypassing all static analysis, type checking, and security scanning. They are the single largest source of injection vulnerabilities in Python.",
   "remediation": "Use safe alternatives: ast.literal_eval() for data parsing, json.loads() for JSON, importlib for dynamic imports.",
-  "guidance": {
-    "correct_example": "import ast\n\ndef parse_config(a_value: str) -> Result[dict]:\n    try:\n        parsed = ast.literal_eval(a_value)\n    except (ValueError, SyntaxError) as e:\n        return Result.failure(f'Invalid config: {e}')\n    if not isinstance(parsed, dict):\n        return Result.failure('Expected dict')\n    return Result.success(parsed)",
-    "incorrect_example": "def parse_config(a_value: str) -> Result[dict]:\n    parsed = eval(a_value)\n    return Result.success(parsed)",
-    "explanation": "The correct version uses ast.literal_eval() which only parses literals safely. The incorrect version uses eval() which executes arbitrary code, creating a critical security vulnerability."
-  },
   "parameters": {
-    "exempt_module_methods": ["re.compile"]
+    "exempt_module_methods": [
+      "re.compile"
+    ]
   }
 }

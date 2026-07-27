@@ -5,8 +5,15 @@
   "message": "Resource not cleaned up on error path",
   "evaluator_type": "ast_context_check",
   "evaluator_config": {
-    "target_functions": ["open", "Popen", "connect"],
-    "must_be_inside": ["With", "TryFinally"],
+    "target_functions": [
+      "open",
+      "Popen",
+      "connect"
+    ],
+    "must_be_inside": [
+      "With",
+      "TryFinally"
+    ],
     "or_try_finally": true,
     "message_template": "Resource function must be used with context manager or try/finally"
   },
@@ -14,7 +21,10 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc043_resource_cleanup",
   "rationale": "Resources not properly closed leak file handles, connections, or memory.",
   "remediation": "Use context managers (with statement) or try/finally to ensure cleanup.",
-  "parameters": {"default_cleanup_pattern": "with_statement"}
+  "parameters": {
+    "default_cleanup_pattern": "with_statement"
+  }
 }

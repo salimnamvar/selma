@@ -7,14 +7,19 @@
   "evaluator_config": {
     "root_node": "FunctionDef",
     "variable": "raise",
-    "rules": ["must_not_exist"],
+    "rules": [
+      "must_not_exist"
+    ],
     "message_template": "Function '{name}' should handle errors locally instead of raising"
   },
   "weight": "medium",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc040_localized_error",
   "rationale": "Local error handling prevents error propagation and provides better context.",
   "remediation": "Catch and handle errors locally. Use Result types instead of raising exceptions.",
-  "parameters": {"allow_final_raise": true}
+  "parameters": {
+    "allow_final_raise": true
+  }
 }

@@ -23,6 +23,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc111_postconditions",
   "rationale": "Postconditions clarify what the function guarantees after execution.",
   "remediation": "Add a 'Postconditions:' section to the function docstring listing guaranteed outcomes.",
   "parameters": {

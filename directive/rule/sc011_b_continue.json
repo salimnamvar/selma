@@ -7,19 +7,20 @@
   "evaluator_config": {
     "root_node": "FunctionDef",
     "variable": "b_continue",
-    "rules": ["must_exist", "first_value_is_true", "used_in_guard"],
+    "rules": [
+      "must_exist",
+      "first_value_is_true",
+      "used_in_guard"
+    ],
     "message_template": "Function '{name}' b_continue violation"
   },
   "weight": "critical",
+  "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc011_b_continue",
   "rationale": "b_continue is a local execution gate. Its semantics are clear only when it is strictly function-local and unidirectional. It governs execution flow across all phases of a function: validation, business logic, exception handling, and cleanup.",
   "remediation": "Add b_continue = True at function start. Set to False on errors, never reset to True. Gate phases with 'if b_continue:'.",
-  "guidance": {
-    "correct_example": "def process(a_data: dict) -> Result[str]:\n    b_continue = True\n    result: Result[str] = INVALID_RESULT\n    if not isinstance(a_data, dict):\n        result = Result.failure('Expected dict')\n        b_continue = False\n    if b_continue:\n        result = Result.success(a_data.get('name', ''))\n    return result",
-    "incorrect_example": "def process(a_data: dict) -> Result[str]:\n    if not isinstance(a_data, dict):\n        return Result.failure('Expected dict')\n    return Result.success(a_data.get('name', ''))",
-    "explanation": "The correct version initializes b_continue=True and uses it to gate phases. The incorrect version has no error-gating mechanism, making control flow implicit."
-  },
   "parameters": {
     "exempt_dunders": true,
     "require_result_functions": true

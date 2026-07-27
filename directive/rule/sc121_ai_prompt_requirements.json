@@ -18,6 +18,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc121_ai_prompt_requirements",
   "rationale": "AI agent prompts need explicit safety constraints to prevent harmful outputs.",
   "remediation": "Include safety guidelines, review requirements, and compliance checks in AI prompts.",
   "parameters": {

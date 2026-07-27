@@ -24,6 +24,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc081_resource_ownership",
   "rationale": "Undocumented ownership leads to double-free or resource leaks.",
   "remediation": "Document resource ownership in docstring: who creates, who closes, who owns.",
   "parameters": {

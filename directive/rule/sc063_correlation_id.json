@@ -6,14 +6,20 @@
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
     "root_node": "FunctionDef",
-    "rules": ["must_have_correlation_id"],
+    "rules": [
+      "must_have_correlation_id"
+    ],
     "message_template": "Function '{name}' should accept correlation_id for distributed tracing"
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc063_correlation_id",
   "rationale": "Correlation IDs enable tracing requests across service boundaries.",
   "remediation": "Add correlation_id: str = '' parameter and propagate it through function calls.",
-  "parameters": {"param_name": "correlation_id", "default_value": ""}
+  "parameters": {
+    "param_name": "correlation_id",
+    "default_value": ""
+  }
 }

@@ -1,0 +1,149 @@
+# Policy doctrine — governance intent, guidance, examples, reasoning ONLY.
+# MUST NOT be used for linting/evaluation at runtime.
+# Machine lint source: matching file under directive/rule/*.json
+# Schema contract: schema/policy_doctrine.yaml
+# Normative source: .nasim/rules/code/safe-coding.md
+
+doctrine:
+  name: sc-122-sc122_ai_review_protocol
+  version: 8.2.4
+  description: 'Human governance doctrine for SC-122: AI Agent Review Protocol. Guidance and reasoning
+    only — not machine-executable.'
+  spec_version: 8.2.4
+  schema_version: 8.2.4
+  schema_id: universal-rule-schema
+  machine_id: SC-122
+  paired_rule_file: directive/rule/sc122_ai_review_protocol.json
+  purpose_layer: governance_intent_guidance_examples_reasoning
+  runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
+    or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
+cross_layer_binding:
+  normative_source: .nasim/rules/code/safe-coding.md
+  policy_purpose: Governance intent, examples, reasoning, and human guidance
+  schema_purpose: Structural projection of machine-evaluable invariants
+  lint_source: directive/rule/sc122_ai_review_protocol.json
+  enforcement: Policy influences humans and authoring tools only. Compile-time/runtime evaluation uses
+    JSON rules exclusively.
+contamination_guard:
+  note: 'This document MUST NOT contain machine-executable logic. Prohibited: parameters, conditions,
+    evaluator_hint, evaluator_type, evaluator_config, weight, depends_on, conflicts_with, status, created_at,
+    expires_at, remediation (as executable carrier), target, lineage.'
+  allowed_machine_references:
+  - Machine ID SC-122 (cross-reference to rule.lineage_id only)
+preamble:
+  title: Preamble
+  purpose: Establish human-readable obligations for SC-122 (AI Agent Review Protocol) so authors, reviewers,
+    and AI agents can reason about intent without reading evaluator configuration.
+  scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
+    code, unless a documented exemption applies.
+  existential_need: AI agents can introduce subtle defects that pass superficial review. The additional
+    review steps ensure that AI-specific failure modes are caught.
+governance:
+  title: Governance & Amendment
+  authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
+    identical in intent to the paired machine rule.
+  amendment_process:
+  - Propose change via PR touching both this policy YAML and the paired rule JSON when semantics change.
+  - Policy-only changes (examples, wording) are allowed if Machine ID intent is unchanged.
+  - Never add evaluator_type/evaluator_config or other prohibited fields to this file.
+  versioning: MAJOR.MINOR.PATCH aligned with policy_contract_version 8.x
+  identity:
+    machine_id: SC-122
+    maps_to: rule.lineage_id
+    paired_execution_id_note: Execution ID in schema layer is SC-122; not redefined as executable data
+      here.
+definitions:
+  title: Definitions
+  terms:
+  - term: Machine ID
+    definition: Immutable lineage identifier SC-122 for this directive.
+    exclusion: Not an execution ID and not a runtime lookup key for evaluation.
+  - term: Paired Rule
+    definition: Machine-evaluable document at directive/rule/sc122_ai_review_protocol.json.
+    exclusion: This policy YAML is not a lint source.
+  - term: AI Agent Review Protocol
+    definition: 'AI-generated code SHALL undergo the same review process as human-written code, PLUS:
+      (a) verification that the AI agent was provided with this Doctrine, (b) verification that no patterns
+      from the "anti-patterns" list (Section 18) were introduced, and (c) verification that the code''s
+      contracts are complete and accurate.'
+    exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
+principles:
+  title: Foundational Principles
+  description: This directive operationalizes one or more Safe Coding Doctrine core principles.
+  items:
+  - id: P1
+    title: Determinism Over Cleverness
+    description: Every function SHALL produce the same output for the same inputs under the same documented
+      conditions. No exceptions. Cleverness that sacrifices determinism is forbidden.
+  - id: P2
+    title: Localized Failure Handling
+    description: Every function SHALL handle its own failures. A function SHALL NOT propagate exceptions
+      to its caller for the caller to decide what to do. Failure handling is the responsibility of the
+      layer that detects the failure.
+  - id: P3
+    title: Explicit Over Implicit
+    description: Every contract, every side effect, every resource ownership transfer, and every state
+      mutation SHALL be declared explicitly. Implicit behavior is forbidden.
+  - id: P4
+    title: Fail-Safe Defaults
+    description: When a function encounters a condition it cannot resolve, it SHALL return a deterministic
+      failure result. It SHALL NOT leave the system in a partially mutated state. It SHALL NOT raise an
+      exception hoping the caller will clean up.
+  - id: P5
+    title: Validation as Entry Contract
+    description: Every function SHALL validate its inputs before executing any logic. Validation is not
+      optional. Validation is not behind feature flags. Validation runs in all environments, including
+      production.
+  - id: P6
+    title: Resource Ownership Is Explicit
+    description: Every resource SHALL have a single, documented owner. Ownership transfers SHALL be explicit.
+      Every resource SHALL be released deterministically, even in failure paths.
+  - id: P7
+    title: Single Truth Source
+    description: Every piece of data SHALL have exactly one authoritative source. Derived data SHALL be
+      computed, never independently maintained.
+directives:
+  title: Directives (Rules & Standards)
+  specific_directives:
+  - type: Obligation
+    description: 'AI-generated code SHALL undergo the same review process as human-written code, PLUS:
+      (a) verification that the AI agent was provided with this Doctrine, (b) verification that no patterns
+      from the "anti-patterns" list (Section 18) were introduced, and (c) verification that the code''s
+      contracts are complete and accurate.'
+    machine_id: SC-122
+    context_conditions: None.
+    title: AI Agent Review Protocol
+  flexible_standards: []
+sanctions:
+  title: Sanctions & Remedies
+  rows:
+  - violation_context: AI agent output not reviewed per protocol
+    enforcement_action: Machine lint finding via sc122_ai_review_protocol.json when automatically enforceable;
+      otherwise Code review gate.
+    remediation_path: Review all AI-generated code in pull requests before merging.
+guidance:
+  title: Guidance, Examples, and Reasoning
+  purpose: For human and AI reasoning only. Do not execute this section as a linter.
+  reasoning: AI agents can introduce subtle defects that pass superficial review. The additional review
+    steps ensure that AI-specific failure modes are caught.
+  explanation: Comply with SC-122 by ensuring code structure matches the obligation/prohibition above.
+  correct_example: |-
+    # Correct: satisfy SC-122 — AI Agent Review Protocol
+    # See also Safe Coding Doctrine examples where applicable.
+  incorrect_example: |-
+    # Incorrect: violates SC-122 — AI Agent Review Protocol
+    # Avoid patterns that contradict the directive description.
+  related_machine_ids:
+  - SC-120
+  - SC-121
+  exceptions: None.
+references:
+  title: References & Annexes
+  source_doctrine: .nasim/rules/code/safe-coding.md
+  policy_schema: schema/policy_doctrine.yaml
+  rule_schema: schema/rule_schema.json
+  paired_rule: directive/rule/sc122_ai_review_protocol.json
+  anchor_ref: section:directives/sc122_ai_review_protocol
+  related:
+  - SC-120
+  - SC-121

@@ -71,5 +71,10 @@ class TestContainerGetLintUseCase:
         """get_lint_use_case_with_defaults should create repo from rules dir."""
         container = Container()
         rules_dir = Path.home() / ".selma" / "rules"
-        use_case = container.get_lint_use_case_with_defaults(a_rules_dir=rules_dir)
+        schema_path = Path.home() / ".selma" / "schema" / "rule_schema.json"
+        use_case = container.get_lint_use_case_with_defaults(
+            a_rules_dir=rules_dir,
+            a_schema_path=schema_path,
+            a_policy_dir=None,
+        )
         assert isinstance(use_case, LintUseCase)

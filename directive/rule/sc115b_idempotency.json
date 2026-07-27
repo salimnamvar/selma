@@ -19,6 +19,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc115b_idempotency",
   "rationale": "Non-idempotent operations can cause duplicate side effects on retry.",
   "remediation": "Add idempotency_key parameter or use database unique constraints.",
   "parameters": {

@@ -1,0 +1,116 @@
+# Policy doctrine — governance intent, guidance, examples, reasoning ONLY.
+# MUST NOT be used for linting/evaluation at runtime.
+# Machine lint source: matching file under directive/rule/*.json
+# Schema contract: schema/policy_doctrine.yaml
+# Normative source: .nasim/rules/code/safe-coding.md
+
+doctrine:
+  name: style-3-style_no_print
+  version: 8.2.4
+  description: 'Human governance doctrine for STYLE-3: print() used in production code. Guidance and reasoning
+    only — not machine-executable.'
+  spec_version: 8.2.4
+  schema_version: 8.2.4
+  schema_id: universal-rule-schema
+  machine_id: STYLE-3
+  paired_rule_file: directive/rule/style_no_print.json
+  purpose_layer: governance_intent_guidance_examples_reasoning
+  runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
+    or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
+cross_layer_binding:
+  normative_source: .nasim/rules/code/safe-coding.md
+  policy_purpose: Governance intent, examples, reasoning, and human guidance
+  schema_purpose: Structural projection of machine-evaluable invariants
+  lint_source: directive/rule/style_no_print.json
+  enforcement: Policy influences humans and authoring tools only. Compile-time/runtime evaluation uses
+    JSON rules exclusively.
+contamination_guard:
+  note: 'This document MUST NOT contain machine-executable logic. Prohibited: parameters, conditions,
+    evaluator_hint, evaluator_type, evaluator_config, weight, depends_on, conflicts_with, status, created_at,
+    expires_at, remediation (as executable carrier), target, lineage.'
+  allowed_machine_references:
+  - Machine ID STYLE-3 (cross-reference to rule.lineage_id only)
+preamble:
+  title: Preamble
+  purpose: Establish human-readable obligations for STYLE-3 (print() used in production code) so authors,
+    reviewers, and AI agents can reason about intent without reading evaluator configuration.
+  scope: Project style conventions complementary to the Safe Coding Doctrine.
+  existential_need: print() has no log levels, no structured output, and no configurability. It cannot
+    be filtered, routed, or analyzed in production.
+governance:
+  title: Governance & Amendment
+  authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
+    identical in intent to the paired machine rule.
+  amendment_process:
+  - Propose change via PR touching both this policy YAML and the paired rule JSON when semantics change.
+  - Policy-only changes (examples, wording) are allowed if Machine ID intent is unchanged.
+  - Never add evaluator_type/evaluator_config or other prohibited fields to this file.
+  versioning: MAJOR.MINOR.PATCH aligned with policy_contract_version 8.x
+  identity:
+    machine_id: STYLE-3
+    maps_to: rule.lineage_id
+    paired_execution_id_note: Execution ID in schema layer is STYLE-3-NO-PRINT; not redefined as executable
+      data here.
+definitions:
+  title: Definitions
+  terms:
+  - term: Machine ID
+    definition: Immutable lineage identifier STYLE-3 for this directive.
+    exclusion: Not an execution ID and not a runtime lookup key for evaluation.
+  - term: Paired Rule
+    definition: Machine-evaluable document at directive/rule/style_no_print.json.
+    exclusion: This policy YAML is not a lint source.
+  - term: print() used in production code
+    definition: print() used in production code
+    exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
+principles:
+  title: Foundational Principles
+  description: This directive supports clarity and consistency complementary to Safe Coding.
+  items:
+  - id: STYLE
+    title: Explicit Over Implicit
+    description: Style conventions make contracts and review expectations visible.
+directives:
+  title: Directives (Rules & Standards)
+  specific_directives:
+  - type: Prohibition
+    description: print() used in production code
+    machine_id: STYLE-3
+    context_conditions: See rule JSON exemptions if any.
+    title: print() used in production code
+  flexible_standards: []
+sanctions:
+  title: Sanctions & Remedies
+  rows:
+  - violation_context: print() used in production code
+    enforcement_action: Machine lint finding via style_no_print.json when automatically enforceable; otherwise
+      See paired machine rule.
+    remediation_path: Replace with structlog.info() or logging.info().
+guidance:
+  title: Guidance, Examples, and Reasoning
+  purpose: For human and AI reasoning only. Do not execute this section as a linter.
+  reasoning: print() has no log levels, no structured output, and no configurability. It cannot be filtered,
+    routed, or analyzed in production.
+  explanation: The correct version uses structlog with structured output. The incorrect version uses print()
+    which has no log levels and cannot be configured in production.
+  correct_example: |-
+    import structlog
+    logger = structlog.get_logger()
+
+    def process(a_data: dict) -> Result[str]:
+        logger.info('processing', keys=list(a_data.keys()))
+        return Result.success('done')
+  incorrect_example: |-
+    def process(a_data: dict) -> Result[str]:
+        print(f'Processing {a_data}')
+        return Result.success('done')
+  related_machine_ids: []
+  exceptions: See rule JSON exemptions if any.
+references:
+  title: References & Annexes
+  source_doctrine: .nasim/rules/code/safe-coding.md
+  policy_schema: schema/policy_doctrine.yaml
+  rule_schema: schema/rule_schema.json
+  paired_rule: directive/rule/style_no_print.json
+  anchor_ref: section:directives/style_no_print
+  related: []

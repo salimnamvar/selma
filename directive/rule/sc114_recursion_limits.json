@@ -7,8 +7,15 @@
   "evaluator_config": {
     "target_node": "FunctionDef",
     "conditions": [
-      {"field": "name", "operator": "not_matches", "value": "^__.*__$"},
-      {"field": ".", "operator": "calls_own_name"},
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": ".",
+        "operator": "calls_own_name"
+      },
       {
         "field": ".",
         "operator": "param_names_disjoint",
@@ -40,13 +47,9 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc114_recursion_limits",
   "rationale": "Unbounded recursion causes stack overflow, which is an unrecoverable process-level failure.",
   "remediation": "Add a max_depth parameter and validate depth at each call. Prefer iterative solutions over recursive.",
-  "guidance": {
-    "correct_example": "def traverse(a_node: TreeNode, a_depth: int = 0, a_max_depth: int = 100) -> Result[list]:\n    if a_depth >= a_max_depth:\n        return Result.failure(f'Max recursion depth {a_max_depth} exceeded')\n    return Result.success([a_node.value])",
-    "incorrect_example": "def traverse(a_node: TreeNode) -> list:\n    return [a_node.value] + sum((traverse(c) for c in a_node.children), [])",
-    "explanation": "Recursive functions must declare depth limits in parameters or body."
-  },
   "parameters": {
     "exempt_dunders": true,
     "max_recursion_depth": 100

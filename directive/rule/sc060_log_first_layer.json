@@ -6,25 +6,36 @@
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
-      {"module": "logging", "method": "info"},
-      {"module": "logging", "method": "warning"},
-      {"module": "logging", "method": "error"},
-      {"module": "logging", "method": "debug"},
-      {"module": "logging", "method": "critical"}
+      {
+        "module": "logging",
+        "method": "info"
+      },
+      {
+        "module": "logging",
+        "method": "warning"
+      },
+      {
+        "module": "logging",
+        "method": "error"
+      },
+      {
+        "module": "logging",
+        "method": "debug"
+      },
+      {
+        "module": "logging",
+        "method": "critical"
+      }
     ],
-    "message_template": "Direct logging call '{module}.{method}()' — log at boundary layer only"
+    "message_template": "Direct logging call '{module}.{method}()' \u2014 log at boundary layer only"
   },
   "weight": "medium",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc060_log_first_layer",
   "rationale": "Re-logging the same failure at multiple layers creates log noise, obscures the actual failure point, and wastes storage. The detection layer has the best context for a meaningful log entry.",
   "remediation": "Log at the first layer that detects the failure. Higher layers only re-log if adding materially new context.",
-  "guidance": {
-    "correct_example": "def fetch(a_url: str) -> Result[str]:\n    b_continue = True\n    result: Result[str] = INVALID_RESULT\n    try:\n        response = requests.get(a_url, timeout=30)\n    except requests.Timeout as e:\n        logger.error('Request timed out', url=a_url, error=str(e))\n        result = Result.failure(f'Request timed out: {e}')\n        b_continue = False\n    if b_continue:\n        result = Result.success(response.text)\n    return result",
-    "incorrect_example": "def process(a_url: str) -> Result[str]:\n    result = fetch(a_url)\n    if not result.is_success():\n        logger.error(f'Fetch failed: {result.message}')\n    return result\ndef fetch(a_url: str) -> Result[str]:\n    result = do_fetch(a_url)\n    if not result.is_success():\n        logger.error(f'Do fetch failed: {result.message}')\n    return result",
-    "explanation": "The correct version logs only at the detection layer. The incorrect version re-logs the same failure at multiple layers, creating noise and obscuring the actual failure point."
-  },
   "parameters": {
     "exempt_boundary": true
   }

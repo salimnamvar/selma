@@ -23,6 +23,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc050_catch_convert_return",
   "rationale": "Uncaught exceptions in except blocks can propagate unexpectedly.",
   "remediation": "Convert exceptions to Result.failure() or handle and return an appropriate value.",
   "parameters": {}

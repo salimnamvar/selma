@@ -18,6 +18,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc131_code_review_gate",
   "rationale": "Code review is a critical gate for catching rule violations.",
   "remediation": "Include safe coding checklist in code review process.",
   "parameters": {

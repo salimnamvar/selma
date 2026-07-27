@@ -6,10 +6,22 @@
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
-      {"module": "logging", "method": "debug"},
-      {"module": "logging", "method": "info"},
-      {"module": "logging", "method": "warning"},
-      {"module": "logging", "method": "error"}
+      {
+        "module": "logging",
+        "method": "debug"
+      },
+      {
+        "module": "logging",
+        "method": "info"
+      },
+      {
+        "module": "logging",
+        "method": "warning"
+      },
+      {
+        "module": "logging",
+        "method": "error"
+      }
     ],
     "message_template": "Use structured logging with appropriate level: debug for dev, info for events, warning for recoverable, error for failures"
   },
@@ -17,7 +29,10 @@
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc064_log_level_discipline",
   "rationale": "Inconsistent log levels make monitoring and alerting ineffective.",
   "remediation": "Use logger.warning for recoverable issues, logger.error for failures, logger.info for events.",
-  "parameters": {"structured_logging": true}
+  "parameters": {
+    "structured_logging": true
+  }
 }

@@ -28,6 +28,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc032_range_constraint",
   "rationale": "Unconstrained numeric inputs can cause overflow, division by zero, or invalid states.",
   "remediation": "Add range checks (e.g., 0 <= x <= max) or constraint validation for numeric parameters.",
   "parameters": {

@@ -23,6 +23,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc116_side_effects_doc",
   "rationale": "Undocumented side effects make code unpredictable and hard to test.",
   "remediation": "Add a 'Side Effects:' section to the function docstring listing all mutations.",
   "parameters": {

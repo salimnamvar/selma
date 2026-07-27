@@ -2,24 +2,24 @@
   "lineage_id": "SC-025",
   "id": "SC-025",
   "type": "prohibition",
-  "message": "Star import detected — use explicit imports",
+  "message": "Star import detected \u2014 use explicit imports",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "ImportFrom",
     "conditions": [
-      {"field": "names", "operator": "star_import"}
+      {
+        "field": "names",
+        "operator": "star_import"
+      }
     ],
-    "message_template": "Star import 'from {module} import *' detected — use explicit imports"
+    "message_template": "Star import 'from {module} import *' detected \u2014 use explicit imports"
   },
   "weight": "medium",
+  "priority": "regulatory",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc025_no_star_imports",
   "rationale": "Star imports pollute the namespace, create implicit dependencies, and make it impossible to determine where a symbol originates without reading the imported module.",
   "remediation": "Use explicit imports naming each symbol: from module import name1, name2.",
-  "guidance": {
-    "correct_example": "from typing import TypeVar, Generic, Optional\nfrom dataclasses import dataclass",
-    "incorrect_example": "from typing import *\nfrom dataclasses import *",
-    "explanation": "The correct version imports specific symbols, making dependencies explicit and namespace clean. The incorrect version uses star imports that pollute the namespace and hide dependencies."
-  },
   "parameters": {}
 }

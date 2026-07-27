@@ -44,14 +44,17 @@ class Container:
         self,
         a_rules_dir: Path,
         a_schema_path: Path,
+        a_policy_dir: Path | None = None,
     ) -> LintUseCase:
         """Get a configured LintUseCase with default rule repository.
 
-        Both a_rules_dir and a_schema_path MUST be provided from config.
+        a_rules_dir and a_schema_path MUST be provided from config.
+        a_policy_dir is optional and used only for human guidance/examples.
         """
         rule_repository = JsonRuleRepository(
             a_rules_dir=a_rules_dir,
             a_schema_path=a_schema_path,
+            a_policy_dir=a_policy_dir,
         )
         return self.get_lint_use_case(a_rule_repository=rule_repository)
 

@@ -18,6 +18,7 @@
   "priority": "advisory",
   "status": "deprecated",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc130_automated_enforcement",
   "rationale": "Manual enforcement is inconsistent; automation ensures consistent compliance.",
   "remediation": "Add rule checks to CI/CD pipeline as blocking or warning gates.",
   "parameters": {

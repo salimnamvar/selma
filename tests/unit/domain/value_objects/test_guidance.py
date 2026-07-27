@@ -6,7 +6,7 @@ import pytest
 from selma.domain.value_objects.guidance import RuleGuidance
 
 
-def _make_guidance(**overrides: object) -> RuleGuidance:
+def _make_guidance(**a_overrides: object) -> RuleGuidance:
     """Create a RuleGuidance with sensible defaults."""
     defaults: dict[str, object] = {
         "rule_code": "SC001",
@@ -21,7 +21,7 @@ def _make_guidance(**overrides: object) -> RuleGuidance:
         "doctrine_section": "Section 1",
         "hints": (),
     }
-    defaults.update(overrides)
+    defaults.update(a_overrides)
     return RuleGuidance(**defaults)  # type: ignore[arg-type]
 
 

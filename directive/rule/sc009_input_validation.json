@@ -28,6 +28,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc009_input_validation",
   "rationale": "Unvalidated inputs lead to runtime errors and security vulnerabilities.",
   "remediation": "Add isinstance checks or TypeValidator calls at function entry for all parameters.",
   "parameters": {

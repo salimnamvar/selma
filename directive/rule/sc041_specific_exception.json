@@ -2,24 +2,24 @@
   "lineage_id": "SC-041",
   "id": "SC-041",
   "type": "obligation",
-  "message": "Bare except forbidden — catch specific exception types",
+  "message": "Bare except forbidden \u2014 catch specific exception types",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "ExceptHandler",
     "conditions": [
-      {"field": "type", "operator": "not_exists"}
+      {
+        "field": "type",
+        "operator": "not_exists"
+      }
     ],
-    "message_template": "Bare 'except:' forbidden — catch specific exception types"
+    "message_template": "Bare 'except:' forbidden \u2014 catch specific exception types"
   },
   "weight": "critical",
+  "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc041_specific_exception",
   "rationale": "Specific exception catching ensures that only anticipated failures are handled gracefully. Bare except clauses catch everything including SystemExit and KeyboardInterrupt, masking real errors.",
   "remediation": "Catch specific exception types. Use 'except Exception:' as a last-resort safety net only, logging at ERROR/CRITICAL level.",
-  "guidance": {
-    "correct_example": "def fetch(a_url: str) -> Result[str]:\n    b_continue = True\n    result: Result[str] = INVALID_RESULT\n    try:\n        response = requests.get(a_url, timeout=30)\n    except requests.Timeout as e:\n        result = Result.failure(f'Request timed out: {e}')\n        b_continue = False\n    except requests.ConnectionError as e:\n        result = Result.failure(f'Connection failed: {e}')\n        b_continue = False\n    if b_continue:\n        result = Result.success(response.text)\n    return result",
-    "incorrect_example": "def fetch(a_url: str) -> Result[str]:\n    try:\n        response = requests.get(a_url, timeout=30)\n        return Result.success(response.text)\n    except:\n        return Result.failure('Request failed')",
-    "explanation": "The correct version catches specific exception types (Timeout, ConnectionError). The incorrect version uses bare except, which catches SystemExit and KeyboardInterrupt, masking real errors."
-  },
   "parameters": {}
 }

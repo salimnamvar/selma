@@ -183,5 +183,16 @@ class LintUseCase:
         )
         if b_continue and eval_result.is_success():
             b_continue = False
-            result = eval_result.unwrap()
+            raw_findings = eval_result.unwrap()
+            # Attach policy-derived guidance for reporting only.
+            # Evaluation never reads policy YAML.
+            if a_rule.guidance is not None:
+                result = [
+                    finding.model_copy(update={"guidance": a_rule.guidance})
+                    if finding.guidance is None
+                    else finding
+                    for finding in raw_findings
+                ]
+            else:
+                result = raw_findings
         return result

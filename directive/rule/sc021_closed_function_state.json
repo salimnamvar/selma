@@ -6,13 +6,17 @@
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
     "root_node": "FunctionDef",
-    "forbidden_types": ["global", "nonlocal"],
-    "message_template": "Function '{name}' uses global/nonlocal — pass state as parameters instead"
+    "forbidden_types": [
+      "global",
+      "nonlocal"
+    ],
+    "message_template": "Function '{name}' uses global/nonlocal \u2014 pass state as parameters instead"
   },
   "weight": "high",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc021_closed_function_state",
   "rationale": "Global/nonlocal state makes functions impure and hard to test.",
   "remediation": "Pass mutable state as parameters and return results explicitly.",
   "parameters": {}

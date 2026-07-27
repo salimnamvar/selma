@@ -24,6 +24,7 @@
   "priority": "operational",
   "status": "draft",
   "created_at": "2026-07-25T00:00:00Z",
+  "anchor_ref": "section:directives/sc112_internal_invariants",
   "rationale": "Asserts document and verify internal invariants during development.",
   "remediation": "Use assert to verify invariants that should always be true at that point in code.",
   "parameters": {
