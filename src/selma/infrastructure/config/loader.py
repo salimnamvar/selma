@@ -1,9 +1,9 @@
 """Configuration loader — loads from pyproject.toml, env vars, CLI args.
 
-Priority: CLI Arguments > Environment Variables > pyproject.toml > Defaults
+Priority: CLI Arguments > Environment Variables > pyproject.toml
 
-Rule definitions are NOT loaded here — they come from schema/rules/*.json
-via JsonRuleRepository. This loader handles infrastructure config only.
+ALL configuration values MUST be provided from one of these sources.
+No hardcoded defaults in the loader either.
 """
 
 from __future__ import annotations
@@ -14,11 +14,13 @@ import tomllib
 from typing import Any
 
 from selma.domain.value_objects.result import Result
+from selma.infrastructure.config.models import DirectivePathsConfig
 from selma.infrastructure.config.models import ExecutionConfig
 from selma.infrastructure.config.models import LoggingConfig
 from selma.infrastructure.config.models import OutputConfig
 from selma.infrastructure.config.models import PathsConfig
 from selma.infrastructure.config.models import RulesFilterConfig
+from selma.infrastructure.config.models import SchemaPathsConfig
 from selma.infrastructure.config.models import SelmaConfig
 from selma.infrastructure.config.models import ToolConfig
 from selma.infrastructure.config.models import ToolsConfig
@@ -41,7 +43,7 @@ class ConfigLoader:
     ) -> Result[SelmaConfig]:
         """Load configuration with priority.
 
-        Priority: CLI > env > toml > defaults.
+        Priority: CLI > env > toml.
 
         Preconditions:
             - a_config_path points to a valid pyproject.toml if provided.
@@ -52,36 +54,35 @@ class ConfigLoader:
 
         Side Effects: None.
         Resource: None.
-        Failure: Returns Failure on invalid config or I/O error.
+        Failure: Returns Failure on invalid config, missing required values,
+                 or I/O error.
         """
-        config = self._load_defaults()
         result: Result[SelmaConfig] = Result.failure("unreachable")
         b_continue = True
 
+        toml_data: dict[str, Any] = {}
         if b_continue and a_config_path is not None:
             toml_result = self._load_toml(a_config_path)
             if b_continue and toml_result.is_failure():
                 b_continue = False
-                msg = f"TOML error: {toml_result.message}"
-                result = Result.failure(msg)
+                result = Result.failure(f"TOML error: {toml_result.message}")
             if b_continue and toml_result.is_success():
-                config = self._merge_toml(config, toml_result.unwrap())
+                toml_data = toml_result.unwrap()
 
         if b_continue:
-            config = self._load_env(config)
-
-        if b_continue and a_cli_args is not None:
-            config = self._load_cli(config, a_cli_args)
-
-        if b_continue:
-            self._cached_config = config
-            validation = self._validator.validate(config)
-            if b_continue and validation.is_failure():
+            config_result = self._build_config(toml_data, a_cli_args)
+            if config_result.is_failure():
                 b_continue = False
-                msg = f"Validation: {validation.message}"
-                result = Result.failure(msg)
+                result = Result.failure(config_result.message)
             if b_continue:
-                result = Result.success(config)
+                config = config_result.unwrap()
+                self._cached_config = config
+                validation = self._validator.validate(config)
+                if validation.is_failure():
+                    b_continue = False
+                    result = Result.failure(f"Validation: {validation.message}")
+                if b_continue:
+                    result = Result.success(config)
 
         return result
 
@@ -89,554 +90,544 @@ class ConfigLoader:
         """Return the cached config, or None if not loaded."""
         return self._cached_config
 
-    def _load_defaults(self) -> SelmaConfig:
-        """Create default configuration."""
-        return SelmaConfig()
+    def _build_config(
+        self,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[SelmaConfig]:
+        """Build SelmaConfig from all sources.
+
+        Every required field must be resolvable from toml, env, or cli.
+        """
+        b_continue = True
+        result: Result[SelmaConfig] = Result.failure("unreachable")
+
+        # Required sections
+        directive_result = self._resolve_directive(a_toml, a_cli_args)
+        if b_continue and directive_result.is_failure():
+            b_continue = False
+            result = Result.failure(directive_result.message)
+
+        schema_result: Result[SchemaPathsConfig] = Result.failure("unreachable")
+        if b_continue:
+            schema_result = self._resolve_schema(a_toml, a_cli_args)
+            if schema_result.is_failure():
+                b_continue = False
+                result = Result.failure(schema_result.message)
+
+        paths_result: Result[PathsConfig] = Result.failure("unreachable")
+        if b_continue:
+            paths_result = self._build_paths(a_toml)
+            if paths_result.is_failure():
+                b_continue = False
+                result = Result.failure(paths_result.message)
+
+        output_result: Result[OutputConfig] = Result.failure("unreachable")
+        if b_continue:
+            output_result = self._build_output(a_toml, a_cli_args)
+            if output_result.is_failure():
+                b_continue = False
+                result = Result.failure(output_result.message)
+
+        execution_result: Result[ExecutionConfig] = Result.failure("unreachable")
+        if b_continue:
+            execution_result = self._build_execution(a_toml, a_cli_args)
+            if execution_result.is_failure():
+                b_continue = False
+                result = Result.failure(execution_result.message)
+
+        rules_result: Result[RulesFilterConfig] = Result.failure("unreachable")
+        if b_continue:
+            rules_result = self._build_rules_filter(a_toml, a_cli_args)
+            if rules_result.is_failure():
+                b_continue = False
+                result = Result.failure(rules_result.message)
+
+        tools_result: Result[ToolsConfig] = Result.failure("unreachable")
+        if b_continue:
+            tools_result = self._build_tools(a_toml)
+            if tools_result.is_failure():
+                b_continue = False
+                result = Result.failure(tools_result.message)
+
+        logging_result: Result[LoggingConfig] = Result.failure("unreachable")
+        if b_continue:
+            logging_result = self._build_logging(a_toml)
+            if logging_result.is_failure():
+                b_continue = False
+                result = Result.failure(logging_result.message)
+
+        if b_continue:
+            config = SelmaConfig(
+                version=a_toml.get("version", "0.1.0"),
+                name=a_toml.get("name", "selma"),
+                paths=paths_result.unwrap(),
+                output=output_result.unwrap(),
+                execution=execution_result.unwrap(),
+                rules_filter=rules_result.unwrap(),
+                tools=tools_result.unwrap(),
+                logging=logging_result.unwrap(),
+                directive=directive_result.unwrap(),
+                schema_paths=schema_result.unwrap(),
+            )
+
+            # CLI positional paths override
+            cli_paths = a_cli_args.get("paths") if a_cli_args else None
+            if cli_paths:
+                config = SelmaConfig(
+                    version=config.version,
+                    name=config.name,
+                    paths=PathsConfig(
+                        include=tuple(cli_paths),
+                        exclude=config.paths.exclude,
+                        extensions=config.paths.extensions,
+                    ),
+                    output=config.output,
+                    execution=config.execution,
+                    rules_filter=config.rules_filter,
+                    tools=config.tools,
+                    logging=config.logging,
+                    directive=config.directive,
+                    schema_paths=config.schema_paths,
+                )
+
+            result = Result.success(config)
+
+        return result
+
+    # ── Directive path resolution (required) ──────────────────────────────
+
+    def _resolve_directive(
+        self,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[DirectivePathsConfig]:
+        """Resolve directive paths from CLI > env > toml."""
+        toml_data = a_toml.get("directive", {})
+
+        cli_root = (a_cli_args or {}).get("directive_root")
+        cli_policy = (a_cli_args or {}).get("directive_policy_dir")
+        cli_rule = (a_cli_args or {}).get("directive_rule_dir")
+
+        env_root = os.environ.get(f"{_ENV_PREFIX}DIRECTIVE_ROOT")
+        env_policy = os.environ.get(f"{_ENV_PREFIX}DIRECTIVE_POLICY_DIR")
+        env_rule = os.environ.get(f"{_ENV_PREFIX}DIRECTIVE_RULE_DIR")
+
+        root_str = cli_root or env_root or toml_data.get("root")
+        policy_str = cli_policy or env_policy or toml_data.get("policy_dir")
+        rule_str = cli_rule or env_rule or toml_data.get("rule_dir")
+
+        if not root_str:
+            return Result.failure(
+                "Directive root path required. Set [tool.selma.directive.root], "
+                + "SELMA_DIRECTIVE_ROOT, or --directive-root.",
+            )
+        if not policy_str:
+            return Result.failure(
+                "Directive policy_dir required. Set [tool.selma.directive.policy_dir], "
+                + "SELMA_DIRECTIVE_POLICY_DIR, or --directive-policy-dir.",
+            )
+        if not rule_str:
+            return Result.failure(
+                "Directive rule_dir required. Set [tool.selma.directive.rule_dir], "
+                + "SELMA_DIRECTIVE_RULE_DIR, or --directive-rule-dir.",
+            )
+
+        return Result.success(
+            DirectivePathsConfig(
+                root=Path(root_str),
+                policy_dir=Path(policy_str),
+                rule_dir=Path(rule_str),
+            ),
+        )
+
+    # ── Schema path resolution (required) ─────────────────────────────────
+
+    def _resolve_schema(
+        self,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[SchemaPathsConfig]:
+        """Resolve schema paths from CLI > env > toml."""
+        toml_data = a_toml.get("schema", {})
+
+        cli_root = (a_cli_args or {}).get("schema_root")
+        cli_rule = (a_cli_args or {}).get("schema_rule_schema")
+        cli_policy = (a_cli_args or {}).get("schema_policy_doctrine")
+
+        env_root = os.environ.get(f"{_ENV_PREFIX}SCHEMA_ROOT")
+        env_rule = os.environ.get(f"{_ENV_PREFIX}SCHEMA_RULE_SCHEMA")
+        env_policy = os.environ.get(f"{_ENV_PREFIX}SCHEMA_POLICY_DOCTRINE")
+
+        root_str = cli_root or env_root or toml_data.get("root")
+        rule_str = cli_rule or env_rule or toml_data.get("rule_schema")
+        policy_str = cli_policy or env_policy or toml_data.get("policy_doctrine")
+
+        if not root_str:
+            return Result.failure(
+                "Schema root path required. Set [tool.selma.schema.root], "
+                + "SELMA_SCHEMA_ROOT, or --schema-root.",
+            )
+        if not rule_str:
+            return Result.failure(
+                "Schema rule_schema path required. Set [tool.selma.schema.rule_schema], "
+                + "SELMA_SCHEMA_RULE_SCHEMA, or --schema-rule-schema.",
+            )
+        if not policy_str:
+            return Result.failure(
+                "Schema policy_doctrine path required. Set "
+                + "[tool.selma.schema.policy_doctrine], SELMA_SCHEMA_POLICY_DOCTRINE, "
+                + "or --schema-policy-doctrine.",
+            )
+
+        return Result.success(
+            SchemaPathsConfig(
+                root=Path(root_str),
+                rule_schema=Path(rule_str),
+                policy_doctrine=Path(policy_str),
+            ),
+        )
+
+    # ── TOML loading ──────────────────────────────────────────────────────
 
     def _load_toml(self, a_path: Path) -> Result[dict[str, Any]]:
         """Load from pyproject.toml [tool.selma] section."""
-        b_continue = True
         result: Result[dict[str, Any]] = Result.failure("unreachable")
         try:
-            data: dict[str, Any] = {}
-            if b_continue:
-                with a_path.open("rb") as f:
-                    data = tomllib.load(f)
-            if b_continue:
-                selma = data.get("tool", {}).get("selma", {})
-                result = Result.success(selma)
+            with a_path.open("rb") as f:
+                data: dict[str, Any] = tomllib.load(f)
+            selma = data.get("tool", {}).get("selma", {})
+            result = Result.success(selma)
         except (OSError, tomllib.TOMLDecodeError) as e:
             result = Result.failure(str(e))
         return result
 
-    def _merge_toml(
-        self,
-        a_base: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge TOML config into base config."""
-        result = a_base
-        result = self._merge_paths_toml(result, a_toml)
-        result = self._merge_output_toml(result, a_toml)
-        result = self._merge_execution_toml(result, a_toml)
-        result = self._merge_rules_filter_toml(result, a_toml)
-        result = self._merge_tools_toml(result, a_toml)
-        return self._merge_logging_toml(result, a_toml)
+    # ── Paths (lint targets, required) ────────────────────────────────────
 
-    def _merge_paths_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge paths from TOML."""
-        result = a_config
-        data = a_toml.get("paths")
-        if data:
-            paths = PathsConfig(
-                include=tuple(data.get("include", a_config.paths.include)),
-                exclude=tuple(data.get("exclude", a_config.paths.exclude)),
-                extensions=tuple(data.get("extensions", a_config.paths.extensions)),
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=result.logging,
-            )
-        return result
+    def _build_paths(self, a_toml: dict[str, Any]) -> Result[PathsConfig]:
+        """Build paths config from toml > env."""
+        data = a_toml.get("paths", {})
 
-    def _merge_output_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge output from TOML."""
-        result = a_config
-        data = a_toml.get("output")
-        if data:
-            output = OutputConfig(
-                format=data.get("format", result.output.format),
-                guide=data.get("guide", result.output.guide),
-                file=data.get("file", result.output.file),
-                color=data.get("color", result.output.color),
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=result.paths,
-                output=output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=result.logging,
-            )
-        return result
+        include_str = os.environ.get(f"{_ENV_PREFIX}PATHS_INCLUDE")
+        exclude_str = os.environ.get(f"{_ENV_PREFIX}PATHS_EXCLUDE")
+        extensions_str = os.environ.get(f"{_ENV_PREFIX}PATHS_EXTENSIONS")
 
-    def _merge_execution_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge execution from TOML."""
-        result = a_config
-        data = a_toml.get("execution")
-        if data:
-            ex = result.execution
-            only_val = data.get("only", ex.only)
-            if only_val == "":
-                only_val = None
-            execution = ExecutionConfig(
-                skip_tools=data.get("skip_tools", ex.skip_tools),
-                skip_ast=data.get("skip_ast", ex.skip_ast),
-                only=only_val,
-                max_workers=data.get("max_workers", ex.max_workers),
-                file_timeout=data.get("file_timeout", ex.file_timeout),
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=result.paths,
-                output=result.output,
-                execution=execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=result.logging,
-            )
-        return result
+        include_raw = include_str.split(",") if include_str else data.get("include")
+        exclude_raw = exclude_str.split(",") if exclude_str else data.get("exclude")
+        extensions_raw = (
+            extensions_str.split(",") if extensions_str else data.get("extensions")
+        )
 
-    def _merge_rules_filter_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge rules filter from TOML."""
-        result = a_config
-        data = a_toml.get("rules")
-        if data:
-            rf = result.rules_filter
-            rules_filter = RulesFilterConfig(
-                disabled=tuple(data.get("disabled", rf.disabled)),
-                codes=tuple(data.get("codes", rf.codes)),
-                exclude_codes=tuple(data.get("exclude_codes", rf.exclude_codes)),
+        if not include_raw:
+            return Result.failure(
+                "paths.include required. Set [tool.selma.paths.include] or "
+                + "SELMA_PATHS_INCLUDE.",
             )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=result.paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=rules_filter,
-                tools=result.tools,
-                logging=result.logging,
+        if not exclude_raw:
+            return Result.failure(
+                "paths.exclude required. Set [tool.selma.paths.exclude] or "
+                + "SELMA_PATHS_EXCLUDE.",
             )
-        return result
+        if not extensions_raw:
+            return Result.failure(
+                "paths.extensions required. Set [tool.selma.paths.extensions] or "
+                + "SELMA_PATHS_EXTENSIONS.",
+            )
 
-    def _merge_tools_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge tools from TOML."""
-        result = a_config
-        data = a_toml.get("tools")
-        if data:
-            tools = self._merge_tools_data(result.tools, data)
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=result.paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=tools,
-                logging=result.logging,
-            )
-        return result
+        return Result.success(
+            PathsConfig(
+                include=tuple(include_raw),
+                exclude=tuple(exclude_raw),
+                extensions=tuple(extensions_raw),
+            ),
+        )
 
-    def _merge_tools_data(
+    # ── Output (required) ─────────────────────────────────────────────────
+
+    def _build_output(
         self,
-        a_tools: ToolsConfig,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[OutputConfig]:
+        """Build output config from toml > env > cli."""
+        toml_data = a_toml.get("output", {})
+
+        env_fmt = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FORMAT")
+        env_guide = os.environ.get(f"{_ENV_PREFIX}OUTPUT_GUIDE")
+        env_file = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FILE")
+        env_color = os.environ.get(f"{_ENV_PREFIX}OUTPUT_COLOR")
+
+        fmt = env_fmt or toml_data.get("format")
+        if not fmt:
+            return Result.failure(
+                "output.format required. Set [tool.selma.output.format] or "
+                + "SELMA_OUTPUT_FORMAT.",
+            )
+
+        guide_str = env_guide or toml_data.get("guide")
+        if guide_str is None:
+            return Result.failure(
+                "output.guide required. Set [tool.selma.output.guide] or "
+                + "SELMA_OUTPUT_GUIDE.",
+            )
+        guide = str(guide_str).lower() in ("true", "1", "yes")
+
+        file = env_file or toml_data.get("file")
+
+        color_str = env_color or toml_data.get("color")
+        if color_str is None:
+            return Result.failure(
+                "output.color required. Set [tool.selma.output.color] or "
+                + "SELMA_OUTPUT_COLOR.",
+            )
+        color = str(color_str).lower() in ("true", "1", "yes")
+
+        if a_cli_args:
+            cli_fmt = a_cli_args.get("format")
+            if cli_fmt:
+                fmt = cli_fmt
+            if a_cli_args.get("guide"):
+                guide = True
+            cli_file = a_cli_args.get("output")
+            if cli_file:
+                file = cli_file
+            if a_cli_args.get("no_color"):
+                color = False
+
+        return Result.success(
+            OutputConfig(format=fmt, guide=guide, file=file, color=color)
+        )
+
+    # ── Execution (required) ──────────────────────────────────────────────
+
+    def _build_execution(
+        self,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[ExecutionConfig]:
+        """Build execution config from toml > env > cli."""
+        toml_data = a_toml.get("execution", {})
+
+        env_skip_tools = os.environ.get(f"{_ENV_PREFIX}EXECUTION_SKIP_TOOLS")
+        env_skip_ast = os.environ.get(f"{_ENV_PREFIX}EXECUTION_SKIP_AST")
+        env_only = os.environ.get(f"{_ENV_PREFIX}EXECUTION_ONLY")
+        env_workers = os.environ.get(f"{_ENV_PREFIX}EXECUTION_MAX_WORKERS")
+        env_timeout = os.environ.get(f"{_ENV_PREFIX}EXECUTION_FILE_TIMEOUT")
+
+        skip_tools_str = env_skip_tools or toml_data.get("skip_tools")
+        if skip_tools_str is None:
+            return Result.failure(
+                "execution.skip_tools required. Set "
+                + "[tool.selma.execution.skip_tools] or SELMA_EXECUTION_SKIP_TOOLS.",
+            )
+        skip_tools = str(skip_tools_str).lower() in ("true", "1", "yes")
+
+        skip_ast_str = env_skip_ast or toml_data.get("skip_ast")
+        if skip_ast_str is None:
+            return Result.failure(
+                "execution.skip_ast required. Set "
+                + "[tool.selma.execution.skip_ast] or SELMA_EXECUTION_SKIP_AST.",
+            )
+        skip_ast = str(skip_ast_str).lower() in ("true", "1", "yes")
+
+        only = env_only or toml_data.get("only")
+        if only == "":
+            only = None
+
+        max_workers_str = env_workers or toml_data.get("max_workers")
+        if max_workers_str is None:
+            return Result.failure(
+                "execution.max_workers required. Set "
+                + "[tool.selma.execution.max_workers] or SELMA_EXECUTION_MAX_WORKERS.",
+            )
+
+        file_timeout_str = env_timeout or toml_data.get("file_timeout")
+        if file_timeout_str is None:
+            return Result.failure(
+                "execution.file_timeout required. Set "
+                + "[tool.selma.execution.file_timeout] or SELMA_EXECUTION_FILE_TIMEOUT.",
+            )
+
+        if a_cli_args:
+            if a_cli_args.get("skip_tools"):
+                skip_tools = True
+            if a_cli_args.get("skip_ast"):
+                skip_ast = True
+            cli_only = a_cli_args.get("only")
+            if cli_only:
+                only = cli_only
+            cli_workers = a_cli_args.get("max_workers")
+            if cli_workers:
+                max_workers_str = cli_workers
+            cli_timeout = a_cli_args.get("file_timeout")
+            if cli_timeout:
+                file_timeout_str = cli_timeout
+
+        return Result.success(
+            ExecutionConfig(
+                skip_tools=skip_tools,
+                skip_ast=skip_ast,
+                only=only,
+                max_workers=int(max_workers_str),
+                file_timeout=int(file_timeout_str),
+            ),
+        )
+
+    # ── Rules filter (required) ───────────────────────────────────────────
+
+    def _build_rules_filter(
+        self,
+        a_toml: dict[str, Any],
+        a_cli_args: dict[str, Any] | None,
+    ) -> Result[RulesFilterConfig]:
+        """Build rules filter from toml > env > cli."""
+        toml_data = a_toml.get("rules", {})
+
+        env_disabled = os.environ.get(f"{_ENV_PREFIX}RULES_DISABLED")
+        env_codes = os.environ.get(f"{_ENV_PREFIX}RULES_CODES")
+        env_exclude = os.environ.get(f"{_ENV_PREFIX}RULES_EXCLUDE_CODES")
+
+        disabled_raw = (
+            env_disabled.split(",") if env_disabled else toml_data.get("disabled")
+        )
+        codes_raw = env_codes.split(",") if env_codes else toml_data.get("codes")
+        exclude_raw = (
+            env_exclude.split(",") if env_exclude else toml_data.get("exclude_codes")
+        )
+
+        if disabled_raw is None:
+            return Result.failure(
+                "rules.disabled required (use [] for none). Set "
+                + "[tool.selma.rules.disabled] or SELMA_RULES_DISABLED.",
+            )
+        if codes_raw is None:
+            return Result.failure(
+                "rules.codes required (use [] for all). Set "
+                + "[tool.selma.rules.codes] or SELMA_RULES_CODES.",
+            )
+        if exclude_raw is None:
+            return Result.failure(
+                "rules.exclude_codes required (use [] for none). Set "
+                + "[tool.selma.rules.exclude_codes] or SELMA_RULES_EXCLUDE_CODES.",
+            )
+
+        disabled = tuple(c.strip() for c in disabled_raw if c.strip())
+        codes = tuple(c.strip() for c in codes_raw if c.strip())
+        exclude_codes = tuple(c.strip() for c in exclude_raw if c.strip())
+
+        if a_cli_args:
+            cli_codes = a_cli_args.get("codes")
+            if cli_codes:
+                codes = tuple(cli_codes)
+            cli_exclude = a_cli_args.get("exclude_codes")
+            if cli_exclude:
+                exclude_codes = tuple(cli_exclude)
+            cli_disable = a_cli_args.get("disable")
+            if cli_disable:
+                disabled = tuple(cli_disable)
+
+        return Result.success(
+            RulesFilterConfig(
+                disabled=disabled,
+                codes=codes,
+                exclude_codes=exclude_codes,
+            ),
+        )
+
+    # ── Tools (required) ──────────────────────────────────────────────────
+
+    def _build_tools(self, a_toml: dict[str, Any]) -> Result[ToolsConfig]:
+        """Build tools config from toml."""
+        data = a_toml.get("tools", {})
+
+        ruff_data = data.get("ruff")
+        pylint_data = data.get("pylint")
+        pyright_data = data.get("pyright")
+
+        if not ruff_data:
+            return Result.failure(
+                "tools.ruff required. Set [tool.selma.tools.ruff] in pyproject.toml.",
+            )
+        if not pylint_data:
+            return Result.failure(
+                "tools.pylint required. Set [tool.selma.tools.pylint] in pyproject.toml.",
+            )
+        if not pyright_data:
+            return Result.failure(
+                "tools.pyright required. Set [tool.selma.tools.pyright] in pyproject.toml.",
+            )
+
+        ruff_result = self._build_tool_config("ruff", ruff_data)
+        if ruff_result.is_failure():
+            return Result.failure(ruff_result.message)
+        pylint_result = self._build_tool_config("pylint", pylint_data)
+        if pylint_result.is_failure():
+            return Result.failure(pylint_result.message)
+        pyright_result = self._build_tool_config("pyright", pyright_data)
+        if pyright_result.is_failure():
+            return Result.failure(pyright_result.message)
+
+        return Result.success(
+            ToolsConfig(
+                ruff=ruff_result.unwrap(),
+                pylint=pylint_result.unwrap(),
+                pyright=pyright_result.unwrap(),
+            ),
+        )
+
+    def _build_tool_config(
+        self,
+        a_name: str,
         a_data: dict[str, Any],
-    ) -> ToolsConfig:
-        """Merge tool-specific TOML data."""
-        result = a_tools
+    ) -> Result[ToolConfig]:
+        """Build a single tool config from toml data."""
+        enabled = a_data.get("enabled")
+        if enabled is None:
+            return Result.failure(f"tools.{a_name}.enabled required.")
+        binary = a_data.get("binary")
+        if not binary:
+            return Result.failure(f"tools.{a_name}.binary required.")
+        args_raw = a_data.get("args")
+        if args_raw is None:
+            return Result.failure(f"tools.{a_name}.args required (use [] for none).")
+        fail_under = a_data.get("fail_under")
+        if fail_under is None:
+            return Result.failure(f"tools.{a_name}.fail_under required.")
 
-        ruff_data = a_data.get("ruff")
-        if ruff_data:
-            old = result.ruff
-            result = ToolsConfig(
-                ruff=ToolConfig(
-                    enabled=ruff_data.get("enabled", old.enabled),
-                    binary=ruff_data.get("binary", old.binary),
-                    args=tuple(ruff_data.get("args", old.args)),
-                    rcfile=ruff_data.get("rcfile", old.rcfile),
-                    fail_under=ruff_data.get("fail_under", old.fail_under),
-                ),
-                pylint=result.pylint,
-                pyright=result.pyright,
-            )
-
-        pylint_data = a_data.get("pylint")
-        if pylint_data:
-            old = result.pylint
-            result = ToolsConfig(
-                ruff=result.ruff,
-                pylint=ToolConfig(
-                    enabled=pylint_data.get("enabled", old.enabled),
-                    binary=pylint_data.get("binary", old.binary),
-                    args=tuple(pylint_data.get("args", old.args)),
-                    rcfile=pylint_data.get("rcfile", old.rcfile),
-                    fail_under=pylint_data.get("fail_under", old.fail_under),
-                ),
-                pyright=result.pyright,
-            )
-
-        pyright_data = a_data.get("pyright")
-        if pyright_data:
-            old = result.pyright
-            result = ToolsConfig(
-                ruff=result.ruff,
-                pylint=result.pylint,
-                pyright=ToolConfig(
-                    enabled=pyright_data.get("enabled", old.enabled),
-                    binary=pyright_data.get("binary", old.binary),
-                    args=tuple(pyright_data.get("args", old.args)),
-                    rcfile=pyright_data.get("rcfile", old.rcfile),
-                    fail_under=pyright_data.get("fail_under", old.fail_under),
-                ),
-            )
-
-        return result
-
-    def _merge_logging_toml(
-        self,
-        a_config: SelmaConfig,
-        a_toml: dict[str, Any],
-    ) -> SelmaConfig:
-        """Merge logging from TOML."""
-        result = a_config
-        data = a_toml.get("logging")
-        if data:
-            log_config = LoggingConfig(
-                level=data.get("level", result.logging.level),
-                format=data.get("format", result.logging.format),
-                file=data.get("file", result.logging.file),
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=result.paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=log_config,
-            )
-        return result
-
-    def _load_env(
-        self,
-        a_config: SelmaConfig,
-    ) -> SelmaConfig:
-        """Load from environment variables."""
-        result = a_config
-        result = self._env_paths(result)
-        result = self._env_output(result)
-        result = self._env_execution(result)
-        result = self._env_rules_filter(result)
-        return self._env_logging(result)
-
-    def _env_paths(self, a_config: SelmaConfig) -> SelmaConfig:
-        """Load paths from env."""
-        result = a_config
-        val = os.environ.get(f"{_ENV_PREFIX}PATHS")
-        if val:
-            paths = PathsConfig(
-                include=tuple(p.strip() for p in val.split(",")),
-                exclude=result.paths.exclude,
-                extensions=result.paths.extensions,
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=result.logging,
-            )
-        return result
-
-    def _env_output(
-        self,
-        a_config: SelmaConfig,
-    ) -> SelmaConfig:
-        """Load output from env."""
-        result = a_config
-        format_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FORMAT")
-        if format_val:
-            result = self._set_output(result, a_format=format_val)
-        guide_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_GUIDE")
-        if guide_val:
-            result = self._set_output(
-                result,
-                a_guide=guide_val.lower() in ("true", "1", "yes"),
-            )
-        file_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_FILE")
-        if file_val:
-            result = self._set_output(result, a_file=file_val)
-        color_val = os.environ.get(f"{_ENV_PREFIX}OUTPUT_COLOR")
-        if color_val:
-            result = self._set_output(
-                result,
-                a_color=color_val.lower() in ("true", "1", "yes"),
-            )
-        return result
-
-    def _set_output(
-        self,
-        a_config: SelmaConfig,
-        *,
-        a_format: str | None = None,
-        a_guide: bool | None = None,
-        a_file: str | None = None,
-        a_color: bool | None = None,
-    ) -> SelmaConfig:
-        """Set output config values."""
-        o = a_config.output
-        output = OutputConfig(
-            format=a_format if a_format is not None else o.format,
-            guide=a_guide if a_guide is not None else o.guide,
-            file=a_file if a_file is not None else o.file,
-            color=a_color if a_color is not None else o.color,
-        )
-        return SelmaConfig(
-            version=a_config.version,
-            name=a_config.name,
-            paths=a_config.paths,
-            output=output,
-            execution=a_config.execution,
-            rules_filter=a_config.rules_filter,
-            tools=a_config.tools,
-            logging=a_config.logging,
-        )
-
-    def _env_execution(
-        self,
-        a_config: SelmaConfig,
-    ) -> SelmaConfig:
-        """Load execution from env."""
-        result = a_config
-        skip_tools = os.environ.get(f"{_ENV_PREFIX}EXECUTION_SKIP_TOOLS")
-        if skip_tools:
-            result = self._set_execution(
-                result,
-                a_skip_tools=skip_tools.lower() in ("true", "1", "yes"),
-            )
-        skip_ast = os.environ.get(f"{_ENV_PREFIX}EXECUTION_SKIP_AST")
-        if skip_ast:
-            result = self._set_execution(
-                result,
-                a_skip_ast=skip_ast.lower() in ("true", "1", "yes"),
-            )
-        only = os.environ.get(f"{_ENV_PREFIX}EXECUTION_ONLY")
-        if only:
-            result = self._set_execution(result, a_only=only)
-        max_workers = os.environ.get(f"{_ENV_PREFIX}EXECUTION_MAX_WORKERS")
-        if max_workers:
-            result = self._set_execution(result, a_max_workers=int(max_workers))
-        return result
-
-    def _set_execution(
-        self,
-        a_config: SelmaConfig,
-        *,
-        a_skip_tools: bool | None = None,
-        a_skip_ast: bool | None = None,
-        a_only: str | None = None,
-        a_max_workers: int | None = None,
-        a_file_timeout: int | None = None,
-    ) -> SelmaConfig:
-        """Set execution config values."""
-        e = a_config.execution
-        execution = ExecutionConfig(
-            skip_tools=(a_skip_tools if a_skip_tools is not None else e.skip_tools),
-            skip_ast=(a_skip_ast if a_skip_ast is not None else e.skip_ast),
-            only=a_only if a_only is not None else e.only,
-            max_workers=(a_max_workers if a_max_workers is not None else e.max_workers),
-            file_timeout=(
-                a_file_timeout if a_file_timeout is not None else e.file_timeout
+        return Result.success(
+            ToolConfig(
+                enabled=bool(enabled),
+                binary=binary,
+                args=tuple(args_raw),
+                rcfile=a_data.get("rcfile"),
+                fail_under=int(fail_under),
             ),
         )
-        return SelmaConfig(
-            version=a_config.version,
-            name=a_config.name,
-            paths=a_config.paths,
-            output=a_config.output,
-            execution=execution,
-            rules_filter=a_config.rules_filter,
-            tools=a_config.tools,
-            logging=a_config.logging,
-        )
 
-    def _env_rules_filter(
-        self,
-        a_config: SelmaConfig,
-    ) -> SelmaConfig:
-        """Load rules filter from env."""
-        result = a_config
-        disabled = os.environ.get(f"{_ENV_PREFIX}RULES_DISABLED")
-        if disabled:
-            result = self._set_rules_filter(
-                result,
-                a_disabled=tuple(c.strip() for c in disabled.split(",")),
-            )
-        codes = os.environ.get(f"{_ENV_PREFIX}RULES_CODES")
-        if codes:
-            result = self._set_rules_filter(
-                result,
-                a_codes=tuple(c.strip() for c in codes.split(",")),
-            )
-        exclude = os.environ.get(f"{_ENV_PREFIX}RULES_EXCLUDE_CODES")
-        if exclude:
-            result = self._set_rules_filter(
-                result,
-                a_exclude_codes=tuple(c.strip() for c in exclude.split(",")),
-            )
-        return result
+    # ── Logging (required) ────────────────────────────────────────────────
 
-    def _set_rules_filter(
-        self,
-        a_config: SelmaConfig,
-        *,
-        a_disabled: tuple[str, ...] | None = None,
-        a_codes: tuple[str, ...] | None = None,
-        a_exclude_codes: tuple[str, ...] | None = None,
-    ) -> SelmaConfig:
-        """Set rules filter config values."""
-        rf = a_config.rules_filter
-        rules_filter = RulesFilterConfig(
-            disabled=(a_disabled if a_disabled is not None else rf.disabled),
-            codes=(a_codes if a_codes is not None else rf.codes),
-            exclude_codes=(
-                a_exclude_codes if a_exclude_codes is not None else rf.exclude_codes
-            ),
-        )
-        return SelmaConfig(
-            version=a_config.version,
-            name=a_config.name,
-            paths=a_config.paths,
-            output=a_config.output,
-            execution=a_config.execution,
-            rules_filter=rules_filter,
-            tools=a_config.tools,
-            logging=a_config.logging,
-        )
+    def _build_logging(self, a_toml: dict[str, Any]) -> Result[LoggingConfig]:
+        """Build logging config from toml > env."""
+        toml_data = a_toml.get("logging", {})
 
-    def _env_logging(
-        self,
-        a_config: SelmaConfig,
-    ) -> SelmaConfig:
-        """Load logging from env."""
-        result = a_config
-        level = os.environ.get(f"{_ENV_PREFIX}LOGGING_LEVEL")
-        if level:
-            result = self._set_logging(result, a_level=level)
-        log_file = os.environ.get(f"{_ENV_PREFIX}LOGGING_FILE")
-        if log_file:
-            result = self._set_logging(result, a_file=log_file)
-        return result
+        env_level = os.environ.get(f"{_ENV_PREFIX}LOGGING_LEVEL")
+        env_format = os.environ.get(f"{_ENV_PREFIX}LOGGING_FORMAT")
+        env_file = os.environ.get(f"{_ENV_PREFIX}LOGGING_FILE")
 
-    def _set_logging(
-        self,
-        a_config: SelmaConfig,
-        *,
-        a_level: str | None = None,
-        a_file: str | None = None,
-    ) -> SelmaConfig:
-        """Set logging config values."""
-        log_cfg = a_config.logging
-        log_config = LoggingConfig(
-            level=a_level if a_level is not None else log_cfg.level,
-            format=log_cfg.format,
-            file=a_file if a_file is not None else log_cfg.file,
-        )
-        return SelmaConfig(
-            version=a_config.version,
-            name=a_config.name,
-            paths=a_config.paths,
-            output=a_config.output,
-            execution=a_config.execution,
-            rules_filter=a_config.rules_filter,
-            tools=a_config.tools,
-            logging=log_config,
-        )
+        level = env_level or toml_data.get("level")
+        if not level:
+            return Result.failure(
+                "logging.level required. Set [tool.selma.logging.level] or "
+                + "SELMA_LOGGING_LEVEL.",
+            )
 
-    def _load_cli(
-        self,
-        a_config: SelmaConfig,
-        a_args: dict[str, Any],
-    ) -> SelmaConfig:
-        """Load from CLI arguments."""
-        result = a_config
-        format_val = a_args.get("format")
-        if format_val:
-            result = self._set_output(result, a_format=format_val)
-        if a_args.get("guide"):
-            result = self._set_output(result, a_guide=True)
-        output_file = a_args.get("output")
-        if output_file:
-            result = self._set_output(result, a_file=output_file)
-        if a_args.get("no_color"):
-            result = self._set_output(result, a_color=False)
-        if a_args.get("skip_tools"):
-            result = self._set_execution(result, a_skip_tools=True)
-        if a_args.get("skip_ast"):
-            result = self._set_execution(result, a_skip_ast=True)
-        only_val = a_args.get("only")
-        if only_val:
-            result = self._set_execution(result, a_only=only_val)
-        codes_val = a_args.get("codes")
-        if codes_val:
-            result = self._set_rules_filter(result, a_codes=tuple(codes_val))
-        exclude_val = a_args.get("exclude_codes")
-        if exclude_val:
-            result = self._set_rules_filter(
-                result,
-                a_exclude_codes=tuple(exclude_val),
+        fmt = env_format or toml_data.get("format")
+        if not fmt:
+            return Result.failure(
+                "logging.format required. Set [tool.selma.logging.format] or "
+                + "SELMA_LOGGING_FORMAT.",
             )
-        disable_val = a_args.get("disable")
-        if disable_val:
-            result = self._set_rules_filter(
-                result,
-                a_disabled=tuple(disable_val),
-            )
-        max_workers = a_args.get("max_workers")
-        if max_workers:
-            result = self._set_execution(result, a_max_workers=int(max_workers))
-        file_timeout = a_args.get("file_timeout")
-        if file_timeout:
-            result = self._set_execution(result, a_file_timeout=int(file_timeout))
-        paths_val = a_args.get("paths")
-        if paths_val:
-            paths = PathsConfig(
-                include=tuple(paths_val),
-                exclude=result.paths.exclude,
-                extensions=result.paths.extensions,
-            )
-            result = SelmaConfig(
-                version=result.version,
-                name=result.name,
-                paths=paths,
-                output=result.output,
-                execution=result.execution,
-                rules_filter=result.rules_filter,
-                tools=result.tools,
-                logging=result.logging,
-            )
-        return result
+
+        file = env_file or toml_data.get("file")
+
+        return Result.success(LoggingConfig(level=level, format=fmt, file=file))

@@ -1,6 +1,7 @@
-"""Validate rule JSON documents against schema/rule_schema.json via jsonschema.
+"""Validate rule JSON documents against a rule schema via jsonschema.
 
 After structural validation, documents are parsed into Pydantic v2 models.
+The schema path MUST be provided — no hardcoded paths.
 """
 
 from __future__ import annotations
@@ -15,51 +16,47 @@ from jsonschema import Draft7Validator
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.config.rule_schema_models import RuleDocumentModel
 
-_SCHEMA_CANDIDATES = (
-    Path("schema/rule_schema.json"),
-    Path(__file__).resolve().parents[4] / "schema" / "rule_schema.json",
-    Path(__file__).resolve().parents[3] / "schema" / "rule_schema.json",
-)
 
+def load_rule_json_schema(a_schema_path: Path) -> Result[dict[str, Any]]:
+    """Load the Draft-07 rule schema object from disk.
 
-def resolve_rule_schema_path() -> Result[Path]:
-    """Locate schema/rule_schema.json on disk."""
-    b_continue = True
-    result: Result[Path] = Result.failure("rule_schema.json not found")
-    for candidate in _SCHEMA_CANDIDATES:
-        if b_continue and candidate.is_file():
-            b_continue = False
-            result = Result.success(candidate)
-    return result
+    Preconditions:
+        - a_schema_path points to a valid JSON file.
 
+    Postconditions:
+        Returns Result.success with the schema dict, or Result.failure.
 
-def load_rule_json_schema() -> Result[dict[str, Any]]:
-    """Load the Draft-07 rule schema object from disk."""
+    Side Effects: None.
+    Resource: Reads file from disk.
+    Failure: Returns Failure on I/O error or invalid JSON.
+    """
     b_continue = True
     result: Result[dict[str, Any]] = Result.failure("unreachable")
-    path_result = resolve_rule_schema_path()
-    if path_result.is_failure():
-        b_continue = False
-        result = Result.failure(path_result.message)
-    if b_continue:
-        path = path_result.unwrap()
-        try:
-            with path.open("r", encoding="utf-8") as handle:
-                data = json.load(handle)
-            if not isinstance(data, dict):
-                b_continue = False
-                result = Result.failure("rule_schema.json root must be an object")
-            if b_continue:
-                result = Result.success(cast("dict[str, Any]", data))
-        except (OSError, json.JSONDecodeError) as exc:
-            result = Result.failure(f"Failed to load rule schema: {exc}")
+    try:
+        with a_schema_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict):
+            b_continue = False
+            result = Result.failure("rule schema root must be an object")
+        if b_continue:
+            result = Result.success(cast("dict[str, Any]", data))
+    except (OSError, json.JSONDecodeError) as exc:
+        result = Result.failure(f"Failed to load rule schema: {exc}")
     return result
 
 
 class RuleSchemaValidator:
-    """Validate rule JSON with jsonschema then parse with Pydantic."""
+    """Validate rule JSON with jsonschema then parse with Pydantic.
 
-    def __init__(self, a_schema: dict[str, Any] | None = None) -> None:
+    The schema path MUST be provided at construction time.
+    """
+
+    def __init__(
+        self,
+        a_schema_path: Path,
+        a_schema: dict[str, Any] | None = None,
+    ) -> None:
+        self._schema_path = a_schema_path
         self._schema = a_schema
         self._validator: Draft7Validator | None = None
 
@@ -70,7 +67,7 @@ class RuleSchemaValidator:
             b_continue = False
             result = Result.success(self._validator)
         if b_continue and self._schema is None:
-            schema_result = load_rule_json_schema()
+            schema_result = load_rule_json_schema(self._schema_path)
             if schema_result.is_failure():
                 b_continue = False
                 result = Result.failure(schema_result.message)
@@ -104,8 +101,3 @@ class RuleSchemaValidator:
             except Exception as exc:
                 result = Result.failure(f"pydantic: {exc}")
         return result
-
-
-def validate_rule_dict(a_raw: dict[str, Any]) -> Result[RuleDocumentModel]:
-    """Validate one rule document dict against the project rule schema."""
-    return RuleSchemaValidator().validate_document(a_raw)

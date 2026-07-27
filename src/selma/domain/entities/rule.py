@@ -32,6 +32,7 @@ class EvaluatorConfig(BaseModel):
     conditions: tuple[dict[str, object], ...] = ()
     forbidden_calls: tuple[dict[str, str], ...] = ()
     forbidden_functions: tuple[str, ...] = ()
+    exempt_module_methods: tuple[str, ...] = ()
     resource_calls: tuple[str, ...] = ()
     execute_methods: tuple[str, ...] = ()
     sql_keywords: tuple[str, ...] = ()

@@ -19,19 +19,18 @@ from selma.domain.value_objects.severity import Severity
 from selma.infrastructure.config.rule_schema_models import RuleDocumentModel
 from selma.infrastructure.config.rule_schema_validator import RuleSchemaValidator
 
-_DEFAULT_RULES_DIR = Path("schema/rules")
-
 
 class JsonRuleRepository(RuleRepository):
-    """Load rules from JSON files in the schema/rules/ directory.
+    """Load rules from JSON files from a configured rules directory.
 
     Implements RuleRepository port. Caches loaded rules.
+    The rules directory and schema path MUST be provided — no hardcoded defaults.
     """
 
-    def __init__(self, a_rules_dir: Path | None = None) -> None:
-        self._rules_dir = a_rules_dir or _DEFAULT_RULES_DIR
+    def __init__(self, a_rules_dir: Path, a_schema_path: Path) -> None:
+        self._rules_dir = a_rules_dir
         self._cached_rules: tuple[RuleDefinition, ...] | None = None
-        self._schema_validator = RuleSchemaValidator()
+        self._schema_validator = RuleSchemaValidator(a_schema_path=a_schema_path)
 
     def find_all(
         self,
@@ -289,6 +288,9 @@ class JsonRuleRepository(RuleRepository):
         forbidden_functions = (
             tuple(a_raw.get("forbidden_functions", [])) if b_continue else ()
         )
+        exempt_module_methods = (
+            tuple(a_raw.get("exempt_module_methods", [])) if b_continue else ()
+        )
         resource_calls = tuple(a_raw.get("resource_calls", [])) if b_continue else ()
         execute_methods = tuple(a_raw.get("execute_methods", [])) if b_continue else ()
         sql_keywords = tuple(a_raw.get("sql_keywords", [])) if b_continue else ()
@@ -348,6 +350,7 @@ class JsonRuleRepository(RuleRepository):
                 conditions=conditions,
                 forbidden_calls=forbidden_calls,
                 forbidden_functions=forbidden_functions,
+                exempt_module_methods=exempt_module_methods,
                 resource_calls=resource_calls,
                 execute_methods=execute_methods,
                 sql_keywords=sql_keywords,

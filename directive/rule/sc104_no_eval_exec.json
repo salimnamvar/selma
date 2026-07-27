@@ -6,6 +6,7 @@
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_functions": ["eval", "exec", "compile"],
+    "exempt_module_methods": ["re.compile"],
     "message_template": "Forbidden call to '{function}()' — use safe alternative"
   },
   "weight": "critical",
@@ -18,5 +19,7 @@
     "incorrect_example": "def parse_config(a_value: str) -> Result[dict]:\n    parsed = eval(a_value)\n    return Result.success(parsed)",
     "explanation": "The correct version uses ast.literal_eval() which only parses literals safely. The incorrect version uses eval() which executes arbitrary code, creating a critical security vulnerability."
   },
-  "parameters": {}
+  "parameters": {
+    "exempt_module_methods": ["re.compile"]
+  }
 }

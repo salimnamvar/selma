@@ -1,6 +1,6 @@
 """Selma CLI entry point: python -m selma"""
 
-from selma.interfaces.cli.main import main
+from selma.interfaces.cli.main import cli_entry
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    cli_entry()

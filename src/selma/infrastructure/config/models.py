@@ -1,132 +1,181 @@
 """Configuration models — infrastructure config only.
 
-Rule definitions live in schema/rules/*.json files (schema-driven).
-This module contains ONLY infrastructure configuration (paths, output,
-execution, tools, logging). Rule-specific config is in JSON rule files.
+Rule definitions live in directive/rule/*.json files (schema-driven).
+Policy definitions live in directive/policy/*.yaml files.
+Schema definitions live in schema/*.json and schema/*.yaml files.
+
+ALL values MUST be configured externally via:
+- pyproject.toml [tool.selma] sections
+- Environment variables SELMA_*
+- CLI arguments
+
+No defaults, no hardcoded paths, no hardcoded patterns in source.
+Every field is required unless explicitly marked Optional (nullable).
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
 
-class PathsConfig(BaseModel):
-    """Directories and files to lint."""
+class DirectivePathsConfig(BaseModel):
+    """Paths to directive directories (policy and rule definitions).
+
+    Required. Configure via SELMA_DIRECTIVE_* env vars,
+    [tool.selma.directive] in pyproject.toml, or CLI args.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    include: tuple[str, ...] = ("src", "tests")
-    exclude: tuple[str, ...] = (
-        "__pycache__",
-        "*.pyc",
-        ".git",
-        ".venv",
-        "build",
-        "dist",
-        "*.egg-info",
-    )
-    extensions: tuple[str, ...] = (".py",)
+    root: Path = Field(description="Root directive directory")
+    policy_dir: Path = Field(description="Policy definitions directory")
+    rule_dir: Path = Field(description="Rule definitions directory")
+
+
+class SchemaPathsConfig(BaseModel):
+    """Paths to schema definitions (rule schema, policy doctrine).
+
+    Required. Configure via SELMA_SCHEMA_* env vars,
+    [tool.selma.schema] in pyproject.toml, or CLI args.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    root: Path = Field(description="Root schema directory")
+    rule_schema: Path = Field(description="Rule schema JSON file")
+    policy_doctrine: Path = Field(description="Policy doctrine YAML file")
+
+
+class PathsConfig(BaseModel):
+    """Directories and files to lint.
+
+    Required. Configure via [tool.selma.paths] in pyproject.toml
+    or SELMA_PATHS_* env vars.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    include: tuple[str, ...] = Field(description="Directories/files to lint")
+    exclude: tuple[str, ...] = Field(description="Patterns to exclude from linting")
+    extensions: tuple[str, ...] = Field(description="File extensions to lint")
 
 
 class OutputConfig(BaseModel):
-    """Output formatting options."""
+    """Output formatting options.
+
+    Required. Configure via [tool.selma.output] in pyproject.toml
+    or SELMA_OUTPUT_* env vars.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    format: str = "default"
-    guide: bool = False
-    file: str | None = None
-    color: bool = True
+    format: str = Field(description="Output format: default, json, gcc, guidance")
+    guide: bool = Field(description="Include guidance in output")
+    file: str | None = Field(description="Output file path (stdout if None)")
+    color: bool = Field(description="Enable colored output")
 
 
 class ExecutionConfig(BaseModel):
-    """Execution behavior options."""
+    """Execution behavior options.
+
+    Required. Configure via [tool.selma.execution] in pyproject.toml
+    or SELMA_EXECUTION_* env vars.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    skip_tools: bool = False
-    skip_ast: bool = False
-    only: str | None = None
-    max_workers: int = 4
-    file_timeout: int = 30
+    skip_tools: bool = Field(description="Skip external tools")
+    skip_ast: bool = Field(description="Skip AST rules")
+    only: str | None = Field(description="Run only one check")
+    max_workers: int = Field(description="Maximum parallel workers")
+    file_timeout: int = Field(description="Per-file timeout in seconds")
 
 
 class LoggingConfig(BaseModel):
-    """Logging configuration."""
+    """Logging configuration.
+
+    Required. Configure via [tool.selma.logging] in pyproject.toml
+    or SELMA_LOGGING_* env vars.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    level: str = "WARNING"
-    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file: str | None = None
+    level: str = Field(description="Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    format: str = Field(description="Log format string")
+    file: str | None = Field(description="Log file path (stderr if None)")
 
 
 class ToolConfig(BaseModel):
-    """Configuration for an external tool (ruff, pylint, pyright)."""
+    """Configuration for an external tool (ruff, pylint, pyright).
+
+    Required. Configure via [tool.selma.tools.*] in pyproject.toml.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    enabled: bool = True
-    binary: str = ""
-    args: tuple[str, ...] = ()
-    rcfile: str | None = None
-    fail_under: int = 8
+    enabled: bool = Field(description="Whether this tool is enabled")
+    binary: str = Field(description="Path or name of the tool binary")
+    args: tuple[str, ...] = Field(description="Extra CLI arguments")
+    rcfile: str | None = Field(description="Config file path for the tool")
+    fail_under: int = Field(description="Minimum score threshold")
 
 
 class RulesFilterConfig(BaseModel):
-    """Top-level rule filtering by code."""
+    """Top-level rule filtering by code.
+
+    All rules are active unless explicitly disabled.
+    Configure via [tool.selma.rules] in pyproject.toml
+    or SELMA_RULES_* env vars.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    disabled: tuple[str, ...] = ("SC-031", "SC-033", "SC-065", "SC-092", "SC-114")
-    codes: tuple[str, ...] = ()
-    exclude_codes: tuple[str, ...] = ()
-
-
-def _default_ruff() -> ToolConfig:
-    return ToolConfig(binary="ruff")
-
-
-def _default_pylint() -> ToolConfig:
-    return ToolConfig(
-        binary="pylint",
-        rcfile="pylintrc",
-        fail_under=8,
-        args=("--recursive=y",),
+    disabled: tuple[str, ...] = Field(description="Rule codes to disable")
+    codes: tuple[str, ...] = Field(
+        description="Only run these rule codes (empty = all)"
     )
-
-
-def _default_pyright() -> ToolConfig:
-    return ToolConfig(binary="pyright", args=("--strict",))
+    exclude_codes: tuple[str, ...] = Field(description="Exclude these rule codes")
 
 
 class ToolsConfig(BaseModel):
-    """External tools configuration."""
+    """External tools configuration.
+
+    Required. Configure via [tool.selma.tools] in pyproject.toml.
+    """
 
     model_config = ConfigDict(frozen=True)
 
-    ruff: ToolConfig = Field(default_factory=_default_ruff)
-    pylint: ToolConfig = Field(default_factory=_default_pylint)
-    pyright: ToolConfig = Field(default_factory=_default_pyright)
+    ruff: ToolConfig = Field(description="Ruff linter configuration")
+    pylint: ToolConfig = Field(description="Pylint configuration")
+    pyright: ToolConfig = Field(description="Pyright type checker configuration")
 
 
 class SelmaConfig(BaseModel):
     """Top-level immutable configuration.
 
-    Rule definitions are NOT here — they live in schema/rules/*.json.
-    This config controls infrastructure behavior only.
+    ALL values MUST be configured externally. No hardcoded paths,
+    no hardcoded patterns, no hardcoded rule exclusions in source.
+
+    Configuration sources (priority: CLI > env > pyproject.toml):
+    - pyproject.toml [tool.selma] sections
+    - Environment variables: SELMA_*
+    - CLI arguments
     """
 
     model_config = ConfigDict(frozen=True)
 
-    version: str = "0.1.0"
-    name: str = "selma"
+    version: str = Field(description="Configuration version")
+    name: str = Field(description="Project name")
 
-    paths: PathsConfig = Field(default_factory=PathsConfig)
-    output: OutputConfig = Field(default_factory=OutputConfig)
-    execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
-    rules_filter: RulesFilterConfig = Field(default_factory=RulesFilterConfig)
-    tools: ToolsConfig = Field(default_factory=ToolsConfig)
-    logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    paths: PathsConfig = Field(description="Lint target paths")
+    output: OutputConfig = Field(description="Output formatting config")
+    execution: ExecutionConfig = Field(description="Execution behavior config")
+    rules_filter: RulesFilterConfig = Field(description="Rule filtering config")
+    tools: ToolsConfig = Field(description="External tools config")
+    logging: LoggingConfig = Field(description="Logging config")
+    directive: DirectivePathsConfig = Field(description="Directive paths config")
+    schema_paths: SchemaPathsConfig = Field(description="Schema paths config")

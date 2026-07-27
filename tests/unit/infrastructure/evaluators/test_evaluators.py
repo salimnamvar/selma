@@ -357,7 +357,10 @@ def ok() -> object:
         assert len(findings) == 1
 
     def test_deprecated_rules_not_loaded(self) -> None:
-        repo = JsonRuleRepository(Path("schema/rules"))
+        repo = JsonRuleRepository(
+            a_rules_dir=Path("directive/rule"),
+            a_schema_path=Path("schema/rule_schema.json"),
+        )
         result = repo.find_all()
         assert result.is_success()
         ids = {rule.lineage_id for rule in result.unwrap()}

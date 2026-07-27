@@ -7,6 +7,7 @@ from abc import abstractmethod
 import ast
 import re
 from typing import Any
+from typing import cast
 
 from selma.domain.entities.finding import Finding
 
@@ -116,7 +117,11 @@ class EvaluatorBase(ABC):
 
     @staticmethod
     def has_decorator(a_node: ast.AST, a_decorator_name: str) -> bool:
-        """Check if an AST node has a specific decorator."""
+        r"""Check if an AST node has a specific decorator.
+
+        Matches bare names (@property), attributes (@app.command), and
+        calls of those forms (@app.command(), @click.command(name=\"x\")).
+        """
         b_continue = True
         result = False
         if b_continue and not hasattr(a_node, "decorator_list"):
@@ -127,13 +132,17 @@ class EvaluatorBase(ABC):
             result = False
         if b_continue:
             for decorator in a_node.decorator_list:  # type: ignore[union-attr]
+                target: ast.expr = cast("ast.expr", decorator)
+                # @app.command() → Call(func=Attribute(...)); unwrap to the callee.
+                if isinstance(target, ast.Call):
+                    target = target.func
                 b_continue_inner = True
-                if b_continue_inner and isinstance(decorator, ast.Name):
+                if b_continue_inner and isinstance(target, ast.Name):
                     b_continue_inner = False
-                    result = decorator.id == a_decorator_name
-                if b_continue_inner and isinstance(decorator, ast.Attribute):
+                    result = target.id == a_decorator_name
+                if b_continue_inner and isinstance(target, ast.Attribute):
                     b_continue_inner = False
-                    result = decorator.attr == a_decorator_name
+                    result = target.attr == a_decorator_name
                 if result:
                     b_continue = False
         return result

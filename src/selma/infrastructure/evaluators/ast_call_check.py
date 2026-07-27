@@ -39,6 +39,7 @@ class AstCallCheckEvaluator(EvaluatorBase):
         target_methods = a_config.get("target_methods", [])
         check_first_arg = a_config.get("check_first_arg", {})
         exempt_if = a_config.get("exempt_if", {})
+        exempt_module_methods = a_config.get("exempt_module_methods", [])
         message_template = a_config.get("message_template", "")
         for node in ast.walk(a_tree):
             if not isinstance(node, ast.Call):
@@ -69,22 +70,27 @@ class AstCallCheckEvaluator(EvaluatorBase):
             if b_continue and forbidden_functions:
                 func_name = self._get_call_name(node)
                 if b_continue and func_name in forbidden_functions:
-                    ctx = {
-                        "function": func_name,
-                        "module": "",
-                        "method": func_name,
-                    }
-                    msg = self._render_message(message_template, ctx)
-                    findings.append(
-                        Finding(
-                            rule_id=a_rule.get("lineage_id", ""),
-                            file="",
-                            line=self._get_line(node),
-                            col=self._get_col(node),
-                            message=msg,
+                    if b_continue and exempt_module_methods:
+                        module_method = self._get_module_method_name(node)
+                        if b_continue and module_method in exempt_module_methods:
+                            b_continue = False
+                    if b_continue:
+                        ctx = {
+                            "function": func_name,
+                            "module": "",
+                            "method": func_name,
+                        }
+                        msg = self._render_message(message_template, ctx)
+                        findings.append(
+                            Finding(
+                                rule_id=a_rule.get("lineage_id", ""),
+                                file="",
+                                line=self._get_line(node),
+                                col=self._get_col(node),
+                                message=msg,
+                            )
                         )
-                    )
-                    b_continue = False
+                        b_continue = False
             if b_continue and target_methods and check_first_arg:
                 method = self._get_method_name(node)
                 if b_continue and method in target_methods:
@@ -158,6 +164,19 @@ class AstCallCheckEvaluator(EvaluatorBase):
         if b_continue and isinstance(a_node.func, ast.Attribute):
             b_continue = False
             result = a_node.func.attr
+        return result
+
+    @staticmethod
+    def _get_module_method_name(a_node: ast.Call) -> str:
+        """Get the module.method name from a Call node (e.g. 're.compile')."""
+        b_continue = True
+        result = ""
+        if b_continue and isinstance(a_node.func, ast.Attribute):
+            method = a_node.func.attr
+            module = _resolve_module_name(a_node.func.value)
+            if b_continue and module:
+                b_continue = False
+                result = f"{module}.{method}"
         return result
 
     @staticmethod

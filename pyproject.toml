@@ -53,7 +53,7 @@ dev = [
 ]
 
 [project.scripts]
-selma = "selma.interfaces.cli.main:main"
+selma = "selma.interfaces.cli.main:cli_entry"
 
 [project.urls]
 Homepage = "https://github.com/salimnamvar/selma"
@@ -291,11 +291,23 @@ reportPrivateUsage = false
 reportImplicitStringConcatenation = true
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Selma Configuration — Zero Hardcoding
+# Selma Configuration — All values defined here, no hardcoded defaults in source
 # ──────────────────────────────────────────────────────────────────────────────
 [tool.selma]
 version = "0.1.0"
 name = "selma"
+
+# ─── Directive Paths (policy and rule definitions) ──────────────────────────
+[tool.selma.directive]
+root = "directive"
+policy_dir = "directive/policy"
+rule_dir = "directive/rule"
+
+# ─── Schema Paths (rule schema and policy doctrine) ─────────────────────────
+[tool.selma.schema]
+root = "schema"
+rule_schema = "schema/rule_schema.json"
+policy_doctrine = "schema/policy_doctrine.yaml"
 
 # ─── Paths ──────────────────────────────────────────────────────────────────
 [tool.selma.paths]
@@ -307,18 +319,18 @@ extensions = [".py"]
 [tool.selma.output]
 format = "default"
 guide = false
-# file = null (stdout by default)
+file = ""
 color = true
 
 # ─── Execution ──────────────────────────────────────────────────────────────
 [tool.selma.execution]
 skip_tools = false
 skip_ast = false
-only = ""  # null equivalent: run all checks
+only = ""
 max_workers = 4
 file_timeout = 30
 
-# ─── Rules (top-level filtering) ───────────────────────────────────────────
+# ─── Rules (top-level filtering, all rules active by default) ──────────────
 [tool.selma.rules]
 disabled = []
 codes = []
@@ -625,6 +637,8 @@ mutable_types = ["list", "dict", "set"]
 enabled = true
 binary = "ruff"
 args = []
+rcfile = ""
+fail_under = 8
 
 [tool.selma.tools.pylint]
 enabled = true
@@ -637,6 +651,8 @@ args = ["--recursive=y"]
 enabled = true
 binary = "pyright"
 args = ["--strict"]
+rcfile = ""
+fail_under = 8
 
 # ─── Logging ───────────────────────────────────────────────────────────────
 [tool.selma.logging]

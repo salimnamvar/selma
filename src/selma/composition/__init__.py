@@ -43,9 +43,16 @@ class Container:
     def get_lint_use_case_with_defaults(
         self,
         a_rules_dir: Path,
+        a_schema_path: Path,
     ) -> LintUseCase:
-        """Get a configured LintUseCase with default rule repository."""
-        rule_repository = JsonRuleRepository(a_rules_dir=a_rules_dir)
+        """Get a configured LintUseCase with default rule repository.
+
+        Both a_rules_dir and a_schema_path MUST be provided from config.
+        """
+        rule_repository = JsonRuleRepository(
+            a_rules_dir=a_rules_dir,
+            a_schema_path=a_schema_path,
+        )
         return self.get_lint_use_case(a_rule_repository=rule_repository)
 
     def get_parser(self) -> PythonAstParser:
