@@ -1,27 +1,21 @@
 """LintUseCase — main application service for linting files.
 
 Orchestrates: parse -> evaluate -> report
-
-FIXED: P0.4 -- Rule hook validation + exception isolation.
-FIXED: Wired _evaluate_rule to ASTInterpreter.
 """
 
 from __future__ import annotations
 
 import ast
 import logging
-import time
 from typing import Any
 
 from selma.application.dto.lint_request import LintRequest
 from selma.application.dto.lint_response import LintResponse
 from selma.application.ports.evaluator_port import RuleEvaluator
-from selma.application.ports.event_publisher_port import EventPublisher
 from selma.application.ports.parser_port import SourceCodeParser
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.rule import RuleDefinition
-from selma.domain.events.lint_completed import LintCompleted
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
@@ -40,12 +34,10 @@ class LintUseCase:
         a_parser: SourceCodeParser,
         a_rule_repository: RuleRepository,
         a_evaluator: RuleEvaluator,
-        a_event_publisher: EventPublisher | None = None,
     ) -> None:
         self._parser = a_parser
         self._rule_repository = a_rule_repository
         self._evaluator = a_evaluator
-        self._event_publisher = a_event_publisher
 
     def execute(self, a_request: LintRequest) -> Result[LintResponse]:
         """Execute the lint use case.
@@ -63,7 +55,6 @@ class LintUseCase:
         Resource: File handles, subprocess handles.
         Failure: Returns Failure on critical error.
         """
-        start_time = time.monotonic()
         b_continue = True
         result: Result[LintResponse] = Result.failure("unreachable")
 
@@ -86,19 +77,6 @@ class LintUseCase:
                 summary=f"Found {len(all_findings)} issues",
                 has_errors=any(f.is_violation for f in all_findings),
             )
-
-            if self._event_publisher:
-                duration_ms = (time.monotonic() - start_time) * 1000
-                self._event_publisher.publish(
-                    LintCompleted(
-                        file_path=a_request.paths[0]
-                        if a_request.paths
-                        else FilePath(""),
-                        finding_count=len(all_findings),
-                        violation_count=response.violation_count,
-                        duration_ms=duration_ms,
-                    )
-                )
             result = Result.success(response)
         return result
 
