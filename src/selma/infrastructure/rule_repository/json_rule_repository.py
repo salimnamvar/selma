@@ -222,6 +222,26 @@ class JsonRuleRepository(RuleRepository):
 
         return result
 
+    @staticmethod
+    def _as_mapping(a_value: object) -> dict[str, object] | None:
+        """Return a string-keyed mapping when the value is a dict."""
+        b_continue = True
+        result: dict[str, object] | None = None
+        if b_continue and not isinstance(a_value, dict):
+            b_continue = False
+        if b_continue:
+            raw = cast("dict[object, object]", a_value)
+            result = {key: value for key, value in raw.items() if isinstance(key, str)}
+        return result
+
+    @staticmethod
+    def _str_field(a_map: dict[str, object], a_key: str, a_default: str = "") -> str:
+        """Read a map field as a string with a default."""
+        value = a_map.get(a_key)
+        if value is None:
+            return a_default
+        return str(value)
+
     def _load_policy_guidance(
         self, a_rule_path: Path, a_lineage_id: str, a_message: str
     ) -> RuleGuidance | None:
@@ -230,19 +250,20 @@ class JsonRuleRepository(RuleRepository):
         result: RuleGuidance | None = None
         if b_continue and self._policy_dir is None:
             b_continue = False
+        policy_path: Path | None = None
         if b_continue and self._policy_dir is not None:
             policy_path = self._policy_dir / f"{a_rule_path.stem}.yaml"
             if not policy_path.is_file():
                 b_continue = False
-        if b_continue and self._policy_dir is not None:
-            policy_path = self._policy_dir / f"{a_rule_path.stem}.yaml"
+                policy_path = None
+        if b_continue and policy_path is not None:
             try:
                 with policy_path.open("r", encoding="utf-8") as handle:
-                    raw_obj = yaml.safe_load(handle)
-                if not isinstance(raw_obj, dict):
+                    raw_obj: object = yaml.safe_load(handle)
+                data = self._as_mapping(raw_obj)
+                if data is None:
                     b_continue = False
-                if b_continue:
-                    data = cast("dict[str, Any]", raw_obj)
+                if b_continue and data is not None:
                     # Contamination guard: never accept machine evaluator fields
                     # as guidance carriers even if a bad policy file contains them.
                     for forbidden in (
@@ -252,58 +273,59 @@ class JsonRuleRepository(RuleRepository):
                     ):
                         if forbidden in data:
                             b_continue = False
-                    if b_continue:
-                        guide = data.get("guidance")
-                        if not isinstance(guide, dict):
-                            guide = {}
-                        guide_d = cast("dict[str, Any]", guide)
-                        directives = data.get("directives")
-                        title = a_lineage_id
-                        if isinstance(directives, dict):
-                            specs = directives.get("specific_directives")
-                            if isinstance(specs, list) and specs:
-                                first = specs[0]
-                                if isinstance(first, dict):
-                                    title = str(
-                                        first.get("title")
-                                        or first.get("machine_id")
-                                        or a_lineage_id
-                                    )
-                        related_raw = guide_d.get("related_machine_ids") or []
-                        related: tuple[str, ...] = ()
-                        if isinstance(related_raw, list):
-                            related = tuple(str(x) for x in related_raw)
-                        refs = data.get("references")
-                        doctrine_section = ""
-                        if isinstance(refs, dict):
-                            doctrine_section = str(refs.get("anchor_ref") or "")
-                        fix_instructions = ""
-                        sanctions = data.get("sanctions")
-                        if isinstance(sanctions, dict):
-                            rows = sanctions.get("rows")
-                            if isinstance(rows, list) and rows:
-                                first_row = rows[0]
-                                if isinstance(first_row, dict):
-                                    fix_instructions = str(
-                                        first_row.get("remediation_path") or ""
-                                    )
-                        if not fix_instructions:
-                            fix_instructions = str(
-                                guide_d.get("explanation") or a_message
-                            )
-                        result = RuleGuidance(
-                            rule_code=a_lineage_id,
-                            title=title,
-                            description=str(guide_d.get("explanation") or a_message),
-                            rationale=str(guide_d.get("reasoning") or ""),
-                            severity="",
-                            fix_instructions=fix_instructions,
-                            correct_example=str(guide_d.get("correct_example") or ""),
-                            anti_pattern=str(guide_d.get("incorrect_example") or ""),
-                            related_rules=related,
-                            doctrine_section=doctrine_section,
-                            hints=(),
+                if b_continue and data is not None:
+                    guide_d = self._as_mapping(data.get("guidance")) or {}
+                    title = a_lineage_id
+                    directives = self._as_mapping(data.get("directives"))
+                    if directives is not None:
+                        specs_obj = directives.get("specific_directives")
+                        if isinstance(specs_obj, list) and specs_obj:
+                            specs_list = cast("list[object]", specs_obj)
+                            first = self._as_mapping(specs_list[0])
+                            if first is not None:
+                                title = (
+                                    self._str_field(first, "title")
+                                    or self._str_field(first, "machine_id")
+                                    or a_lineage_id
+                                )
+                    related: list[str] = []
+                    related_raw = guide_d.get("related_machine_ids")
+                    if isinstance(related_raw, list):
+                        for item in cast("list[object]", related_raw):
+                            related.append(str(item))
+                    doctrine_section = ""
+                    refs = self._as_mapping(data.get("references"))
+                    if refs is not None:
+                        doctrine_section = self._str_field(refs, "anchor_ref")
+                    fix_instructions = ""
+                    sanctions = self._as_mapping(data.get("sanctions"))
+                    if sanctions is not None:
+                        rows_obj = sanctions.get("rows")
+                        if isinstance(rows_obj, list) and rows_obj:
+                            rows_list = cast("list[object]", rows_obj)
+                            first_row = self._as_mapping(rows_list[0])
+                            if first_row is not None:
+                                fix_instructions = self._str_field(
+                                    first_row, "remediation_path"
+                                )
+                    if not fix_instructions:
+                        fix_instructions = (
+                            self._str_field(guide_d, "explanation") or a_message
                         )
+                    result = RuleGuidance(
+                        rule_code=a_lineage_id,
+                        title=title,
+                        description=self._str_field(guide_d, "explanation")
+                        or a_message,
+                        rationale=self._str_field(guide_d, "reasoning"),
+                        severity="",
+                        fix_instructions=fix_instructions,
+                        correct_example=self._str_field(guide_d, "correct_example"),
+                        anti_pattern=self._str_field(guide_d, "incorrect_example"),
+                        related_rules=tuple(related),
+                        doctrine_section=doctrine_section,
+                        hints=(),
+                    )
             except (OSError, yaml.YAMLError):
                 result = None
         return result
