@@ -6,6 +6,7 @@ import ast
 import logging
 from typing import Any
 
+from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
@@ -29,7 +30,7 @@ _EVALUATOR_MAP: dict[str, type[EvaluatorBase]] = {
 }
 
 
-class ASTInterpreter:
+class ASTInterpreter(RuleEvaluator):
     """Interpret JSON rule definitions against Python AST.
 
     The interpreter reads the evaluator_type from a rule dict,

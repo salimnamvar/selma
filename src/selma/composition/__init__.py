@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from selma.application.use_cases.lint_use_case import LintUseCase
+from selma.infrastructure.evaluators.ast_interpreter import ASTInterpreter
 from selma.infrastructure.parsers.python_ast_parser import PythonAstParser
 from selma.infrastructure.reporters import DefaultReporter
 from selma.infrastructure.reporters import GccReporter
@@ -22,6 +23,7 @@ class Container:
 
     def __init__(self) -> None:
         self._parser = PythonAstParser()
+        self._evaluator = ASTInterpreter()
         self._ruff_check = RuffCheckRunner()
         self._ruff_format = RuffFormatRunner()
         self._pylint = PylintRunner()
@@ -40,6 +42,7 @@ class Container:
         return LintUseCase(
             a_parser=self._parser,
             a_rule_repository=a_rule_repository,  # type: ignore[arg-type]
+            a_evaluator=self._evaluator,
             a_event_publisher=a_event_publisher,  # type: ignore[arg-type]
         )
 

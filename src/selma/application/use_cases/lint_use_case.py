@@ -15,6 +15,7 @@ from typing import Any
 
 from selma.application.dto.lint_request import LintRequest
 from selma.application.dto.lint_response import LintResponse
+from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.application.ports.event_publisher_port import EventPublisher
 from selma.application.ports.parser_port import SourceCodeParser
 from selma.application.ports.rule_repository_port import RuleRepository
@@ -24,7 +25,6 @@ from selma.domain.events.lint_completed import LintCompleted
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
-from selma.infrastructure.evaluators.ast_interpreter import ASTInterpreter
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,13 @@ class LintUseCase:
         self,
         a_parser: SourceCodeParser,
         a_rule_repository: RuleRepository,
+        a_evaluator: RuleEvaluator,
         a_event_publisher: EventPublisher | None = None,
     ) -> None:
         self._parser = a_parser
         self._rule_repository = a_rule_repository
+        self._evaluator = a_evaluator
         self._event_publisher = a_event_publisher
-        self._interpreter = ASTInterpreter()
 
     def execute(self, a_request: LintRequest) -> Result[LintResponse]:
         """Execute the lint use case.
@@ -197,7 +198,7 @@ class LintUseCase:
             "parameters": a_rule.parameters,
         }
 
-        eval_result = self._interpreter.evaluate(
+        eval_result = self._evaluator.evaluate(
             a_tree=a_tree,
             a_rule=rule_dict,
             a_file_path=str(a_path),
