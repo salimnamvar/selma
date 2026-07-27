@@ -255,7 +255,7 @@ def _match_condition(
     if operator == "has_mutable_defaults":
         return _has_mutable_defaults(a_node, _as_str_set(value))
     if operator == "params_missing_prefix":
-        return _params_missing_prefix(a_node, _as_dict(value))
+        return _params_missing_prefix(a_node, _as_dict(value), a_ctx.get("tree"))
     if operator == "params_any_unannotated":
         return _params_any_unannotated(a_node, _as_dict(value))
     if operator == "body_contains_any":
@@ -412,12 +412,38 @@ def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
     return False
 
 
-def _params_missing_prefix(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
+def _find_enclosing_class(a_node: ast.AST, a_tree: ast.AST) -> ast.ClassDef | None:
+    best: ast.ClassDef | None = None
+    best_size = 10**12
+    for parent in ast.walk(a_tree):
+        if not isinstance(parent, ast.ClassDef):
+            continue
+        if not any(child is a_node for child in ast.walk(parent)):
+            continue
+        size = sum(1 for _ in ast.walk(parent))
+        if size < best_size:
+            best = parent
+            best_size = size
+    return best
+
+
+def _is_method_in_subclass(a_node: ast.AST, a_tree: ast.AST) -> bool:
     if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return False
-    exempt_methods = set(_as_str_list(a_cfg.get("exempt_methods", [])))
-    if a_node.name in exempt_methods:
+    enclosing = _find_enclosing_class(a_node, a_tree)
+    if enclosing is None:
         return False
+    return bool(enclosing.bases)
+
+
+def _params_missing_prefix(
+    a_node: ast.AST, a_cfg: dict[str, Any], a_tree: ast.AST | None = None
+) -> bool:
+    if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return False
+    if a_cfg.get("exempt_overrides", False) and a_tree is not None:
+        if _is_method_in_subclass(a_node, a_tree):
+            return False
     prefix = str(a_cfg.get("prefix", "a_"))
     allow_private = bool(a_cfg.get("allow_private_underscore", True))
     skip = _skip_param_names(a_cfg)

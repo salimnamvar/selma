@@ -619,11 +619,6 @@ enabled = true
 severity = "error"
 exempt_params = ["self", "cls", "args", "kwargs"]
 exempt_prefixes = ["_", "__"]
-inherited_methods = [
-  "filter", "emit", "format", "formatTime", "formatException",
-  "write", "read", "close", "flush", "seek", "tell",
-  "readline", "readlines", "writelines",
-]
 exempt_decorated = true
 
 # ─── Rule: mutable-default ─────────────────────────────────────────────────
