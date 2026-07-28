@@ -5,7 +5,6 @@
   "message": "Function has too many diverse responsibilities",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "walk_nodes": [
       "Call",
       "If",
@@ -18,8 +17,11 @@
       "operator": "gt",
       "value": 20
     },
-    "message_template": "Function '{name}' has {count} diverse node types \u2014 consider splitting into smaller functions",
-    "exempt_dunders": true
+    "message_template": "Function '{name}' has {count} diverse node types — consider splitting into smaller functions",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",
@@ -29,7 +31,6 @@
   "rationale": "Functions with too many responsibilities are hard to test and maintain.",
   "remediation": "Extract distinct responsibilities into separate, well-named functions.",
   "parameters": {
-    "exempt_dunders": true,
     "complexity_threshold": 20
   }
 }

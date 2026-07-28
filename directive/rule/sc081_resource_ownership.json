@@ -5,20 +5,18 @@
   "message": "Resource ownership not documented",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "body",
         "operator": "not_contains_node",
         "value": "Assign"
       }
     ],
-    "message_template": "Function '{name}' creates resources but should document ownership transfer"
+    "message_template": "Function '{name}' creates resources but should document ownership transfer",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",

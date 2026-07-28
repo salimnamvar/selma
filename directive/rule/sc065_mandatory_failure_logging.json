@@ -39,6 +39,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc065_mandatory_failure_logging",
   "rationale": "Empty failure messages make debugging impossible.",
-  "remediation": "Add descriptive message: Result.failure('What went wrong and why').",
-  "parameters": {}
+  "remediation": "Add descriptive message: Result.failure('What went wrong and why')."
 }

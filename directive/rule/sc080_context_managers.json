@@ -29,6 +29,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc080_context_managers",
   "rationale": "Context managers guarantee deterministic cleanup. They are the language's mechanism for RAII (Resource Acquisition Is Initialization). Using them eliminates an entire class of resource leak bugs.",
-  "remediation": "Wrap resource acquisition in a 'with' statement or try/finally block to guarantee deterministic cleanup.",
-  "parameters": {}
+  "remediation": "Wrap resource acquisition in a 'with' statement or try/finally block to guarantee deterministic cleanup."
 }

@@ -2,10 +2,9 @@
   "lineage_id": "SC-090",
   "id": "SC-090",
   "type": "prohibition",
-  "message": "Mutable shared state detected \u2014 use thread-safe patterns",
+  "message": "Mutable shared state detected — use thread-safe patterns",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "check": {
       "type": "shared_state",
       "rules": [
@@ -23,7 +22,11 @@
         }
       ]
     },
-    "message_template": "Function '{name}' uses mutable shared state \u2014 use thread-safe patterns"
+    "message_template": "Function '{name}' uses mutable shared state — use thread-safe patterns",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "high",
   "priority": "constitutional",
@@ -31,6 +34,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc090_shared_state",
   "rationale": "Unprotected shared state under concurrent access causes data races, torn reads, and corrupted state. These failures are non-deterministic and nearly impossible to reproduce.",
-  "remediation": "Use threading.Lock, queue.Queue, or immutable data structures to protect shared state.",
-  "parameters": {}
+  "remediation": "Use threading.Lock, queue.Queue, or immutable data structures to protect shared state."
 }

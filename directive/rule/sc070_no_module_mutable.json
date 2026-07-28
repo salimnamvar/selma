@@ -14,7 +14,7 @@
       ],
       "forbid_reassignable": true
     },
-    "message_template": "Module-level mutable state detected \u2014 use function-local or class-based state"
+    "message_template": "Module-level mutable state detected — use function-local or class-based state"
   },
   "weight": "high",
   "priority": "constitutional",
@@ -22,9 +22,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc070_no_module_mutable",
   "rationale": "Module-level mutable state is global state. It is shared across all callers, all threads, and all test runs. It creates invisible coupling between unrelated code paths and makes testing non-deterministic.",
-  "remediation": "Use class-based state, dependency injection, or function-local state. Module-level constants (immutable values, frozen dataclasses) are permitted.",
-  "parameters": {
-    "exempt_constants": true,
-    "exempt_type_aliases": true
-  }
+  "remediation": "Use class-based state, dependency injection, or function-local state. Module-level constants (immutable values, frozen dataclasses) are permitted."
 }

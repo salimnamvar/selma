@@ -5,13 +5,7 @@
   "message": "Mutable default argument in function signature",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": ".",
         "operator": "has_mutable_defaults",
@@ -22,7 +16,11 @@
         ]
       }
     ],
-    "message_template": "Function '{name}' has mutable default argument \u2014 use None with guard"
+    "message_template": "Function '{name}' has mutable default argument — use None with guard",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "high",
   "priority": "constitutional",

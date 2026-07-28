@@ -5,11 +5,14 @@
   "message": "Function does not use b_continue canonical error handling pattern",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "rules": [
       "must_have_b_continue"
     ],
-    "message_template": "Function '{name}' must use b_continue pattern for error handling"
+    "message_template": "Function '{name}' must use b_continue pattern for error handling",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "high",
   "priority": "operational",

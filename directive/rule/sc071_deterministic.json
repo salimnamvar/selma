@@ -2,7 +2,7 @@
   "lineage_id": "SC-071",
   "id": "SC-071",
   "type": "prohibition",
-  "message": "Non-deterministic call forbidden \u2014 inject time/random source",
+  "message": "Non-deterministic call forbidden — inject time/random source",
   "evaluator_type": "ast_call_check",
   "evaluator_config": {
     "forbidden_calls": [
@@ -59,7 +59,7 @@
         "method": "uuid4"
       }
     ],
-    "message_template": "Non-deterministic call forbidden \u2014 inject parameter"
+    "message_template": "Non-deterministic call forbidden — inject parameter"
   },
   "weight": "critical",
   "priority": "constitutional",
@@ -67,9 +67,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc071_deterministic",
   "rationale": "Non-deterministic code is untestable and unreproducible. A test that passes sometimes and fails sometimes is a test that tells you nothing.",
-  "remediation": "Inject time/random as parameters. Use datetime.datetime for timestamps, random.Random with seed for random values.",
-  "parameters": {
-    "exempt_injection": true,
-    "exempt_crypto": true
-  }
+  "remediation": "Inject time/random as parameters. Use datetime.datetime for timestamps, random.Random with seed for random values."
 }

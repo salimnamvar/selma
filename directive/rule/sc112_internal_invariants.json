@@ -5,20 +5,18 @@
   "message": "Function missing internal invariant assertions",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "body",
         "operator": "not_contains_node",
         "value": "Assert"
       }
     ],
-    "message_template": "Function '{name}' should use assert for internal invariants"
+    "message_template": "Function '{name}' should use assert for internal invariants",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",

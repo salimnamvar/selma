@@ -5,19 +5,17 @@
   "message": "Function missing explicit return type annotation",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "returns",
         "operator": "not_exists"
       }
     ],
-    "message_template": "Function '{name}' missing explicit return type annotation"
+    "message_template": "Function '{name}' missing explicit return type annotation",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",
@@ -25,11 +23,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc024_explicit_return_types",
   "rationale": "Explicit return types are contracts. They tell the caller what to expect and enable static analysis to catch type mismatches.",
-  "remediation": "Add return type annotation: def foo() -> Result[int]:",
-  "parameters": {
-    "exempt_dunders": true,
-    "exempt_properties": true,
-    "exempt_abstract": true,
-    "exempt_private": true
-  }
+  "remediation": "Add return type annotation: def foo() -> Result[int]:"
 }

@@ -5,7 +5,6 @@
   "message": "Function exceeds 60 executable lines",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "walk_nodes": [
       "Assign",
       "Expr",
@@ -22,8 +21,10 @@
       "value": 60
     },
     "message_template": "Function '{name}' has {count} executable lines (max 60)",
-    "exempt_dunders": false,
-    "exempt_generators": false
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "regulatory",

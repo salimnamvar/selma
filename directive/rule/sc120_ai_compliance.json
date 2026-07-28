@@ -5,19 +5,17 @@
   "message": "AI-generated code missing compliance markers",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "decorator_list",
         "operator": "not_exists"
       }
     ],
-    "message_template": "Function '{name}' should include AI generation marker in comments or decorators"
+    "message_template": "Function '{name}' should include AI generation marker in comments or decorators",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "advisory",

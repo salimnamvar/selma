@@ -5,13 +5,7 @@
   "message": "Recursive function missing depth limit",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": ".",
         "operator": "calls_own_name"
@@ -41,7 +35,11 @@
         ]
       }
     ],
-    "message_template": "Recursive function '{name}' missing depth limit protection"
+    "message_template": "Recursive function '{name}' missing depth limit protection",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",
@@ -51,7 +49,6 @@
   "rationale": "Unbounded recursion causes stack overflow, which is an unrecoverable process-level failure.",
   "remediation": "Add a max_depth parameter and validate depth at each call. Prefer iterative solutions over recursive.",
   "parameters": {
-    "exempt_dunders": true,
     "max_recursion_depth": 100
   }
 }

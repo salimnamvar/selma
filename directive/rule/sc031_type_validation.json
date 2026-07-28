@@ -5,13 +5,7 @@
   "message": "Missing type validation before operation",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "args",
         "operator": "exists"
@@ -38,7 +32,11 @@
         ]
       }
     ],
-    "message_template": "Function '{name}' accepts arguments without type validation"
+    "message_template": "Function '{name}' accepts arguments without type validation",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",
@@ -48,8 +46,6 @@
   "rationale": "Python type hints are not enforced at runtime. Unannotated parameters without runtime validation allow undefined behavior.",
   "remediation": "Annotate parameters or add isinstance() checks / Result.failure validation.",
   "parameters": {
-    "exempt_dunders": true,
-    "exempt_typed": true,
     "skip_names": [
       "self",
       "cls",

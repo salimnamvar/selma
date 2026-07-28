@@ -5,14 +5,17 @@
   "message": "Function lacks b_continue error-gating",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "variable": "b_continue",
     "rules": [
       "must_exist",
       "first_value_is_true",
       "used_in_guard"
     ],
-    "message_template": "Function '{name}' b_continue violation"
+    "message_template": "Function '{name}' b_continue violation",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "critical",
   "priority": "constitutional",
@@ -22,7 +25,6 @@
   "rationale": "b_continue is a local execution gate. Its semantics are clear only when it is strictly function-local and unidirectional. It governs execution flow across all phases of a function: validation, business logic, exception handling, and cleanup.",
   "remediation": "Add b_continue = True at function start. Set to False on errors, never reset to True. Gate phases with 'if b_continue:'.",
   "parameters": {
-    "exempt_dunders": true,
     "require_result_functions": true
   }
 }

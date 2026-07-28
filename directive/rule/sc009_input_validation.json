@@ -5,13 +5,7 @@
   "message": "Function does not validate its inputs",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "args.args",
         "operator": "not_empty"
@@ -22,7 +16,11 @@
         "value": "IsInstance"
       }
     ],
-    "message_template": "Function '{name}' has parameters but no isinstance/TypeValidator call"
+    "message_template": "Function '{name}' has parameters but no isinstance/TypeValidator call",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",
@@ -30,8 +28,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc009_input_validation",
   "rationale": "Unvalidated inputs lead to runtime errors and security vulnerabilities.",
-  "remediation": "Add isinstance checks or TypeValidator calls at function entry for all parameters.",
-  "parameters": {
-    "exempt_dunders": true
-  }
+  "remediation": "Add isinstance checks or TypeValidator calls at function entry for all parameters."
 }

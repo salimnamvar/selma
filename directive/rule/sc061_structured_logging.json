@@ -8,7 +8,7 @@
     "forbidden_functions": [
       "print"
     ],
-    "message_template": "print() detected \u2014 use structlog for structured logging"
+    "message_template": "print() detected — use structlog for structured logging"
   },
   "weight": "low",
   "priority": "operational",
@@ -16,8 +16,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc061_structured_logging",
   "rationale": "Structured logs are machine-parseable. They enable automated alerting, aggregation, and analysis. Unstructured log strings are unsearchable at scale.",
-  "remediation": "Replace print() with structlog.info() or similar structured logger.",
-  "parameters": {
-    "exempt_test_files": true
-  }
+  "remediation": "Replace print() with structlog.info() or similar structured logger."
 }

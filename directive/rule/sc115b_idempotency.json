@@ -5,7 +5,6 @@
   "message": "Non-idempotent operation without idempotency key",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
       {
         "field": "name",
@@ -13,7 +12,11 @@
         "value": "^(create|delete|update|modify)"
       }
     ],
-    "message_template": "Function '{name}' appears non-idempotent \u2014 add idempotency key parameter"
+    "message_template": "Function '{name}' appears non-idempotent — add idempotency key parameter",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",

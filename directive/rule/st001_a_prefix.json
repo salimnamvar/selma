@@ -5,13 +5,7 @@
   "message": "Function parameters must use a stable parameter prefix convention",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": ".",
         "operator": "params_missing_prefix",
@@ -23,29 +17,30 @@
             "cls",
             "args",
             "kwargs"
-          ],
-          "exempt_overrides": true
+          ]
         }
       }
     ],
-    "message_template": "Function '{name}' parameters must use the a_ prefix (language receiver names self/cls and *args/**kwargs exempt)"
+    "message_template": "Function '{name}' parameters must use the a_ prefix (language receivers self/cls and *args/**kwargs keep conventional names)",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/st001_a_prefix",
-  "rationale": "A stable parameter prefix distinguishes parameters from locals and supports searchability. Language-level receivers (self, cls) and variadic packs (args, kwargs) are Python method conventions, not application parameters. Subclass overrides must keep base-class parameter names for LSP.",
-  "remediation": "Rename application parameters with the a_ prefix, e.g. def process(a_path: Path, a_limit: int). Keep self/cls and *args/**kwargs unchanged. Keep override signatures identical to the base method.",
+  "rationale": "A stable parameter prefix distinguishes parameters from locals and supports searchability. Language-level receivers (self, cls) and variadic packs (args, kwargs) are Python method conventions for those parameter slots, not application parameter names.",
+  "remediation": "Rename application parameters with the a_ prefix, e.g. def process(a_path: Path, a_limit: int). Keep self/cls and *args/**kwargs unchanged.",
   "parameters": {
-    "exempt_dunders": true,
     "prefix": "a_",
     "skip_names": [
       "self",
       "cls",
       "args",
       "kwargs"
-    ],
-    "exempt_overrides": true
+    ]
   }
 }

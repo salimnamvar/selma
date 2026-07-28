@@ -5,7 +5,6 @@
   "message": "Function should use assert for invariant checking",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "walk_nodes": [
       "Assert"
     ],
@@ -13,8 +12,11 @@
       "operator": "eq",
       "value": 0
     },
-    "message_template": "Function '{name}' has no assert statements \u2014 use assert for internal invariants",
-    "exempt_dunders": true
+    "message_template": "Function '{name}' has no assert statements — use assert for internal invariants",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",
@@ -22,8 +24,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc113_assertion_usage",
   "rationale": "Asserts help catch logic errors during development.",
-  "remediation": "Add assert statements to verify internal invariants at critical points.",
-  "parameters": {
-    "exempt_dunders": true
-  }
+  "remediation": "Add assert statements to verify internal invariants at critical points."
 }

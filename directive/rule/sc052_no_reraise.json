@@ -2,7 +2,7 @@
   "lineage_id": "SC-052",
   "id": "SC-052",
   "type": "prohibition",
-  "message": "Re-raise forbidden \u2014 convert exception to Result return",
+  "message": "Re-raise forbidden — convert exception to Result return",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
     "root_node": "ExceptHandler",
@@ -10,7 +10,7 @@
     "rules": [
       "must_not_exist"
     ],
-    "message_template": "Re-raise forbidden \u2014 convert exception to Result return"
+    "message_template": "Re-raise forbidden — convert exception to Result return"
   },
   "weight": "critical",
   "priority": "constitutional",
@@ -18,6 +18,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc052_no_reraise",
   "rationale": "Re-raising is a declaration that the function chose not to handle the error. Under the Zero-Raise Policy, every function must handle its own errors. Re-raising violates this principle.",
-  "remediation": "Convert the caught exception to a structured Result.failure() return instead of re-raising.",
-  "parameters": {}
+  "remediation": "Convert the caught exception to a structured Result.failure() return instead of re-raising."
 }

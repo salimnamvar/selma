@@ -5,12 +5,15 @@
   "message": "Function raises exceptions that should be handled locally",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "variable": "raise",
     "rules": [
       "must_not_exist"
     ],
-    "message_template": "Function '{name}' should handle errors locally instead of raising"
+    "message_template": "Function '{name}' should handle errors locally instead of raising",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "medium",
   "priority": "operational",

@@ -5,19 +5,17 @@
   "message": "Function missing Preconditions section in docstring",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
     "conditions": [
-      {
-        "field": "name",
-        "operator": "not_matches",
-        "value": "^__.*__$"
-      },
       {
         "field": "body",
         "operator": "not_empty"
       }
     ],
-    "message_template": "Function '{name}' should document preconditions in docstring"
+    "message_template": "Function '{name}' should document preconditions in docstring",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",

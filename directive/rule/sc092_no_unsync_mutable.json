@@ -42,7 +42,7 @@
         }
       }
     ],
-    "message_template": "Unsynchronized mutable access detected \u2014 use thread-safe wrapper"
+    "message_template": "Unsynchronized mutable access detected — use thread-safe wrapper"
   },
   "weight": "high",
   "priority": "constitutional",
@@ -50,6 +50,5 @@
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc092_no_unsync_mutable",
   "rationale": "Python's GIL does not protect against logical data races on shared mutable state.",
-  "remediation": "Wrap with threading.Lock or use queue.Queue for thread-safe access.",
-  "parameters": {}
+  "remediation": "Wrap with threading.Lock or use queue.Queue for thread-safe access."
 }

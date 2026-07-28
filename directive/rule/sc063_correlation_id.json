@@ -5,11 +5,14 @@
   "message": "Function missing correlation_id parameter for tracing",
   "evaluator_type": "ast_scope_check",
   "evaluator_config": {
-    "root_node": "FunctionDef",
     "rules": [
       "must_have_correlation_id"
     ],
-    "message_template": "Function '{name}' should accept correlation_id for distributed tracing"
+    "message_template": "Function '{name}' should accept correlation_id for distributed tracing",
+    "root_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ]
   },
   "weight": "low",
   "priority": "operational",
