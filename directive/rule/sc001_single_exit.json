@@ -10,9 +10,6 @@
       "Return",
       "Raise"
     ],
-    "walk_config": {
-      "exit_call_names": ["sys.exit", "os._exit"]
-    },
     "count": {
       "operator": "gt",
       "value": 1
@@ -24,7 +21,6 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc001_single_exit",
-  "rationale": "Multiple exit points create invisible control flow. A reviewer must trace every path to understand what the function returns. A single exit makes the return value the function's explicit contract. Exit doors include: return, raise, sys.exit(), os._exit(). All functions MUST have exactly one exit point — no exceptions.",
-  "remediation": "Refactor to a single terminal return. Prefer a continue-flag / staged assignment pattern for application logic.",
-  "parameters": {}
+  "rationale": "Multiple exit points create invisible control flow. A reviewer must trace every path to understand what the function returns. A single exit makes the return value the function's explicit contract. All functions MUST have exactly one exit point — no exceptions.",
+  "remediation": "Refactor to a single terminal return. Prefer a continue-flag / staged assignment pattern for application logic."
 }

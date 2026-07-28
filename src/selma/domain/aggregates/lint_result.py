@@ -51,8 +51,9 @@ class LintResult(BaseModel):
         result: Result[None] = Result.failure("unreachable")
         if b_continue and self._is_complete:
             b_continue = False
-            logger.warning("Cannot add finding to completed result")
-            result = Result.failure("Cannot add finding to completed result")
+            msg = "Cannot add finding to completed result"
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             # Immutable rebuild avoids in-place mutation methods (SC-092).
             self._findings = [*self._findings, a_finding]

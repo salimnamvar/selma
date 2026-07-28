@@ -107,11 +107,9 @@ directives:
   specific_directives:
   - type: Obligation
     description: 'Every function SHALL return Result[T] (or equivalent explicit result type) with success
-      discrimination, optional value, and a human-readable message. Dunder methods and properties follow
-      Python protocol contracts and are exempt.'
+      discrimination, optional value, and a human-readable message. No exceptions.'
     machine_id: SC-003
-    context_conditions: 'Applies to every function with a return type annotation. Dunder methods and
-      properties are exempt as they follow Python protocol contracts.'
+    context_conditions: 'Applies to every function with a return type annotation. No exceptions.'
     title: Explicit Result for Every Function
   flexible_standards: []
 sanctions:
@@ -143,7 +141,7 @@ guidance:
   related_machine_ids:
   - SC-004
   - SC-010
-  exceptions: 'Dunder methods and properties are exempt. Every other function SHALL return Result[T].'
+  exceptions: 'None. Every function SHALL return Result[T] — no exceptions.'
 references:
   title: References & Annexes
   source_doctrine: doctrinal-source.md

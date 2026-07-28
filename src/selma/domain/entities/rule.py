@@ -221,8 +221,9 @@ def validate_conflict_resolution(
     result: Result[None] = Result.success(None)
     if b_continue and a_strategy == ConflictStrategy.DEFER_TO and not a_defer_to:
         b_continue = False
-        logger.warning("defer_to is required when strategy is DEFER_TO")
-        result = Result.failure("defer_to is required when strategy is DEFER_TO")
+        msg = "defer_to is required when strategy is DEFER_TO"
+        logger.warning(msg)
+        result = Result.failure(msg)
     if b_continue:
         b_continue = False
         result = Result.success(None)

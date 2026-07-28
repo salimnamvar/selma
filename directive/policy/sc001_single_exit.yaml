@@ -62,9 +62,9 @@ definitions:
     definition: Machine-evaluable document at directive/rule/sc001_single_exit.json.
     exclusion: This policy YAML is not a lint source.
   - term: Single-Exit Point
-    definition: Every function SHALL contain exactly one exit point. All code paths within the
-      function SHALL converge to this single exit. Exit mechanisms include: `return`, `raise`,
-      `sys.exit()`, `os._exit()`. The function SHALL NOT contain more than one of these.
+    definition: 'Every function SHALL contain exactly one exit point. All code paths within the
+      function SHALL converge to this single exit. Exit mechanisms: `return` and `raise`. The function
+      SHALL NOT contain more than one of these.'
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
@@ -106,8 +106,8 @@ directives:
   specific_directives:
   - type: Obligation
     description: Every function SHALL contain exactly one exit point. All code paths within the
-      function SHALL converge to this single exit. Exit mechanisms include `return`, `raise`,
-      `sys.exit()`, `os._exit()`. Use a continue-flag pattern for conditional logic.
+      function SHALL converge to this single exit. Exit mechanisms: `return` and `raise`. Use a
+      continue-flag pattern for conditional logic.
     machine_id: SC-001
     context_conditions: All functions — no exceptions. `yield` is a suspension point, not an exit.
       Async functions (`async def`) SHALL follow the same single-exit rules; `await` does not count as
@@ -127,8 +127,8 @@ guidance:
   reasoning: Multiple exit points create invisible control flow. A reviewer must trace every path to understand
     what the function returns. A single exit makes the return value the function's explicit contract.
     This applies to ALL functions — including dunders, generators, decorated methods, and nested functions.
-    Exit doors include `return`, `raise`, `sys.exit()`, and `os._exit()`. `yield` is a suspension, not
-    an exit — but a generator function must still have exactly one terminal exit point.
+    Exit doors: `return` and `raise`. `yield` is a suspension, not an exit — but a generator function
+    must still have exactly one terminal exit point.
   explanation: The correct version uses b_continue to gate execution and a single return at the end. The
     incorrect version has multiple return statements, making control flow harder to trace.
   correct_example: |-
@@ -161,11 +161,6 @@ guidance:
         if a_key not in cache:
             raise KeyError(a_key)
         return cache[a_key]
-
-    # sys.exit() as exit — violates single-exit rule
-    def terminate(a_msg: str) -> None:
-        log.error(a_msg)
-        sys.exit(1)
   related_machine_ids:
   - SC-002
   - SC-010

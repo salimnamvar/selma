@@ -32,10 +32,6 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc003_result_return",
-  "rationale": "Every function must surface success or failure explicitly in its return type. Result[T] makes the contract visible and statically analyzable. Dunder methods and properties follow Python protocol contracts and are exempt.",
-  "remediation": "Return a typed Result[T] (or equivalent explicit result type) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work.",
-  "parameters": {
-    "exempt_dunders": true,
-    "exempt_properties": true
-  }
+  "rationale": "Every function must surface success or failure explicitly in its return type. Result[T] makes the contract visible and statically analyzable. All functions MUST return Result[T] — no exceptions.",
+  "remediation": "Return a typed Result[T] (or equivalent explicit result type) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work."
 }

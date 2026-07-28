@@ -8,8 +8,8 @@ No hardcoded defaults in the loader either.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 from pathlib import Path
 import tomllib
 from typing import Any
@@ -69,8 +69,9 @@ class ConfigLoader:
             toml_result = self._load_toml(a_config_path)
             if b_continue and toml_result.is_failure():
                 b_continue = False
-                logger.warning(f"TOML error: {toml_result.message}")
-                result = Result.failure(f"TOML error: {toml_result.message}")
+                msg = f"TOML error: {toml_result.message}"
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue and toml_result.is_success():
                 toml_data = toml_result.unwrap()
 
@@ -78,16 +79,18 @@ class ConfigLoader:
             config_result = self._build_config(toml_data, a_cli_args)
             if config_result.is_failure():
                 b_continue = False
-                logger.warning(config_result.message)
-                result = Result.failure(config_result.message)
+                msg = config_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 config = config_result.unwrap()
                 self._cached_config = config
                 validation = self._validator.validate(config)
                 if validation.is_failure():
                     b_continue = False
-                    logger.warning(f"Validation: {validation.message}")
-                    result = Result.failure(f"Validation: {validation.message}")
+                    msg = f"Validation: {validation.message}"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
                 if b_continue:
                     result = Result.success(config)
 
@@ -113,64 +116,72 @@ class ConfigLoader:
         directive_result = self._resolve_directive(a_toml, a_cli_args)
         if b_continue and directive_result.is_failure():
             b_continue = False
-            logger.warning(directive_result.message)
-            result = Result.failure(directive_result.message)
+            msg = directive_result.message
+            logger.warning(msg)
+            result = Result.failure(msg)
 
         schema_result: Result[SchemaPathsConfig] = Result.failure("unreachable")
         if b_continue:
             schema_result = self._resolve_schema(a_toml, a_cli_args)
             if schema_result.is_failure():
                 b_continue = False
-                logger.warning(schema_result.message)
-                result = Result.failure(schema_result.message)
+                msg = schema_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         paths_result: Result[PathsConfig] = Result.failure("unreachable")
         if b_continue:
             paths_result = self._build_paths(a_toml)
             if paths_result.is_failure():
                 b_continue = False
-                logger.warning(paths_result.message)
-                result = Result.failure(paths_result.message)
+                msg = paths_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         output_result: Result[OutputConfig] = Result.failure("unreachable")
         if b_continue:
             output_result = self._build_output(a_toml, a_cli_args)
             if output_result.is_failure():
                 b_continue = False
-                logger.warning(output_result.message)
-                result = Result.failure(output_result.message)
+                msg = output_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         execution_result: Result[ExecutionConfig] = Result.failure("unreachable")
         if b_continue:
             execution_result = self._build_execution(a_toml, a_cli_args)
             if execution_result.is_failure():
                 b_continue = False
-                logger.warning(execution_result.message)
-                result = Result.failure(execution_result.message)
+                msg = execution_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         rules_result: Result[RulesFilterConfig] = Result.failure("unreachable")
         if b_continue:
             rules_result = self._build_rules_filter(a_toml, a_cli_args)
             if rules_result.is_failure():
                 b_continue = False
-                logger.warning(rules_result.message)
-                result = Result.failure(rules_result.message)
+                msg = rules_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         tools_result: Result[ToolsConfig] = Result.failure("unreachable")
         if b_continue:
             tools_result = self._build_tools(a_toml)
             if tools_result.is_failure():
                 b_continue = False
-                logger.warning(tools_result.message)
-                result = Result.failure(tools_result.message)
+                msg = tools_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         logging_result: Result[LoggingConfig] = Result.failure("unreachable")
         if b_continue:
             logging_result = self._build_logging(a_toml)
             if logging_result.is_failure():
                 b_continue = False
-                logger.warning(logging_result.message)
-                result = Result.failure(logging_result.message)
+                msg = logging_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         if b_continue:
             config = SelmaConfig(
@@ -236,21 +247,36 @@ class ConfigLoader:
 
         if b_continue and not root_str:
             b_continue = False
+            msg = (
+                "Directive root path required. Set [tool.selma.directive.root], "
+                + "SELMA_DIRECTIVE_ROOT, or --directive-root."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Directive root path required. Set [tool.selma.directive.root], "
-                + "SELMA_DIRECTIVE_ROOT, or --directive-root.",
+                + "SELMA_DIRECTIVE_ROOT, or --directive-root."
             )
         if b_continue and not policy_str:
             b_continue = False
+            msg = (
+                "Directive policy_dir required. Set [tool.selma.directive.policy_dir], "
+                + "SELMA_DIRECTIVE_POLICY_DIR, or --directive-policy-dir."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Directive policy_dir required. Set [tool.selma.directive.policy_dir], "
-                + "SELMA_DIRECTIVE_POLICY_DIR, or --directive-policy-dir.",
+                + "SELMA_DIRECTIVE_POLICY_DIR, or --directive-policy-dir."
             )
         if b_continue and not rule_str:
             b_continue = False
+            msg = (
+                "Directive rule_dir required. Set [tool.selma.directive.rule_dir], "
+                + "SELMA_DIRECTIVE_RULE_DIR, or --directive-rule-dir."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Directive rule_dir required. Set [tool.selma.directive.rule_dir], "
-                + "SELMA_DIRECTIVE_RULE_DIR, or --directive-rule-dir.",
+                + "SELMA_DIRECTIVE_RULE_DIR, or --directive-rule-dir."
             )
         if b_continue:
             result = Result.success(
@@ -288,22 +314,38 @@ class ConfigLoader:
 
         if b_continue and not root_str:
             b_continue = False
+            msg = (
+                "Schema root path required. Set [tool.selma.schema.root], "
+                + "SELMA_SCHEMA_ROOT, or --schema-root."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Schema root path required. Set [tool.selma.schema.root], "
-                + "SELMA_SCHEMA_ROOT, or --schema-root.",
+                + "SELMA_SCHEMA_ROOT, or --schema-root."
             )
         if b_continue and not rule_str:
             b_continue = False
+            msg = (
+                "Schema rule_schema path required. Set [tool.selma.schema.rule_schema], "
+                + "SELMA_SCHEMA_RULE_SCHEMA, or --schema-rule-schema."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Schema rule_schema path required. Set [tool.selma.schema.rule_schema], "
-                + "SELMA_SCHEMA_RULE_SCHEMA, or --schema-rule-schema.",
+                + "SELMA_SCHEMA_RULE_SCHEMA, or --schema-rule-schema."
             )
         if b_continue and not policy_str:
             b_continue = False
+            msg = (
+                "Schema policy_doctrine path required. Set "
+                + "[tool.selma.schema.policy_doctrine], SELMA_SCHEMA_POLICY_DOCTRINE, "
+                + "or --schema-policy-doctrine."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "Schema policy_doctrine path required. Set "
                 + "[tool.selma.schema.policy_doctrine], SELMA_SCHEMA_POLICY_DOCTRINE, "
-                + "or --schema-policy-doctrine.",
+                + "or --schema-policy-doctrine."
             )
         if b_continue:
             result = Result.success(
@@ -326,8 +368,9 @@ class ConfigLoader:
             selma = data.get("tool", {}).get("selma", {})
             result = Result.success(selma)
         except (OSError, tomllib.TOMLDecodeError) as e:
-            logger.warning(str(e))
-            result = Result.failure(str(e))
+            msg = str(e)
+            logger.warning(msg)
+            result = Result.failure(msg)
         return result
 
     # ── Paths (lint targets, required) ────────────────────────────────────
@@ -350,21 +393,36 @@ class ConfigLoader:
 
         if b_continue and not include_raw:
             b_continue = False
+            msg = (
+                "paths.include required. Set [tool.selma.paths.include] or "
+                + "SELMA_PATHS_INCLUDE."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "paths.include required. Set [tool.selma.paths.include] or "
-                + "SELMA_PATHS_INCLUDE.",
+                + "SELMA_PATHS_INCLUDE."
             )
         if b_continue and not exclude_raw:
             b_continue = False
+            msg = (
+                "paths.exclude required. Set [tool.selma.paths.exclude] or "
+                + "SELMA_PATHS_EXCLUDE."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "paths.exclude required. Set [tool.selma.paths.exclude] or "
-                + "SELMA_PATHS_EXCLUDE.",
+                + "SELMA_PATHS_EXCLUDE."
             )
         if b_continue and not extensions_raw:
             b_continue = False
+            msg = (
+                "paths.extensions required. Set [tool.selma.paths.extensions] or "
+                + "SELMA_PATHS_EXTENSIONS."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "paths.extensions required. Set [tool.selma.paths.extensions] or "
-                + "SELMA_PATHS_EXTENSIONS.",
+                + "SELMA_PATHS_EXTENSIONS."
             )
         if b_continue:
             result = Result.success(
@@ -400,17 +458,27 @@ class ConfigLoader:
 
         if b_continue and not fmt:
             b_continue = False
+            msg = (
+                "output.format required. Set [tool.selma.output.format] or "
+                + "SELMA_OUTPUT_FORMAT."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "output.format required. Set [tool.selma.output.format] or "
-                + "SELMA_OUTPUT_FORMAT.",
+                + "SELMA_OUTPUT_FORMAT."
             )
 
         guide_str = env_guide or toml_data.get("guide")
         if b_continue and guide_str is None:
             b_continue = False
+            msg = (
+                "output.guide required. Set [tool.selma.output.guide] or "
+                + "SELMA_OUTPUT_GUIDE."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "output.guide required. Set [tool.selma.output.guide] or "
-                + "SELMA_OUTPUT_GUIDE.",
+                + "SELMA_OUTPUT_GUIDE."
             )
         if b_continue:
             guide = str(guide_str).lower() in ("true", "1", "yes")
@@ -418,9 +486,14 @@ class ConfigLoader:
         color_str = env_color or toml_data.get("color")
         if b_continue and color_str is None:
             b_continue = False
+            msg = (
+                "output.color required. Set [tool.selma.output.color] or "
+                + "SELMA_OUTPUT_COLOR."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "output.color required. Set [tool.selma.output.color] or "
-                + "SELMA_OUTPUT_COLOR.",
+                + "SELMA_OUTPUT_COLOR."
             )
         if b_continue:
             color = str(color_str).lower() in ("true", "1", "yes")
@@ -472,9 +545,14 @@ class ConfigLoader:
         skip_tools_str = env_skip_tools or toml_data.get("skip_tools")
         if b_continue and skip_tools_str is None:
             b_continue = False
+            msg = (
+                "execution.skip_tools required. Set "
+                + "[tool.selma.execution.skip_tools] or SELMA_EXECUTION_SKIP_TOOLS."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "execution.skip_tools required. Set "
-                + "[tool.selma.execution.skip_tools] or SELMA_EXECUTION_SKIP_TOOLS.",
+                + "[tool.selma.execution.skip_tools] or SELMA_EXECUTION_SKIP_TOOLS."
             )
         if b_continue:
             skip_tools = str(skip_tools_str).lower() in ("true", "1", "yes")
@@ -482,25 +560,40 @@ class ConfigLoader:
         skip_ast_str = env_skip_ast or toml_data.get("skip_ast")
         if b_continue and skip_ast_str is None:
             b_continue = False
+            msg = (
+                "execution.skip_ast required. Set "
+                + "[tool.selma.execution.skip_ast] or SELMA_EXECUTION_SKIP_AST."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "execution.skip_ast required. Set "
-                + "[tool.selma.execution.skip_ast] or SELMA_EXECUTION_SKIP_AST.",
+                + "[tool.selma.execution.skip_ast] or SELMA_EXECUTION_SKIP_AST."
             )
         if b_continue:
             skip_ast = str(skip_ast_str).lower() in ("true", "1", "yes")
 
         if b_continue and max_workers_str is None:
             b_continue = False
+            msg = (
+                "execution.max_workers required. Set "
+                + "[tool.selma.execution.max_workers] or SELMA_EXECUTION_MAX_WORKERS."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "execution.max_workers required. Set "
-                + "[tool.selma.execution.max_workers] or SELMA_EXECUTION_MAX_WORKERS.",
+                + "[tool.selma.execution.max_workers] or SELMA_EXECUTION_MAX_WORKERS."
             )
 
         if b_continue and file_timeout_str is None:
             b_continue = False
+            msg = (
+                "execution.file_timeout required. Set "
+                + "[tool.selma.execution.file_timeout] or SELMA_EXECUTION_FILE_TIMEOUT."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "execution.file_timeout required. Set "
-                + "[tool.selma.execution.file_timeout] or SELMA_EXECUTION_FILE_TIMEOUT.",
+                + "[tool.selma.execution.file_timeout] or SELMA_EXECUTION_FILE_TIMEOUT."
             )
 
         if b_continue and a_cli_args:
@@ -556,21 +649,36 @@ class ConfigLoader:
 
         if b_continue and disabled_raw is None:
             b_continue = False
+            msg = (
+                "rules.disabled required (use [] for none). Set "
+                + "[tool.selma.rules.disabled] or SELMA_RULES_DISABLED."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "rules.disabled required (use [] for none). Set "
-                + "[tool.selma.rules.disabled] or SELMA_RULES_DISABLED.",
+                + "[tool.selma.rules.disabled] or SELMA_RULES_DISABLED."
             )
         if b_continue and codes_raw is None:
             b_continue = False
+            msg = (
+                "rules.codes required (use [] for all). Set "
+                + "[tool.selma.rules.codes] or SELMA_RULES_CODES."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "rules.codes required (use [] for all). Set "
-                + "[tool.selma.rules.codes] or SELMA_RULES_CODES.",
+                + "[tool.selma.rules.codes] or SELMA_RULES_CODES."
             )
         if b_continue and exclude_raw is None:
             b_continue = False
+            msg = (
+                "rules.exclude_codes required (use [] for none). Set "
+                + "[tool.selma.rules.exclude_codes] or SELMA_RULES_EXCLUDE_CODES."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "rules.exclude_codes required (use [] for none). Set "
-                + "[tool.selma.rules.exclude_codes] or SELMA_RULES_EXCLUDE_CODES.",
+                + "[tool.selma.rules.exclude_codes] or SELMA_RULES_EXCLUDE_CODES."
             )
 
         if (
@@ -621,38 +729,47 @@ class ConfigLoader:
 
         if b_continue and not ruff_data:
             b_continue = False
+            msg = "tools.ruff required. Set [tool.selma.tools.ruff] in pyproject.toml."
+            logger.warning(msg)
             result = Result.failure(
-                "tools.ruff required. Set [tool.selma.tools.ruff] in pyproject.toml.",
+                "tools.ruff required. Set [tool.selma.tools.ruff] in pyproject.toml."
             )
         if b_continue and not pylint_data:
             b_continue = False
+            msg = "tools.pylint required. Set [tool.selma.tools.pylint] in pyproject.toml."
+            logger.warning(msg)
             result = Result.failure(
-                "tools.pylint required. Set [tool.selma.tools.pylint] in pyproject.toml.",
+                "tools.pylint required. Set [tool.selma.tools.pylint] in pyproject.toml."
             )
         if b_continue and not pyright_data:
             b_continue = False
+            msg = "tools.pyright required. Set [tool.selma.tools.pyright] in pyproject.toml."
+            logger.warning(msg)
             result = Result.failure(
-                "tools.pyright required. Set [tool.selma.tools.pyright] in pyproject.toml.",
+                "tools.pyright required. Set [tool.selma.tools.pyright] in pyproject.toml."
             )
 
         if b_continue:
             ruff_result = self._build_tool_config("ruff", ruff_data)
             if ruff_result.is_failure():
                 b_continue = False
-                logger.warning(ruff_result.message)
-                result = Result.failure(ruff_result.message)
+                msg = ruff_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
         if b_continue:
             pylint_result = self._build_tool_config("pylint", pylint_data)
             if pylint_result.is_failure():
                 b_continue = False
-                logger.warning(pylint_result.message)
-                result = Result.failure(pylint_result.message)
+                msg = pylint_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
         if b_continue:
             pyright_result = self._build_tool_config("pyright", pyright_data)
             if pyright_result.is_failure():
                 b_continue = False
-                logger.warning(pyright_result.message)
-                result = Result.failure(pyright_result.message)
+                msg = pyright_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         if b_continue:
             result = Result.success(
@@ -679,20 +796,24 @@ class ConfigLoader:
 
         if b_continue and enabled is None:
             b_continue = False
-            logger.warning(f"tools.{a_name}.enabled required.")
-            result = Result.failure(f"tools.{a_name}.enabled required.")
+            msg = f"tools.{a_name}.enabled required."
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue and not binary:
             b_continue = False
-            logger.warning(f"tools.{a_name}.binary required.")
-            result = Result.failure(f"tools.{a_name}.binary required.")
+            msg = f"tools.{a_name}.binary required."
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue and args_raw is None:
             b_continue = False
-            logger.warning(f"tools.{a_name}.args required (use [] for none).")
-            result = Result.failure(f"tools.{a_name}.args required (use [] for none).")
+            msg = f"tools.{a_name}.args required (use [] for none)."
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue and fail_under is None:
             b_continue = False
-            logger.warning(f"tools.{a_name}.fail_under required.")
-            result = Result.failure(f"tools.{a_name}.fail_under required.")
+            msg = f"tools.{a_name}.fail_under required."
+            logger.warning(msg)
+            result = Result.failure(msg)
         if (
             b_continue
             and enabled is not None
@@ -750,50 +871,85 @@ class ConfigLoader:
 
         if b_continue and not level:
             b_continue = False
+            msg = (
+                "logging.level required. Set [tool.selma.logging.level] or "
+                + "SELMA_LOGGING_LEVEL."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.level required. Set [tool.selma.logging.level] or "
-                + "SELMA_LOGGING_LEVEL.",
+                + "SELMA_LOGGING_LEVEL."
             )
         if b_continue and not logger_name:
             b_continue = False
+            msg = (
+                "logging.logger_name required. Set "
+                + "[tool.selma.logging.logger_name] or SELMA_LOGGING_LOGGER_NAME."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.logger_name required. Set "
-                + "[tool.selma.logging.logger_name] or SELMA_LOGGING_LOGGER_NAME.",
+                + "[tool.selma.logging.logger_name] or SELMA_LOGGING_LOGGER_NAME."
             )
         if b_continue and not diag_fmt:
             b_continue = False
+            msg = (
+                "logging.diagnostic_format required. Set "
+                + "[tool.selma.logging.diagnostic_format] or SELMA_LOGGING_DIAGNOSTIC_FORMAT."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.diagnostic_format required. Set "
-                + "[tool.selma.logging.diagnostic_format] or SELMA_LOGGING_DIAGNOSTIC_FORMAT.",
+                + "[tool.selma.logging.diagnostic_format] or SELMA_LOGGING_DIAGNOSTIC_FORMAT."
             )
         if b_continue and not ops_fmt:
             b_continue = False
+            msg = (
+                "logging.operational_format required. Set "
+                + "[tool.selma.logging.operational_format] or SELMA_LOGGING_OPERATIONAL_FORMAT."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.operational_format required. Set "
-                + "[tool.selma.logging.operational_format] or SELMA_LOGGING_OPERATIONAL_FORMAT.",
+                + "[tool.selma.logging.operational_format] or SELMA_LOGGING_OPERATIONAL_FORMAT."
             )
 
         enabled_raw = env_enabled or toml_data.get("enabled")
         if b_continue and enabled_raw is None:
             b_continue = False
+            msg = (
+                "logging.enabled required. Set "
+                + "[tool.selma.logging.enabled] or SELMA_LOGGING_ENABLED."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.enabled required. Set "
-                + "[tool.selma.logging.enabled] or SELMA_LOGGING_ENABLED.",
+                + "[tool.selma.logging.enabled] or SELMA_LOGGING_ENABLED."
             )
         if b_continue:
             enabled = str(enabled_raw).lower() in ("true", "1", "yes")
 
         if b_continue and max_bytes_raw is None:
             b_continue = False
+            msg = (
+                "logging.max_bytes required. Set "
+                + "[tool.selma.logging.max_bytes] or SELMA_LOGGING_MAX_BYTES."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.max_bytes required. Set "
-                + "[tool.selma.logging.max_bytes] or SELMA_LOGGING_MAX_BYTES.",
+                + "[tool.selma.logging.max_bytes] or SELMA_LOGGING_MAX_BYTES."
             )
         if b_continue and backup_count_raw is None:
             b_continue = False
+            msg = (
+                "logging.backup_count required. Set "
+                + "[tool.selma.logging.backup_count] or SELMA_LOGGING_BACKUP_COUNT."
+            )
+            logger.warning(msg)
             result = Result.failure(
                 "logging.backup_count required. Set "
-                + "[tool.selma.logging.backup_count] or SELMA_LOGGING_BACKUP_COUNT.",
+                + "[tool.selma.logging.backup_count] or SELMA_LOGGING_BACKUP_COUNT."
             )
         if (
             b_continue

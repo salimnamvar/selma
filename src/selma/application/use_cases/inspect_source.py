@@ -93,9 +93,7 @@ class InspectSourceUseCase:
                 report_result = await self._reporter.report(findings_tuple)
                 if report_result.is_failure():
                     b_continue = False
-                    logger.warning(
-                        "Reporting failed: %s", report_result.message
-                    )
+                    logger.warning("Reporting failed: %s", report_result.message)
                     result = Result.failure(
                         f"Reporting failed: {report_result.message}"
                     )

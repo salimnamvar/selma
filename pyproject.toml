@@ -352,17 +352,11 @@ exempt_names = []
 [tool.selma.rules.sc002]
 enabled = true
 severity = "critical"
-exempt_dunders = true
-exempt_adapters = true
-adapter_keywords = ["exception", "error", "http"]
 
 # ─── Rule: SC-003 Result Return ────────────────────────────────────────────
 [tool.selma.rules.sc003]
 enabled = true
 severity = "critical"
-exempt_dunders = true
-exempt_properties = true
-exempt_abstract = true
 
 # ─── Rule: SC-004 INVALID_RESULT Sentinel ──────────────────────────────────
 [tool.selma.rules.sc004]
