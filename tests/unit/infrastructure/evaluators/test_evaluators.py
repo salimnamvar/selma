@@ -75,6 +75,60 @@ def foo():
         findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-002"}).unwrap()
         assert len(findings) == 1
 
+    def test_nested_function_returns_not_counted_on_parent(self) -> None:
+        source = """
+def outer():
+    def inner():
+        return 1
+    return 2
+"""
+        tree = _parse(source)
+        config = {
+            "root_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "walk_nodes": ["Return"],
+            "count": {"operator": "gt", "value": 1},
+            "message_template": "Function '{name}' has {count} returns",
+        }
+        evaluator = AstWalkEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
+        assert findings == []
+
+    def test_async_function_multiple_returns(self) -> None:
+        source = """
+async def foo(x):
+    if x:
+        return 1
+    return 0
+"""
+        tree = _parse(source)
+        config = {
+            "root_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "walk_nodes": ["Return", "Raise", "Yield", "YieldFrom", "Pass"],
+            "count": {"operator": "gt", "value": 1},
+            "message_template": "Function '{name}' has {count} exit doors",
+        }
+        evaluator = AstWalkEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
+        assert len(findings) == 1
+        assert "foo" in findings[0].message
+
+    def test_yield_and_return_are_two_exits(self) -> None:
+        source = """
+def gen(x):
+    yield x
+    return
+"""
+        tree = _parse(source)
+        config = {
+            "root_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "walk_nodes": ["Return", "Raise", "Yield", "YieldFrom", "Pass"],
+            "count": {"operator": "gt", "value": 1},
+            "message_template": "Function '{name}' has {count} exit doors",
+        }
+        evaluator = AstWalkEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
+        assert len(findings) == 1
+
 
 class TestAstNodeMatchEvaluator:
     """Tests for AstNodeMatchEvaluator (SC-003, SC-024, etc.)."""
@@ -109,6 +163,99 @@ def foo() -> int:
         findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-024"}).unwrap()
         assert findings == []
 
+    def test_sc003_missing_annotation_is_violation(self) -> None:
+        source = """
+def foo(x):
+    return x
+"""
+        tree = _parse(source)
+        config = {
+            "target_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "conditions": [
+                {
+                    "field": "returns",
+                    "operator": "unparse_not_contains",
+                    "value": "Result",
+                }
+            ],
+            "message_template": "Function '{name}' must return Result[T]",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-003"}).unwrap()
+        assert len(findings) == 1
+
+    def test_sc003_result_annotation_ok(self) -> None:
+        source = """
+def foo(x) -> Result[int]:
+    return Result.success(x)
+"""
+        tree = _parse(source)
+        config = {
+            "target_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "conditions": [
+                {
+                    "field": "returns",
+                    "operator": "unparse_not_contains",
+                    "value": "Result",
+                }
+            ],
+            "message_template": "Function '{name}' must return Result[T]",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-003"}).unwrap()
+        assert findings == []
+
+    def test_sc003_async_and_none_not_exempt(self) -> None:
+        source = """
+async def a(x) -> int:
+    return x
+
+def b() -> None:
+    return None
+"""
+        tree = _parse(source)
+        config = {
+            "target_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "conditions": [
+                {
+                    "field": "returns",
+                    "operator": "unparse_not_contains",
+                    "value": "Result",
+                }
+            ],
+            "message_template": "Function '{name}' must return Result[T]",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-003"}).unwrap()
+        names = {f.message for f in findings}
+        assert any("a" in m for m in names)
+        assert any("b" in m for m in names)
+
+    def test_no_engine_dunder_exemption(self) -> None:
+        source = """
+def __str__(self) -> str:
+    return "x"
+"""
+        tree = _parse(source)
+        config = {
+            "target_nodes": ["FunctionDef", "AsyncFunctionDef"],
+            "conditions": [
+                {
+                    "field": "returns",
+                    "operator": "unparse_not_contains",
+                    "value": "Result",
+                }
+            ],
+            "message_template": "Function '{name}' must return Result[T]",
+        }
+        evaluator = AstNodeMatchEvaluator()
+        findings = evaluator.evaluate(
+            tree,
+            config,
+            {"lineage_id": "SC-003", "parameters": {"exempt_dunders": True}},
+        ).unwrap()
+        assert len(findings) == 1
+
     def test_function_with_args_detected(self) -> None:
         source = """
 def foo(x, y):
@@ -124,7 +271,8 @@ def foo(x, y):
         findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-009"}).unwrap()
         assert len(findings) == 1
 
-    def test_dunder_exemption(self) -> None:
+    def test_dunder_not_exempted_by_parameters(self) -> None:
+        """Engine ignores exemption parameters — dunders are fully subject to rules."""
         source = """
 class Foo:
     def __init__(self):
@@ -142,7 +290,8 @@ class Foo:
         }
         evaluator = AstNodeMatchEvaluator()
         findings = evaluator.evaluate(tree, config, rule).unwrap()
-        assert findings == []
+        assert len(findings) == 1
+        assert "__init__" in findings[0].message
 
     def test_style2_only_mutable_defaults(self) -> None:
         source = """
