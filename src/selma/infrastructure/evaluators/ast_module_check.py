@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -25,7 +26,7 @@ class AstModuleCheckEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Run module-level checks."""
         b_continue = True
         findings: list[Finding] = []
@@ -49,7 +50,7 @@ class AstModuleCheckEvaluator(EvaluatorBase):
                                 message=msg,
                             )
                         )
-        return findings
+        return Result.success(findings)
 
 
 def _has_sentinel(a_tree: ast.AST, a_name: str) -> bool:

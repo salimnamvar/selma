@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -26,7 +27,7 @@ class AstScopeCheckEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Check variable patterns within function scope."""
         b_continue = True
         findings: list[Finding] = []
@@ -60,7 +61,7 @@ class AstScopeCheckEvaluator(EvaluatorBase):
                             message=msg,
                         )
                     )
-        return findings
+        return Result.success(findings)
 
     @staticmethod
     def _check_variable_rules(

@@ -13,6 +13,7 @@ from typing import Any
 from typing import cast
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -65,7 +66,7 @@ class AstNodeMatchEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         findings: list[Finding] = []
         target_node = str(a_config.get("target_node", ""))
         conditions = _as_cond_list(a_config.get("conditions", []))
@@ -97,7 +98,7 @@ class AstNodeMatchEvaluator(EvaluatorBase):
                         message=msg,
                     )
                 )
-        return findings
+        return Result.success(findings)
 
     @staticmethod
     def _is_node_excluded(a_node: ast.AST, a_exemptions: dict[str, Any]) -> bool:

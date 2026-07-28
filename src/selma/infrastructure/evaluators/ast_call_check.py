@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -30,7 +31,7 @@ class AstCallCheckEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Check function calls for forbidden patterns."""
         b_continue = True
         findings: list[Finding] = []
@@ -106,7 +107,7 @@ class AstCallCheckEvaluator(EvaluatorBase):
                                 message=msg,
                             )
                         )
-        return findings
+        return Result.success(findings)
 
     @staticmethod
     def _is_exempt_call(

@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -29,7 +30,7 @@ class AstWalkEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Walk AST counting specific node types within root nodes."""
         b_continue = True
         findings: list[Finding] = []
@@ -64,7 +65,7 @@ class AstWalkEvaluator(EvaluatorBase):
                             message=msg,
                         )
                     )
-        return findings
+        return Result.success(findings)
 
     @staticmethod
     def _is_excluded(

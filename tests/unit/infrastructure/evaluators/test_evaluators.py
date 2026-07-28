@@ -35,7 +35,7 @@ def foo():
             "message_template": "Function '{name}' has multiple returns",
         }
         evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
         assert findings == []
 
     def test_multiple_returns_detected(self) -> None:
@@ -53,7 +53,7 @@ def foo(x):
             "message_template": "Function '{name}' has {count} returns",
         }
         evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
         assert len(findings) == 1
         assert "foo" in findings[0].message
 
@@ -70,7 +70,7 @@ def foo():
             "message_template": "Function '{name}' raises exceptions",
         }
         evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-002"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-002"}).unwrap()
         assert len(findings) == 1
 
     def test_dunder_excluded(self) -> None:
@@ -90,7 +90,7 @@ class Foo:
             "message_template": "Function '{name}' has multiple returns",
         }
         evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
         assert findings == []
 
     def test_generator_excluded(self) -> None:
@@ -109,7 +109,7 @@ def gen():
             "message_template": "Function '{name}' yields",
         }
         evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
         assert findings == []
 
 
@@ -128,7 +128,7 @@ def foo():
             "message_template": "Function '{name}' missing return type",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-024"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-024"}).unwrap()
         assert len(findings) == 1
 
     def test_function_with_return_type(self) -> None:
@@ -143,7 +143,7 @@ def foo() -> int:
             "message_template": "Function '{name}' missing return type",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-024"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-024"}).unwrap()
         assert findings == []
 
     def test_function_with_args_detected(self) -> None:
@@ -158,7 +158,7 @@ def foo(x, y):
             "message_template": "Function '{name}' has args",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-009"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-009"}).unwrap()
         assert len(findings) == 1
 
     def test_dunder_exemption(self) -> None:
@@ -178,7 +178,7 @@ class Foo:
             "parameters": {"exempt_dunders": True},
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, rule)
+        findings = evaluator.evaluate(tree, config, rule).unwrap()
         assert findings == []
 
     def test_style2_only_mutable_defaults(self) -> None:
@@ -203,7 +203,7 @@ def bad(a_items: list = []) -> int:
             "message_template": "Function '{name}' has mutable default",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"}).unwrap()
         assert len(findings) == 1
         assert "bad" in findings[0].message
 
@@ -236,7 +236,7 @@ def skip_builtin(self, cls, args, kwargs, a_value: int) -> int:
             "message_template": "Function '{name}' arguments must use a_ prefix",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"}).unwrap()
         assert len(findings) == 1
         assert "bad" in findings[0].message
 
@@ -312,7 +312,7 @@ def helper_ok(a_value: str) -> str:
             ),
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "ST-001"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "ST-001"}).unwrap()
         found_names = " ".join(f.message for f in findings)
         assert len(findings) == 1
         assert "helper" in found_names
@@ -358,7 +358,7 @@ def ok(a_x: int) -> int:
             "message_template": "Function '{name}' returns values but type is not Result[T]",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"}).unwrap()
         assert len(findings) == 1
         assert "bad" in findings[0].message
 
@@ -404,7 +404,7 @@ def guarded(a_n: int, a_depth: int = 0, a_max_depth: int = 10) -> int:
             "message_template": "Recursive function '{name}' missing depth limit",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"}).unwrap()
         assert len(findings) == 1
         assert "recurse" in findings[0].message
 
@@ -434,7 +434,7 @@ def ok() -> object:
             "message_template": "Result.failure() called without descriptive message",
         }
         evaluator = AstNodeMatchEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "R1"}).unwrap()
         assert len(findings) == 1
 
     def test_deprecated_rules_not_loaded(self) -> None:
@@ -468,7 +468,7 @@ def foo():
             "message_template": "Function '{name}' missing b_continue",
         }
         evaluator = AstScopeCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"}).unwrap()
         assert len(findings) == 1
 
     def test_b_continue_exists_no_finding(self) -> None:
@@ -489,7 +489,7 @@ def foo():
             "message_template": "Function '{name}' missing b_continue",
         }
         evaluator = AstScopeCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"}).unwrap()
         assert findings == []
 
     def test_b_continue_first_value_is_true(self) -> None:
@@ -508,7 +508,7 @@ def foo():
             "message_template": "Function '{name}' b_continue not initialized to True",
         }
         evaluator = AstScopeCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"}).unwrap()
         assert len(findings) == 1
 
     def test_b_continue_no_reset_to_true(self) -> None:
@@ -529,7 +529,7 @@ def foo():
             "message_template": "Function '{name}' b_continue reset to True",
         }
         evaluator = AstScopeCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"}).unwrap()
         assert len(findings) == 1
 
     def test_b_continue_not_global(self) -> None:
@@ -549,7 +549,7 @@ def foo():
             "message_template": "Function '{name}' uses global b_continue",
         }
         evaluator = AstScopeCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-011"}).unwrap()
         assert len(findings) == 1
 
 
@@ -567,7 +567,7 @@ def foo():
             "message_template": "Forbidden function '{function}'",
         }
         evaluator = AstCallCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"}).unwrap()
         assert len(findings) == 1
         assert "eval" in findings[0].message
 
@@ -582,7 +582,7 @@ def foo():
             "message_template": "Forbidden function '{function}'",
         }
         evaluator = AstCallCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"}).unwrap()
         assert len(findings) == 1
 
     def test_datetime_now_detected(self) -> None:
@@ -597,7 +597,7 @@ def foo():
             "message_template": "Non-deterministic call: {function}",
         }
         evaluator = AstCallCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-071"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-071"}).unwrap()
         assert len(findings) == 1
 
     def test_safe_function_no_finding(self) -> None:
@@ -611,7 +611,7 @@ def foo():
             "message_template": "Forbidden function '{function}'",
         }
         evaluator = AstCallCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-104"}).unwrap()
         assert findings == []
 
 
@@ -633,7 +633,7 @@ def foo():
             "message_template": "Function '{function}' used without context manager",
         }
         evaluator = AstContextCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"}).unwrap()
         assert len(findings) == 1
 
     def test_open_with_context_manager(self) -> None:
@@ -652,7 +652,7 @@ def foo():
             "message_template": "Function '{function}' used without context manager",
         }
         evaluator = AstContextCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"}).unwrap()
         assert findings == []
 
     def test_open_in_try_finally(self) -> None:
@@ -673,7 +673,7 @@ def foo():
             "message_template": "Function '{function}' used without context manager",
         }
         evaluator = AstContextCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-080"}).unwrap()
         assert findings == []
 
 
@@ -697,7 +697,7 @@ def foo() -> Result[int]:
             "message_template": "Module missing {sentinel} sentinel",
         }
         evaluator = AstModuleCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-004"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-004"}).unwrap()
         assert len(findings) == 1
 
     def test_sentinel_present(self) -> None:
@@ -717,5 +717,5 @@ def foo() -> Result[int]:
             "message_template": "Module missing {sentinel} sentinel",
         }
         evaluator = AstModuleCheckEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-004"})
+        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-004"}).unwrap()
         assert findings == []

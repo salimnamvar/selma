@@ -6,6 +6,7 @@ import ast
 from typing import Any
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
@@ -27,7 +28,7 @@ class AstContextCheckEvaluator(EvaluatorBase):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Check that target function calls appear inside required context."""
         b_continue = True
         findings: list[Finding] = []
@@ -56,7 +57,7 @@ class AstContextCheckEvaluator(EvaluatorBase):
                         message=msg,
                     )
                 )
-        return findings
+        return Result.success(findings)
 
 
 def _extract_call_name(a_node: ast.Call) -> str:

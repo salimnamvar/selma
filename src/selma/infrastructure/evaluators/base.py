@@ -10,6 +10,7 @@ from typing import Any
 from typing import cast
 
 from selma.domain.entities.finding import Finding
+from selma.domain.value_objects.result import Result
 
 
 class EvaluatorBase(ABC):
@@ -27,7 +28,7 @@ class EvaluatorBase(ABC):
         a_config: dict[str, Any],
         a_rule: dict[str, Any],
         a_source_code: str = "",
-    ) -> list[Finding]:
+    ) -> Result[list[Finding]]:
         """Evaluate a rule configuration against an AST.
 
         Preconditions:
@@ -36,11 +37,11 @@ class EvaluatorBase(ABC):
             - a_rule is the full rule dict.
 
         Postconditions:
-            Returns a list of Finding objects (may be empty).
+            Returns a Result containing a list of Finding objects (may be empty).
 
         Side Effects: None.
         Resource: None.
-        Failure: Never raises — returns empty list on error.
+        Failure: Returns Result.failure on error.
         """
 
     @staticmethod

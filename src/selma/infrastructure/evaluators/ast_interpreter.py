@@ -84,9 +84,16 @@ class ASTInterpreter(RuleEvaluator):
                     "message": a_rule.message,
                     "parameters": a_rule.parameters,
                 }
-                findings = evaluator.evaluate(a_tree, config, rule_dict, a_source_code)
-                enriched = self._enrich_findings(findings, a_file_path, rule_dict)
-                result = Result.success(enriched)
+                eval_result = evaluator.evaluate(
+                    a_tree, config, rule_dict, a_source_code
+                )
+                if eval_result.is_success():
+                    enriched = self._enrich_findings(
+                        eval_result.unwrap(), a_file_path, rule_dict
+                    )
+                    result = Result.success(enriched)
+                else:
+                    result = Result.failure(eval_result.message)
             except Exception as exc:
                 logger.warning("Evaluator %s failed: %s", evaluator_type, exc)
                 b_continue = False
