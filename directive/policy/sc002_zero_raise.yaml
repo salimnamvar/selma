@@ -108,9 +108,7 @@ directives:
     description: Every function SHALL contain zero `raise` statements. All exceptions SHALL be caught
       within the function and converted to the function's deterministic structured result.
     machine_id: SC-002
-    context_conditions: 'Language dunder methods are exempt when they implement Python data-model contracts
-      that may require raise. Declarative validators attached via standard decorator patterns (e.g. schema
-      field validators) may raise ValidationError as part of the validation framework contract. Application
+    context_conditions: 'Every function SHALL contain zero raise statements. Application
       logic SHALL NOT raise for normal failure paths — convert to an explicit result type instead. Do not
       maintain project-specific lists of function names to exclude.'
     title: Zero-Raise Policy
@@ -153,10 +151,8 @@ guidance:
   - SC-001
   - SC-010
   - SC-011
-  exceptions: 'Language dunder methods that implement Python data-model contracts may raise. Declarative
-    schema validators attached via standard decorator patterns (field/model validators) may raise as part
-    of the validation framework contract. Application logic shall convert failures to an explicit result
-    type. Do not maintain project-specific function-name exclusion lists.'
+  exceptions: 'None. Every function SHALL contain zero raise statements. Application logic shall convert
+    failures to an explicit result type. Do not maintain project-specific exclusion lists.'
 references:
   title: References & Annexes
   source_doctrine: doctrinal-source.md

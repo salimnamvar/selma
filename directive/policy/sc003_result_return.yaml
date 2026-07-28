@@ -110,8 +110,8 @@ directives:
       result (e.g. Result[T]) with success discrimination, optional value, and a human-readable message.
       Pure functions without raise or I/O are outside this obligation.'
     machine_id: SC-003
-    context_conditions: 'Applies when the body raises or performs I/O-like calls. Language dunders and
-      properties follow language contracts. No project-specific function-name allowlists.'
+    context_conditions: 'Applies when the function body contains a raise statement. No project-specific
+      function-name allowlists.'
     title: Explicit Result for Fallible Operations
   flexible_standards: []
 sanctions:
@@ -119,17 +119,7 @@ sanctions:
   rows:
   - violation_context: Function returns values but type is not Result[T]
     enforcement_action: 'Machine lint finding via sc003_result_return.json when automatically enforceable;
-      otherwise Type checker, code review gate. **Result[T] Definition:** `Result[T]` SHALL be implemented
-      as a frozen dataclass defined in the project''s shared types module: ```python from dataclasses
-      import dataclass from typing import TypeVar, Generic, Optional T = TypeVar("T") @dataclass(frozen=True)
-      class Result(Generic[T]): """Immutable structured result returned by all functions.""" _is_success:
-      bool value: Optional[T] message: str def is_success(self) -> bool: return self._is_success @staticmethod
-      def success(value: T, message: str = "Success") -> "Result[T]": return Result(_is_success=True,
-      value=value, message=message) @staticmethod def failure(message: str) -> "Result[None]": return
-      Result(_is_success=False, value=None, message=message) ``` The `Result` type is frozen (immutable).
-      Callers SHALL NOT modify its fields. `is_success()` is a method, not a property. Python dunder methods
-      and protocol-constrained interfaces (`__next__`, `__enter__`, `__iter__`, etc.) are exempt from
-      the `Result[T]` requirement and SHALL return protocol-mandated types.'
+      otherwise Type checker, code review gate.'
     remediation_path: Return a typed Result[T] with is_success(), value, and message fields.
 guidance:
   title: Guidance, Examples, and Reasoning
@@ -153,7 +143,7 @@ guidance:
   related_machine_ids:
   - SC-004
   - SC-010
-  exceptions: None.
+  exceptions: 'None. Every fallible function SHALL return an explicit result type.'
 references:
   title: References & Annexes
   source_doctrine: doctrinal-source.md
