@@ -14,7 +14,6 @@ from selma.application.dto.lint_request import LintRequest
 from selma.composition import Container
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
-from selma.domain.value_objects.severity import Severity
 from selma.infrastructure.bootstrap import lifespan
 from selma.infrastructure.config import ConfigLoader
 from selma.infrastructure.config.models import SelmaConfig
@@ -219,22 +218,6 @@ def main() -> Result[int]:
             lint_result = use_case.execute(request)
             if lint_result.is_success():
                 response = lint_result.unwrap()
-                if args.verbose:
-                    report_findings = response.findings
-                else:
-                    report_findings = tuple(
-                        f
-                        for f in response.findings
-                        if f.severity != Severity.INFORMATIONAL
-                    )
-                reporter = container.get_reporter(
-                    config.output.format,
-                )
-                report_result = reporter.report(
-                    report_findings,
-                )
-                if report_result.is_success():
-                    sys.stdout.write(report_result.unwrap() + "\n")
                 if response.finding_count > 0:
                     exit_code = 1
             else:

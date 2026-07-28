@@ -12,6 +12,7 @@ from selma.application.dto.lint_request import LintRequest
 from selma.application.dto.lint_response import LintResponse
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.application.ports.parser_port import SourceCodeParser
+from selma.application.ports.reporter_port import FindingReporter
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.rule import RuleDefinition
@@ -33,10 +34,12 @@ class LintUseCase:
         a_parser: SourceCodeParser,
         a_rule_repository: RuleRepository,
         a_evaluator: RuleEvaluator,
+        a_reporter: FindingReporter | None = None,
     ) -> None:
         self._parser = a_parser
         self._rule_repository = a_rule_repository
         self._evaluator = a_evaluator
+        self._reporter = a_reporter
 
     def execute(self, a_request: LintRequest) -> Result[LintResponse]:
         """Execute the lint use case.
@@ -76,7 +79,16 @@ class LintUseCase:
                 summary=f"Found {len(all_findings)} issues",
                 has_errors=any(f.is_violation for f in all_findings),
             )
-            result = Result.success(response)
+            if self._reporter is not None:
+                report_result = self._reporter.report(response.findings)
+                if report_result.is_failure():
+                    result = Result.failure(
+                        f"Reporting failed: {report_result.message}"
+                    )
+                else:
+                    result = Result.success(response)
+            else:
+                result = Result.success(response)
         return result
 
     def _load_rules(self, a_request: LintRequest) -> Result[tuple[RuleDefinition, ...]]:

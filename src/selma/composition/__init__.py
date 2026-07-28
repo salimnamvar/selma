@@ -34,12 +34,14 @@ class Container:
     def get_lint_use_case(
         self,
         a_rule_repository: RuleRepository,
+        a_reporter: FindingReporter | None = None,
     ) -> LintUseCase:
         """Get a configured LintUseCase with explicit repository."""
         return LintUseCase(
             a_parser=self._parser,
             a_rule_repository=a_rule_repository,
             a_evaluator=self._evaluator,
+            a_reporter=a_reporter,
         )
 
     def get_lint_use_case_with_defaults(
@@ -48,7 +50,7 @@ class Container:
         a_schema_path: Path,
         a_policy_dir: Path | None = None,
     ) -> LintUseCase:
-        """Get a configured LintUseCase with default rule repository.
+        """Get a configured LintUseCase with default rule repository and reporter.
 
         a_rules_dir and a_schema_path MUST be provided from config.
         a_policy_dir is optional and used only for human guidance/examples.
@@ -58,7 +60,10 @@ class Container:
             a_schema_path=a_schema_path,
             a_policy_dir=a_policy_dir,
         )
-        return self.get_lint_use_case(a_rule_repository=rule_repository)
+        return self.get_lint_use_case(
+            a_rule_repository=rule_repository,
+            a_reporter=self._default_reporter,
+        )
 
     def get_parser(self) -> SourceCodeParser:
         return self._parser
