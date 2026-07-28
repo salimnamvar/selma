@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from typing import Any
+from typing import cast
 
 from selma.domain.entities.finding import Finding
 from selma.domain.value_objects.result import Result
@@ -29,20 +30,14 @@ class AstScopeCheckEvaluator(EvaluatorBase):
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
         """Check variable patterns within function scope."""
-        b_continue = True
         findings: list[Finding] = []
-        root_node = a_config.get("root_node", "FunctionDef")
+        root_names = self._resolve_root_names(a_config)
         check = a_config.get("check", {})
         message_template = a_config.get("message_template", "")
-        exemptions = a_rule.get("parameters", {})
         for node in ast.walk(a_tree):
             b_continue = True
-            if b_continue and self.node_name(node) != root_node:
+            if b_continue and self.node_name(node) not in root_names:
                 b_continue = False
-            if b_continue and exemptions.get("exempt_dunders", False):
-                name = getattr(node, "name", "")
-                if b_continue and self.is_dunder(name):
-                    b_continue = False
             if b_continue:
                 violations = self._check_variable_rules(node, check)
                 for violation in violations:
@@ -62,6 +57,22 @@ class AstScopeCheckEvaluator(EvaluatorBase):
                         )
                     )
         return Result.success(findings)
+
+    @staticmethod
+    def _resolve_root_names(a_config: dict[str, Any]) -> set[str]:
+        names: set[str] = set()
+        single = a_config.get("root_node")
+        if single is not None and str(single):
+            names.add(str(single))
+        multi_raw: object = a_config.get("root_nodes", [])
+        if isinstance(multi_raw, list):
+            for item in cast("list[object]", multi_raw):
+                text = str(item)
+                if text:
+                    names.add(text)
+        if not names:
+            names.add("FunctionDef")
+        return names
 
     @staticmethod
     def _check_variable_rules(

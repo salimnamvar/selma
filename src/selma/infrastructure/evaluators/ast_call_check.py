@@ -21,8 +21,9 @@ class AstCallCheckEvaluator(EvaluatorBase):
         forbidden_functions: List of bare function names
         target_methods: Method names to check on cursor objects
         check_first_arg: Conditions on the first argument
-        exempt_if: Conditions that exempt a violation
         message_template: Template string
+
+    No call-site exemptions: every matching call is a finding.
     """
 
     def evaluate(
@@ -33,21 +34,16 @@ class AstCallCheckEvaluator(EvaluatorBase):
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
         """Check function calls for forbidden patterns."""
-        b_continue = True
         findings: list[Finding] = []
         forbidden_calls = a_config.get("forbidden_calls", [])
         forbidden_functions = a_config.get("forbidden_functions", [])
         target_methods = a_config.get("target_methods", [])
         check_first_arg = a_config.get("check_first_arg", {})
-        exempt_if = a_config.get("exempt_if", {})
-        exempt_module_methods = a_config.get("exempt_module_methods", [])
         message_template = a_config.get("message_template", "")
         for node in ast.walk(a_tree):
             if not isinstance(node, ast.Call):
                 continue
             b_continue = True
-            if b_continue and self._is_exempt_call(node, exempt_if, a_tree):
-                b_continue = False
             if b_continue and forbidden_calls:
                 match = self._check_forbidden_module_call(node, forbidden_calls)
                 if b_continue and match is not None:
@@ -71,27 +67,22 @@ class AstCallCheckEvaluator(EvaluatorBase):
             if b_continue and forbidden_functions:
                 func_name = self._get_call_name(node)
                 if b_continue and func_name in forbidden_functions:
-                    if b_continue and exempt_module_methods:
-                        module_method = self._get_module_method_name(node)
-                        if b_continue and module_method in exempt_module_methods:
-                            b_continue = False
-                    if b_continue:
-                        ctx = {
-                            "function": func_name,
-                            "module": "",
-                            "method": func_name,
-                        }
-                        msg = self._render_message(message_template, ctx)
-                        findings.append(
-                            Finding(
-                                rule_id=a_rule.get("lineage_id", ""),
-                                file="",
-                                line=self._get_line(node),
-                                col=self._get_col(node),
-                                message=msg,
-                            )
+                    ctx = {
+                        "function": func_name,
+                        "module": "",
+                        "method": func_name,
+                    }
+                    msg = self._render_message(message_template, ctx)
+                    findings.append(
+                        Finding(
+                            rule_id=a_rule.get("lineage_id", ""),
+                            file="",
+                            line=self._get_line(node),
+                            col=self._get_col(node),
+                            message=msg,
                         )
-                        b_continue = False
+                    )
+                    b_continue = False
             if b_continue and target_methods and check_first_arg:
                 method = self._get_method_name(node)
                 if b_continue and method in target_methods:
@@ -108,26 +99,6 @@ class AstCallCheckEvaluator(EvaluatorBase):
                             )
                         )
         return Result.success(findings)
-
-    @staticmethod
-    def _is_exempt_call(
-        a_node: ast.Call,
-        a_exempt_if: dict[str, Any],
-        a_tree: ast.AST,
-    ) -> bool:
-        """Check if a call node is exempt based on exemption rules."""
-        b_continue = True
-        result = False
-        param_names = a_exempt_if.get("function_has_parameter_named", [])
-        if b_continue and param_names:
-            enclosing = _find_enclosing_function(a_node, a_tree)
-            if b_continue and enclosing is not None:
-                args = _get_function_param_names(enclosing)
-                for pname in args:
-                    if b_continue and pname in param_names:
-                        b_continue = False
-                        result = True
-        return result
 
     @staticmethod
     def _check_forbidden_module_call(
@@ -256,39 +227,4 @@ def _resolve_module_name(a_node: ast.AST) -> str:
             result = parts[0]
         else:
             result = parts[0] if parts else ""
-    return result
-
-
-def _find_enclosing_function(
-    a_node: ast.AST, a_tree: ast.AST
-) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-    """Find the enclosing FunctionDef for a given node by walking parent references."""
-    b_continue = True
-    result: ast.FunctionDef | ast.AsyncFunctionDef | None = None
-    for parent in ast.walk(a_tree):
-        if b_continue and isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for child in ast.walk(parent):
-                if b_continue and child is a_node:
-                    b_continue = False
-                    result = parent
-    return result
-
-
-def _get_function_param_names(
-    a_func: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> list[str]:
-    """Get the parameter names of a FunctionDef."""
-    b_continue = True
-    result: list[str] = []
-    if b_continue:
-        for arg in a_func.args.args:
-            result.append(arg.arg)
-        for arg in a_func.args.posonlyargs:
-            result.append(arg.arg)
-        if a_func.args.vararg:
-            result.append(a_func.args.vararg.arg)
-        for arg in a_func.args.kwonlyargs:
-            result.append(arg.arg)
-        if a_func.args.kwarg:
-            result.append(a_func.args.kwarg.arg)
     return result

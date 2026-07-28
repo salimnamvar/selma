@@ -66,7 +66,11 @@ def _as_cond_list(a_value: object) -> list[dict[str, Any]]:
 
 
 class AstNodeMatchEvaluator(EvaluatorBase):
-    """Match AST nodes using target_node + declarative conditions from config."""
+    """Match AST nodes using target_node(s) + declarative conditions from config.
+
+    Universal rules: no engine-side exemptions for dunders, properties, tests,
+    or any other code section. Rule JSON alone defines match conditions.
+    """
 
     def evaluate(
         self,
@@ -76,19 +80,17 @@ class AstNodeMatchEvaluator(EvaluatorBase):
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
         findings: list[Finding] = []
-        target_node = str(a_config.get("target_node", ""))
+        target_names = self._resolve_target_names(a_config)
         conditions = _as_cond_list(a_config.get("conditions", []))
         message_template = str(a_config.get("message_template", ""))
         params_obj: object = a_rule.get("parameters")
-        exemptions = _as_dict(params_obj)
+        parameters = _as_dict(params_obj)
         lineage_id = str(a_rule.get("lineage_id", ""))
-        ctx_base: dict[str, Any] = {"tree": a_tree, "parameters": exemptions}
+        ctx_base: dict[str, Any] = {"tree": a_tree, "parameters": parameters}
 
         for node in ast.walk(a_tree):
             b_continue = True
-            if b_continue and self.node_name(node) != target_node:
-                b_continue = False
-            if b_continue and self._is_node_excluded(node, exemptions):
+            if b_continue and self.node_name(node) not in target_names:
                 b_continue = False
             if b_continue and not self._all_conditions_match(
                 node, conditions, ctx_base, a_depth=0, a_max_depth=64
@@ -109,36 +111,19 @@ class AstNodeMatchEvaluator(EvaluatorBase):
         return Result.success(findings)
 
     @staticmethod
-    def _is_node_excluded(a_node: ast.AST, a_exemptions: dict[str, Any]) -> bool:
-        b_continue = True
-        result = False
-        if b_continue and a_exemptions.get("exempt_dunders", False):
-            name = getattr(a_node, "name", "")
-            if b_continue and EvaluatorBase.is_dunder(str(name)):
-                b_continue = False
-                result = True
-        if b_continue and a_exemptions.get("exempt_properties", False):
-            if b_continue and EvaluatorBase.has_decorator(a_node, "property"):
-                b_continue = False
-                result = True
-        if b_continue and a_exemptions.get("exempt_abstract", False):
-            if b_continue and EvaluatorBase.has_decorator(a_node, "abstractmethod"):
-                b_continue = False
-                result = True
-        if b_continue and a_exemptions.get("exempt_no_args", False):
-            if b_continue and _has_no_non_self_args(a_node, a_exemptions):
-                b_continue = False
-                result = True
-        if b_continue and a_exemptions.get("exempt_init", False):
-            name = getattr(a_node, "name", "")
-            init_names = a_exemptions.get(
-                "init_names",
-                ["__init__", "__post_init__", "__init_subclass__"],
-            )
-            if b_continue and name in init_names:
-                b_continue = False
-                result = True
-        return result
+    def _resolve_target_names(a_config: dict[str, Any]) -> set[str]:
+        """Resolve target_node and/or target_nodes into a set of AST type names."""
+        names: set[str] = set()
+        single = a_config.get("target_node")
+        if single is not None and str(single):
+            names.add(str(single))
+        multi_raw: object = a_config.get("target_nodes", [])
+        if isinstance(multi_raw, list):
+            for item in cast("list[object]", multi_raw):
+                text = str(item)
+                if text:
+                    names.add(text)
+        return names
 
     @staticmethod
     def _all_conditions_match(
@@ -492,12 +477,6 @@ def _param_names(a_node: ast.AST) -> set[str]:
     return {p.arg for p in _iter_function_params(a_node)}
 
 
-def _has_no_non_self_args(a_node: ast.AST, a_exemptions: dict[str, Any]) -> bool:
-    skip = _skip_param_names(a_exemptions)
-    non_self = [p for p in _iter_function_params(a_node) if p.arg not in skip]
-    return len(non_self) == 0
-
-
 def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
     b_continue = True
     result = False
@@ -535,49 +514,19 @@ def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
     return result
 
 
-def _find_enclosing_class(a_node: ast.AST, a_tree: ast.AST) -> ast.ClassDef | None:
-    best: ast.ClassDef | None = None
-    best_size = 10**12
-    for parent in ast.walk(a_tree):
-        if not isinstance(parent, ast.ClassDef):
-            continue
-        if not any(child is a_node for child in ast.walk(parent)):
-            continue
-        size = sum(1 for _ in ast.walk(parent))
-        if size < best_size:
-            best = parent
-            best_size = size
-    return best
-
-
-def _is_method_in_subclass(a_node: ast.AST, a_tree: ast.AST) -> bool:
-    b_continue = True
-    result = False
-    if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        b_continue = False
-        result = False
-    if b_continue:
-        enclosing = _find_enclosing_class(a_node, a_tree)
-        if enclosing is None:
-            b_continue = False
-            result = False
-        if b_continue and enclosing is not None:
-            result = bool(enclosing.bases)
-    return result
-
-
 def _params_missing_prefix(
     a_node: ast.AST, a_cfg: dict[str, Any], a_tree: ast.AST | None = None
 ) -> bool:
+    """True when application parameters lack the configured prefix.
+
+    Language receivers (self/cls) and *args/**kwargs may be listed in skip_names
+    as naming conventions for those slots — not as function-level rule exemptions.
+    """
     b_continue = True
     result = False
     if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         b_continue = False
         result = False
-    if b_continue and a_cfg.get("exempt_overrides", False) and a_tree is not None:
-        if _is_method_in_subclass(a_node, a_tree):
-            b_continue = False
-            result = False
     if b_continue:
         prefix = str(a_cfg.get("prefix", "a_"))
         allow_private = bool(a_cfg.get("allow_private_underscore", True))

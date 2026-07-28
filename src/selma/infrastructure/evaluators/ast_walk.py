@@ -10,6 +10,14 @@ from selma.domain.entities.finding import Finding
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.base import EvaluatorBase
 
+# Nested scopes whose bodies must not count toward the enclosing root's walk.
+_NESTED_SCOPE_TYPES: tuple[type[ast.AST], ...] = (
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.ClassDef,
+    ast.Lambda,
+)
+
 
 class AstWalkEvaluator(EvaluatorBase):
     """Evaluate rules by walking AST and counting node types.
@@ -18,6 +26,7 @@ class AstWalkEvaluator(EvaluatorBase):
 
     Config fields:
         root_node: Name of root node to iterate (e.g. "FunctionDef")
+        root_nodes: Alternative list of root node names (e.g. FunctionDef + AsyncFunctionDef)
         walk_nodes: List of child node names to count (e.g. ["Return", "Raise"])
         walk_config: Additional configuration (e.g. exit_call_names)
         count: Threshold check {"operator": "gt", "value": 1}
@@ -33,9 +42,8 @@ class AstWalkEvaluator(EvaluatorBase):
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
         """Walk AST counting specific node types within root nodes."""
-        b_continue = True
         findings: list[Finding] = []
-        root_node = str(a_config.get("root_node", "") or "")
+        root_names = self._resolve_root_names(a_config)
         walk_nodes_raw: object = a_config.get("walk_nodes", [])
         walk_nodes: list[str] = []
         if isinstance(walk_nodes_raw, list):
@@ -62,7 +70,7 @@ class AstWalkEvaluator(EvaluatorBase):
         threshold_op = str(count_config.get("operator", "gt") or "gt")
         for node in ast.walk(a_tree):
             b_continue = True
-            if b_continue and self.node_name(node) != root_node:
+            if b_continue and self.node_name(node) not in root_names:
                 b_continue = False
             if b_continue:
                 count = self._count_child_nodes(node, walk_nodes, walk_config)
@@ -82,6 +90,21 @@ class AstWalkEvaluator(EvaluatorBase):
                         )
                     )
         return Result.success(findings)
+
+    @staticmethod
+    def _resolve_root_names(a_config: dict[str, Any]) -> set[str]:
+        """Resolve root_node and/or root_nodes into a set of AST type names."""
+        names: set[str] = set()
+        single = a_config.get("root_node")
+        if single is not None and str(single):
+            names.add(str(single))
+        multi_raw: object = a_config.get("root_nodes", [])
+        if isinstance(multi_raw, list):
+            for item in cast("list[object]", multi_raw):
+                text = str(item)
+                if text:
+                    names.add(text)
+        return names
 
     @staticmethod
     def _get_call_full_name(a_node: ast.Call) -> str:
@@ -115,20 +138,37 @@ class AstWalkEvaluator(EvaluatorBase):
         return result
 
     @staticmethod
+    def _iter_own_scope_nodes(a_root: ast.AST) -> list[ast.AST]:
+        """Yield descendants of a_root excluding nested function/class/lambda bodies.
+
+        Counts only control flow belonging to this root (single-exit / zero-raise
+        semantics for the function under inspection). Nested defs are evaluated
+        when they themselves are roots.
+        """
+        collected: list[ast.AST] = []
+        stack: list[ast.AST] = list(ast.iter_child_nodes(a_root))
+        while stack:
+            child = stack.pop()
+            collected.append(child)
+            if isinstance(child, _NESTED_SCOPE_TYPES):
+                continue
+            stack.extend(list(ast.iter_child_nodes(child)))
+        return collected
+
+    @staticmethod
     def _count_child_nodes(
         a_node: ast.AST,
         a_walk_nodes: list[str],
         a_walk_config: dict[str, Any],
     ) -> int:
-        """Count matching child nodes within a root node."""
-        b_continue = True
+        """Count matching child nodes within a root node (own scope only)."""
         count = 0
         exit_call_names: list[str] = []
         raw_exit_calls: object = a_walk_config.get("exit_call_names", [])
         if isinstance(raw_exit_calls, list):
             for item in cast("list[object]", raw_exit_calls):
                 exit_call_names.append(str(item))
-        for child in ast.walk(a_node):
+        for child in AstWalkEvaluator._iter_own_scope_nodes(a_node):
             b_continue = True
             if b_continue and EvaluatorBase.node_name(child) in a_walk_nodes:
                 count += 1
@@ -154,7 +194,7 @@ class AstWalkEvaluator(EvaluatorBase):
             result = ""
         if b_continue:
             parts: list[str] = []
-            for child in ast.walk(a_node):
+            for child in AstWalkEvaluator._iter_own_scope_nodes(a_node):
                 name = EvaluatorBase.node_name(child)
                 if name in a_count_breakdown:
                     parts.append(a_count_breakdown[name])
