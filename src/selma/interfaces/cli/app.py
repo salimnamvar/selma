@@ -310,8 +310,6 @@ def _normalize_argv(a_argv: list[str] | None) -> list[str]:
 
 async def async_main(a_argv: list[str] | None = None) -> Result[int]:
     """Async CLI entry."""
-    b_continue = True
-    exit_code = 0
     parser = _build_parser()
     args = parser.parse_args(_normalize_argv(a_argv))
 
@@ -335,16 +333,12 @@ async def async_main(a_argv: list[str] | None = None) -> Result[int]:
     with lifespan(config.logging):
         if command == "query":
             return await _run_query(args, config)
-        if command == "inspect" or (command is None and args.paths):
-            return await _run_inspect(args, config)
-        if command is None and not args.paths:
-            b_continue = False
-            parser.print_help()
-            exit_code = 0
-        if b_continue and command is None:
+        if command == "inspect" or (command is None and getattr(args, "paths", None)):
             return await _run_inspect(args, config)
 
-    return Result.success(exit_code)
+        tui_module = __import__("selma.interfaces.tui.app", fromlist=["run_tui"])
+        await tui_module.run_tui(config)
+        return Result.success(0)
 
 
 def main() -> Result[int]:

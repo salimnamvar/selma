@@ -56,7 +56,7 @@ dev = [
 ]
 
 [project.scripts]
-selma = "selma.interfaces.cli.main:cli_entry"
+selma = "selma.interfaces.cli.app:cli_entry"
 
 [project.urls]
 Homepage = "https://github.com/salimnamvar/selma"

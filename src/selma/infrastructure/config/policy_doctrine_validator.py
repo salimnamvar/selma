@@ -13,22 +13,22 @@ from selma.domain.entities.policy import PolicyDoctrine
 from selma.domain.value_objects.result import Result
 
 
-def load_yaml_file(a_path: Path) -> Result[dict[str, Any]]:
-    """Load a YAML file from disk into a dict."""
-    try:
-        with a_path.open("r", encoding="utf-8") as handle:
-            data = yaml.safe_load(handle)
-        if not isinstance(data, dict):
-            return Result.failure(
-                f"YAML root must be an object, got {type(data).__name__}"
-            )
-        return Result.success(cast("dict[str, Any]", data))
-    except (OSError, yaml.YAMLError) as exc:
-        return Result.failure(f"Failed to load YAML: {exc}")
-
-
 class PolicyDoctrineValidator:
     """Validate policy doctrine YAML into domain models."""
+
+    @staticmethod
+    def load_yaml_file(a_path: Path) -> Result[dict[str, Any]]:
+        """Load a YAML file from disk into a dict."""
+        try:
+            with a_path.open("r", encoding="utf-8") as handle:
+                data = yaml.safe_load(handle)
+            if not isinstance(data, dict):
+                return Result.failure(
+                    f"YAML root must be an object, got {type(data).__name__}"
+                )
+            return Result.success(cast("dict[str, Any]", data))
+        except (OSError, yaml.YAMLError) as exc:
+            return Result.failure(f"Failed to load YAML: {exc}")
 
     def validate_doctrine(self, a_raw: dict[str, Any]) -> Result[PolicyDoctrine]:
         """Validate the universal policy doctrine document."""
@@ -42,7 +42,7 @@ class PolicyDoctrineValidator:
         """Load and validate a policy doctrine YAML file."""
         b_continue = True
         result: Result[PolicyDoctrine] = Result.failure("unreachable")
-        load_result = load_yaml_file(a_path)
+        load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
             result = Result.failure(load_result.message)
@@ -62,7 +62,7 @@ class PolicyDoctrineValidator:
         """Load and validate a per-rule directive policy YAML file."""
         b_continue = True
         result: Result[DirectivePolicy] = Result.failure("unreachable")
-        load_result = load_yaml_file(a_path)
+        load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
             result = Result.failure(load_result.message)
