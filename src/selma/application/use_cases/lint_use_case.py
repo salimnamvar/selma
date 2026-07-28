@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import ast
 import logging
-from typing import Any
 
 from selma.application.dto.lint_request import LintRequest
 from selma.application.dto.lint_response import LintResponse
@@ -164,35 +163,22 @@ class LintUseCase:
 
         Delegates to ASTInterpreter for actual evaluation.
         """
-        b_continue = True
-        result: list[Finding] = []
-
-        rule_dict: dict[str, Any] = {
-            "evaluator_type": a_rule.evaluator_type,
-            "evaluator_config": a_rule.evaluator_config.model_dump(),
-            "weight": a_rule.weight.value,
-            "lineage_id": a_rule.lineage_id,
-            "message": a_rule.message,
-            "parameters": a_rule.parameters,
-        }
+        findings: list[Finding] = []
 
         eval_result = self._evaluator.evaluate(
             a_tree=a_tree,
-            a_rule=rule_dict,
+            a_rule=a_rule,
             a_file_path=str(a_path),
         )
-        if b_continue and eval_result.is_success():
-            b_continue = False
+        if eval_result.is_success():
             raw_findings = eval_result.unwrap()
-            # Attach policy-derived guidance for reporting only.
-            # Evaluation never reads policy YAML.
             if a_rule.guidance is not None:
-                result = [
+                findings = [
                     finding.model_copy(update={"guidance": a_rule.guidance})
                     if finding.guidance is None
                     else finding
                     for finding in raw_findings
                 ]
             else:
-                result = raw_findings
-        return result
+                findings = raw_findings
+        return findings

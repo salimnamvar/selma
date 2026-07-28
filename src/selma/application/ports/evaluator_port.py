@@ -1,12 +1,13 @@
-"""RuleEvaluator port -- abstract interface for rule evaluation."""
+"""RuleEvaluator port — abstract interface for rule evaluation."""
 
 from __future__ import annotations
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
+import ast
 
 from selma.domain.entities.finding import Finding
+from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.result import Result
 
 
@@ -20,15 +21,15 @@ class RuleEvaluator(ABC):
     @abstractmethod
     def evaluate(
         self,
-        a_tree: Any,
-        a_rule: dict[str, Any],
+        a_tree: ast.AST,
+        a_rule: RuleDefinition,
         a_file_path: str = "",
     ) -> Result[list[Finding]]:
         """Evaluate a single rule against an AST.
 
         Args:
-            a_tree: Parsed AST from the parser port.
-            a_rule: Rule definition as a dict.
+            a_tree: Parsed AST from the parser port (stdlib ast.AST).
+            a_rule: Domain rule definition.
             a_file_path: Path to the source file.
 
         Returns:

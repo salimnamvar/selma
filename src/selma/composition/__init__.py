@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from selma.application.ports.parser_port import SourceCodeParser
+from selma.application.ports.reporter_port import FindingReporter
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.application.use_cases.lint_use_case import LintUseCase
 from selma.infrastructure.evaluators.ast_interpreter import ASTInterpreter
@@ -58,13 +60,11 @@ class Container:
         )
         return self.get_lint_use_case(a_rule_repository=rule_repository)
 
-    def get_parser(self) -> PythonAstParser:
+    def get_parser(self) -> SourceCodeParser:
         return self._parser
 
-    def get_reporter(
-        self, a_format: str
-    ) -> DefaultReporter | JsonReporter | GccReporter:
-        reporters = {
+    def get_reporter(self, a_format: str) -> FindingReporter:
+        reporters: dict[str, FindingReporter] = {
             "default": self._default_reporter,
             "json": self._json_reporter,
             "gcc": self._gcc_reporter,

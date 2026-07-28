@@ -1,5 +1,6 @@
 """Tests for LintUseCase — application service orchestration."""
 
+import ast
 from typing import Any
 
 from selma.application.dto.lint_request import LintRequest
@@ -57,7 +58,10 @@ class _MockEvaluator(RuleEvaluator):
         self._findings = a_findings or []
 
     def evaluate(
-        self, a_tree: Any, a_rule: dict[str, Any], a_file_path: str = ""
+        self,
+        a_tree: ast.AST,
+        a_rule: RuleDefinition,
+        a_file_path: str = "",
     ) -> Result[list[Finding]]:
         return Result.success(self._findings)
 

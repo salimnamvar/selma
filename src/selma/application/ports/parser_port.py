@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Any
+import ast
 
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
@@ -16,11 +16,11 @@ from selma.domain.value_objects.result import Result
 class SourceCodeParser(ABC):
     """Port: parse source code into AST.
 
-    Infrastructure implements this interface.
+    Infrastructure implements this interface (stdlib ast.AST).
     """
 
     @abstractmethod
-    def parse(self, a_path: FilePath) -> Result[Any]:
+    def parse(self, a_path: FilePath) -> Result[ast.AST]:
         """Parse a source file into an AST.
 
         Preconditions:
@@ -36,7 +36,9 @@ class SourceCodeParser(ABC):
         ...
 
     @abstractmethod
-    def parse_source(self, a_source: str, a_filename: str = "<string>") -> Result[Any]:
+    def parse_source(
+        self, a_source: str, a_filename: str = "<string>"
+    ) -> Result[ast.AST]:
         """Parse source code string into an AST.
 
         Preconditions:

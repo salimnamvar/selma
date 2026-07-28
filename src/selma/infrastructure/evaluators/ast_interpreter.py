@@ -8,6 +8,7 @@ from typing import Any
 
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
+from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.severity import Severity
 from selma.infrastructure.evaluators.ast_call_check import AstCallCheckEvaluator
@@ -46,7 +47,7 @@ class ASTInterpreter(RuleEvaluator):
     def evaluate(
         self,
         a_tree: ast.AST,
-        a_rule: dict[str, Any],
+        a_rule: RuleDefinition,
         a_file_path: str = "",
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
@@ -54,7 +55,7 @@ class ASTInterpreter(RuleEvaluator):
 
         Preconditions:
             - a_tree is a valid parsed AST.
-            - a_rule is a dict loaded from a JSON rule file.
+            - a_rule is a RuleDefinition domain object.
             - a_file_path is the file path for findings.
 
         Postconditions:
@@ -66,8 +67,8 @@ class ASTInterpreter(RuleEvaluator):
         """
         b_continue = True
         result: Result[list[Finding]] = Result.failure("unreachable")
-        evaluator_type = a_rule.get("evaluator_type", "")
-        config = a_rule.get("evaluator_config", {})
+        evaluator_type = a_rule.evaluator_type
+        config = a_rule.evaluator_config.model_dump()
         if b_continue and evaluator_type not in self._evaluators:
             b_continue = False
             logger.warning("Unknown evaluator type: %s", evaluator_type)
@@ -75,8 +76,16 @@ class ASTInterpreter(RuleEvaluator):
         if b_continue:
             evaluator = self._evaluators[evaluator_type]
             try:
-                findings = evaluator.evaluate(a_tree, config, a_rule, a_source_code)
-                enriched = self._enrich_findings(findings, a_file_path, a_rule)
+                rule_dict: dict[str, Any] = {
+                    "evaluator_type": a_rule.evaluator_type,
+                    "evaluator_config": config,
+                    "weight": a_rule.weight.value,
+                    "lineage_id": a_rule.lineage_id,
+                    "message": a_rule.message,
+                    "parameters": a_rule.parameters,
+                }
+                findings = evaluator.evaluate(a_tree, config, rule_dict, a_source_code)
+                enriched = self._enrich_findings(findings, a_file_path, rule_dict)
                 result = Result.success(enriched)
             except Exception as exc:
                 logger.warning("Evaluator %s failed: %s", evaluator_type, exc)
@@ -87,7 +96,7 @@ class ASTInterpreter(RuleEvaluator):
     def evaluate_many(
         self,
         a_tree: ast.AST,
-        a_rules: list[dict[str, Any]],
+        a_rules: list[RuleDefinition],
         a_file_path: str = "",
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
@@ -95,7 +104,7 @@ class ASTInterpreter(RuleEvaluator):
 
         Preconditions:
             - a_tree is a valid parsed AST.
-            - a_rules is a list of rule dicts.
+            - a_rules is a list of RuleDefinition objects.
 
         Postconditions:
             Returns Result.success with all findings merged.
@@ -104,14 +113,12 @@ class ASTInterpreter(RuleEvaluator):
         Resource: None.
         Failure: Never fails — skips invalid rules.
         """
-        b_continue = True
         all_findings: list[Finding] = []
         for rule in a_rules:
             eval_result = self.evaluate(a_tree, rule, a_file_path, a_source_code)
-            if b_continue and eval_result.is_success():
+            if eval_result.is_success():
                 all_findings.extend(eval_result.unwrap())
-        result = Result.success(all_findings)
-        return result
+        return Result.success(all_findings)
 
     @staticmethod
     def _enrich_findings(

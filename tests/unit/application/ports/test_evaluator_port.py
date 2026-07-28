@@ -1,11 +1,12 @@
 """Tests for RuleEvaluator port — abstract interface."""
 
-from typing import Any
+import ast
 
 import pytest
 
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
+from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.result import Result
 
 
@@ -32,8 +33,8 @@ class TestRuleEvaluatorAbstract:
         class ConcreteEvaluator(RuleEvaluator):
             def evaluate(
                 self,
-                a_tree: Any,
-                a_rule: dict[str, Any],
+                a_tree: ast.AST,
+                a_rule: RuleDefinition,
                 a_file_path: str = "",
             ) -> Result[list[Finding]]:
                 return Result.success([])

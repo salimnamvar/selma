@@ -2,16 +2,14 @@
 
 from pathlib import Path
 
+from selma.application.ports.parser_port import SourceCodeParser
+from selma.application.ports.reporter_port import FindingReporter
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.application.use_cases.lint_use_case import LintUseCase
 from selma.composition import Container
 from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
-from selma.infrastructure.parsers.python_ast_parser import PythonAstParser
-from selma.infrastructure.reporters import DefaultReporter
-from selma.infrastructure.reporters import GccReporter
-from selma.infrastructure.reporters import JsonReporter
 
 
 class _NullRepo(RuleRepository):
@@ -33,29 +31,28 @@ class TestContainerInit:
     """Container initialization behavior."""
 
     def test_creates_parser(self) -> None:
-        """Container should create a PythonAstParser."""
+        """Container should create a SourceCodeParser."""
         container = Container()
-        assert isinstance(container.get_parser(), PythonAstParser)
+        assert isinstance(container.get_parser(), SourceCodeParser)
 
     def test_creates_evaluator(self) -> None:
         """Container should have an ASTInterpreter evaluator."""
         container = Container()
-        # Verify evaluator works by creating a use case
         use_case = container.get_lint_use_case(a_rule_repository=_NullRepo())
         assert isinstance(use_case, LintUseCase)
 
     def test_creates_reporters(self) -> None:
         """Container should create all reporter types."""
         container = Container()
-        assert isinstance(container.get_reporter("default"), DefaultReporter)
-        assert isinstance(container.get_reporter("json"), JsonReporter)
-        assert isinstance(container.get_reporter("gcc"), GccReporter)
-        assert isinstance(container.get_reporter("guidance"), JsonReporter)
+        assert isinstance(container.get_reporter("default"), FindingReporter)
+        assert isinstance(container.get_reporter("json"), FindingReporter)
+        assert isinstance(container.get_reporter("gcc"), FindingReporter)
+        assert isinstance(container.get_reporter("guidance"), FindingReporter)
 
     def test_unknown_format_returns_default(self) -> None:
         """Container should return default reporter for unknown format."""
         container = Container()
-        assert isinstance(container.get_reporter("unknown"), DefaultReporter)
+        assert isinstance(container.get_reporter("unknown"), FindingReporter)
 
 
 class TestContainerGetLintUseCase:
