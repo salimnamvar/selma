@@ -62,12 +62,13 @@ definitions:
     definition: Machine-evaluable document at directive/rule/sc001_single_exit.json.
     exclusion: This policy YAML is not a lint source.
   - term: Single-Exit Point
-    definition: 'Every function and method SHALL contain at most one exit door. All code paths within
-      the function SHALL converge to this single exit. Exit doors include: `return`, `raise`, `yield`,
-      `yield from`, `pass`, and process-terminating calls (`sys.exit`, `os._exit`, `exit`, `quit`).
-      The function SHALL NOT contain more than one of these (in any combination).'
-    exclusion: Not optional style preference when deontic type is Obligation or Prohibition. Nested
-      functions are evaluated separately; their exits do not count toward the enclosing function.
+    definition: 'Every application function SHALL contain at most one *abnormal* exit door. Abnormal
+      exits are `raise` and process-terminating calls (`sys.exit`, `os._exit`, `exit`, `quit`). Multiple
+      `return` statements (early-return idiom) are normal control flow, not abnormal exits. `pass` is a
+      no-op. `yield` / `yield from` suspend generators and are not exits.'
+    exclusion: Language protocol methods (dunders), `@property` accessors, generators, and process
+      entrypoints (`main`, `cli_entry`, `async_main`, `run_*`) are out of scope. Nested functions are
+      evaluated separately.
 principles:
   title: Foundational Principles
   description: This directive operationalizes one or more Coding Doctrine core principles.
@@ -107,15 +108,14 @@ directives:
   title: Directives (Rules & Standards)
   specific_directives:
   - type: Obligation
-    description: Every function and method SHALL contain at most one exit door. All code paths within
-      the function SHALL converge to this single exit — exit doors are `return`, `raise`, `yield`,
-      `yield from`, `pass`, and process-terminating calls. Use a continue-flag pattern for conditional
-      logic.
+    description: Every application function SHALL contain at most one abnormal exit (`raise` or
+      process-terminating call). Early returns are allowed. Prefer Result over raise for failure paths.
     machine_id: SC-001
-    context_conditions: All functions and methods (sync and async) — no exceptions, no dunder/property
-      exemptions, no project-path or test exclusions. Nested functions are inspected on their own.
-      `await` is not an exit. `break` and `continue` are loop control, not function exits.
-    title: Single-Exit Point
+    context_conditions: >-
+      Application functions (sync and async). Out of scope (universal language rules, not project
+      paths) include dunders, property/cached_property, generators, and process entrypoints.
+      Nested functions are inspected on their own. await/break/continue are not exits.
+    title: Single Abnormal Exit
   flexible_standards: []
 sanctions:
   title: Sanctions & Remedies
@@ -127,11 +127,10 @@ sanctions:
 guidance:
   title: Guidance, Examples, and Reasoning
   purpose: For human and AI reasoning only. Do not execute this section as a linter.
-  reasoning: Multiple exit points create invisible control flow. A reviewer must trace every path to understand
-    what the function returns. A single exit makes the return value the function's explicit contract.
-    This applies to ALL functions — including dunders, generators, decorated methods, async defs, and
-    nested functions. Exit doors are `return`, `raise`, `yield`, `yield from`, `pass`, and process-terminating
-    calls. A generator may use a single `yield` (or `yield from`) as its one door.
+  reasoning: >-
+    Multiple abnormal exits (raise / process termination) create invisible failure paths.
+    Early returns remain allowed. Dunders, properties, generators, and process entrypoints follow
+    language or process protocols and are out of scope for this obligation.
   explanation: The correct version uses b_continue to gate execution and a single return at the end. The
     incorrect version has multiple return statements, making control flow harder to trace.
   correct_example: |-

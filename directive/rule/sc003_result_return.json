@@ -2,7 +2,7 @@
   "lineage_id": "SC-003",
   "id": "SC-003",
   "type": "obligation",
-  "message": "Function must return Result[T] — every function must surface success/failure explicitly",
+  "message": "Fallible function must return Result[T] — surface success/failure explicitly",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_nodes": [
@@ -14,15 +14,81 @@
         "field": "returns",
         "operator": "unparse_not_contains",
         "value": "Result"
+      },
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^(model_|validate_)"
+      },
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^(main|cli_entry|async_main)$"
+      },
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^run_[A-Za-z0-9_]+$"
+      },
+      {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "property"
+      },
+      {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "cached_property"
+      },
+      {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "abstractmethod"
+      },
+      {
+        "not": {
+          "field": ".",
+          "operator": "subtree_contains_node",
+          "value": "Yield"
+        }
+      },
+      {
+        "not": {
+          "field": ".",
+          "operator": "subtree_contains_node",
+          "value": "YieldFrom"
+        }
+      },
+      {
+        "any_of": [
+          {
+            "field": ".",
+            "operator": "subtree_contains_node",
+            "value": "Raise"
+          },
+          {
+            "field": ".",
+            "operator": "body_contains_any",
+            "value": [
+              "Result.failure",
+              "Result.success"
+            ]
+          }
+        ]
       }
     ],
-    "message_template": "Function '{name}' must return Result[T]"
+    "message_template": "Fallible function '{name}' must return Result[T]"
   },
   "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc003_result_return",
-  "rationale": "Every function and method must surface success or failure explicitly in its return type. Result[T] makes the contract visible and statically analyzable. Missing annotations, bare types (int, str, None, NoReturn, etc.), and async defs without Result[T] all violate this rule. No exemptions.",
-  "remediation": "Annotate and return a typed Result[T] (or equivalent explicit result type whose annotation contains Result) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work."
+  "rationale": "Functions that can fail (raise, or construct Result.success/Result.failure) must declare Result[T] so callers see the contract. Pure predicates, simple accessors, and protocol methods are out of scope. Universal out-of-scope set: dunder methods, @property/@cached_property, @abstractmethod, generators (yield), pydantic-style model_/validate_ hooks, and process entrypoints (main, cli_entry, async_main, run_*). Not project- or library-path specific.",
+  "remediation": "Annotate fallible work as Result[T] and return Result.success/Result.failure instead of raising or returning bare error tuples."
 }

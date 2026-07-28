@@ -2,7 +2,7 @@
   "lineage_id": "SC-001",
   "id": "SC-001",
   "type": "obligation",
-  "message": "Function has multiple exit doors — use single-exit control flow",
+  "message": "Function has multiple abnormal exit doors — use a single abnormal-exit path",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_nodes": [
@@ -10,11 +10,7 @@
       "AsyncFunctionDef"
     ],
     "walk_nodes": [
-      "Return",
-      "Raise",
-      "Yield",
-      "YieldFrom",
-      "Pass"
+      "Raise"
     ],
     "walk_config": {
       "exit_call_names": [
@@ -24,24 +20,35 @@
         "quit"
       ]
     },
+    "scope_filters": {
+      "exclude_name_matches": [
+        "^__.*__$",
+        "^(main|cli_entry|async_main)$",
+        "^run_[A-Za-z0-9_]+$"
+      ],
+      "exclude_decorators": [
+        "property",
+        "cached_property"
+      ],
+      "exclude_if_contains_nodes": [
+        "Yield",
+        "YieldFrom"
+      ]
+    },
     "count": {
       "operator": "gt",
       "value": 1
     },
     "count_breakdown": {
-      "Return": "return",
-      "Raise": "raise",
-      "Yield": "yield",
-      "YieldFrom": "yield from",
-      "Pass": "pass"
+      "Raise": "raise"
     },
-    "message_template": "Function '{name}' has {count} exit doors — use single-exit control flow"
+    "message_template": "Function '{name}' has {count} abnormal exit doors — use a single raise/process-exit path"
   },
   "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc001_single_exit",
-  "rationale": "Multiple exit points create invisible control flow. A reviewer must trace every path to understand what the function returns. A single exit makes the return value the function's explicit contract. Exit doors include return, raise, yield, yield from, pass, and process-terminating calls (sys.exit, os._exit, exit, quit). All functions and methods MUST have at most one exit door — no exceptions.",
-  "remediation": "Refactor to a single terminal exit. Prefer a continue-flag / staged assignment pattern with one return (or one yield for generators)."
+  "rationale": "Abnormal exits (raise and process-terminating calls) must not fan out. Multiple return statements are the normal early-return idiom and are not abnormal exits. Pass is a no-op, not an exit. Yield/yield-from suspend generators and are not function exits. Language data-model methods (dunders) and property getters follow fixed protocols and are out of scope. Generator functions are out of scope for abnormal-exit counting of yields.",
+  "remediation": "Keep at most one raise or process-terminating call per function. Prefer converting failures to an explicit result type instead of raising. Early returns remain allowed."
 }

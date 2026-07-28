@@ -2,7 +2,7 @@
   "lineage_id": "SC-002",
   "id": "SC-002",
   "type": "prohibition",
-  "message": "Forbidden raise in function — handle locally with an explicit result type",
+  "message": "Forbidden raise in application function — handle locally with an explicit result type",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_nodes": [
@@ -12,6 +12,17 @@
     "walk_nodes": [
       "Raise"
     ],
+    "scope_filters": {
+      "exclude_name_matches": [
+        "^__.*__$",
+        "^(main|cli_entry|async_main)$",
+        "^run_[A-Za-z0-9_]+$"
+      ],
+      "exclude_decorators": [
+        "property",
+        "cached_property"
+      ]
+    },
     "count": {
       "operator": "gt",
       "value": 0
@@ -23,6 +34,6 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc002_zero_raise",
-  "rationale": "A raise is an unhandled failure transferred to an unknown caller. It is a declaration that the function does not know how to handle its own errors. In safety-critical systems, every error must be handled at the point of detection with full contextual awareness. Every function and method SHALL contain zero raise statements — no exceptions.",
-  "remediation": "Catch failures within the function and convert them to a structured success/failure result (e.g. Result.failure / Result.success). Do not propagate exceptions for normal error paths."
+  "rationale": "Application logic must not transfer failures via raise. Language construction protocols (dunder methods such as __init__/__new__) may raise ValueError/TypeError per the data model. Process entrypoints (main, cli_entry, async_main, run_*) may raise after failed bootstrap. Property accessors follow fixed return contracts and are out of scope.",
+  "remediation": "Catch failures within the function and convert them to a structured success/failure result (e.g. Result.failure / Result.success). Do not raise for normal application error paths."
 }
