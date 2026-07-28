@@ -1,6 +1,6 @@
 """Tests for Severity value object — enum values."""
 
-from selma.domain.value_objects.severity import Severity
+from selma.domain.value_objects.enums import Severity
 
 
 class TestSeverityEnum:

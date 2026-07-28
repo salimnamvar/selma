@@ -11,10 +11,13 @@ from selma.application.use_cases.lint_use_case import LintUseCase
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.rule import EvaluatorConfig
 from selma.domain.entities.rule import RuleDefinition
+from selma.domain.value_objects.enums import DeonticType
+from selma.domain.value_objects.enums import PriorityLevel
+from selma.domain.value_objects.enums import RuleStatus
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
-from selma.domain.value_objects.severity import Severity
 
 
 class _MockParser(SourceCodeParser):
@@ -71,13 +74,13 @@ def _make_rule(a_lineage_id: str = "SC001") -> RuleDefinition:
     return RuleDefinition(
         lineage_id=a_lineage_id,
         id=a_lineage_id,
-        rule_type="coding_standard",
+        rule_type=DeonticType.OBLIGATION,
         message="Test rule",
         evaluator_type="ast_node_match",
         evaluator_config=EvaluatorConfig(),
         weight=Severity.MEDIUM,
-        priority="operational",
-        status="active",
+        priority=PriorityLevel.OPERATIONAL,
+        status=RuleStatus.ACTIVE,
     )
 
 

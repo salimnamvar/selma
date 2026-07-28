@@ -2,7 +2,7 @@
 
 from selma.application.dto.lint_response import LintResponse
 from selma.domain.entities.finding import Finding
-from selma.domain.value_objects.severity import Severity
+from selma.domain.value_objects.enums import Severity
 
 
 class TestLintResponseCreation:

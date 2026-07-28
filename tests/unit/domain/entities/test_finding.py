@@ -1,7 +1,7 @@
 """Tests for Finding entity — creation, is_violation."""
 
 from selma.domain.entities.finding import Finding
-from selma.domain.value_objects.severity import Severity
+from selma.domain.value_objects.enums import Severity
 
 
 class TestFindingCreation:

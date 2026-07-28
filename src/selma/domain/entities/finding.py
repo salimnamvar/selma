@@ -9,8 +9,8 @@ from __future__ import annotations
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.guidance import RuleGuidance
-from selma.domain.value_objects.severity import Severity
 
 
 class Finding(BaseModel):

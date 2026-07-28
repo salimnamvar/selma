@@ -6,8 +6,8 @@ from selma.domain.aggregates.lint_result import LintResult
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.source_file import SourceFile
 from selma.domain.exceptions.domain_errors import LintResultAlreadyComplete
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.file_path import FilePath
-from selma.domain.value_objects.severity import Severity
 from selma.domain.value_objects.source_hash import SourceHash
 
 

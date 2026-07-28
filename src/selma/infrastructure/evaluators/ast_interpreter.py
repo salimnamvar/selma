@@ -9,8 +9,8 @@ from typing import Any
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.rule import RuleDefinition
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.result import Result
-from selma.domain.value_objects.severity import Severity
 from selma.infrastructure.evaluators.ast_call_check import AstCallCheckEvaluator
 from selma.infrastructure.evaluators.ast_context_check import AstContextCheckEvaluator
 from selma.infrastructure.evaluators.ast_module_check import AstModuleCheckEvaluator

@@ -16,9 +16,9 @@ from selma.application.ports.reporter_port import FindingReporter
 from selma.application.ports.rule_repository_port import RuleRepository
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.rule import RuleDefinition
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.result import Result
-from selma.domain.value_objects.severity import Severity
 
 logger = logging.getLogger(__name__)
 

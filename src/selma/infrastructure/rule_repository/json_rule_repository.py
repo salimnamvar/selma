@@ -22,8 +22,7 @@ from selma.domain.entities.rule import RuleDefinition
 from selma.domain.value_objects.guidance import RuleGuidance
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
-from selma.domain.value_objects.severity import Severity
-from selma.infrastructure.config.rule_schema_models import RuleDocumentModel
+from selma.infrastructure.config.rule_schema_models import Rule
 from selma.infrastructure.config.rule_schema_validator import RuleSchemaValidator
 
 
@@ -202,7 +201,7 @@ class JsonRuleRepository(RuleRepository):
     def _parse_rule(
         self, a_raw: dict[str, Any], a_rule_path: Path
     ) -> Result[RuleDefinition]:
-        """Validate via jsonschema + Pydantic, then map to domain RuleDefinition."""
+        """Validate via jschon JSON Schema + Pydantic, then map to domain RuleDefinition."""
         b_continue = True
         result: Result[RuleDefinition] = Result.failure("unreachable")
 
@@ -330,28 +329,17 @@ class JsonRuleRepository(RuleRepository):
                 result = None
         return result
 
-    def _map_document(
-        self, a_doc: RuleDocumentModel, a_rule_path: Path
-    ) -> Result[RuleDefinition]:
+    def _map_document(self, a_doc: Rule, a_rule_path: Path) -> Result[RuleDefinition]:
+        """Map a validated Rule model to a domain RuleDefinition."""
         b_continue = True
         result: Result[RuleDefinition] = Result.failure("unreachable")
-        ec_raw = a_doc.evaluator_config.model_dump(by_alias=True, exclude_none=False)
-        ec_result = self._parse_evaluator_config(ec_raw)
+
+        ec_result = self._parse_evaluator_config(a_doc.evaluator_config)
         if ec_result.is_failure():
             b_continue = False
             result = Result.failure(ec_result.message)
+
         if b_continue:
-            weight_str = (
-                a_doc.weight.value
-                if isinstance(a_doc.weight, Severity)
-                else str(a_doc.weight)
-            )
-            valid_weights = frozenset(
-                {"critical", "high", "medium", "low", "informational"}
-            )
-            weight = (
-                Severity(weight_str) if weight_str in valid_weights else Severity.MEDIUM
-            )
             guidance = self._load_policy_guidance(
                 a_rule_path=a_rule_path,
                 a_lineage_id=a_doc.lineage_id,
@@ -362,18 +350,25 @@ class JsonRuleRepository(RuleRepository):
                 id=a_doc.id,
                 rule_type=a_doc.type,
                 message=a_doc.message,
-                evaluator_type=a_doc.evaluator_type,
+                evaluator_type=str(a_doc.evaluator_type.value)
+                if hasattr(a_doc.evaluator_type, "value")
+                else str(a_doc.evaluator_type),
                 evaluator_config=ec_result.unwrap(),
-                weight=weight,
+                weight=a_doc.weight,
                 priority=a_doc.priority,
                 status=a_doc.status,
                 created_at=a_doc.created_at,
                 rationale=a_doc.rationale,
                 remediation=a_doc.remediation,
-                guidance=guidance,
+                guidance=guidance.model_dump() if guidance else None,
                 parameters=dict(a_doc.parameters),
                 depends_on=tuple(a_doc.depends_on),
                 conflicts_with=tuple(a_doc.conflicts_with),
+                anchor_ref=a_doc.anchor_ref,
+                scope=a_doc.scope.model_dump() if a_doc.scope else None,
+                conflict_resolution=a_doc.conflict_resolution.model_dump()
+                if a_doc.conflict_resolution
+                else None,
             )
             result = Result.success(rule)
         return result
@@ -386,6 +381,7 @@ class JsonRuleRepository(RuleRepository):
     ) -> Result[EvaluatorConfig]:
         """Parse raw evaluator config dict into EvaluatorConfig.
 
+        Uses EvaluatorConfig's extra="allow" to accept any fields.
         a_depth / a_max_depth guard nested sub_evaluators (SC-114).
         """
         b_continue = True
@@ -397,103 +393,56 @@ class JsonRuleRepository(RuleRepository):
                 f"Evaluator config nesting exceeds max depth {a_max_depth}"
             )
 
-        pattern = a_raw.get("pattern") if b_continue else None
-        flags = a_raw.get("flags") if b_continue else None
-        field = a_raw.get("field") if b_continue else None
-        operator = a_raw.get("operator") if b_continue else None
-        value = a_raw.get("value") if b_continue else None
-        threshold = a_raw.get("threshold") if b_continue else None
-        logic = a_raw.get("logic") if b_continue else None
-        target_node = a_raw.get("target_node") if b_continue else None
-        walk_nodes = tuple(a_raw.get("walk_nodes", [])) if b_continue else ()
-        conditions = tuple(a_raw.get("conditions", [])) if b_continue else ()
-        fc_raw: list[dict[str, str]] = (
-            a_raw.get("forbidden_calls", []) if b_continue else []
-        )
-        forbidden_calls = tuple(
-            {
-                "name": fc.get("name", ""),
-                "module": fc.get("module", ""),
-            }
-            for fc in fc_raw
-        )
-        forbidden_functions = (
-            tuple(a_raw.get("forbidden_functions", [])) if b_continue else ()
-        )
-        exempt_module_methods = (
-            tuple(a_raw.get("exempt_module_methods", [])) if b_continue else ()
-        )
-        resource_calls = tuple(a_raw.get("resource_calls", [])) if b_continue else ()
-        execute_methods = tuple(a_raw.get("execute_methods", [])) if b_continue else ()
-        sql_keywords = tuple(a_raw.get("sql_keywords", [])) if b_continue else ()
-        io_calls = tuple(a_raw.get("io_calls", [])) if b_continue else ()
-        check_first_arg: dict[str, bool] = {}
-        count: dict[str, object] = {}
+        sub_evaluators: tuple[EvaluatorConfig, ...] = ()
         if b_continue:
-            raw_cfa = a_raw.get("check_first_arg", {})
-            if isinstance(raw_cfa, dict):
-                check_first_arg = cast("dict[str, bool]", raw_cfa)
-            raw_cnt = a_raw.get("count", {})
-            if isinstance(raw_cnt, dict):
-                count = cast("dict[str, object]", raw_cnt)
-        message_template = a_raw.get("message_template", "") if b_continue else ""
-        exempt_dunders = a_raw.get("exempt_dunders", True) if b_continue else True
-        exempt_generators = a_raw.get("exempt_generators", True) if b_continue else True
-        exempt_names = tuple(a_raw.get("exempt_names", [])) if b_continue else ()
-        max_lines = a_raw.get("max_lines", 60) if b_continue else 60
-
-        sub_raw: list[dict[str, Any]] = []
-        if b_continue:
-            raw_subs_obj = a_raw.get("sub_evaluators", [])
+            sub_raw: list[dict[str, Any]] = []
+            raw_subs_obj: object = a_raw.get("sub_evaluators", [])
             if isinstance(raw_subs_obj, list):
                 for item in cast("list[object]", raw_subs_obj):
                     if isinstance(item, dict):
                         sub_raw.append(cast("dict[str, Any]", item))
-        sub_evaluators: tuple[EvaluatorConfig, ...] = ()
-        if b_continue and sub_raw:
-            parsed_subs: list[EvaluatorConfig] = []
-            for sub_item in sub_raw:
-                sub_result = self._parse_evaluator_config(
-                    sub_item,
-                    a_depth=a_depth + 1,
-                    a_max_depth=a_max_depth,
-                )
-                if b_continue and sub_result.is_failure():
-                    b_continue = False
-                    msg = f"Sub-evaluator: {sub_result.message}"
-                    result = Result.failure(msg)
-                if b_continue and sub_result.is_success():
+
+            if sub_raw:
+                parsed_subs: list[EvaluatorConfig] = []
+                for sub_item in sub_raw:
+                    sub_result = self._parse_evaluator_config(
+                        sub_item,
+                        a_depth=a_depth + 1,
+                        a_max_depth=a_max_depth,
+                    )
+                    if sub_result.is_failure():
+                        b_continue = False
+                        result = Result.failure(f"Sub-evaluator: {sub_result.message}")
+                        break
                     parsed_subs.append(sub_result.unwrap())
-            if b_continue:
-                sub_evaluators = tuple(parsed_subs)
+                if b_continue:
+                    sub_evaluators = tuple(parsed_subs)
 
         if b_continue:
             config = EvaluatorConfig(
-                pattern=pattern,
-                flags=flags,
-                target_field=field,
-                operator=operator,
-                value=value,
-                threshold=threshold,
-                logic=logic,
+                pattern=a_raw.get("pattern"),
+                flags=a_raw.get("flags"),
+                field=a_raw.get("field"),
+                operator=a_raw.get("operator"),
+                value=a_raw.get("value"),
+                threshold=a_raw.get("threshold"),
+                logic=a_raw.get("logic"),
                 sub_evaluators=sub_evaluators,
-                target_node=target_node,
-                walk_nodes=walk_nodes,
-                conditions=conditions,
-                forbidden_calls=forbidden_calls,
-                forbidden_functions=forbidden_functions,
-                exempt_module_methods=exempt_module_methods,
-                resource_calls=resource_calls,
-                execute_methods=execute_methods,
-                sql_keywords=sql_keywords,
-                io_calls=io_calls,
-                check_first_arg=check_first_arg,
-                count=count,
-                message_template=message_template,
-                exempt_dunders=exempt_dunders,
-                exempt_generators=exempt_generators,
-                exempt_names=exempt_names,
-                max_lines=max_lines,
+                **{
+                    k: v
+                    for k, v in a_raw.items()
+                    if k
+                    not in {
+                        "pattern",
+                        "flags",
+                        "field",
+                        "operator",
+                        "value",
+                        "threshold",
+                        "logic",
+                        "sub_evaluators",
+                    }
+                },
             )
             result = Result.success(config)
 

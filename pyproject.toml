@@ -39,6 +39,8 @@ dependencies = [
   "tree-sitter>=0.21",
   "tree-sitter-python>=0.21",
   "jsonpath-ng>=1.6",
+  "jschon>=0.11",
+  "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +51,6 @@ dev = [
   "pyright",
   "pre-commit",
   "httpx",
-  "PyYAML",
 ]
 
 [project.scripts]
@@ -252,6 +253,7 @@ addopts = [
 ]
 filterwarnings = [
   "error",
+  "ignore::DeprecationWarning:rfc3986.*",
 ]
 markers = [
   "unit: Fast, isolated unit tests with no I/O",

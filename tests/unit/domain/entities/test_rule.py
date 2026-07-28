@@ -6,7 +6,10 @@ is no longer an issue. All tests run without skipif.
 
 from selma.domain.entities.rule import EvaluatorConfig
 from selma.domain.entities.rule import RuleDefinition
-from selma.domain.value_objects.severity import Severity
+from selma.domain.value_objects.enums import DeonticType
+from selma.domain.value_objects.enums import PriorityLevel
+from selma.domain.value_objects.enums import RuleStatus
+from selma.domain.value_objects.enums import Severity
 
 
 def _make_rule(**a_overrides: object) -> RuleDefinition:
@@ -14,7 +17,7 @@ def _make_rule(**a_overrides: object) -> RuleDefinition:
     defaults: dict[str, object] = {
         "lineage_id": "SC001",
         "id": "sc001",
-        "rule_type": "prohibition",
+        "rule_type": DeonticType.PROHIBITION,
         "message": "No mutable defaults",
         "evaluator_type": "ast",
         "evaluator_config": EvaluatorConfig(),
@@ -31,7 +34,7 @@ class TestRuleDefinitionCreation:
         r = _make_rule()
         assert r.lineage_id == "SC001"
         assert r.id == "sc001"
-        assert r.rule_type == "prohibition"
+        assert r.rule_type == DeonticType.PROHIBITION
         assert r.message == "No mutable defaults"
         assert r.evaluator_type == "ast"
 
@@ -39,8 +42,8 @@ class TestRuleDefinitionCreation:
         """RuleDefinition should have sensible defaults."""
         r = _make_rule()
         assert r.weight == Severity.MEDIUM
-        assert r.priority == "operational"
-        assert r.status == "active"
+        assert r.priority == PriorityLevel.OPERATIONAL
+        assert r.status == RuleStatus.ACTIVE
         assert r.created_at == ""
         assert r.rationale == ""
         assert r.remediation == ""
@@ -60,13 +63,13 @@ class TestRuleDefinitionProperties:
         assert str(rid) == "SC042"
 
     def test_is_active_true(self) -> None:
-        """is_active returns True when status is 'active'."""
-        r = _make_rule(status="active")
+        """is_active returns True when status is ACTIVE."""
+        r = _make_rule(status=RuleStatus.ACTIVE)
         assert r.is_active() is True
 
     def test_is_active_false(self) -> None:
-        """is_active returns False when status is not 'active'."""
-        r = _make_rule(status="deprecated")
+        """is_active returns False when status is not ACTIVE."""
+        r = _make_rule(status=RuleStatus.DEPRECATED)
         assert r.is_active() is False
 
 
@@ -78,15 +81,25 @@ class TestEvaluatorConfig:
         ec = EvaluatorConfig()
         assert ec.pattern is None
         assert ec.flags is None
-        assert ec.target_field is None
+        assert ec.field is None
         assert ec.operator is None
         assert ec.value is None
         assert ec.threshold is None
         assert ec.logic is None
         assert ec.sub_evaluators == ()
-        assert ec.max_lines == 60
 
     def test_frozen(self) -> None:
         """EvaluatorConfig should be a Pydantic frozen model."""
         ec = EvaluatorConfig()
         assert hasattr(ec, "__pydantic_fields__")
+
+    def test_extra_fields_allowed(self) -> None:
+        """EvaluatorConfig should accept language-specific extra fields."""
+        ec = EvaluatorConfig(
+            walk_nodes=("Return",),
+            message_template="test {name}",
+            exempt_dunders=True,
+        )
+        assert ec.walk_nodes == ("Return",)
+        assert ec.message_template == "test {name}"
+        assert ec.exempt_dunders is True

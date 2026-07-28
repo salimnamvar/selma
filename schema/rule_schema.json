@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas/universal-rule-schema.json",
   "title": "Universal Rule Schema 8.2.4",
   "description": "Machine-readable rule structure with dual identity, evaluation logic, and lineage tracking. Finding lifecycle states are documented in x-finding-fsm (informative; normative source: SPECIFICATION.md §3.1).",
@@ -200,7 +200,7 @@
           "properties": {
             "authored_by": { "type": "string" },
             "approved_by": { "type": "string" },
-            "approved_at": { "$ref": "#/definitions/utc_datetime" }
+            "approved_at": { "$ref": "#/$defs/utc_datetime" }
           },
           "additionalProperties": false
         },
@@ -233,7 +233,7 @@
                   },
                   "minItems": 1
                 },
-                "merged_at": { "$ref": "#/definitions/utc_datetime", "description": "Timestamp of the merge operation. Optional for backward compatibility; strongly RECOMMENDED for audit trail completeness." },
+                "merged_at": { "$ref": "#/$defs/utc_datetime", "description": "Timestamp of the merge operation. Optional for backward compatibility; strongly RECOMMENDED for audit trail completeness." },
                 "merge_notes": { "type": "string", "description": "Additional context about the merge rationale." }
               },
               "required": ["non_surviving_parents"],
@@ -255,502 +255,7 @@
       "type": "array",
       "minItems": 1,
       "description": "The list of directives. Every rule MUST have a unique lineage_id and id. Uniqueness enforced by external validator.",
-      "items": {
-        "type": "object",
-        "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
-        "properties": {
-          "lineage_id": {
-            "type": "string",
-            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?$",
-            "description": "Immutable root identifier. Assigned once, never reused. Used for audit trail. Optional letter suffix for sub-rules (e.g. SC-115A)."
-          },
-          "id": {
-            "type": "string",
-            "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?(-[A-Z0-9]+)*$",
-            "description": "Active execution identifier. May change on fork/merge/split. Used for CG-IR compilation."
-          },
-          "type": {
-            "type": "string",
-            "enum": ["obligation", "prohibition", "permission"],
-            "description": "Deontic classification: obligation (MUST), prohibition (MUST NOT), permission (MAY)."
-          },
-          "message": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Human-readable output or description."
-          },
-          "target": {
-            "type": "string",
-            "description": "Who or what this rule applies to. Deprecated in favor of scope for structured applicability filtering."
-          },
-          "scope": {
-            "type": "object",
-            "description": "Structured applicability context. Replaces bare target string for deterministic scope filtering and specificity scoring per SPECIFICATION.md §2.8.2.",
-            "properties": {
-              "target_type": {
-                "type": "string",
-                "enum": ["text", "structured", "binary", "any"]
-              },
-              "domain": {
-                "type": "string",
-                "description": "Regulatory or business domain (e.g. 'finance', 'environment', 'safety')."
-              },
-              "jurisdiction": {
-                "type": "string",
-                "description": "Legal or operational jurisdiction (e.g. 'EU', 'US-Federal', 'California')."
-              },
-              "filters": {
-                "type": "array",
-                "description": "Additional applicability filter predicates on target metadata or content.",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "field": { "type": "string", "description": "Path within target metadata or content." },
-                    "operator": { "type": "string", "enum": ["eq", "neq", "in", "subset"] },
-                    "value": { "description": "Value to compare against." }
-                  },
-                  "required": ["field", "operator", "value"],
-                  "additionalProperties": false
-                },
-                "minItems": 0
-              }
-            },
-            "additionalProperties": false
-          },
-          "status": {
-            "type": "string",
-            "enum": ["draft", "active", "deprecated", "superseded"],
-            "description": "Lifecycle state."
-          },
-          "anchor_ref": {
-            "type": "string",
-            "pattern": "^(section:[a-z][a-z_]*(/[a-z_]+)?|/.+)$",
-            "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2. JSON Pointer format follows RFC 6901."
-          },
-          "evaluator_type": {
-            "type": "string",
-            "enum": ["regex", "field_check", "threshold", "composite", "ast_walk", "ast_node_match", "ast_call_check", "ast_scope_check", "ast_module_check", "ast_context_check"],
-            "description": "Evaluator type. Discriminator for evaluator_config. AST types are Selma-specific extensions for Python code analysis."
-          },
-          "evaluator_config": {
-            "oneOf": [
-              {
-                "description": "Regex evaluator config",
-                "type": "object",
-                "properties": {
-                  "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
-                  "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
-                },
-                "required": ["pattern"],
-                "additionalProperties": false,
-                "x-evaluator-type": "regex"
-              },
-              {
-                "description": "Field check evaluator config",
-                "type": "object",
-                "properties": {
-                  "field": { "type": "string", "minLength": 1 },
-                  "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"] },
-                  "value": {}
-                },
-                "required": ["field", "operator", "value"],
-                "additionalProperties": false,
-                "x-evaluator-type": "field_check"
-              },
-              {
-                "description": "Threshold evaluator config",
-                "type": "object",
-                "properties": {
-                  "field": { "type": "string", "minLength": 1 },
-                  "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte"] },
-                  "threshold": { "type": "number", "description": "Finite IEEE 754 double. NaN and ±Infinity rejected at compile time per §9.2.15." }
-                },
-                "required": ["field", "operator", "threshold"],
-                "additionalProperties": false,
-                "x-evaluator-type": "threshold"
-              },
-              {
-                "description": "Composite evaluator config",
-                "type": "object",
-                "properties": {
-                  "logic": { "type": "string", "enum": ["and", "or", "not"] },
-                  "sub_evaluators": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/evaluator_config_entry"
-                    },
-                    "minItems": 1
-                  }
-                },
-                "required": ["logic", "sub_evaluators"],
-                "additionalProperties": false,
-                "x-evaluator-type": "composite"
-              },
-              {
-                "description": "AST walk evaluator config — walks AST tree counting matching nodes",
-                "type": "object",
-                "properties": {
-                  "root_node": { "type": "string", "description": "AST node type to start walking from (e.g. FunctionDef, Module)" },
-                  "walk_nodes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "AST node types to count during walk" },
-                  "walk_config": { "type": "object", "description": "Additional walk configuration" },
-                  "count": {
-                    "type": "object",
-                    "properties": {
-                      "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte", "eq", "neq"] },
-                      "value": { "type": "integer" }
-                    },
-                    "required": ["operator", "value"],
-                    "description": "Threshold condition on counted nodes"
-                  },
-                  "message_template": { "type": "string", "description": "Message template with {name}, {count} placeholders" },
-                  "exempt_dunders": { "type": "boolean", "default": false },
-                  "exempt_generators": { "type": "boolean", "default": false }
-                },
-                "required": ["root_node", "walk_nodes", "count", "message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_walk"
-              },
-              {
-                "description": "AST node match evaluator config — matches specific AST nodes with conditions",
-                "type": "object",
-                "properties": {
-                  "target_node": { "type": "string", "description": "AST node type to match (e.g. FunctionDef, ExceptHandler, Call)" },
-                  "conditions": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "field": { "type": "string" },
-                        "operator": {
-                          "type": "string",
-                          "enum": [
-                            "eq", "neq", "equals", "not_equals",
-                            "exists", "not_exists",
-                            "matches", "not_matches",
-                            "contains", "not_contains", "contains_node", "subtree_contains_node",
-                            "not_empty", "star_import",
-                            "unparse_matches", "unparse_not_matches",
-                            "unparse_contains", "unparse_not_contains",
-                            "unparse_in", "unparse_not_in",
-                            "has_mutable_defaults",
-                            "params_missing_prefix", "params_any_unannotated",
-                            "body_contains_any", "body_not_contains_any",
-                            "calls_own_name", "calls_any",
-                            "param_names_intersect", "param_names_disjoint",
-                            "has_decorator", "not_has_decorator",
-                            "call_message_missing_or_empty",
-                            "attr_call_on_shared_state",
-                            "except_type_names_intersect", "except_type_names_disjoint",
-                            "except_bound_name_unused",
-                            "name_not_matches_any"
-                          ]
-                        },
-                        "value": { "description": "Value to compare against (string, number, list, object, or pattern)" },
-                        "all_of": { "type": "array", "items": { "type": "object" } },
-                        "any_of": { "type": "array", "items": { "type": "object" } },
-                        "not": { "type": "object" }
-                      },
-                      "required": []
-                    },
-                    "minItems": 1
-                  },
-                  "message_template": { "type": "string", "description": "Message template with {name} placeholder" }
-                },
-                "required": ["target_node", "conditions", "message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_node_match"
-              },
-              {
-                "description": "AST call check evaluator config — checks for forbidden or unsafe function calls",
-                "type": "object",
-                "properties": {
-                  "forbidden_functions": { "type": "array", "items": { "type": "string" }, "description": "Function names that are forbidden (e.g. eval, exec, print)" },
-                  "forbidden_calls": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "module": { "type": "string" },
-                        "method": { "type": "string" }
-                      },
-                      "required": ["module", "method"]
-                    },
-                    "description": "Module.method calls that are forbidden"
-                  },
-                  "target_methods": { "type": "array", "items": { "type": "string" }, "description": "Methods to check arguments of (e.g. execute for SQL injection)" },
-                  "check_first_arg": {
-                    "type": "object",
-                    "properties": {
-                      "forbid_fstring": { "type": "boolean", "default": false },
-                      "forbid_format_call": { "type": "boolean", "default": false },
-                      "forbid_percent": { "type": "boolean", "default": false }
-                    },
-                    "description": "Checks on first argument of target methods"
-                  },
-                  "message_template": { "type": "string" }
-                },
-                "required": ["message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_call_check"
-              },
-              {
-                "description": "AST scope check evaluator config — checks variable usage patterns within function scope",
-                "type": "object",
-                "properties": {
-                  "root_node": { "type": "string", "description": "AST node type to scope to (e.g. FunctionDef, Module)" },
-                  "variable": { "type": "string", "description": "Variable name to track (e.g. b_continue, raise)" },
-                  "check": {
-                    "type": "object",
-                    "properties": {
-                      "type": { "type": "string", "enum": ["input_mutation", "shared_state"] },
-                      "rules": { "type": "array" },
-                      "forbidden_types": { "type": "array", "items": { "type": "string" } },
-                      "forbid_reassignable": { "type": "boolean" }
-                    },
-                    "description": "Scope check configuration"
-                  },
-                  "rules": { "type": "array", "items": { "type": "string" }, "description": "Rules to check (e.g. must_exist, must_not_exist, first_value_is_true)" },
-                  "message_template": { "type": "string" }
-                },
-                "required": ["root_node", "message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_scope_check"
-              },
-              {
-                "description": "AST module check evaluator config — checks module-level patterns",
-                "type": "object",
-                "properties": {
-                  "sentinel_name": { "type": "string", "description": "Name of required sentinel (e.g. INVALID_RESULT)" },
-                  "condition": { "type": "string", "description": "Condition that triggers the check" },
-                  "check": {
-                    "type": "object",
-                    "properties": {
-                      "type": { "type": "string" },
-                      "forbidden_types": { "type": "array", "items": { "type": "string" } },
-                      "forbid_reassignable": { "type": "boolean" }
-                    },
-                    "description": "Module-level check configuration"
-                  },
-                  "message_template": { "type": "string" }
-                },
-                "required": ["message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_module_check"
-              },
-              {
-                "description": "AST context check evaluator config — ensures resource functions are used with context managers",
-                "type": "object",
-                "properties": {
-                  "target_functions": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Functions that must be used in context managers (e.g. open, Popen)" },
-                  "must_be_inside": { "type": "array", "items": { "type": "string" }, "description": "Required enclosing AST node types (e.g. With)" },
-                  "or_try_finally": { "type": "boolean", "default": true, "description": "Whether try/finally is an acceptable alternative" },
-                  "message_template": { "type": "string" }
-                },
-                "required": ["target_functions", "must_be_inside", "message_template"],
-                "additionalProperties": true,
-                "x-evaluator-type": "ast_context_check"
-              }
-            ]
-          },
-          "directive_revision": {
-            "type": "string",
-            "description": "Revision identifier of the source directive (e.g. 'v3', '2026-07-05-r2'). Maps to CG-IR node.directive_revision."
-          },
-          "control_version": {
-            "type": "string",
-            "description": "Version of evaluation logic for this rule. Maps to CG-IR node.control_version."
-          },
-          "metadata": {
-            "type": "object",
-            "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1. metadata.audit.authored_by is required for active rules and compiled to creator_provenance per §3.2.",
-            "properties": {
-              "audit": {
-                "type": "object",
-                "properties": {
-                  "authored_by": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Actor ID of directive creator. Inherited through lineage operations. Compiled to creator_provenance for segregation enforcement."
-                  },
-                  "approved_by": { "type": "string" },
-                  "approved_at": { "$ref": "#/definitions/utc_datetime" }
-                },
-                "additionalProperties": false
-              }
-            },
-            "patternProperties": {
-              "^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.).*": false
-            },
-            "additionalProperties": true
-          },
-          "weight": {
-            "type": "string",
-            "enum": ["critical", "high", "medium", "low", "informational"],
-            "description": "Severity weight."
-          },
-          "priority": {
-            "type": "string",
-            "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
-            "default": "operational"
-          },
-          "depends_on": {
-            "type": "array",
-            "items": { "type": "string" },
-            "uniqueItems": true,
-            "description": "IDs of rules that must be evaluated first."
-          },
-          "conflicts_with": {
-            "type": "array",
-            "items": { "type": "string" },
-            "uniqueItems": true,
-            "description": "IDs of rules that cannot coexist."
-          },
-          "conflict_resolution": {
-            "type": "object",
-            "description": "Explicit conflict resolution override. Takes precedence over computed resolution per SPECIFICATION.md Section 2.15.",
-            "properties": {
-              "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"] },
-              "defer_to": { "type": "string", "description": "Rule ID to defer to (required if strategy=defer_to)" }
-            },
-            "required": ["strategy"],
-            "if": { "properties": { "strategy": { "const": "defer_to" } } },
-            "then": { "required": ["defer_to"] },
-            "additionalProperties": false
-          },
-          "created_at": {
-            "$ref": "#/definitions/utc_datetime",
-            "description": "ISO 8601 UTC timestamp. Participates in conflict resolution recency step (§2.15)."
-          },
-          "expires_at": {
-            "$ref": "#/definitions/utc_datetime",
-            "description": "ISO 8601 UTC timestamp."
-          },
-          "parameters": {
-            "type": "object",
-            "description": "Configuration values passed to evaluator_config.",
-            "additionalProperties": true
-          },
-          "rationale": {
-            "type": "string",
-            "description": "Why this rule exists."
-          },
-          "remediation": {
-            "type": "string",
-            "description": "What to do if violated."
-          },
-          "lineage": {
-            "type": "object",
-            "description": "Tracks identity lifecycle operations. REQUIRED for fork, merge, split. NOT required for revision, rename, retire.",
-            "properties": {
-              "operation": { "type": "string", "enum": ["fork", "merge", "split"] },
-              "parent_lineage_ids": {
-                "type": "array",
-                "items": { "type": "string" },
-                "minItems": 1,
-                "description": "Immutable root IDs of parent directives. Cardinality: fork/split=1, merge=2."
-              },
-              "parent_execution_ids": {
-                "type": "array",
-                "items": { "type": "string" },
-                "minItems": 1,
-                "description": "Active execution IDs of parent directives at time of operation. Cardinality matches parent_lineage_ids."
-              },
-              "timestamp": { "$ref": "#/definitions/utc_datetime" },
-              "reason": { "type": "string" }
-            },
-            "required": ["operation", "parent_lineage_ids", "parent_execution_ids", "timestamp"],
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false,
-        "dependencies": {
-          "evaluator_type": ["evaluator_config"]
-        },
-        "allOf": [
-          {
-            "if": { "properties": { "evaluator_type": { "const": "regex" } } },
-            "then": {
-              "properties": {
-                "evaluator_config": {
-                  "type": "object",
-                  "required": ["pattern"],
-                  "properties": {
-                    "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
-                    "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
-                  },
-                  "not": { "required": ["field", "operator", "value", "threshold", "logic", "sub_evaluators"] },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          {
-            "if": { "properties": { "evaluator_type": { "const": "field_check" } } },
-            "then": {
-              "properties": {
-                "evaluator_config": {
-                  "type": "object",
-                  "required": ["field", "operator", "value"],
-                  "not": { "required": ["pattern", "threshold", "logic", "sub_evaluators"] },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          {
-            "if": { "properties": { "evaluator_type": { "const": "threshold" } } },
-            "then": {
-              "properties": {
-                "evaluator_config": {
-                  "type": "object",
-                  "required": ["field", "operator", "threshold"],
-                  "not": { "required": ["pattern", "value", "logic", "sub_evaluators"] },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          {
-            "if": { "properties": { "evaluator_type": { "const": "composite" } } },
-            "then": {
-              "properties": {
-                "evaluator_config": {
-                  "type": "object",
-                  "required": ["logic", "sub_evaluators"],
-                  "not": { "required": ["pattern", "field", "operator", "value", "threshold"] },
-                  "properties": {
-                    "sub_evaluators": {
-                      "type": "array",
-                      "maxItems": 64
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          {
-            "if": { "properties": { "lineage": { "properties": { "operation": { "enum": ["fork", "merge", "split"] } } } } },
-            "then": { "required": ["lineage"] }
-          },
-          {
-            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "fork" } } } } },
-            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
-          },
-          {
-            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "split" } } } } },
-            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
-          },
-          {
-            "if": { "properties": { "lineage": { "properties": { "operation": { "const": "merge" } } } } },
-            "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 2, "minItems": 2 }, "parent_execution_ids": { "maxItems": 2, "minItems": 2 } } } } }
-          },
-          {
-            "if": { "properties": { "evaluator_type": { "const": "composite" }, "evaluator_config": { "properties": { "logic": { "const": "not" } } } } },
-            "then": { "properties": { "evaluator_config": { "properties": { "sub_evaluators": { "maxItems": 1 } } } } }
-          }
-        ]
-      }
+      "items": { "$ref": "#/$defs/rule" }
     },
     "lineage_id": {
       "type": "string",
@@ -774,8 +279,8 @@
     },
     "evaluator_type": {
       "type": "string",
-      "enum": ["regex", "field_check", "threshold", "composite", "ast_walk", "ast_node_match", "ast_call_check", "ast_scope_check", "ast_module_check", "ast_context_check"],
-      "description": "Evaluator type for individual rule objects."
+      "enum": ["regex", "field_check", "threshold", "composite"],
+      "description": "Pure evaluator type. Discriminator for evaluator_config."
     },
     "evaluator_config": {
       "type": "object",
@@ -787,7 +292,7 @@
       "description": "Lifecycle state."
     },
     "created_at": {
-      "$ref": "#/definitions/utc_datetime",
+      "$ref": "#/$defs/utc_datetime",
       "description": "ISO 8601 UTC timestamp."
     },
     "weight": {
@@ -815,11 +320,343 @@
     }
   },
   "additionalProperties": true,
-  "definitions": {
+  "$defs": {
     "utc_datetime": {
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
       "description": "ISO 8601 UTC timestamp (Z suffix required). Offsets (±HH:MM) are rejected per SPECIFICATION.md §9.2.15."
+    },
+    "rule": {
+      "type": "object",
+      "required": ["lineage_id", "id", "type", "message", "evaluator_type", "evaluator_config", "status", "created_at"],
+      "properties": {
+        "lineage_id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?$",
+          "description": "Immutable root identifier. Assigned once, never reused. Used for audit trail."
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]+-[0-9]+[A-Z]?(-[A-Z0-9]+)*$",
+          "description": "Active execution identifier. May change on fork/merge/split. Used for CG-IR compilation."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["obligation", "prohibition", "permission"],
+          "description": "Deontic classification: obligation (MUST), prohibition (MUST NOT), permission (MAY)."
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable output or description."
+        },
+        "target": {
+          "type": "string",
+          "description": "Who or what this rule applies to. Deprecated in favor of scope for structured applicability filtering."
+        },
+        "scope": {
+          "type": "object",
+          "description": "Structured applicability context. Replaces bare target string for deterministic scope filtering and specificity scoring per SPECIFICATION.md §2.8.2.",
+          "properties": {
+            "target_type": {
+              "type": "string",
+              "enum": ["text", "structured", "binary", "any"]
+            },
+            "domain": {
+              "type": "string",
+              "description": "Regulatory or business domain (e.g. 'finance', 'environment', 'safety')."
+            },
+            "jurisdiction": {
+              "type": "string",
+              "description": "Legal or operational jurisdiction (e.g. 'EU', 'US-Federal', 'California')."
+            },
+            "filters": {
+              "type": "array",
+              "description": "Additional applicability filter predicates on target metadata or content.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": { "type": "string", "description": "Path within target metadata or content." },
+                  "operator": { "type": "string", "enum": ["eq", "neq", "in", "subset"] },
+                  "value": { "description": "Value to compare against." }
+                },
+                "required": ["field", "operator", "value"],
+                "additionalProperties": false
+              },
+              "minItems": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "deprecated", "superseded"],
+          "description": "Lifecycle state."
+        },
+        "anchor_ref": {
+          "type": "string",
+          "pattern": "^(section:[a-z][a-z_]*(/[a-z_]+)?|/.+)$",
+          "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2. JSON Pointer format follows RFC 6901."
+        },
+        "evaluator_type": {
+          "type": "string",
+          "enum": ["regex", "field_check", "threshold", "composite"],
+          "description": "Pure evaluator type. Discriminator for evaluator_config."
+        },
+        "evaluator_config": {
+          "oneOf": [
+            {
+              "description": "Regex evaluator config",
+              "type": "object",
+              "properties": {
+                "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
+              },
+              "required": ["pattern"],
+              "additionalProperties": false,
+              "x-evaluator-type": "regex"
+            },
+            {
+              "description": "Field check evaluator config",
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "operator": { "type": "string", "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "matches"] },
+                "value": {}
+              },
+              "required": ["field", "operator", "value"],
+              "additionalProperties": false,
+              "x-evaluator-type": "field_check"
+            },
+            {
+              "description": "Threshold evaluator config",
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "minLength": 1 },
+                "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte"] },
+                "threshold": { "type": "number", "description": "Finite IEEE 754 double. NaN and ±Infinity rejected at compile time per §9.2.15." }
+              },
+              "required": ["field", "operator", "threshold"],
+              "additionalProperties": false,
+              "x-evaluator-type": "threshold"
+            },
+            {
+              "description": "Composite evaluator config",
+              "type": "object",
+              "properties": {
+                "logic": { "type": "string", "enum": ["and", "or", "not"] },
+                "sub_evaluators": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/evaluator_config_entry"
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": ["logic", "sub_evaluators"],
+              "additionalProperties": false,
+              "x-evaluator-type": "composite"
+            }
+          ]
+        },
+        "directive_revision": {
+          "type": "string",
+          "description": "Revision identifier of the source directive (e.g. 'v3', '2026-07-05-r2'). Maps to CG-IR node.directive_revision."
+        },
+        "control_version": {
+          "type": "string",
+          "description": "Version of evaluation logic for this rule. Maps to CG-IR node.control_version."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1. metadata.audit.authored_by is required for active rules and compiled to creator_provenance per §3.2.",
+          "properties": {
+            "audit": {
+              "type": "object",
+              "properties": {
+                "authored_by": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Actor ID of directive creator. Inherited through lineage operations. Compiled to creator_provenance for segregation enforcement."
+                },
+                "approved_by": { "type": "string" },
+                "approved_at": { "$ref": "#/$defs/utc_datetime" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "patternProperties": {
+            "^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.).*": false
+          },
+          "additionalProperties": true
+        },
+        "weight": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "informational"],
+          "description": "Severity weight."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["constitutional", "statutory", "regulatory", "operational", "advisory"],
+          "default": "operational"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "IDs of rules that must be evaluated first."
+        },
+        "conflicts_with": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "description": "IDs of rules that cannot coexist."
+        },
+        "conflict_resolution": {
+          "type": "object",
+          "description": "Explicit conflict resolution override. Takes precedence over computed resolution per SPECIFICATION.md Section 2.15.",
+          "properties": {
+            "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"] },
+            "defer_to": { "type": "string", "description": "Rule ID to defer to (required if strategy=defer_to)" }
+          },
+          "required": ["strategy"],
+          "if": { "properties": { "strategy": { "const": "defer_to" } } },
+          "then": { "required": ["defer_to"] },
+          "additionalProperties": false
+        },
+        "created_at": {
+          "$ref": "#/$defs/utc_datetime",
+          "description": "ISO 8601 UTC timestamp. Participates in conflict resolution recency step (§2.15)."
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc_datetime",
+          "description": "ISO 8601 UTC timestamp."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Configuration values passed to evaluator_config.",
+          "additionalProperties": true
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this rule exists."
+        },
+        "remediation": {
+          "type": "string",
+          "description": "What to do if violated."
+        },
+        "lineage": {
+          "type": "object",
+          "description": "Tracks identity lifecycle operations. REQUIRED for fork, merge, split. NOT required for revision, rename, retire.",
+          "properties": {
+            "operation": { "type": "string", "enum": ["fork", "merge", "split"] },
+            "parent_lineage_ids": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "description": "Immutable root IDs of parent directives. Cardinality: fork/split=1, merge=2."
+            },
+            "parent_execution_ids": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "description": "Active execution IDs of parent directives at time of operation. Cardinality matches parent_lineage_ids."
+            },
+            "timestamp": { "$ref": "#/$defs/utc_datetime" },
+            "reason": { "type": "string" }
+          },
+          "required": ["operation", "parent_lineage_ids", "parent_execution_ids", "timestamp"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "dependentRequired": {
+        "evaluator_type": ["evaluator_config"]
+      },
+      "allOf": [
+        {
+          "if": { "required": ["evaluator_type"], "properties": { "evaluator_type": { "const": "regex" } } },
+          "then": {
+            "properties": {
+              "evaluator_config": {
+                "type": "object",
+                "required": ["pattern"],
+                "properties": {
+                  "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                  "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
+                },
+                "not": { "required": ["field", "operator", "value", "threshold", "logic", "sub_evaluators"] },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": { "required": ["evaluator_type"], "properties": { "evaluator_type": { "const": "field_check" } } },
+          "then": {
+            "properties": {
+              "evaluator_config": {
+                "type": "object",
+                "required": ["field", "operator", "value"],
+                "not": { "required": ["pattern", "threshold", "logic", "sub_evaluators"] },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": { "required": ["evaluator_type"], "properties": { "evaluator_type": { "const": "threshold" } } },
+          "then": {
+            "properties": {
+              "evaluator_config": {
+                "type": "object",
+                "required": ["field", "operator", "threshold"],
+                "not": { "required": ["pattern", "value", "logic", "sub_evaluators"] },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": { "required": ["evaluator_type"], "properties": { "evaluator_type": { "const": "composite" } } },
+          "then": {
+            "properties": {
+              "evaluator_config": {
+                "type": "object",
+                "required": ["logic", "sub_evaluators"],
+                "not": { "required": ["pattern", "field", "operator", "value", "threshold"] },
+                "properties": {
+                  "sub_evaluators": {
+                    "type": "array",
+                    "maxItems": 64
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": { "required": ["lineage"], "properties": { "lineage": { "properties": { "operation": { "enum": ["fork", "merge", "split"] } } } } },
+          "then": { "required": ["lineage"] }
+        },
+        {
+          "if": { "required": ["lineage"], "properties": { "lineage": { "properties": { "operation": { "const": "fork" } } } } },
+          "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
+        },
+        {
+          "if": { "required": ["lineage"], "properties": { "lineage": { "properties": { "operation": { "const": "split" } } } } },
+          "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 1 }, "parent_execution_ids": { "maxItems": 1 } } } } }
+        },
+        {
+          "if": { "required": ["lineage"], "properties": { "lineage": { "properties": { "operation": { "const": "merge" } } } } },
+          "then": { "properties": { "lineage": { "properties": { "parent_lineage_ids": { "maxItems": 2, "minItems": 2 }, "parent_execution_ids": { "maxItems": 2, "minItems": 2 } } } } }
+        },
+        {
+          "if": { "required": ["evaluator_type", "evaluator_config"], "properties": { "evaluator_type": { "const": "composite" }, "evaluator_config": { "properties": { "logic": { "const": "not" } } } } },
+          "then": { "properties": { "evaluator_config": { "properties": { "sub_evaluators": { "maxItems": 1 } } } } }
+        }
+      ]
     },
     "evaluator_config_entry": {
       "type": "object",
@@ -830,21 +667,21 @@
           "type": "object",
           "properties": {
             "evaluator_type": { "type": "string", "const": "regex" },
-              "evaluator_config": {
-                "type": "object",
-                "properties": {
-                  "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
-                  "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
-                },
-                "required": ["pattern"],
-                "additionalProperties": false
-              }
-            },
-            "required": ["evaluator_type", "evaluator_config"],
-            "additionalProperties": false
+            "evaluator_config": {
+              "type": "object",
+              "properties": {
+                "pattern": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "flags": { "type": "string", "default": "", "pattern": "^[ims]*$" }
+              },
+              "required": ["pattern"],
+              "additionalProperties": false
+            }
           },
-          {
-            "description": "Field check sub-evaluator",
+          "required": ["evaluator_type", "evaluator_config"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field check sub-evaluator",
           "type": "object",
           "properties": {
             "evaluator_type": { "type": "string", "const": "field_check" },
@@ -892,14 +729,14 @@
                 "logic": { "type": "string", "enum": ["and", "or", "not"] },
                 "sub_evaluators": {
                   "type": "array",
-                  "items": { "$ref": "#/definitions/evaluator_config_entry" },
+                  "items": { "$ref": "#/$defs/evaluator_config_entry" },
                   "minItems": 1,
                   "maxItems": 64
                 }
               },
               "allOf": [
                 {
-                  "if": { "properties": { "logic": { "const": "not" } } },
+                  "if": { "required": ["logic"], "properties": { "logic": { "const": "not" } } },
                   "then": { "properties": { "sub_evaluators": { "maxItems": 1 } } }
                 }
               ],
