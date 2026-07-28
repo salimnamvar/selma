@@ -263,7 +263,8 @@ class JsonRuleRepository(DirectiveRepository):
                     if sub_result.is_failure():
                         b_continue = False
                         logger.warning("Sub-evaluator: %s", sub_result.message)
-                        result = Result.failure(f"Sub-evaluator: {sub_result.message}")
+                        msg = f"Sub-evaluator: {sub_result.message}"
+                        result = Result.failure(msg)
                         break
                     parsed_subs.append(sub_result.unwrap())
                 if b_continue:

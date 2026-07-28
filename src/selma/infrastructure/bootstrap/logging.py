@@ -49,7 +49,7 @@ from selma.domain.value_objects.result import INVALID_RESULT
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.config.models import LoggingConfig
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _format_utc_timestamp(a_epoch_seconds: float) -> Result[str]:
@@ -118,8 +118,9 @@ def _build_file_handler(a_config: LoggingConfig) -> Result[dict[str, Any]]:
     b_continue: bool = True
 
     if b_continue and a_config.log_dir is None:
-        logger.warning("No log_dir configured")
-        result = Result.failure("No log_dir configured")
+        msg = "No log_dir configured"
+        logger.warning(msg)
+        result = Result.failure(msg)
         b_continue = False
 
     if b_continue and a_config.log_dir is not None:
@@ -426,9 +427,7 @@ def configure_logging(
             if async_result.is_success():
                 result = async_result
             else:
-                _logger.error(
-                    "Failed to enable async logging: %s", async_result.message
-                )
+                logger.error("Failed to enable async logging: %s", async_result.message)
                 result = async_result
         else:
             logger.warning("Async logging not enabled")
