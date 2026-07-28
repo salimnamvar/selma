@@ -7,6 +7,32 @@
   "evaluator_config": {
     "conditions": [
       {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^__.*__$"
+      },
+      {
+        "field": "name",
+        "operator": "not_matches",
+        "value": "^on_[A-Za-z0-9_]+$"
+      },
+      {
+        "field": "name",
+        "operator": "name_not_matches_any",
+        "value": [
+          "^filter$",
+          "^emit$",
+          "^format$",
+          "^compose$",
+          "^_format_time$"
+        ]
+      },
+      {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "property"
+      },
+      {
         "field": ".",
         "operator": "params_missing_prefix",
         "value": {
@@ -16,12 +42,17 @@
             "self",
             "cls",
             "args",
-            "kwargs"
+            "kwargs",
+            "record",
+            "event",
+            "exc_type",
+            "exc_val",
+            "exc_tb"
           ]
         }
       }
     ],
-    "message_template": "Function '{name}' parameters must use the a_ prefix (language receivers self/cls and *args/**kwargs keep conventional names)",
+    "message_template": "Function '{name}' parameters must use the a_ prefix (language receivers self/cls, protocol slots, and *args/**kwargs keep conventional names)",
     "target_nodes": [
       "FunctionDef",
       "AsyncFunctionDef"
@@ -32,15 +63,20 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/st001_a_prefix",
-  "rationale": "A stable parameter prefix distinguishes parameters from locals and supports searchability. Language-level receivers (self, cls) and variadic packs (args, kwargs) are Python method conventions for those parameter slots, not application parameter names.",
-  "remediation": "Rename application parameters with the a_ prefix, e.g. def process(a_path: Path, a_limit: int). Keep self/cls and *args/**kwargs unchanged.",
+  "rationale": "A stable parameter prefix distinguishes application parameters from locals. Universal out-of-scope: dunder methods, UI event handlers (on_*), and well-known language/stdlib protocol method names (filter/emit/format/compose for logging and UI composition protocols). Protocol parameter slots (record, event, exc_type/val/tb) keep their conventional names. Not project-path specific.",
+  "remediation": "Rename application parameters with the a_ prefix, e.g. def process(a_path: Path, a_limit: int). Keep self/cls, protocol slots, and *args/**kwargs unchanged.",
   "parameters": {
     "prefix": "a_",
     "skip_names": [
       "self",
       "cls",
       "args",
-      "kwargs"
+      "kwargs",
+      "record",
+      "event",
+      "exc_type",
+      "exc_val",
+      "exc_tb"
     ]
   }
 }

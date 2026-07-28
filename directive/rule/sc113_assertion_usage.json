@@ -2,27 +2,44 @@
   "lineage_id": "SC-113",
   "id": "SC-113",
   "type": "obligation",
-  "message": "Function should use assert for invariant checking",
-  "evaluator_type": "ast_walk",
+  "message": "Assert used for invariant checking must include a message",
+  "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "walk_nodes": [
-      "Assert"
+    "target_node": "Assert",
+    "conditions": [
+      {
+        "any_of": [
+          {
+            "field": "msg",
+            "operator": "not_exists"
+          },
+          {
+            "all_of": [
+              {
+                "field": "msg",
+                "operator": "exists"
+              },
+              {
+                "field": "msg",
+                "operator": "unparse_in",
+                "value": [
+                  "\"\"",
+                  "''",
+                  "None"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     ],
-    "count": {
-      "operator": "eq",
-      "value": 0
-    },
-    "message_template": "Function '{name}' has no assert statements — use assert for internal invariants",
-    "root_nodes": [
-      "FunctionDef",
-      "AsyncFunctionDef"
-    ]
+    "message_template": "Assert without message — document the invariant being checked"
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc113_assertion_usage",
-  "rationale": "Asserts help catch logic errors during development.",
-  "remediation": "Add assert statements to verify internal invariants at critical points."
+  "rationale": "Assert is for internal invariants during development, not for requiring every function to contain asserts (that conflicts with SC-007). When an assert is present, it must carry a human-readable invariant message. Functions without asserts are not violations.",
+  "remediation": "Add a message: assert condition, 'invariant: ...'. Prefer Result.failure for input validation (SC-007)."
 }

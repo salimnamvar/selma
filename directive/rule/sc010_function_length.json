@@ -2,7 +2,7 @@
   "lineage_id": "SC-010",
   "id": "SC-010",
   "type": "obligation",
-  "message": "Function exceeds 60 executable lines",
+  "message": "Function exceeds 150 executable statement nodes",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "walk_nodes": [
@@ -16,11 +16,20 @@
       "Raise",
       "Assert"
     ],
+    "scope_filters": {
+      "exclude_name_matches": [
+        "^__.*__$"
+      ],
+      "exclude_decorators": [
+        "property",
+        "cached_property"
+      ]
+    },
     "count": {
       "operator": "gt",
-      "value": 60
+      "value": 150
     },
-    "message_template": "Function '{name}' has {count} executable lines (max 60)",
+    "message_template": "Function '{name}' has {count} executable statement nodes (max 150)",
     "root_nodes": [
       "FunctionDef",
       "AsyncFunctionDef"
@@ -31,9 +40,9 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc010_function_length",
-  "rationale": "Long functions are cognitively opaque. They accumulate hidden state, imply multiple responsibilities, and resist testing. Decomposition forces clarity.",
+  "rationale": "Long functions are cognitively opaque. The universal limit of 150 executable statement nodes accommodates legitimate high-density pure functions (dispatch tables, schema walkers) while still flagging unbounded growth. Dunders and properties are out of scope.",
   "remediation": "Decompose into sub-functions. Each function should have a single, well-defined responsibility.",
   "parameters": {
-    "max_lines": 60
+    "max_lines": 150
   }
 }

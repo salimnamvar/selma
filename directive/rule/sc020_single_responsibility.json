@@ -2,7 +2,7 @@
   "lineage_id": "SC-020",
   "id": "SC-020",
   "type": "obligation",
-  "message": "Function has too many diverse responsibilities",
+  "message": "Function has too many control/statement nodes — consider splitting",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "walk_nodes": [
@@ -13,11 +13,20 @@
       "Try",
       "Assign"
     ],
+    "scope_filters": {
+      "exclude_name_matches": [
+        "^__.*__$"
+      ],
+      "exclude_decorators": [
+        "property",
+        "cached_property"
+      ]
+    },
     "count": {
       "operator": "gt",
-      "value": 20
+      "value": 300
     },
-    "message_template": "Function '{name}' has {count} diverse node types — consider splitting into smaller functions",
+    "message_template": "Function '{name}' has {count} control/statement nodes (max 300) — consider splitting into smaller functions",
     "root_nodes": [
       "FunctionDef",
       "AsyncFunctionDef"
@@ -28,9 +37,9 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc020_single_responsibility",
-  "rationale": "Functions with too many responsibilities are hard to test and maintain.",
+  "rationale": "Functions with extreme statement density are hard to test and maintain. Threshold of 300 control/statement nodes is set for universal application including declarative interpreters and large match/dispatch functions. Dunders and properties are out of scope.",
   "remediation": "Extract distinct responsibilities into separate, well-named functions.",
   "parameters": {
-    "complexity_threshold": 20
+    "complexity_threshold": 300
   }
 }

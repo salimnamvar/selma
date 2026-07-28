@@ -116,10 +116,11 @@ directives:
 sanctions:
   title: Sanctions & Remedies
   rows:
-  - violation_context: Function should use assert for invariant checking
+  - violation_context: Assert without message — document the invariant being checked
     enforcement_action: Machine lint finding via sc113_assertion_usage.json when automatically enforceable;
-      otherwise Lint rule (`pylint:assert-used`), code review gate.
-    remediation_path: Add assert statements to verify internal invariants at critical points.
+      otherwise code review gate.
+    remediation_path: Add a message to every assert documenting the invariant. Do not require asserts
+      on every function. Use Result.failure for input validation (SC-007).
 guidance:
   title: Guidance, Examples, and Reasoning
   purpose: For human and AI reasoning only. Do not execute this section as a linter.
