@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from typing import Any
 from typing import cast
 
@@ -68,9 +69,16 @@ class AstWalkEvaluator(EvaluatorBase):
         message_template = str(a_config.get("message_template", "") or "")
         threshold_value = count_config.get("value", 0)
         threshold_op = str(count_config.get("operator", "gt") or "gt")
+        scope_filters = self._as_str_dict(a_config.get("scope_filters", {}))
+        # Also accept scope filters nested under walk_config (legacy).
+        for key, value in self._as_str_dict(walk_config.get("scope_filters", {})).items():
+            if key not in scope_filters:
+                scope_filters[key] = value
         for node in ast.walk(a_tree):
             b_continue = True
             if b_continue and self.node_name(node) not in root_names:
+                b_continue = False
+            if b_continue and self._is_root_out_of_scope(node, scope_filters):
                 b_continue = False
             if b_continue:
                 count = self._count_child_nodes(node, walk_nodes, walk_config)
@@ -90,6 +98,57 @@ class AstWalkEvaluator(EvaluatorBase):
                         )
                     )
         return Result.success(findings)
+
+    @staticmethod
+    def _as_str_dict(a_value: object) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if isinstance(a_value, dict):
+            mapping = cast("dict[Any, Any]", a_value)
+            for key in mapping:
+                result[str(key)] = mapping[key]
+        return result
+
+    @staticmethod
+    def _is_root_out_of_scope(a_node: ast.AST, a_filters: dict[str, Any]) -> bool:
+        """Universal language-scope filters (not project paths).
+
+        Config keys (all optional lists/bools):
+          exclude_name_matches: regexes for function names (e.g. dunders)
+          exclude_name_equals: exact function names (language protocol methods)
+          exclude_decorators: decorator simple names (property, abstractmethod, ...)
+          exclude_if_contains_nodes: AST type names that mark generators etc.
+        """
+        b_continue = True
+        result = False
+        name = str(getattr(a_node, "name", "") or "")
+
+        if b_continue:
+            for pattern in _as_str_list(a_filters.get("exclude_name_matches")):
+                if re.search(pattern, name):
+                    b_continue = False
+                    result = True
+
+        if b_continue:
+            equals = set(_as_str_list(a_filters.get("exclude_name_equals")))
+            if name in equals:
+                b_continue = False
+                result = True
+
+        if b_continue:
+            for dec_name in _as_str_list(a_filters.get("exclude_decorators")):
+                if EvaluatorBase.has_decorator(a_node, dec_name):
+                    b_continue = False
+                    result = True
+
+        if b_continue:
+            node_types = set(_as_str_list(a_filters.get("exclude_if_contains_nodes")))
+            if node_types:
+                for child in AstWalkEvaluator._iter_own_scope_nodes(a_node):
+                    if EvaluatorBase.node_name(child) in node_types:
+                        b_continue = False
+                        result = True
+                        break
+        return result
 
     @staticmethod
     def _resolve_root_names(a_config: dict[str, Any]) -> set[str]:
@@ -218,3 +277,18 @@ class AstWalkEvaluator(EvaluatorBase):
             "breakdown": a_breakdown,
         }
         return result
+
+
+def _as_str_list(a_value: object) -> list[str]:
+    result: list[str] = []
+    if a_value is None:
+        result = []
+    elif isinstance(a_value, str):
+        result = [a_value]
+    elif isinstance(a_value, list):
+        result = [str(item) for item in cast("list[object]", a_value)]
+    elif isinstance(a_value, tuple):
+        result = [str(item) for item in cast("tuple[object, ...]", a_value)]
+    else:
+        result = [str(a_value)]
+    return result
