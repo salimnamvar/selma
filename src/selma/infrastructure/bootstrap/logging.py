@@ -119,8 +119,7 @@ def _build_file_handler(a_config: LoggingConfig) -> Result[dict[str, Any]]:
         result = Result.failure("No log_dir configured")
         b_continue = False
 
-    if b_continue:
-        assert a_config.log_dir is not None
+    if b_continue and a_config.log_dir is not None:
         log_dir: Path = Path(a_config.log_dir).expanduser()
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file: Path = log_dir / "selma.log"
@@ -268,8 +267,7 @@ def _build_logging_config(a_config: LoggingConfig) -> Result[dict[str, Any]]:
     root_handlers: list[str] = ["console_debug", "console_ops"]
 
     file_handler_result: Result[dict[str, Any]] = _build_file_handler(a_config)
-    if file_handler_result.is_success():
-        assert file_handler_result.value is not None
+    if file_handler_result.is_success() and file_handler_result.value is not None:
         handlers["file"] = file_handler_result.value
         root_handlers.append("file")
 
@@ -291,10 +289,15 @@ def _build_logging_config(a_config: LoggingConfig) -> Result[dict[str, Any]]:
             result = Result.failure("Failed to build logging sub-configs")
             b_continue = False
 
+    if b_continue and (
+        filters_result.value is None
+        or formatters_result.value is None
+        or loggers_result.value is None
+    ):
+        result = Result.failure("Failed to build logging sub-configs")
+        b_continue = False
+
     if b_continue:
-        assert filters_result.value is not None
-        assert formatters_result.value is not None
-        assert loggers_result.value is not None
         result = Result.success(
             {
                 "version": 1,
@@ -399,8 +402,13 @@ def configure_logging(
             result = Result.failure(logging_config_result.message)
             b_continue = False
 
-    if b_continue:
-        assert logging_config_result.value is not None
+    if b_continue and logging_config_result.value is None:
+        result = Result.failure(
+            logging_config_result.message or "Logging config missing value"
+        )
+        b_continue = False
+
+    if b_continue and logging_config_result.value is not None:
         logging.config.dictConfig(logging_config_result.value)
         logging.captureWarnings(True)  # noqa: FBT003 — stdlib API, positional required
 

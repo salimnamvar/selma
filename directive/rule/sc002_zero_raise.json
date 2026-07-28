@@ -2,30 +2,39 @@
   "lineage_id": "SC-002",
   "id": "SC-002",
   "type": "prohibition",
-  "message": "Forbidden raise in function \u2014 handle locally with Result.failure()",
+  "message": "Forbidden raise in function — handle locally with an explicit result type",
   "evaluator_type": "ast_walk",
   "evaluator_config": {
     "root_node": "FunctionDef",
     "walk_nodes": [
       "Raise"
     ],
+    "walk_config": {
+      "exclude_dunders": true,
+      "exclude_generators": false,
+      "exclude_decorator_names": [
+        "field_validator",
+        "model_validator",
+        "field_serializer",
+        "model_serializer",
+        "validator",
+        "root_validator"
+      ]
+    },
     "count": {
       "operator": "gt",
       "value": 0
     },
-    "message_template": "Forbidden raise in function '{name}' \u2014 handle locally with Result.failure()",
-    "exempt_dunders": true,
-    "exempt_generators": false
+    "message_template": "Forbidden raise in function '{name}' — handle locally with an explicit result type"
   },
   "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc002_zero_raise",
-  "rationale": "A raise is an unhandled failure transferred to an unknown caller. It is a declaration that the function does not know how to handle its own errors. In safety-critical systems, every error must be handled at the point of detection with full contextual awareness.",
-  "remediation": "Catch all exceptions within the function and convert them to Result.failure() or Result.success().",
+  "rationale": "A raise is an unhandled failure transferred to an unknown caller. It is a declaration that the function does not know how to handle its own errors. In safety-critical systems, every error must be handled at the point of detection with full contextual awareness. Language dunder methods may still raise when implementing language contracts (e.g. type construction); application logic must not.",
+  "remediation": "Catch failures within the function and convert them to a structured success/failure result (e.g. Result.failure / Result.success). Do not propagate exceptions for normal error paths.",
   "parameters": {
-    "exempt_dunders": true,
-    "exempt_adapters": true
+    "exempt_dunders": true
   }
 }

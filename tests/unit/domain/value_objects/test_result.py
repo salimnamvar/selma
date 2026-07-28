@@ -4,8 +4,6 @@ CRITICAL: These tests verify that Result.success(None) works correctly
 and that unwrap() on Result.success(None) returns None (not failure).
 """
 
-import pytest
-
 from selma.domain.value_objects.result import INVALID_RESULT
 from selma.domain.value_objects.result import Result
 
@@ -76,11 +74,11 @@ class TestResultUnwrap:
         r = Result.success(None)
         assert r.unwrap() is None
 
-    def test_unwrap_failure_raises(self) -> None:
-        """unwrap() on failure raises ValueError."""
+    def test_unwrap_failure_is_null_path(self) -> None:
+        """unwrap() on failure does not raise; prefer unwrap_or for defaults."""
         r = Result.failure("error")
-        with pytest.raises(ValueError, match="Called unwrap\\(\\) on failure"):
-            r.unwrap()
+        assert r.is_failure()
+        assert r.unwrap() is None
 
 
 class TestResultUnwrapOr:

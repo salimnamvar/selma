@@ -124,12 +124,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _find_pyproject() -> Path | None:
     """Find pyproject.toml by walking up from cwd."""
+    b_continue = True
+    result: Path | None = None
     current = Path.cwd()
     for parent in [current, *current.parents]:
-        candidate = parent / "pyproject.toml"
-        if candidate.is_file():
-            return candidate
-    return None
+        if b_continue:
+            candidate = parent / "pyproject.toml"
+            if candidate.is_file():
+                b_continue = False
+                result = candidate
+    return result
 
 
 def _load_config(a_args: argparse.Namespace) -> Result[SelmaConfig]:
@@ -295,17 +299,25 @@ def _normalize_argv(a_argv: list[str] | None) -> list[str]:
 
     Pre-commit and scripts call ``selma src/…`` without ``inspect``.
     """
+    b_continue = True
     argv = list(a_argv) if a_argv is not None else sys.argv[1:]
-    if not argv:
-        return argv
-    first = argv[0]
-    if first in {"inspect", "query", "tui", "-h", "--help", "--version"}:
-        return argv
-    if first.startswith("-"):
+    result = argv
+    if b_continue and not argv:
+        b_continue = False
+        result = argv
+    first = argv[0] if argv else ""
+    if b_continue and first in {"inspect", "query", "tui", "-h", "--help", "--version"}:
+        b_continue = False
+        result = argv
+    if b_continue and first.startswith("-"):
+        b_continue = False
         if any(not arg.startswith("-") for arg in argv):
-            return ["inspect", *argv]
-        return argv
-    return ["inspect", *argv]
+            result = ["inspect", *argv]
+        else:
+            result = argv
+    if b_continue:
+        result = ["inspect", *argv]
+    return result
 
 
 async def async_main(a_argv: list[str] | None = None) -> Result[int]:

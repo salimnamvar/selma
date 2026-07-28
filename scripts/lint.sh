@@ -75,24 +75,11 @@ fi
 
 echo "▸ Running selma self-lint: ${SELMA_TARGET}…"
 # Self-lint with full rule set. Process/governance rules SC-120–133 are
-# enforced outside AST evaluation. Exit codes:
-#   0 — no critical/high findings
-#   1 — critical/high findings (report; baseline debt may remain while the
-#       catalog is brought into full compliance)
-#   2+ — tool/runtime failure (always blocks)
-set +e
-"$PYTHON" -m selma inspect "${SELMA_TARGET}" --skip-tools
-_selma_ec=$?
-set -e
-if [[ "${_selma_ec}" -ge 2 ]]; then
+# enforced outside AST evaluation. Any critical/high finding blocks commit.
+if ! "$PYTHON" -m selma inspect "${SELMA_TARGET}" --skip-tools; then
     echo ""
-    echo "✗ Selma failed to run (exit ${_selma_ec}). Commit blocked."
+    echo "✗ Selma critical/high findings or runtime failure. Commit blocked."
     exit 1
-fi
-if [[ "${_selma_ec}" -eq 1 ]]; then
-    echo ""
-    echo "⚠ Selma reported critical/high findings (exit 1)."
-    echo "  Ruff/pyright still gate the commit. Resolve findings in follow-up."
 fi
 
 echo "✓ All lint checks passed."

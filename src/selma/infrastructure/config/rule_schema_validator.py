@@ -66,11 +66,16 @@ class RuleSchemaValidator:
     @staticmethod
     def _is_pure_evaluator_document(a_raw: dict[str, Any]) -> bool:
         """Return True when document uses only pure schema evaluator types."""
+        b_continue = True
+        result = False
         evaluator_type = a_raw.get("evaluator_type")
-        if not isinstance(evaluator_type, str):
-            return False
-        pure = {member.value for member in PureEvaluatorType}
-        return evaluator_type in pure
+        if b_continue and not isinstance(evaluator_type, str):
+            b_continue = False
+            result = False
+        if b_continue:
+            pure = {member.value for member in PureEvaluatorType}
+            result = str(evaluator_type) in pure
+        return result
 
     def validate_document(self, a_raw: dict[str, Any]) -> Result[Rule]:
         """Validate a single rule document into a domain Rule.

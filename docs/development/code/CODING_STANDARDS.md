@@ -154,7 +154,24 @@ Do not reimplement validation trees, TUI frameworks, or result monads when a mai
 
 ---
 
-## 7. Safe Coding Doctrine (project self-lint)
+## 7. Universal directives (no project hardcoding)
+
+Rules under `directive/rule/*.json` and policies under `directive/policy/*.yaml`
+are **universal standards**. They MUST be written from language patterns and
+governance knowledge — never from a single codebase's private names.
+
+| Allowed | Forbidden |
+| :--- | :--- |
+| Language structure (dunders, generators, properties, `self`/`cls`) | Function-name allowlists (`unwrap`, `list_*`, product APIs) |
+| Structural decorator patterns (e.g. schema field validators) | Framework product callouts as special cases (framework X only) |
+| Catalogs of known hazardous APIs by semantics (`eval`, `datetime.now`) | Project path, module, or argument name inclusion/exclusion lists |
+| Severity / priority / deontic type | “Exclude argument `xyz` because our app uses it” |
+
+When Selma flags correct universal doctrine, **fix the code**. When the rule is
+wrong for all languages/projects, **improve the rule/policy pair** — do not add
+a one-off name exclusion.
+
+## 8. Safe Coding Doctrine (project self-lint)
 
 Implement and respect directives under `directive/`, especially:
 
@@ -178,7 +195,7 @@ After every subtask:
 
 ---
 
-## 8. Git commits
+## 9. Git commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -199,7 +216,7 @@ One logical subtask → one commit. Message in complete sentences when the body 
 
 ---
 
-## 9. Testing
+## 10. Testing
 
 - Unit tests mirror package layout under `tests/unit/`.
 - Domain tests: pure, no I/O.
@@ -208,7 +225,7 @@ One logical subtask → one commit. Message in complete sentences when the body 
 
 ---
 
-## 10. Policy runtime prohibition
+## 11. Policy runtime prohibition
 
 `directive/policy/*.yaml` and doctrine models **must not** drive inspection evaluation.
 
@@ -218,12 +235,13 @@ One logical subtask → one commit. Message in complete sentences when the body 
 
 ---
 
-## 11. Checklist for every PR / agent session
+## 12. Checklist for every PR / agent session
 
 - [ ] Domain concepts live only under `domain/`
 - [ ] Infrastructure maps in; does not redefine domain types
 - [ ] Ports are async; use cases orchestrate
 - [ ] Names follow Google + ROD
 - [ ] Directives still paired (rule + policy)
-- [ ] Lint clean on changed paths
+- [ ] Directives stay universal (no project name allowlists)
+- [ ] Lint clean on changed paths (critical/high = zero)
 - [ ] Conventional commit per subtask

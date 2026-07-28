@@ -18,17 +18,25 @@ from selma.infrastructure.evaluators.base import EvaluatorBase
 
 
 def _as_str_list(a_value: object) -> list[str]:
-    if a_value is None:
-        return []
-    if isinstance(a_value, str):
-        return [a_value]
-    if isinstance(a_value, list):
+    b_continue = True
+    result: list[str] = []
+    if b_continue and a_value is None:
+        b_continue = False
+        result = []
+    if b_continue and isinstance(a_value, str):
+        b_continue = False
+        result = [a_value]
+    if b_continue and isinstance(a_value, list):
+        b_continue = False
         values = cast("list[Any]", a_value)
-        return [str(values[i]) for i in range(len(values))]
-    if isinstance(a_value, tuple):
+        result = [str(values[i]) for i in range(len(values))]
+    if b_continue and isinstance(a_value, tuple):
+        b_continue = False
         values_t = cast("tuple[Any, ...]", a_value)
-        return [str(values_t[i]) for i in range(len(values_t))]
-    return [str(a_value)]
+        result = [str(values_t[i]) for i in range(len(values_t))]
+    if b_continue:
+        result = [str(cast("object", a_value))]
+    return result
 
 
 def _as_str_set(a_value: object) -> set[str]:
@@ -173,210 +181,311 @@ def _match_condition(
     a_depth: int = 0,
     a_max_depth: int = 64,
 ) -> bool:
-    if a_depth >= a_max_depth:
-        return False
-    if "all_of" in a_cond:
+    b_continue = True
+    result = False
+
+    if b_continue and a_depth >= a_max_depth:
+        b_continue = False
+        result = False
+
+    if b_continue and "all_of" in a_cond:
+        b_continue = False
         items = _as_cond_list(a_cond.get("all_of"))
-        return all(
+        result = all(
             _match_condition(
                 a_node, c, a_ctx, a_depth=a_depth + 1, a_max_depth=a_max_depth
             )
             for c in items
         )
-    if "any_of" in a_cond:
+    if b_continue and "any_of" in a_cond:
+        b_continue = False
         items = _as_cond_list(a_cond.get("any_of"))
-        return any(
+        result = any(
             _match_condition(
                 a_node, c, a_ctx, a_depth=a_depth + 1, a_max_depth=a_max_depth
             )
             for c in items
         )
-    if "not" in a_cond:
+    if b_continue and "not" in a_cond:
+        b_continue = False
         inner = a_cond.get("not")
         if not isinstance(inner, dict):
-            return False
-        return not _match_condition(
-            a_node,
-            _as_dict(cast("object", inner)),
-            a_ctx,
-            a_depth=a_depth + 1,
-            a_max_depth=a_max_depth,
-        )
+            result = False
+        else:
+            result = not _match_condition(
+                a_node,
+                _as_dict(cast("object", inner)),
+                a_ctx,
+                a_depth=a_depth + 1,
+                a_max_depth=a_max_depth,
+            )
 
-    field = str(a_cond.get("field", ""))
-    operator = str(a_cond.get("operator", ""))
-    value: object = a_cond.get("value", "")
-    field_value = _resolve_field(a_node, field)
+    field = ""
+    operator = ""
+    value: object = ""
+    field_value: Any = None
+    if b_continue:
+        field = str(a_cond.get("field", ""))
+        operator = str(a_cond.get("operator", ""))
+        value = a_cond.get("value", "")
+        field_value = _resolve_field(a_node, field)
 
-    if operator == "exists":
+    if b_continue and operator == "exists":
+        b_continue = False
         if field_value is None:
-            return False
-        sized = _collection_size(field_value)
-        return True if sized is None else sized > 0
-    if operator == "not_exists":
+            result = False
+        else:
+            sized = _collection_size(field_value)
+            result = True if sized is None else sized > 0
+    if b_continue and operator == "not_exists":
+        b_continue = False
         if field_value is None:
-            return True
-        sized = _collection_size(field_value)
-        return False if sized is None else sized == 0
-    if operator in {"equals", "eq"}:
-        return str(_ast_to_comparable(field_value)) == str(value)
-    if operator in {"not_equals", "neq"}:
-        return str(_ast_to_comparable(field_value)) != str(value)
-    if operator == "matches":
-        return bool(re.search(str(value), str(_ast_to_comparable(field_value))))
-    if operator == "not_matches":
-        return not bool(re.search(str(value), str(_ast_to_comparable(field_value))))
-    if operator == "contains":
-        return str(value) in str(_ast_to_comparable(field_value))
-    if operator == "not_contains":
-        return str(value) not in str(_ast_to_comparable(field_value))
-    if operator == "contains_node":
-        return _subtree_contains_node_type(
+            result = True
+        else:
+            sized = _collection_size(field_value)
+            result = False if sized is None else sized == 0
+    if b_continue and operator in {"equals", "eq"}:
+        b_continue = False
+        result = str(_ast_to_comparable(field_value)) == str(value)
+    if b_continue and operator in {"not_equals", "neq"}:
+        b_continue = False
+        result = str(_ast_to_comparable(field_value)) != str(value)
+    if b_continue and operator == "matches":
+        b_continue = False
+        result = bool(re.search(str(value), str(_ast_to_comparable(field_value))))
+    if b_continue and operator == "not_matches":
+        b_continue = False
+        result = not bool(re.search(str(value), str(_ast_to_comparable(field_value))))
+    if b_continue and operator == "contains":
+        b_continue = False
+        result = str(value) in str(_ast_to_comparable(field_value))
+    if b_continue and operator == "not_contains":
+        b_continue = False
+        result = str(value) not in str(_ast_to_comparable(field_value))
+    if b_continue and operator == "contains_node":
+        b_continue = False
+        result = _subtree_contains_node_type(
             a_node if field in ("", ".") else field_value, str(value)
         )
-    if operator == "subtree_contains_node":
+    if b_continue and operator == "subtree_contains_node":
+        b_continue = False
         target = a_node if field in ("", ".") else field_value
         if not isinstance(target, ast.AST):
-            return False
-        return _subtree_contains_node_type(target, str(value))
-    if operator == "unparse_matches":
-        return bool(re.search(str(value), _safe_unparse(field_value), re.IGNORECASE))
-    if operator == "unparse_not_matches":
-        return not bool(
+            result = False
+        else:
+            result = _subtree_contains_node_type(target, str(value))
+    if b_continue and operator == "unparse_matches":
+        b_continue = False
+        result = bool(re.search(str(value), _safe_unparse(field_value), re.IGNORECASE))
+    if b_continue and operator == "unparse_not_matches":
+        b_continue = False
+        result = not bool(
             re.search(str(value), _safe_unparse(field_value), re.IGNORECASE)
         )
-    if operator == "unparse_contains":
-        return str(value) in _safe_unparse(field_value)
-    if operator == "unparse_not_contains":
-        return str(value) not in _safe_unparse(field_value)
-    if operator == "unparse_in":
-        return _safe_unparse(field_value) in set(_as_str_list(value))
-    if operator == "unparse_not_in":
-        return _safe_unparse(field_value) not in set(_as_str_list(value))
-    if operator == "has_mutable_defaults":
-        return _has_mutable_defaults(a_node, _as_str_set(value))
-    if operator == "params_missing_prefix":
-        return _params_missing_prefix(a_node, _as_dict(value), a_ctx.get("tree"))
-    if operator == "params_any_unannotated":
-        return _params_any_unannotated(a_node, _as_dict(value))
-    if operator == "body_contains_any":
-        return _body_contains_any(a_node, _as_str_list(value))
-    if operator == "body_not_contains_any":
-        return not _body_contains_any(a_node, _as_str_list(value))
-    if operator == "calls_own_name":
-        return _calls_own_name(a_node)
-    if operator == "param_names_intersect":
-        return bool(_param_names(a_node) & _as_str_set(value))
-    if operator == "param_names_disjoint":
-        return not bool(_param_names(a_node) & _as_str_set(value))
-    if operator == "calls_any":
-        return _calls_any(a_node, _as_dict(value))
-    if operator == "has_decorator":
-        return EvaluatorBase.has_decorator(a_node, str(value))
-    if operator == "not_has_decorator":
-        return not EvaluatorBase.has_decorator(a_node, str(value))
-    if operator == "call_message_missing_or_empty":
-        return _call_message_missing_or_empty(a_node, _as_dict(value))
-    if operator == "attr_call_on_shared_state":
+    if b_continue and operator == "unparse_contains":
+        b_continue = False
+        result = str(value) in _safe_unparse(field_value)
+    if b_continue and operator == "unparse_not_contains":
+        b_continue = False
+        result = str(value) not in _safe_unparse(field_value)
+    if b_continue and operator == "unparse_in":
+        b_continue = False
+        result = _safe_unparse(field_value) in set(_as_str_list(value))
+    if b_continue and operator == "unparse_not_in":
+        b_continue = False
+        result = _safe_unparse(field_value) not in set(_as_str_list(value))
+    if b_continue and operator == "has_mutable_defaults":
+        b_continue = False
+        result = _has_mutable_defaults(a_node, _as_str_set(value))
+    if b_continue and operator == "params_missing_prefix":
+        b_continue = False
+        result = _params_missing_prefix(a_node, _as_dict(value), a_ctx.get("tree"))
+    if b_continue and operator == "params_any_unannotated":
+        b_continue = False
+        result = _params_any_unannotated(a_node, _as_dict(value))
+    if b_continue and operator == "body_contains_any":
+        b_continue = False
+        result = _body_contains_any(a_node, _as_str_list(value))
+    if b_continue and operator == "body_not_contains_any":
+        b_continue = False
+        result = not _body_contains_any(a_node, _as_str_list(value))
+    if b_continue and operator == "calls_own_name":
+        b_continue = False
+        result = _calls_own_name(a_node)
+    if b_continue and operator == "param_names_intersect":
+        b_continue = False
+        result = bool(_param_names(a_node) & _as_str_set(value))
+    if b_continue and operator == "param_names_disjoint":
+        b_continue = False
+        result = not bool(_param_names(a_node) & _as_str_set(value))
+    if b_continue and operator == "calls_any":
+        b_continue = False
+        result = _calls_any(a_node, _as_dict(value))
+    if b_continue and operator == "has_decorator":
+        b_continue = False
+        result = EvaluatorBase.has_decorator(a_node, str(value))
+    if b_continue and operator == "not_has_decorator":
+        b_continue = False
+        result = not EvaluatorBase.has_decorator(a_node, str(value))
+    if b_continue and operator == "call_message_missing_or_empty":
+        b_continue = False
+        result = _call_message_missing_or_empty(a_node, _as_dict(value))
+    if b_continue and operator == "attr_call_on_shared_state":
+        b_continue = False
         tree = a_ctx.get("tree")
         if not isinstance(tree, ast.AST):
-            return False
-        return _attr_call_on_shared_state(a_node, tree, _as_dict(value))
-    if operator == "except_type_names_intersect":
-        return bool(_except_type_names(a_node) & _as_str_set(value))
-    if operator == "except_type_names_disjoint":
-        return not bool(_except_type_names(a_node) & _as_str_set(value))
-    if operator == "except_bound_name_unused":
-        return _except_bound_name_unused(a_node, _as_str_list(value))
-    if operator == "name_not_matches_any":
+            result = False
+        else:
+            result = _attr_call_on_shared_state(a_node, tree, _as_dict(value))
+    if b_continue and operator == "except_type_names_intersect":
+        b_continue = False
+        result = bool(_except_type_names(a_node) & _as_str_set(value))
+    if b_continue and operator == "except_type_names_disjoint":
+        b_continue = False
+        result = not bool(_except_type_names(a_node) & _as_str_set(value))
+    if b_continue and operator == "except_bound_name_unused":
+        b_continue = False
+        result = _except_bound_name_unused(a_node, _as_str_list(value))
+    if b_continue and operator == "name_not_matches_any":
+        b_continue = False
         name = str(getattr(a_node, "name", ""))
-        return not any(re.search(pattern, name) for pattern in _as_str_list(value))
-    if operator == "star_import":
-        return _is_star_import(field_value if field_value is not None else a_node)
-    if operator == "not_empty":
+        result = not any(re.search(pattern, name) for pattern in _as_str_list(value))
+    if b_continue and operator == "star_import":
+        b_continue = False
+        result = _is_star_import(field_value if field_value is not None else a_node)
+    if b_continue and operator == "not_empty":
+        b_continue = False
         sized = _collection_size(field_value)
-        return bool(sized is not None and sized > 0)
-    return False
+        result = bool(sized is not None and sized > 0)
+    return result
 
 
 def _is_star_import(a_value: Any) -> bool:
-    if isinstance(a_value, list):
+    b_continue = True
+    result = False
+    if b_continue and isinstance(a_value, list):
+        b_continue = False
+        result = False
         for alias in cast("list[object]", a_value):
             if isinstance(alias, ast.alias) and alias.name == "*":
-                return True
-        return False
-    if isinstance(a_value, ast.ImportFrom):
-        return any(alias.name == "*" for alias in a_value.names)
-    return False
+                result = True
+    if b_continue and isinstance(a_value, ast.ImportFrom):
+        b_continue = False
+        result = any(alias.name == "*" for alias in a_value.names)
+    if b_continue:
+        result = False
+    return result
 
 
 def _collection_size(a_value: object) -> int | None:
-    if isinstance(a_value, (str, list, tuple, set, dict)):
-        return len(cast("Sized", a_value))
-    return None
+    b_continue = True
+    result: int | None = None
+    if b_continue and isinstance(a_value, (str, list, tuple, set, dict)):
+        b_continue = False
+        result = len(cast("Sized", a_value))
+    if b_continue:
+        result = None
+    return result
 
 
 def _ast_to_comparable(a_value: Any) -> Any:
-    if isinstance(a_value, ast.Attribute):
-        return a_value.attr
-    if isinstance(a_value, ast.Name):
-        return a_value.id
-    if isinstance(a_value, ast.Constant):
-        return a_value.value
-    if isinstance(a_value, ast.AST):
-        return ast.unparse(a_value)
-    return a_value
+    b_continue = True
+    result: Any = a_value
+    if b_continue and isinstance(a_value, ast.Attribute):
+        b_continue = False
+        result = a_value.attr
+    if b_continue and isinstance(a_value, ast.Name):
+        b_continue = False
+        result = a_value.id
+    if b_continue and isinstance(a_value, ast.Constant):
+        b_continue = False
+        result = a_value.value
+    if b_continue and isinstance(a_value, ast.AST):
+        b_continue = False
+        result = ast.unparse(a_value)
+    if b_continue:
+        result = a_value
+    return result
 
 
 def _safe_unparse(a_value: Any) -> str:
-    if a_value is None:
-        return ""
-    if isinstance(a_value, ast.AST):
-        return ast.unparse(a_value)
-    return str(_ast_to_comparable(a_value))
+    b_continue = True
+    result = ""
+    if b_continue and a_value is None:
+        b_continue = False
+        result = ""
+    if b_continue and isinstance(a_value, ast.AST):
+        b_continue = False
+        result = ast.unparse(a_value)
+    if b_continue:
+        result = str(_ast_to_comparable(a_value))
+    return result
 
 
 def _resolve_field(a_node: ast.AST, a_field: str) -> Any:
-    if a_field in ("", ".", "self"):
-        return a_node
-    current: Any = a_node
-    for part in a_field.split("."):
-        if current is None:
-            return None
-        if isinstance(current, ast.AST):
-            current = getattr(current, part, None)
-        else:
-            return None
-    return current
+    b_continue = True
+    result: Any = None
+    if b_continue and a_field in ("", ".", "self"):
+        b_continue = False
+        result = a_node
+    if b_continue:
+        current: Any = a_node
+        for part in a_field.split("."):
+            if b_continue and current is None:
+                b_continue = False
+                result = None
+            if b_continue and isinstance(current, ast.AST):
+                current = getattr(current, part, None)
+            elif b_continue:
+                b_continue = False
+                result = None
+        if b_continue:
+            result = current
+    return result
 
 
 def _subtree_contains_node_type(a_node: Any, a_type_name: str) -> bool:
-    if not isinstance(a_node, ast.AST):
-        return False
-    return any(type(child).__name__ == a_type_name for child in ast.walk(a_node))
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, ast.AST):
+        b_continue = False
+        result = False
+    if b_continue:
+        result = any(type(child).__name__ == a_type_name for child in ast.walk(a_node))
+    return result
 
 
 def _skip_param_names(a_cfg: dict[str, Any]) -> set[str]:
+    b_continue = True
+    result: set[str] = {"self", "cls"}
     raw = a_cfg.get("skip_names", ["self", "cls"])
     names = _as_str_list(raw)
-    if not names:
-        return {"self", "cls"}
-    return set(names)
+    if b_continue and not names:
+        b_continue = False
+        result = {"self", "cls"}
+    if b_continue:
+        result = set(names)
+    return result
 
 
 def _iter_function_params(a_node: ast.AST) -> list[ast.arg]:
-    args = getattr(a_node, "args", None)
-    if args is None:
-        return []
-    params: list[ast.arg] = []
-    params.extend(getattr(args, "posonlyargs", []) or [])
-    params.extend(getattr(args, "args", []) or [])
-    params.extend(getattr(args, "kwonlyargs", []) or [])
-    if getattr(args, "vararg", None) is not None:
-        params.append(args.vararg)
-    if getattr(args, "kwarg", None) is not None:
-        params.append(args.kwarg)
-    return params
+    b_continue = True
+    result: list[ast.arg] = []
+    args_obj: object = getattr(a_node, "args", None)
+    if b_continue and args_obj is None:
+        b_continue = False
+        result = []
+    if b_continue and isinstance(args_obj, ast.arguments):
+        params: list[ast.arg] = []
+        params.extend(list(args_obj.posonlyargs))
+        params.extend(list(args_obj.args))
+        params.extend(list(args_obj.kwonlyargs))
+        if args_obj.vararg is not None:
+            params.append(args_obj.vararg)
+        if args_obj.kwarg is not None:
+            params.append(args_obj.kwarg)
+        result = params
+    return result
 
 
 def _param_names(a_node: ast.AST) -> set[str]:
@@ -390,27 +499,40 @@ def _has_no_non_self_args(a_node: ast.AST, a_exemptions: dict[str, Any]) -> bool
 
 
 def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
-    args = getattr(a_node, "args", None)
-    if args is None:
-        return False
-    defaults: list[ast.expr] = []
-    defaults.extend(getattr(args, "defaults", []) or [])
-    defaults.extend(
-        [d for d in (getattr(args, "kw_defaults", []) or []) if d is not None]
-    )
-    type_to_ast = {
-        "list": ast.List,
-        "dict": ast.Dict,
-        "set": ast.Set,
-    }
-    for default in defaults:
-        for type_name, node_cls in type_to_ast.items():
-            if type_name in a_types and isinstance(default, node_cls):
-                return True
-        if isinstance(default, ast.Call) and isinstance(default.func, ast.Name):
-            if default.func.id in a_types:
-                return True
-    return False
+    b_continue = True
+    result = False
+    args_obj: object = getattr(a_node, "args", None)
+    if b_continue and not isinstance(args_obj, ast.arguments):
+        b_continue = False
+        result = False
+    if b_continue and isinstance(args_obj, ast.arguments):
+        defaults: list[ast.expr] = []
+        defaults.extend(list(args_obj.defaults))
+        defaults.extend([d for d in args_obj.kw_defaults if d is not None])
+        type_to_ast: dict[str, type[ast.AST]] = {
+            "list": ast.List,
+            "dict": ast.Dict,
+            "set": ast.Set,
+        }
+        for default in defaults:
+            if b_continue:
+                for type_name, node_cls in type_to_ast.items():
+                    if (
+                        b_continue
+                        and type_name in a_types
+                        and isinstance(default, node_cls)
+                    ):
+                        b_continue = False
+                        result = True
+            if (
+                b_continue
+                and isinstance(default, ast.Call)
+                and isinstance(default.func, ast.Name)
+            ):
+                if default.func.id in a_types:
+                    b_continue = False
+                    result = True
+    return result
 
 
 def _find_enclosing_class(a_node: ast.AST, a_tree: ast.AST) -> ast.ClassDef | None:
@@ -429,47 +551,67 @@ def _find_enclosing_class(a_node: ast.AST, a_tree: ast.AST) -> ast.ClassDef | No
 
 
 def _is_method_in_subclass(a_node: ast.AST, a_tree: ast.AST) -> bool:
-    if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return False
-    enclosing = _find_enclosing_class(a_node, a_tree)
-    if enclosing is None:
-        return False
-    return bool(enclosing.bases)
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        b_continue = False
+        result = False
+    if b_continue:
+        enclosing = _find_enclosing_class(a_node, a_tree)
+        if enclosing is None:
+            b_continue = False
+            result = False
+        if b_continue and enclosing is not None:
+            result = bool(enclosing.bases)
+    return result
 
 
 def _params_missing_prefix(
     a_node: ast.AST, a_cfg: dict[str, Any], a_tree: ast.AST | None = None
 ) -> bool:
-    if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return False
-    if a_cfg.get("exempt_overrides", False) and a_tree is not None:
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        b_continue = False
+        result = False
+    if b_continue and a_cfg.get("exempt_overrides", False) and a_tree is not None:
         if _is_method_in_subclass(a_node, a_tree):
-            return False
-    prefix = str(a_cfg.get("prefix", "a_"))
-    allow_private = bool(a_cfg.get("allow_private_underscore", True))
-    skip = _skip_param_names(a_cfg)
-    for param in _iter_function_params(a_node):
-        name = param.arg
-        if name in skip:
-            continue
-        if name.startswith(prefix):
-            continue
-        if allow_private and name.startswith("_"):
-            continue
-        return True
-    return False
+            b_continue = False
+            result = False
+    if b_continue:
+        prefix = str(a_cfg.get("prefix", "a_"))
+        allow_private = bool(a_cfg.get("allow_private_underscore", True))
+        skip = _skip_param_names(a_cfg)
+        found_missing = False
+        for param in _iter_function_params(a_node):
+            name = param.arg
+            check = True
+            if check and name in skip:
+                check = False
+            if check and name.startswith(prefix):
+                check = False
+            if check and allow_private and name.startswith("_"):
+                check = False
+            if check:
+                found_missing = True
+        result = found_missing
+    return result
 
 
 def _params_any_unannotated(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
-    if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return False
-    skip = _skip_param_names(a_cfg)
-    for param in _iter_function_params(a_node):
-        if param.arg in skip:
-            continue
-        if param.annotation is None:
-            return True
-    return False
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        b_continue = False
+        result = False
+    if b_continue:
+        skip = _skip_param_names(a_cfg)
+        found = False
+        for param in _iter_function_params(a_node):
+            if not found and param.arg not in skip and param.annotation is None:
+                found = True
+        result = found
+    return result
 
 
 def _body_contains_any(a_node: ast.AST, a_needles: list[str]) -> bool:
@@ -486,70 +628,110 @@ def _body_contains_any(a_node: ast.AST, a_needles: list[str]) -> bool:
 
 
 def _calls_own_name(a_node: ast.AST) -> bool:
-    if not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return False
-    name = a_node.name
-    for child in ast.walk(a_node):
-        if not isinstance(child, ast.Call):
-            continue
-        if isinstance(child.func, ast.Name) and child.func.id == name:
-            return True
-        if isinstance(child.func, ast.Attribute) and child.func.attr == name:
-            if isinstance(child.func.value, ast.Name) and child.func.value.id in {
-                "self",
-                "cls",
-            }:
-                return True
-    return False
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        b_continue = False
+        result = False
+    if b_continue and isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        name = a_node.name
+        for child in ast.walk(a_node):
+            if b_continue and isinstance(child, ast.Call):
+                if (
+                    b_continue
+                    and isinstance(child.func, ast.Name)
+                    and child.func.id == name
+                ):
+                    b_continue = False
+                    result = True
+                if (
+                    b_continue
+                    and isinstance(child.func, ast.Attribute)
+                    and child.func.attr == name
+                ):
+                    if isinstance(
+                        child.func.value, ast.Name
+                    ) and child.func.value.id in {"self", "cls"}:
+                        b_continue = False
+                        result = True
+    return result
 
 
 def _calls_any(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
+    b_continue = True
+    result = False
     names = set(_as_str_list(a_cfg.get("names")))
     attrs = set(_as_str_list(a_cfg.get("attrs")))
     modules = set(_as_str_list(a_cfg.get("module_attrs")))
     for child in ast.walk(a_node):
-        if not isinstance(child, ast.Call):
-            continue
-        if isinstance(child.func, ast.Name) and child.func.id in names:
-            return True
-        if isinstance(child.func, ast.Attribute):
-            if child.func.attr in attrs:
-                return True
-            if child.func.attr in modules and isinstance(child.func.value, ast.Name):
-                if f"{child.func.value.id}.{child.func.attr}" in modules:
-                    return True
+        if b_continue and isinstance(child, ast.Call):
             if (
-                child.func.attr == "run"
-                and isinstance(child.func.value, ast.Name)
-                and child.func.value.id in names
+                b_continue
+                and isinstance(child.func, ast.Name)
+                and child.func.id in names
             ):
-                return True
-    return False
+                b_continue = False
+                result = True
+            if b_continue and isinstance(child.func, ast.Attribute):
+                if b_continue and child.func.attr in attrs:
+                    b_continue = False
+                    result = True
+                if (
+                    b_continue
+                    and child.func.attr in modules
+                    and isinstance(child.func.value, ast.Name)
+                ):
+                    if f"{child.func.value.id}.{child.func.attr}" in modules:
+                        b_continue = False
+                        result = True
+                if (
+                    b_continue
+                    and child.func.attr == "run"
+                    and isinstance(child.func.value, ast.Name)
+                    and child.func.value.id in names
+                ):
+                    b_continue = False
+                    result = True
+    return result
 
 
 def _call_message_missing_or_empty(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
-    if not isinstance(a_node, ast.Call):
-        return False
-    keyword_names = set(
-        _as_str_list(a_cfg.get("keyword_names", ["a_message", "message"]))
-    )
-    empty_values_raw: object = a_cfg.get("empty_values", ["", None])
-    empty_values: list[object]
-    if isinstance(empty_values_raw, list):
-        empty_values = cast("list[object]", cast("list[Any]", empty_values_raw))
-    elif isinstance(empty_values_raw, tuple):
-        empty_values = list(cast("tuple[Any, ...]", empty_values_raw))
-    else:
-        empty_values = ["", None]
-    for kw in a_node.keywords:
-        if kw.arg in keyword_names:
-            return bool(
-                isinstance(kw.value, ast.Constant) and kw.value.value in empty_values
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, ast.Call):
+        b_continue = False
+        result = False
+    if b_continue and isinstance(a_node, ast.Call):
+        call_node = a_node
+        keyword_names = set(
+            _as_str_list(a_cfg.get("keyword_names", ["a_message", "message"]))
+        )
+        empty_values_raw: object = a_cfg.get("empty_values", ["", None])
+        empty_values: list[object]
+        if isinstance(empty_values_raw, list):
+            empty_values = cast("list[object]", cast("list[Any]", empty_values_raw))
+        elif isinstance(empty_values_raw, tuple):
+            empty_values = list(cast("tuple[Any, ...]", empty_values_raw))
+        else:
+            empty_values = ["", None]
+        found_kw = False
+        for kw in call_node.keywords:
+            if b_continue and kw.arg in keyword_names:
+                b_continue = False
+                found_kw = True
+                result = bool(
+                    isinstance(kw.value, ast.Constant)
+                    and kw.value.value in empty_values
+                )
+        if b_continue and not call_node.args:
+            b_continue = False
+            result = True
+        if b_continue and not found_kw:
+            first = call_node.args[0]
+            result = bool(
+                isinstance(first, ast.Constant) and first.value in empty_values
             )
-    if not a_node.args:
-        return True
-    first = a_node.args[0]
-    return bool(isinstance(first, ast.Constant) and first.value in empty_values)
+    return result
 
 
 def _attr_call_on_shared_state(
@@ -557,31 +739,56 @@ def _attr_call_on_shared_state(
     a_tree: ast.AST,
     a_cfg: dict[str, Any],
 ) -> bool:
-    if not isinstance(a_node, ast.Call):
-        return False
-    if not isinstance(a_node.func, ast.Attribute):
-        return False
-    methods = _as_str_list(a_cfg.get("methods"))
-    if methods and a_node.func.attr not in set(methods):
-        return False
-    lock_markers = _as_str_list(a_cfg.get("lock_markers", ["Lock", "RLock", "lock"]))
-    if _call_protected_by_markers(a_node, a_tree, lock_markers):
-        return False
-    receiver = a_node.func.value
-    self_set = set(_as_str_list(a_cfg.get("self_names", ["self"])))
-    if isinstance(receiver, ast.Attribute):
-        root: ast.AST = receiver
-        while isinstance(root, ast.Attribute):
-            root = root.value
-        if isinstance(root, ast.Name) and root.id in self_set:
-            return True
-    if isinstance(receiver, ast.Name):
-        enclosing = _find_enclosing_function(a_node, a_tree)
-        if enclosing is None:
-            return True
-        if receiver.id not in _local_names(enclosing):
-            return True
-    return False
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, ast.Call):
+        b_continue = False
+        result = False
+    if (
+        b_continue
+        and isinstance(a_node, ast.Call)
+        and not isinstance(a_node.func, ast.Attribute)
+    ):
+        b_continue = False
+        result = False
+    if (
+        b_continue
+        and isinstance(a_node, ast.Call)
+        and isinstance(a_node.func, ast.Attribute)
+    ):
+        call_node = a_node
+        func_attr = a_node.func
+        methods = _as_str_list(a_cfg.get("methods"))
+        if methods and func_attr.attr not in set(methods):
+            b_continue = False
+            result = False
+        if b_continue:
+            lock_markers = _as_str_list(
+                a_cfg.get("lock_markers", ["Lock", "RLock", "lock"])
+            )
+            if _call_protected_by_markers(call_node, a_tree, lock_markers):
+                b_continue = False
+                result = False
+        if b_continue:
+            receiver = func_attr.value
+            self_set = set(_as_str_list(a_cfg.get("self_names", ["self"])))
+            if isinstance(receiver, ast.Attribute):
+                root: ast.expr = receiver
+                while isinstance(root, ast.Attribute):
+                    root = root.value
+                if isinstance(root, ast.Name) and root.id in self_set:
+                    b_continue = False
+                    result = True
+            if b_continue and isinstance(receiver, ast.Name):
+                enclosing = _find_enclosing_function(call_node, a_tree)
+                if enclosing is None:
+                    b_continue = False
+                    result = True
+                if b_continue and enclosing is not None:
+                    if receiver.id not in _local_names(enclosing):
+                        b_continue = False
+                        result = True
+    return result
 
 
 def _call_protected_by_markers(
@@ -589,16 +796,18 @@ def _call_protected_by_markers(
     a_tree: ast.AST,
     a_markers: list[str],
 ) -> bool:
+    b_continue = True
+    result = False
     for parent in ast.walk(a_tree):
-        if not isinstance(parent, ast.With):
-            continue
-        if not any(child is a_node for child in ast.walk(parent)):
-            continue
-        for item in parent.items:
-            src = ast.unparse(item.context_expr)
-            if any(marker in src for marker in a_markers):
-                return True
-    return False
+        if b_continue and isinstance(parent, ast.With):
+            if any(child is a_node for child in ast.walk(parent)):
+                for item in parent.items:
+                    if b_continue:
+                        src = ast.unparse(item.context_expr)
+                        if any(marker in src for marker in a_markers):
+                            b_continue = False
+                            result = True
+    return result
 
 
 def _local_names(a_func: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
@@ -629,30 +838,46 @@ def _find_enclosing_function(
 
 
 def _except_type_names(a_node: ast.AST) -> set[str]:
-    if not isinstance(a_node, ast.ExceptHandler) or a_node.type is None:
-        return set()
+    b_continue = True
     names: set[str] = set()
-    if isinstance(a_node.type, ast.Name):
-        names.add(a_node.type.id)
-        return names
-    if isinstance(a_node.type, ast.Attribute):
-        names.add(a_node.type.attr)
-        return names
-    if isinstance(a_node.type, ast.Tuple):
-        for elt in a_node.type.elts:
-            if isinstance(elt, ast.Name):
-                names.add(elt.id)
-            elif isinstance(elt, ast.Attribute):
-                names.add(elt.attr)
+    if b_continue and (
+        not isinstance(a_node, ast.ExceptHandler) or a_node.type is None
+    ):
+        b_continue = False
+        names = set()
+    if b_continue and isinstance(a_node, ast.ExceptHandler) and a_node.type is not None:
+        exc_type = a_node.type
+        if isinstance(exc_type, ast.Name):
+            b_continue = False
+            names = {exc_type.id}
+        if b_continue and isinstance(exc_type, ast.Attribute):
+            b_continue = False
+            names = {exc_type.attr}
+        if b_continue and isinstance(exc_type, ast.Tuple):
+            b_continue = False
+            for elt in exc_type.elts:
+                if isinstance(elt, ast.Name):
+                    names.add(elt.id)
+                elif isinstance(elt, ast.Attribute):
+                    names.add(elt.attr)
     return names
 
 
 def _except_bound_name_unused(a_node: ast.AST, a_markers: list[str]) -> bool:
-    if not isinstance(a_node, ast.ExceptHandler):
-        return False
-    if a_node.name is None:
-        return False
-    body_src = "\n".join(ast.unparse(stmt) for stmt in a_node.body)
-    if a_node.name in body_src:
-        return False
-    return not any(marker in body_src for marker in a_markers)
+    b_continue = True
+    result = False
+    if b_continue and not isinstance(a_node, ast.ExceptHandler):
+        b_continue = False
+        result = False
+    if b_continue and isinstance(a_node, ast.ExceptHandler) and a_node.name is None:
+        b_continue = False
+        result = False
+    if b_continue and isinstance(a_node, ast.ExceptHandler) and a_node.name is not None:
+        bound_name = a_node.name
+        body_src = "\n".join(ast.unparse(stmt) for stmt in a_node.body)
+        if bound_name in body_src:
+            b_continue = False
+            result = False
+        if b_continue:
+            result = not any(marker in body_src for marker in a_markers)
+    return result

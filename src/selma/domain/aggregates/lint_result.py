@@ -1,4 +1,4 @@
-"""LintResult aggregate root — consistency boundary for lint findings.
+"""InspectionResult aggregate root — consistency boundary for findings.
 
 Maintains invariants: no findings after completion, violation count accurate.
 Uses Pydantic v2 BaseModel (mutable for aggregate state management).
@@ -11,11 +11,11 @@ from pydantic import PrivateAttr
 
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.source_file import SourceFile
-from selma.domain.exceptions.domain_errors import LintResultAlreadyComplete
+from selma.domain.value_objects.result import Result
 
 
 class LintResult(BaseModel):
-    """Aggregate root for lint results.
+    """Aggregate root for inspection findings.
 
     Maintains consistency: no findings can be added after completion.
     Mutable — aggregate state changes via methods.
@@ -32,23 +32,27 @@ class LintResult(BaseModel):
         if not hasattr(self, "_is_complete"):
             self._is_complete = False
 
-    def add_finding(self, a_finding: Finding) -> None:
-        """Add a finding. Enforces business rules.
+    def add_finding(self, a_finding: Finding) -> Result[None]:
+        """Add a finding. Enforces business rules without raise (SC-002).
 
         Preconditions:
             - Result is not yet complete.
-
         Postconditions:
-            - Finding is added to the result.
-
+            - Finding is added, or Failure if complete.
         Side Effects: None.
         Resource: None.
-        Failure: Raises LintResultAlreadyComplete if result is complete.
+        Failure: Returns Failure if result is complete.
         """
-        if self._is_complete:
-            raise LintResultAlreadyComplete("Cannot add finding to completed result")
-        # Immutable rebuild avoids in-place mutation methods (SC-092).
-        self._findings = [*self._findings, a_finding]
+        b_continue = True
+        result: Result[None] = Result.failure("unreachable")
+        if b_continue and self._is_complete:
+            b_continue = False
+            result = Result.failure("Cannot add finding to completed result")
+        if b_continue:
+            # Immutable rebuild avoids in-place mutation methods (SC-092).
+            self._findings = [*self._findings, a_finding]
+            result = Result.success(None)
+        return result
 
     def complete(self) -> None:
         """Mark result as complete. No more findings allowed."""

@@ -2,7 +2,7 @@
   "lineage_id": "ST-001",
   "id": "ST-001",
   "type": "obligation",
-  "message": "Function arguments must use a_ prefix",
+  "message": "Function parameters must use a stable parameter prefix convention",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "FunctionDef",
@@ -11,27 +11,6 @@
         "field": "name",
         "operator": "not_matches",
         "value": "^__.*__$"
-      },
-      {
-        "not": {
-          "any_of": [
-            {
-              "field": ".",
-              "operator": "has_decorator",
-              "value": "command"
-            },
-            {
-              "field": ".",
-              "operator": "has_decorator",
-              "value": "callback"
-            },
-            {
-              "field": ".",
-              "operator": "has_decorator",
-              "value": "group"
-            }
-          ]
-        }
       },
       {
         "field": ".",
@@ -49,33 +28,24 @@
         }
       }
     ],
-    "message_template": "Function '{name}' arguments must use a_ prefix (except self/cls; CLI entry points exempt)"
+    "message_template": "Function '{name}' parameters must use the a_ prefix (language receiver names self/cls and *args/**kwargs exempt)"
   },
   "weight": "low",
   "priority": "operational",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/st001_a_prefix",
-  "rationale": "Consistent argument naming improves code readability and searchability. The a_ prefix distinguishes parameters from local variables at a glance. CLI entry points (Typer/Click @command/@callback/@group) are exempt: their parameter names are the public CLI surface (flags and positional args), not internal API parameters, so a_ would leak into help text and call sites. Subclass overrides are exempt: the base class dictates parameter names for overridden methods.",
-  "remediation": "Rename arguments: def func(a_name: str, a_count: int):. Do not apply a_ to Typer/Click command parameters; use plain names that match the CLI interface (task, query, output). Do not apply a_ to methods overriding base class methods — the base class contract dictates parameter names.",
+  "rationale": "A stable parameter prefix distinguishes parameters from locals and supports searchability. Language-level receivers (self, cls) and variadic packs (args, kwargs) are Python method conventions, not application parameters. Subclass overrides must keep base-class parameter names for LSP.",
+  "remediation": "Rename application parameters with the a_ prefix, e.g. def process(a_path: Path, a_limit: int). Keep self/cls and *args/**kwargs unchanged. Keep override signatures identical to the base method.",
   "parameters": {
     "exempt_dunders": true,
-    "exempt_self": true,
-    "exempt_cls": true,
-    "exempt_private": true,
-    "exempt_no_args": true,
-    "exempt_init": true,
-    "exempt_cli_entry_points": true,
-    "cli_decorators": [
-      "command",
-      "callback",
-      "group"
-    ],
+    "prefix": "a_",
     "skip_names": [
       "self",
       "cls",
       "args",
       "kwargs"
-    ]
+    ],
+    "exempt_overrides": true
   }
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from typing import Any
+from typing import cast
 
 from selma.domain.entities.finding import Finding
 from selma.domain.value_objects.result import Result
@@ -34,19 +35,45 @@ class AstWalkEvaluator(EvaluatorBase):
         """Walk AST counting specific node types within root nodes."""
         b_continue = True
         findings: list[Finding] = []
-        root_node = a_config.get("root_node", "")
-        walk_nodes = a_config.get("walk_nodes", [])
-        walk_config = a_config.get("walk_config", {})
-        count_config = a_config.get("count", {})
-        count_breakdown = a_config.get("count_breakdown", {})
-        message_template = a_config.get("message_template", "")
+        root_node = str(a_config.get("root_node", "") or "")
+        walk_nodes_raw: object = a_config.get("walk_nodes", [])
+        walk_nodes: list[str] = []
+        if isinstance(walk_nodes_raw, list):
+            walk_nodes = [str(item) for item in cast("list[object]", walk_nodes_raw)]
+        walk_config_obj: object = a_config.get("walk_config", {})
+        walk_config: dict[str, Any] = (
+            cast("dict[str, Any]", walk_config_obj)
+            if isinstance(walk_config_obj, dict)
+            else {}
+        )
+        count_config_obj: object = a_config.get("count", {})
+        count_config: dict[str, Any] = (
+            cast("dict[str, Any]", count_config_obj)
+            if isinstance(count_config_obj, dict)
+            else {}
+        )
+        count_breakdown_obj: object = a_config.get("count_breakdown", {})
+        count_breakdown: dict[str, str] = {}
+        if isinstance(count_breakdown_obj, dict):
+            raw_breakdown = cast("dict[Any, Any]", count_breakdown_obj)
+            count_breakdown = {str(k): str(v) for k, v in raw_breakdown.items()}
+        message_template = str(a_config.get("message_template", "") or "")
         threshold_value = count_config.get("value", 0)
-        threshold_op = count_config.get("operator", "gt")
+        threshold_op = str(count_config.get("operator", "gt") or "gt")
+        # Merge rule parameters into config so exempt_* flags apply.
+        exclusion_config: dict[str, Any] = dict(a_config)
+        params_obj: object = a_rule.get("parameters", {})
+        if isinstance(params_obj, dict):
+            params_map = cast("dict[str, Any]", params_obj)
+            exclusion_config["parameters"] = params_map
+            for key, value in params_map.items():
+                if key not in exclusion_config:
+                    exclusion_config[key] = value
         for node in ast.walk(a_tree):
             b_continue = True
             if b_continue and self.node_name(node) != root_node:
                 b_continue = False
-            if b_continue and self._is_excluded(node, walk_config, a_config):
+            if b_continue and self._is_excluded(node, walk_config, exclusion_config):
                 b_continue = False
             if b_continue:
                 count = self._count_child_nodes(node, walk_nodes, walk_config)
@@ -58,7 +85,7 @@ class AstWalkEvaluator(EvaluatorBase):
                     msg = self._render_message(message_template, ctx)
                     findings.append(
                         Finding(
-                            rule_id=a_rule.get("lineage_id", ""),
+                            rule_id=str(a_rule.get("lineage_id", "") or ""),
                             file="",
                             line=self._get_line(node),
                             col=self._get_col(node),
@@ -68,32 +95,81 @@ class AstWalkEvaluator(EvaluatorBase):
         return Result.success(findings)
 
     @staticmethod
+    def _flag_enabled(
+        a_walk_config: dict[str, Any],
+        a_config: dict[str, Any],
+        a_walk_key: str,
+        a_config_key: str,
+    ) -> bool:
+        """Resolve exclusion flag from walk_config, config, or parameters."""
+        b_continue = True
+        result = False
+        if b_continue and a_walk_config.get(a_walk_key, False):
+            b_continue = False
+            result = True
+        params_raw: object = a_config.get("parameters", {})
+        params: dict[str, Any] = (
+            cast("dict[str, Any]", params_raw) if isinstance(params_raw, dict) else {}
+        )
+        if b_continue and a_config.get(a_config_key, False):
+            b_continue = False
+            result = True
+        if b_continue and params.get(a_config_key, False):
+            b_continue = False
+            result = True
+        return result
+
+    @staticmethod
     def _is_excluded(
         a_node: ast.AST,
         a_walk_config: dict[str, Any],
         a_config: dict[str, Any],
     ) -> bool:
-        """Check if a root node should be excluded from evaluation."""
+        """Check if a root node should be excluded from evaluation.
+
+        Honors walk_config keys (exclude_*) and rule-level / parameters
+        keys (exempt_*) so directive JSON fields are applied consistently.
+        """
         b_continue = True
         result = False
-        if b_continue and a_walk_config.get("exclude_dunders", False):
-            name = getattr(a_node, "name", "")
+        name = getattr(a_node, "name", "")
+        if b_continue and AstWalkEvaluator._flag_enabled(
+            a_walk_config, a_config, "exclude_dunders", "exempt_dunders"
+        ):
             if b_continue and EvaluatorBase.is_dunder(name):
                 b_continue = False
                 result = True
-        if b_continue and a_walk_config.get("exclude_generators", False):
+        if b_continue and AstWalkEvaluator._flag_enabled(
+            a_walk_config, a_config, "exclude_generators", "exempt_generators"
+        ):
             if b_continue and AstWalkEvaluator._is_generator(a_node):
                 b_continue = False
                 result = True
-        if b_continue and a_walk_config.get("exclude_framework_adapters", False):
-            params = a_config.get("parameters", {})
-            adapter_keywords = params.get(
-                "adapter_keywords", ["exception", "error", "http"]
-            )
-            name = getattr(a_node, "name", "")
-            if b_continue:
-                for kw in adapter_keywords:
-                    if b_continue and kw.lower() in name.lower():
+        # Structural: declarative validators via known decorator *patterns*
+        # (not project-specific function-name allowlists).
+        if b_continue and a_walk_config.get("exclude_decorator_names"):
+            raw_names: object = a_walk_config.get("exclude_decorator_names", [])
+            decorator_names: list[str] = []
+            if isinstance(raw_names, list):
+                for item in cast("list[object]", raw_names):
+                    decorator_names.append(str(item))
+            if (
+                b_continue
+                and decorator_names
+                and isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            ):
+                for dec in a_node.decorator_list:
+                    dec_name = ""
+                    if isinstance(dec, ast.Name):
+                        dec_name = dec.id
+                    elif isinstance(dec, ast.Attribute):
+                        dec_name = dec.attr
+                    elif isinstance(dec, ast.Call):
+                        if isinstance(dec.func, ast.Name):
+                            dec_name = dec.func.id
+                        elif isinstance(dec.func, ast.Attribute):
+                            dec_name = dec.func.attr
+                    if b_continue and dec_name in decorator_names:
                         b_continue = False
                         result = True
         return result

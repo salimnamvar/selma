@@ -133,17 +133,17 @@ class EvaluatorBase(ABC):
             result = False
         if b_continue:
             for decorator in a_node.decorator_list:  # type: ignore[union-attr]
-                target: ast.expr = cast("ast.expr", decorator)
-                # @app.command() → Call(func=Attribute(...)); unwrap to the callee.
-                if isinstance(target, ast.Call):
-                    target = target.func
-                b_continue_inner = True
-                if b_continue_inner and isinstance(target, ast.Name):
-                    b_continue_inner = False
-                    result = target.id == a_decorator_name
-                if b_continue_inner and isinstance(target, ast.Attribute):
-                    b_continue_inner = False
-                    result = target.attr == a_decorator_name
-                if result:
-                    b_continue = False
+                if b_continue:
+                    target: ast.expr = cast("ast.expr", decorator)
+                    # @decorator() → Call(func=...); unwrap to the callee.
+                    if isinstance(target, ast.Call):
+                        target = target.func
+                    matched = False
+                    if isinstance(target, ast.Name):
+                        matched = target.id == a_decorator_name
+                    if isinstance(target, ast.Attribute):
+                        matched = target.attr == a_decorator_name
+                    if matched:
+                        b_continue = False
+                        result = True
         return result

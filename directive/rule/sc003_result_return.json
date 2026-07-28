@@ -2,7 +2,7 @@
   "lineage_id": "SC-003",
   "id": "SC-003",
   "type": "obligation",
-  "message": "Function returns values but type is not Result[T]",
+  "message": "Fallible function must return an explicit result type, not bare values with raise/I/O ambiguity",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
     "target_node": "FunctionDef",
@@ -30,25 +30,22 @@
         ]
       },
       {
-        "field": "name",
-        "operator": "name_not_matches_any",
-        "value": [
-          "^(is_|has_|_is_|_has_)",
-          "^(unwrap|unwrap_or)$"
-        ]
-      },
-      {
         "field": ".",
         "operator": "not_has_decorator",
         "value": "property"
       },
       {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "field_validator"
+      },
+      {
+        "field": ".",
+        "operator": "not_has_decorator",
+        "value": "model_validator"
+      },
+      {
         "any_of": [
-          {
-            "field": "returns",
-            "operator": "unparse_matches",
-            "value": "tuple"
-          },
           {
             "field": ".",
             "operator": "subtree_contains_node",
@@ -66,33 +63,32 @@
                 "check_call",
                 "connect",
                 "executemany",
-                "subprocess",
-                "asyncio"
+                "subprocess"
               ],
               "attrs": [
                 "read_text",
                 "read_bytes",
                 "write_text",
                 "write_bytes",
-                "load",
-                "loads",
-                "dump",
-                "dumps"
+                "read",
+                "write",
+                "readline",
+                "readlines"
               ]
             }
           }
         ]
       }
     ],
-    "message_template": "Function '{name}' returns values but type is not Result[T]"
+    "message_template": "Function '{name}' is fallible (raises or performs I/O) but return type is not Result[T]"
   },
   "weight": "critical",
   "priority": "constitutional",
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc003_result_return",
-  "rationale": "Tuple returns are ambiguous. Callers must remember positional semantics. Typed results are self-documenting and statically analyzable. Fallible operations that raise or perform I/O SHALL return Result[T].",
-  "remediation": "Return a typed Result[T] with is_success(), value, and message fields.",
+  "rationale": "Fallible operations that raise or perform I/O must surface failure in the type system. A bare return type that can also raise or hide I/O errors forces callers to guess. Explicit result types (success value + failure message) are self-documenting and statically analyzable. Pure functions without raise or I/O are outside this obligation. Language dunders and properties are structural language constructs.",
+  "remediation": "Return a typed Result[T] (or equivalent explicit result type) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work.",
   "parameters": {
     "exempt_dunders": true,
     "exempt_properties": true

@@ -36,13 +36,11 @@ preamble:
     authors, reviewers, and AI agents can reason about intent without reading evaluator configuration.
   scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
     code, unless a documented exemption applies.
-  existential_need: 'Consistent argument naming improves code readability and searchability. The a_ prefix
-    distinguishes parameters from local variables at a glance. CLI entry points (Typer/Click @command/@callback/@group)
-    are exempt: their parameter names are the public CLI surface (flags and positional args), not internal
-    API parameters, so a_ would leak into help text and call sites. Subclass overrides are exempt: when a
-    class inherits from a base class (stdlib or third-party), the base class dictates parameter names for
-    overridden methods (e.g. logging.Filter.filter(record), Formatter.formatTime(record, datefmt)).
-    Renaming those to a_ prefix would break the override contract with the base class.'
+  existential_need: 'Consistent argument naming improves code readability and searchability. A stable
+    parameter prefix distinguishes parameters from local variables at a glance. Language receivers (self,
+    cls) and variadic packs (args, kwargs) are Python method conventions, not application parameters.
+    Subclass overrides keep base-class parameter names for Liskov substitution — renaming them would break
+    the polymorphic contract.'
 governance:
   title: Governance & Amendment
   authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
@@ -83,48 +81,41 @@ directives:
   - type: Obligation
     description: Function arguments must use a_ prefix
     machine_id: ST-001
-    context_conditions: 'See rule JSON exemptions. Exempt: self/cls/args/kwargs, dunder methods, CLI entry
-      points (@command/@callback/@group), and methods overriding base class methods (subclasses with bases).
-      The override exemption is structural: any method defined in a class that inherits from another class
-      is exempt because the base class dictates parameter names.'
-    title: Function arguments must use a_ prefix
+    context_conditions: 'Language-level exemptions only: self, cls, *args, **kwargs, dunder methods, and
+      methods that override a base-class signature (structural LSP). No project- or framework-specific
+      parameter name lists.'
+    title: Function parameters use a stable prefix convention
   flexible_standards: []
 sanctions:
   title: Sanctions & Remedies
   rows:
-  - violation_context: Function arguments must use a_ prefix
+  - violation_context: Function parameters missing the required prefix
     enforcement_action: Machine lint finding via st001_a_prefix.json when automatically enforceable; otherwise
       See paired machine rule.
-    remediation_path: 'Rename arguments: def func(a_name: str, a_count: int):. Do not apply a_ to Typer/Click
-      command parameters; use plain names that match the CLI interface (task, query, output).'
+    remediation_path: 'Rename application parameters with the a_ prefix, e.g. def process(a_path: Path).
+      Keep self/cls and *args/**kwargs unchanged. Keep override signatures identical to the base method.'
 guidance:
   title: Guidance, Examples, and Reasoning
   purpose: For human and AI reasoning only. Do not execute this section as a linter.
-  reasoning: 'Consistent argument naming improves code readability and searchability. The a_ prefix distinguishes
-    parameters from local variables at a glance. CLI entry points (Typer/Click @command/@callback/@group)
-    are exempt: their parameter names are the public CLI surface (flags and positional args), not internal
-    API parameters, so a_ would leak into help text and call sites. Subclass overrides are exempt because
-    the base class contract dictates parameter names — renaming them would break polymorphism.'
-  explanation: Internal functions use a_ on parameters (a_value, a_multiplier). CLI handlers decorated
-    with @command / @callback / @group must use plain parameter names that mirror the CLI contract (task,
-    query), not a_task. Methods that override base class methods (e.g. logging.Filter.filter, logging.Formatter.formatTime)
-    must use the base class parameter names (record, datefmt) — the a_ prefix is not applied because the
-    author does not control the signature. Built-ins self, cls, args, and kwargs remain exempt everywhere.
+  reasoning: 'Consistent argument naming improves code readability and searchability. A stable parameter
+    prefix distinguishes parameters from locals. Language receivers and override contracts are structural
+    language rules, not project-specific allowlists.'
+  explanation: Application functions use a_ on parameters (a_value, a_multiplier). Methods that override
+    a base class keep the base parameter names. Language receivers self/cls and packs args/kwargs remain
+    unchanged.
   correct_example: |-
     def calculate(a_value: float, a_multiplier: float = 1.0) -> Result[float]:
-        if not isinstance(a_value, (int, float)):
-            return Result.failure('Expected number')
-        return Result.success(a_value * a_multiplier)
-
-    @app.command()
-    def context(
-        task: str = typer.Option('general', '--task'),
-        query: str | None = typer.Option(None, '--query', '-q'),
-        paths: list[str] = typer.Argument(default=None),
-    ) -> None:
-        request = ContextRequest(task=task, query=query, paths=tuple(paths or ()))
+        b_continue = True
+        result: Result[float] = Result.failure('unreachable')
+        if b_continue and not isinstance(a_value, (int, float)):
+            b_continue = False
+            result = Result.failure('Expected number')
+        if b_continue:
+            result = Result.success(float(a_value) * a_multiplier)
+        return result
 
     class RequestFilter(logging.Filter):
+        # Override keeps base signature (LSP) — base dictates parameter names.
         def filter(self, record: logging.LogRecord) -> bool:
             record.request_id = self._current_id
             return True
@@ -134,20 +125,14 @@ guidance:
             return Result.failure('Expected number')
         return Result.success(value * multiplier)
 
-    @app.command()
-    def context(
-        a_task: str = typer.Option('general', '--task'),
-        a_query: str | None = typer.Option(None, '--query', '-q'),
-    ) -> None:
-        request = ContextRequest(task=a_task, query=a_query)
-
-    class RequestFilter(logging.Filter):
+    class BadFilter(logging.Filter):
+        # Incorrect: renamed override parameters break the base contract.
         def filter(self, a_record: logging.LogRecord) -> bool:
             a_record.request_id = self._current_id
             return True
   related_machine_ids: []
-  exceptions: 'Exempt: self/cls/args/kwargs, dunder methods, CLI entry points, and methods in subclasses
-    (base class dictates parameter names). See rule JSON for evaluator_config.exempt_overrides.'
+  exceptions: 'Language-level only: self/cls/args/kwargs, dunder methods, and methods overriding a base
+    class signature (LSP). No project- or product-specific name lists.'
 references:
   title: References & Annexes
   source_doctrine: .nasim/rules/code/safe-coding.md

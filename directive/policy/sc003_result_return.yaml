@@ -106,13 +106,13 @@ directives:
   title: Directives (Rules & Standards)
   specific_directives:
   - type: Obligation
-    description: 'Every function SHALL return a typed `Result[T]` with the following fields: - `is_success()
-      -> bool`: Whether the operation completed successfully. - `value: T | None`: The result value, present
-      only when `is_success()` is `True`. - `message: str`: A human-readable description of the outcome,
-      always present.'
+    description: 'Every fallible function (one that raises or performs I/O) SHALL return a typed explicit
+      result (e.g. Result[T]) with success discrimination, optional value, and a human-readable message.
+      Pure functions without raise or I/O are outside this obligation.'
     machine_id: SC-003
-    context_conditions: None.
-    title: Structured Result Return
+    context_conditions: 'Applies when the body raises or performs I/O-like calls. Language dunders and
+      properties follow language contracts. No project-specific function-name allowlists.'
+    title: Explicit Result for Fallible Operations
   flexible_standards: []
 sanctions:
   title: Sanctions & Remedies

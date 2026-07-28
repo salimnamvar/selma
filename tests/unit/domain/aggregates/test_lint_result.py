@@ -1,11 +1,8 @@
 """Tests for LintResult aggregate — add_finding, complete, violation_count."""
 
-import pytest
-
 from selma.domain.aggregates.lint_result import LintResult
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.source_file import SourceFile
-from selma.domain.exceptions.domain_errors import LintResultAlreadyComplete
 from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.file_path import FilePath
 from selma.domain.value_objects.source_hash import SourceHash
@@ -17,7 +14,7 @@ def _make_source_file() -> SourceFile:
 
 
 def _make_finding(
-    a_severity: Severity = Severity.MEDIUM, a_rule_id: str = "SC001"
+    a_severity: Severity = Severity.MEDIUM, a_rule_id: str = "SC-001"
 ) -> Finding:
     """Create a Finding for testing."""
     return Finding(rule_id=a_rule_id, file="main.py", line=10, severity=a_severity)
@@ -29,14 +26,15 @@ class TestLintResultAddFinding:
     def test_add_single_finding(self) -> None:
         """Adding a finding should increase finding count."""
         lr = LintResult(source_file=_make_source_file())
-        lr.add_finding(_make_finding())
+        result = lr.add_finding(_make_finding())
+        assert result.is_success()
         assert lr.finding_count == 1
 
     def test_add_multiple_findings(self) -> None:
         """Adding multiple findings should accumulate."""
         lr = LintResult(source_file=_make_source_file())
-        lr.add_finding(_make_finding(a_rule_id="SC001"))
-        lr.add_finding(_make_finding(a_rule_id="SC002"))
+        lr.add_finding(_make_finding(a_rule_id="SC-001"))
+        lr.add_finding(_make_finding(a_rule_id="SC-002"))
         assert lr.finding_count == 2
 
     def test_findings_returns_tuple(self) -> None:
@@ -51,12 +49,13 @@ class TestLintResultComplete:
     """LintResult.complete behavior."""
 
     def test_complete_prevents_adding(self) -> None:
-        """After complete(), adding a finding should raise."""
+        """After complete(), adding a finding should fail via Result."""
         lr = LintResult(source_file=_make_source_file())
         lr.add_finding(_make_finding())
         lr.complete()
-        with pytest.raises(LintResultAlreadyComplete):
-            lr.add_finding(_make_finding())
+        result = lr.add_finding(_make_finding())
+        assert result.is_failure()
+        assert "completed" in result.message
 
     def test_complete_without_findings(self) -> None:
         """complete() should work even with no findings."""

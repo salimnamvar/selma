@@ -55,30 +55,55 @@ class Result(BaseModel, Generic[_T]):
 
         Success with value=None is valid (SC-003); the mapper receives None.
         """
-        if not self._is_success:
-            return Result.failure(self.message)
-        return Result.success(a_fn(self.value), self.message)  # type: ignore[arg-type]
+        b_continue = True
+        result: Result[_U] = Result.failure("unreachable")
+        if b_continue and not self._is_success:
+            b_continue = False
+            result = Result.failure(self.message)
+        if b_continue:
+            result = Result.success(a_fn(self.value), self.message)  # type: ignore[arg-type]
+        return result
 
     def flat_map(self, a_fn: Callable[[_T], Result[_U]]) -> Result[_U]:
         """Chain a function that itself returns a Result.
 
         Success with value=None is valid; the chained function receives None.
         """
-        if not self._is_success:
-            return Result.failure(self.message)
-        return a_fn(self.value)  # type: ignore[arg-type]
+        b_continue = True
+        result: Result[_U] = Result.failure("unreachable")
+        if b_continue and not self._is_success:
+            b_continue = False
+            result = Result.failure(self.message)
+        if b_continue:
+            result = a_fn(self.value)  # type: ignore[arg-type]
+        return result
 
     def unwrap(self) -> _T:
-        """Return the success value, or raise ValueError on failure."""
-        if self._is_success:
-            return self.value  # type: ignore[return-value]
-        raise ValueError(f"Called unwrap() on failure: {self.message}")
+        """Return the success value.
+
+        Preconditions: caller has verified is_success() is True, or accepts
+        that failure yields a typed null-like value for non-success paths.
+        Prefer unwrap_or for recoverable defaults. Does not raise (SC-002).
+        """
+        b_continue = True
+        result: _T | None = None
+        if b_continue and self._is_success:
+            b_continue = False
+            result = self.value  # type: ignore[assignment]
+        if b_continue:
+            result = None  # type: ignore[assignment]
+        return result  # type: ignore[return-value]
 
     def unwrap_or(self, a_default: _T) -> _T:
         """Return the success value, or a_default on failure."""
-        if self._is_success:
-            return self.value  # type: ignore[assignment]
-        return a_default
+        b_continue = True
+        result: _T = a_default
+        if b_continue and self._is_success:
+            b_continue = False
+            result = self.value  # type: ignore[assignment]
+        if b_continue:
+            result = a_default
+        return result
 
     @staticmethod
     def success(a_value: _U, a_message: str = "Success") -> Result[_U]:

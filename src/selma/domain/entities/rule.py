@@ -211,11 +211,17 @@ class ConflictResolution(BaseModel):
     @field_validator("defer_to")
     @classmethod
     def validate_defer_to(cls, v: str | None, info: Any) -> str | None:
-        """Require defer_to when strategy is defer_to."""
-        if info.data.get("strategy") == ConflictStrategy.DEFER_TO and not v:
+        """Require defer_to when strategy is defer_to (Pydantic contract)."""
+        b_continue = True
+        result = v
+        needs_defer = info.data.get("strategy") == ConflictStrategy.DEFER_TO
+        if b_continue and needs_defer and not v:
+            b_continue = False
             msg = "defer_to is required when strategy is defer_to"
             raise ValueError(msg)
-        return v
+        if b_continue:
+            result = v
+        return result
 
 
 class Lineage(BaseModel):
