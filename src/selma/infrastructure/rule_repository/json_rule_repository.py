@@ -107,8 +107,9 @@ class JsonRuleRepository(DirectiveRepository):
             load_result = self._load_catalog()
             if load_result.is_failure():
                 b_continue = False
-                logger.warning(load_result.message)
-                result = Result.failure(load_result.message)
+                msg = load_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 self._cached_catalog = load_result.unwrap()
                 result = Result.success(self._cached_catalog)
@@ -163,15 +164,17 @@ class JsonRuleRepository(DirectiveRepository):
                     parse_result = self._parse_rule(cast("dict[str, Any]", raw_rule))
                     if parse_result.is_failure():
                         b_continue = False
-                        logger.warning(parse_result.message)
-                        result = Result.failure(parse_result.message)
+                        msg = parse_result.message
+                        logger.warning(msg)
+                        result = Result.failure(msg)
                     if b_continue and parse_result.is_success():
                         parsed.append(parse_result.unwrap())
             if b_continue:
                 result = Result.success(tuple(parsed))
         except (OSError, json.JSONDecodeError) as exc:
-            logger.warning(str(exc))
-            result = Result.failure(str(exc))
+            msg = str(exc)
+            logger.warning(msg)
+            result = Result.failure(msg)
 
         return result
 
@@ -187,8 +190,9 @@ class JsonRuleRepository(DirectiveRepository):
             )
             if config_result.is_failure():
                 b_continue = False
-                logger.warning(config_result.message)
-                result = Result.failure(config_result.message)
+                msg = config_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 raw["evaluator_config"] = config_result.unwrap()
 
@@ -196,8 +200,9 @@ class JsonRuleRepository(DirectiveRepository):
             validation = self._schema_validator.validate_document(raw)
             if validation.is_failure():
                 b_continue = False
-                logger.warning(validation.message)
-                result = Result.failure(validation.message)
+                msg = validation.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 result = Result.success(validation.unwrap())
 

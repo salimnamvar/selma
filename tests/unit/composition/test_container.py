@@ -41,19 +41,27 @@ class TestContainer:
 
     def test_inspect_use_case(self) -> None:
         c = Container()
-        uc = c.get_inspect_use_case(a_directive_repository=_FakeRepo())
-        assert isinstance(uc, InspectSourceUseCase)
+        result = c.get_inspect_use_case(a_directive_repository=_FakeRepo())
+        assert result.is_success()
+        assert isinstance(result.unwrap(), InspectSourceUseCase)
 
     def test_query_use_case(self) -> None:
         c = Container()
-        uc = c.get_query_use_case(a_directive_repository=_FakeRepo())
-        assert isinstance(uc, QueryDirectiveUseCase)
+        result = c.get_query_use_case(a_directive_repository=_FakeRepo())
+        assert result.is_success()
+        assert isinstance(result.unwrap(), QueryDirectiveUseCase)
 
     def test_reporter_default(self) -> None:
         c = Container()
-        assert c.get_reporter("default") is not None
-        assert c.get_reporter("json") is not None
-        assert c.get_reporter("gcc") is not None
+        result = c.get_reporter("default")
+        assert result.is_success()
+        assert result.unwrap() is not None
+        result = c.get_reporter("json")
+        assert result.is_success()
+        assert result.unwrap() is not None
+        result = c.get_reporter("gcc")
+        assert result.is_success()
+        assert result.unwrap() is not None
 
     def test_directive_repository_type(self, tmp_path: Path) -> None:
         c = Container()
@@ -61,8 +69,9 @@ class TestContainer:
         schema.write_text("{}")
         rules = tmp_path / "rules"
         rules.mkdir()
-        repo = c.get_directive_repository(
+        result = c.get_directive_repository(
             a_rules_dir=rules,
             a_schema_path=schema,
         )
-        assert repo is not None
+        assert result.is_success()
+        assert result.unwrap() is not None

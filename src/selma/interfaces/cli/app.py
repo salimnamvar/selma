@@ -217,16 +217,25 @@ async def _run_inspect(
 
     if b_continue:
         container = Container()
-        reporter = container.get_reporter(a_config.output.format)
-        repository = container.get_directive_repository(
+        reporter_result = container.get_reporter(a_config.output.format)
+        if reporter_result.is_failure():
+            return Result.failure(reporter_result.message)
+        reporter = reporter_result.unwrap()
+        repo_result = container.get_directive_repository(
             a_rules_dir=a_config.directive.rule_dir,
             a_schema_path=a_config.schema_paths.rule_schema,
             a_policy_dir=a_config.directive.policy_dir,
         )
-        use_case = container.get_inspect_use_case(
+        if repo_result.is_failure():
+            return Result.failure(repo_result.message)
+        repository = repo_result.unwrap()
+        uc_result = container.get_inspect_use_case(
             a_directive_repository=repository,
             a_reporter=reporter,
         )
+        if uc_result.is_failure():
+            return Result.failure(uc_result.message)
+        use_case = uc_result.unwrap()
 
         exclude_codes: frozenset[str] = (
             frozenset(a_args.exclude_codes)
@@ -271,11 +280,15 @@ async def _run_inspect(
 async def _run_query(a_args: argparse.Namespace, a_config: SelmaConfig) -> Result[int]:
     """Run catalog query."""
     container = Container()
-    use_case = container.get_query_use_case_with_defaults(
+    uc_result = container.get_query_use_case_with_defaults(
         a_rules_dir=a_config.directive.rule_dir,
         a_schema_path=a_config.schema_paths.rule_schema,
         a_policy_dir=a_config.directive.policy_dir,
     )
+    if uc_result.is_failure():
+        sys.stderr.write(f"Error: {uc_result.message}\n")
+        return Result.success(1)
+    use_case = uc_result.unwrap()
     kind = QueryKind(a_args.kind)
     request = QueryRequest(
         kind=kind,

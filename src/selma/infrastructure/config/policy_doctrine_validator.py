@@ -65,8 +65,9 @@ class PolicyDoctrineValidator:
         load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
-            logger.warning(load_result.message)
-            result = Result.failure(load_result.message)
+            msg = load_result.message
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             result = self.validate_doctrine(load_result.unwrap())
         return result
@@ -94,8 +95,9 @@ class PolicyDoctrineValidator:
         load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
-            logger.warning(load_result.message)
-            result = Result.failure(load_result.message)
+            msg = load_result.message
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             result = self.validate_directive(load_result.unwrap())
         return result

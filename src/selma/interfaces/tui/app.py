@@ -248,15 +248,32 @@ class SelmaApp(App[None]):
 async def run_tui(a_config: SelmaConfig) -> None:
     """Build container and run the Textual app."""
     container = Container()
-    repository = container.get_directive_repository(
+    repo_result = container.get_directive_repository(
         a_rules_dir=a_config.directive.rule_dir,
         a_schema_path=a_config.schema_paths.rule_schema,
         a_policy_dir=a_config.directive.policy_dir,
     )
-    inspect_uc = container.get_inspect_use_case(
+    if repo_result.is_failure():
+        msg = repo_result.message
+        raise RuntimeError(msg)
+    repository = repo_result.unwrap()
+    reporter_result = container.get_reporter("default")
+    if reporter_result.is_failure():
+        msg = reporter_result.message
+        raise RuntimeError(msg)
+    reporter = reporter_result.unwrap()
+    inspect_result = container.get_inspect_use_case(
         a_directive_repository=repository,
-        a_reporter=container.get_reporter("default"),
+        a_reporter=reporter,
     )
-    query_uc = container.get_query_use_case(a_directive_repository=repository)
+    if inspect_result.is_failure():
+        msg = inspect_result.message
+        raise RuntimeError(msg)
+    inspect_uc = inspect_result.unwrap()
+    query_result = container.get_query_use_case(a_directive_repository=repository)
+    if query_result.is_failure():
+        msg = query_result.message
+        raise RuntimeError(msg)
+    query_uc = query_result.unwrap()
     app = SelmaApp(a_inspect=inspect_uc, a_query=query_uc)
     await app.run_async()

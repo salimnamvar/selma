@@ -49,8 +49,9 @@ class RuleSchemaValidator:
                     loaded = json.load(handle)
                 if not isinstance(loaded, dict):
                     b_continue = False
-                    logger.warning("rule schema root must be an object")
-                    result = Result.failure("rule schema root must be an object")
+                    msg = "rule schema root must be an object"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
                 else:
                     schema_dict = cast("dict[str, Any]", loaded)
             except (OSError, json.JSONDecodeError) as exc:
@@ -100,8 +101,9 @@ class RuleSchemaValidator:
             schema_result = self._ensure_schema()
             if schema_result.is_failure():
                 b_continue = False
-                logger.warning(schema_result.message)
-                result = Result.failure(schema_result.message)
+                msg = schema_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 schema = schema_result.unwrap()
                 output = schema.evaluate(jschon.JSON(a_raw))
@@ -145,8 +147,9 @@ class RuleSchemaValidator:
             schema_result = self._ensure_schema()
             if schema_result.is_failure():
                 b_continue = False
-                logger.warning(schema_result.message)
-                result = Result.failure(schema_result.message)
+                msg = schema_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 schema = schema_result.unwrap()
                 output = schema.evaluate(jschon.JSON(a_raw))

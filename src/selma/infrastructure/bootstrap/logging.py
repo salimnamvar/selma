@@ -409,9 +409,9 @@ def configure_logging(
             b_continue = False
 
     if b_continue and logging_config_result.value is None:
-        result = Result.failure(
-            logging_config_result.message or "Logging config missing value"
-        )
+        msg = logging_config_result.message or "Logging config missing value"
+        logger.warning(msg)
+        result = Result.failure(msg)
         b_continue = False
 
     if b_continue and logging_config_result.value is not None:

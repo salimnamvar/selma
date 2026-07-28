@@ -106,7 +106,7 @@ directives:
   specific_directives:
   - type: Obligation
     description: Every function SHALL contain exactly one exit point. All code paths within the
-      function SHALL converge to this single exit. Exit mechanisms: `return` and `raise`. Use a
+      function SHALL converge to this single exit — exit doors are `return` and `raise`. Use a
       continue-flag pattern for conditional logic.
     machine_id: SC-001
     context_conditions: All functions — no exceptions. `yield` is a suspension point, not an exit.
@@ -127,7 +127,7 @@ guidance:
   reasoning: Multiple exit points create invisible control flow. A reviewer must trace every path to understand
     what the function returns. A single exit makes the return value the function's explicit contract.
     This applies to ALL functions — including dunders, generators, decorated methods, and nested functions.
-    Exit doors: `return` and `raise`. `yield` is a suspension, not an exit — but a generator function
+    Exit doors are `return` and `raise`. `yield` is a suspension, not an exit — but a generator function
     must still have exactly one terminal exit point.
   explanation: The correct version uses b_continue to gate execution and a single return at the end. The
     incorrect version has multiple return statements, making control flow harder to trace.

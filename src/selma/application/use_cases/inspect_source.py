@@ -73,8 +73,9 @@ class InspectSourceUseCase:
             rules_result = self._filter_rules(catalog, a_request)
             if rules_result.is_failure():
                 b_continue = False
-                logger.warning(rules_result.message)
-                result = Result.failure(rules_result.message)
+                msg = rules_result.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 rules = rules_result.unwrap()
 
@@ -93,10 +94,11 @@ class InspectSourceUseCase:
                 report_result = await self._reporter.report(findings_tuple)
                 if report_result.is_failure():
                     b_continue = False
-                    logger.warning("Reporting failed: %s", report_result.message)
-                    result = Result.failure(
-                        f"Reporting failed: {report_result.message}"
-                    )
+                    msg = f"Reporting failed: {report_result.message}"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
+                if b_continue:
+                    report_text = report_result.unwrap()
             if b_continue:
                 response = InspectResponse(
                     findings=findings_tuple,
@@ -148,7 +150,8 @@ class InspectSourceUseCase:
         if parse_result.is_failure():
             b_continue = False
             logger.warning("Failed to parse %s: %s", a_path, parse_result.message)
-            result = Result.failure(f"Failed to parse {a_path}: {parse_result.message}")
+            msg = f"Failed to parse {a_path}: {parse_result.message}"
+            result = Result.failure(msg)
 
         if b_continue:
             tree = parse_result.unwrap()

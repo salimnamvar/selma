@@ -40,8 +40,9 @@ class QueryDirectiveUseCase:
         catalog_result = await self._directive_repository.list_catalog()
         if catalog_result.is_failure():
             b_continue = False
-            logger.warning(catalog_result.message)
-            result = Result.failure(catalog_result.message)
+            msg = catalog_result.message
+            logger.warning(msg)
+            result = Result.failure(msg)
 
         if b_continue:
             catalog = catalog_result.unwrap()
@@ -70,7 +71,8 @@ class QueryDirectiveUseCase:
                     result = Result.success(self._detail_response(kind, directive))
             else:
                 logger.warning("Unsupported query kind: %s", kind)
-                result = Result.failure(f"Unsupported query kind: {kind}")
+                msg = f"Unsupported query kind: {kind}"
+                result = Result.failure(msg)
 
         return result
 
@@ -138,15 +140,17 @@ class QueryDirectiveUseCase:
         result: Result[str] = Result.failure("unreachable")
         if b_continue and not a_lineage_id:
             b_continue = False
-            logger.warning("lineage_id is required")
-            result = Result.failure("lineage_id is required")
+            msg = "lineage_id is required"
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             query = QueryRequest(kind=QueryKind.GUIDANCE, lineage_id=a_lineage_id)
             response = await self.execute(query)
             if response.is_failure():
                 b_continue = False
-                logger.warning(response.message)
-                result = Result.failure(response.message)
+                msg = response.message
+                logger.warning(msg)
+                result = Result.failure(msg)
             if b_continue:
                 body = response.unwrap()
                 guidance_obj = body.payload.get("guidance")
