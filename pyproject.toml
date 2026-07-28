@@ -346,8 +346,6 @@ exclude_codes = []
 [tool.selma.rules.sc001]
 enabled = true
 severity = "critical"
-exempt_dunders = true
-exempt_generators = true
 exempt_names = []
 
 # ─── Rule: SC-002 Zero Raise ───────────────────────────────────────────────

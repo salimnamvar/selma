@@ -36,9 +36,15 @@ class SourceHash(BaseModel):
         return SourceHash(hashlib.sha256(raw).hexdigest())  # type: ignore[arg-type]
 
     def __eq__(self, a_other: object) -> bool:
-        if not isinstance(a_other, SourceHash):
-            return False
-        return self._value == a_other._value
+        b_continue = True
+        result = False
+        if (
+            b_continue
+            and isinstance(a_other, SourceHash)
+            and self._value == a_other._value
+        ):
+            result = True
+        return result
 
     def __hash__(self) -> int:
         return hash(self._value)

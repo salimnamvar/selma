@@ -34,11 +34,10 @@ preamble:
   title: Preamble
   purpose: Establish human-readable obligations for SC-001 (Single-Exit Point) so authors, reviewers,
     and AI agents can reason about intent without reading evaluator configuration.
-  scope: All production code under this coding doctrine, including tests and AI-generated
-    code, unless a documented exemption applies.
+  scope: All functions in production code, tests, and AI-generated code. No exceptions.
   existential_need: Multiple exit points create invisible control flow. A reviewer must trace every path
-    to understand what the function returns. A single exit makes the return value the function's explicit
-    contract.
+    to understand what the function returns (or raises, or terminates). A single exit makes the
+    function's outcome explicit and predictable. This applies to ALL functions — no exceptions.
 governance:
   title: Governance & Amendment
   authority: Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
@@ -63,8 +62,9 @@ definitions:
     definition: Machine-evaluable document at directive/rule/sc001_single_exit.json.
     exclusion: This policy YAML is not a lint source.
   - term: Single-Exit Point
-    definition: Every function SHALL contain exactly one `return` statement. All code paths within the
-      function SHALL converge to this single return.
+    definition: Every function SHALL contain exactly one exit point. All code paths within the
+      function SHALL converge to this single exit. Exit mechanisms include: `return`, `raise`,
+      `sys.exit()`, `os._exit()`. The function SHALL NOT contain more than one of these.
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
@@ -105,28 +105,30 @@ directives:
   title: Directives (Rules & Standards)
   specific_directives:
   - type: Obligation
-    description: Every function SHALL contain exactly one `return` statement. All code paths within the
-      function SHALL converge to this single return.
+    description: Every function SHALL contain exactly one exit point. All code paths within the
+      function SHALL converge to this single exit. Exit mechanisms include `return`, `raise`,
+      `sys.exit()`, `os._exit()`. Use a continue-flag pattern for conditional logic.
     machine_id: SC-001
-    context_conditions: Python dunder methods and protocol-constrained interfaces mandated by Python's
-      data model are exempt, as their signatures are imposed by the language. Generator functions (`yield`)
-      are exempt from the single-exit rule at the `yield` level, as each `yield` is a suspension point,
-      not an exit. Generators SHALL use `try/finally` to clean up resources on `close()`. Async functions
-      (`async def`) SHALL follow the same single-exit rules; `await` does not count as an exit.
+    context_conditions: All functions — no exceptions. `yield` is a suspension point, not an exit.
+      Async functions (`async def`) SHALL follow the same single-exit rules; `await` does not count as
+      an exit. `break` and `continue` are loop control, not function exits.
     title: Single-Exit Point
   flexible_standards: []
 sanctions:
   title: Sanctions & Remedies
   rows:
-  - violation_context: Function has multiple exit doors — use b_continue pattern
+  - violation_context: Function has multiple exit doors — use single-exit pattern
     enforcement_action: Machine lint finding via sc001_single_exit.json when automatically enforceable;
-      otherwise Lint rule (`pylint:single-return`), code review gate.
-    remediation_path: Refactor to use b_continue pattern with one return at the end of the function.
+      otherwise code review gate.
+    remediation_path: Refactor to use a continue-flag / staged assignment pattern with one terminal exit.
 guidance:
   title: Guidance, Examples, and Reasoning
   purpose: For human and AI reasoning only. Do not execute this section as a linter.
   reasoning: Multiple exit points create invisible control flow. A reviewer must trace every path to understand
     what the function returns. A single exit makes the return value the function's explicit contract.
+    This applies to ALL functions — including dunders, generators, decorated methods, and nested functions.
+    Exit doors include `return`, `raise`, `sys.exit()`, and `os._exit()`. `yield` is a suspension, not
+    an exit — but a generator function must still have exactly one terminal exit point.
   explanation: The correct version uses b_continue to gate execution and a single return at the end. The
     incorrect version has multiple return statements, making control flow harder to trace.
   correct_example: |-
@@ -137,9 +139,15 @@ guidance:
             result = Result.failure('Empty data')
             b_continue = False
         if b_continue:
-            result = Result.success(a_data.get('name', ''))
+            name = a_data.get('name', '')
+            if not name:
+                result = Result.failure('Missing name')
+                b_continue = False
+        if b_continue:
+            result = Result.success(name)
         return result
   incorrect_example: |-
+    # Multiple returns — violates single-exit rule
     def process(a_data: dict) -> Result[str]:
         if not a_data:
             return Result.failure('Empty data')
@@ -147,15 +155,24 @@ guidance:
         if not name:
             return Result.failure('Missing name')
         return Result.success(name)
+
+    # Raise as exit — violates single-exit rule
+    def lookup(a_key: str) -> str:
+        if a_key not in cache:
+            raise KeyError(a_key)
+        return cache[a_key]
+
+    # sys.exit() as exit — violates single-exit rule
+    def terminate(a_msg: str) -> None:
+        log.error(a_msg)
+        sys.exit(1)
   related_machine_ids:
   - SC-002
   - SC-010
   - SC-011
-  exceptions: Python dunder methods and protocol-constrained interfaces mandated by Python's data model
-    are exempt, as their signatures are imposed by the language. Generator functions (`yield`) are exempt
-    from the single-exit rule at the `yield` level, as each `yield` is a suspension point, not an exit.
-    Generators SHALL use `try/finally` to clean up resources on `close()`. Async functions (`async def`)
-    SHALL follow the same single-exit rules; `await` does not count as an exit.
+  exceptions: None. All functions — including dunders, generators, decorated methods, and nested functions
+    — MUST follow the single-exit rule. `yield` is a suspension point, not an exit; `await` is a
+    suspension point, not an exit; `break` and `continue` are loop control, not function exits.
 references:
   title: References & Annexes
   source_doctrine: doctrinal-source.md

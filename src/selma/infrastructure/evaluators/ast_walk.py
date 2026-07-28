@@ -19,7 +19,7 @@ class AstWalkEvaluator(EvaluatorBase):
     Config fields:
         root_node: Name of root node to iterate (e.g. "FunctionDef")
         walk_nodes: List of child node names to count (e.g. ["Return", "Raise"])
-        walk_config: Exclusion flags (exclude_nested_functions, exclude_dunders, etc.)
+        walk_config: Additional configuration (e.g. exit_call_names)
         count: Threshold check {"operator": "gt", "value": 1}
         count_breakdown: Map node name to label for message
         message_template: Template string with {root.name}, {count}, {breakdown}
@@ -60,20 +60,9 @@ class AstWalkEvaluator(EvaluatorBase):
         message_template = str(a_config.get("message_template", "") or "")
         threshold_value = count_config.get("value", 0)
         threshold_op = str(count_config.get("operator", "gt") or "gt")
-        # Merge rule parameters into config so exempt_* flags apply.
-        exclusion_config: dict[str, Any] = dict(a_config)
-        params_obj: object = a_rule.get("parameters", {})
-        if isinstance(params_obj, dict):
-            params_map = cast("dict[str, Any]", params_obj)
-            exclusion_config["parameters"] = params_map
-            for key, value in params_map.items():
-                if key not in exclusion_config:
-                    exclusion_config[key] = value
         for node in ast.walk(a_tree):
             b_continue = True
             if b_continue and self.node_name(node) != root_node:
-                b_continue = False
-            if b_continue and self._is_excluded(node, walk_config, exclusion_config):
                 b_continue = False
             if b_continue:
                 count = self._count_child_nodes(node, walk_nodes, walk_config)
@@ -95,100 +84,34 @@ class AstWalkEvaluator(EvaluatorBase):
         return Result.success(findings)
 
     @staticmethod
-    def _flag_enabled(
-        a_walk_config: dict[str, Any],
-        a_config: dict[str, Any],
-        a_walk_key: str,
-        a_config_key: str,
-    ) -> bool:
-        """Resolve exclusion flag from walk_config, config, or parameters."""
+    def _get_call_full_name(a_node: ast.Call) -> str:
+        func = a_node.func
         b_continue = True
-        result = False
-        if b_continue and a_walk_config.get(a_walk_key, False):
+        result = ""
+        if b_continue and isinstance(func, ast.Name):
+            result = func.id
             b_continue = False
-            result = True
-        params_raw: object = a_config.get("parameters", {})
-        params: dict[str, Any] = (
-            cast("dict[str, Any]", params_raw) if isinstance(params_raw, dict) else {}
-        )
-        if b_continue and a_config.get(a_config_key, False):
-            b_continue = False
-            result = True
-        if b_continue and params.get(a_config_key, False):
-            b_continue = False
-            result = True
+        if b_continue and isinstance(func, ast.Attribute):
+            parts: list[str] = []
+            current: ast.AST = func
+            while isinstance(current, ast.Attribute):
+                parts.append(current.attr)
+                current = current.value
+            if isinstance(current, ast.Name):
+                parts.append(current.id)
+            result = ".".join(reversed(parts))
         return result
 
     @staticmethod
-    def _is_excluded(
-        a_node: ast.AST,
-        a_walk_config: dict[str, Any],
-        a_config: dict[str, Any],
-    ) -> bool:
-        """Check if a root node should be excluded from evaluation.
-
-        Honors walk_config keys (exclude_*) and rule-level / parameters
-        keys (exempt_*) so directive JSON fields are applied consistently.
-        """
+    def _get_call_simple_name(a_node: ast.Call) -> str:
+        func = a_node.func
         b_continue = True
-        result = False
-        name = getattr(a_node, "name", "")
-        if b_continue and AstWalkEvaluator._flag_enabled(
-            a_walk_config, a_config, "exclude_dunders", "exempt_dunders"
-        ):
-            if b_continue and EvaluatorBase.is_dunder(name):
-                b_continue = False
-                result = True
-        if b_continue and AstWalkEvaluator._flag_enabled(
-            a_walk_config, a_config, "exclude_generators", "exempt_generators"
-        ):
-            if b_continue and AstWalkEvaluator._is_generator(a_node):
-                b_continue = False
-                result = True
-        # Structural: declarative validators via known decorator *patterns*
-        # (not project-specific function-name allowlists).
-        if b_continue and a_walk_config.get("exclude_decorator_names"):
-            raw_names: object = a_walk_config.get("exclude_decorator_names", [])
-            decorator_names: list[str] = []
-            if isinstance(raw_names, list):
-                for item in cast("list[object]", raw_names):
-                    decorator_names.append(str(item))
-            if (
-                b_continue
-                and decorator_names
-                and isinstance(a_node, (ast.FunctionDef, ast.AsyncFunctionDef))
-            ):
-                for dec in a_node.decorator_list:
-                    dec_name = ""
-                    if isinstance(dec, ast.Name):
-                        dec_name = dec.id
-                    elif isinstance(dec, ast.Attribute):
-                        dec_name = dec.attr
-                    elif isinstance(dec, ast.Call):
-                        if isinstance(dec.func, ast.Name):
-                            dec_name = dec.func.id
-                        elif isinstance(dec.func, ast.Attribute):
-                            dec_name = dec.func.attr
-                    if b_continue and dec_name in decorator_names:
-                        b_continue = False
-                        result = True
-        return result
-
-    @staticmethod
-    def _is_generator(a_node: ast.AST) -> bool:
-        """Check if a FunctionDef is a generator (contains yield)."""
-        b_continue = True
-        result = False
-        if b_continue and not isinstance(
-            a_node, (ast.FunctionDef, ast.AsyncFunctionDef)
-        ):
+        result = ""
+        if b_continue and isinstance(func, ast.Name):
+            result = func.id
             b_continue = False
-            result = False
-        if b_continue:
-            for child in ast.walk(a_node):
-                if b_continue and isinstance(child, (ast.Yield, ast.YieldFrom)):
-                    b_continue = False
-                    result = True
+        if b_continue and isinstance(func, ast.Attribute):
+            result = func.attr
         return result
 
     @staticmethod
@@ -197,22 +120,24 @@ class AstWalkEvaluator(EvaluatorBase):
         a_walk_nodes: list[str],
         a_walk_config: dict[str, Any],
     ) -> int:
-        """Count matching child nodes within a root node, respecting exclusions."""
+        """Count matching child nodes within a root node."""
         b_continue = True
         count = 0
-        exclude_nested = a_walk_config.get("exclude_nested_functions", False)
+        exit_call_names: list[str] = []
+        raw_exit_calls: object = a_walk_config.get("exit_call_names", [])
+        if isinstance(raw_exit_calls, list):
+            for item in cast("list[object]", raw_exit_calls):
+                exit_call_names.append(str(item))
         for child in ast.walk(a_node):
             b_continue = True
-            if b_continue and exclude_nested and isinstance(child, ast.FunctionDef):
-                b_continue = False
-            if (
-                b_continue
-                and exclude_nested
-                and isinstance(child, ast.AsyncFunctionDef)
-            ):
-                b_continue = False
             if b_continue and EvaluatorBase.node_name(child) in a_walk_nodes:
                 count += 1
+                b_continue = False
+            if b_continue and exit_call_names and isinstance(child, ast.Call):
+                full_name = AstWalkEvaluator._get_call_full_name(child)
+                simple_name = AstWalkEvaluator._get_call_simple_name(child)
+                if full_name in exit_call_names or simple_name in exit_call_names:
+                    count += 1
         return count
 
     @staticmethod

@@ -39,9 +39,15 @@ class FilePath(BaseModel):
         return Path(self._value).name
 
     def __eq__(self, a_other: object) -> bool:
-        if not isinstance(a_other, FilePath):
-            return False
-        return self._value == a_other._value
+        b_continue = True
+        result = False
+        if (
+            b_continue
+            and isinstance(a_other, FilePath)
+            and self._value == a_other._value
+        ):
+            result = True
+        return result
 
     def __hash__(self) -> int:
         return hash(self._value)

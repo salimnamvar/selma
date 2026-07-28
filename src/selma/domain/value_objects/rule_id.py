@@ -29,9 +29,11 @@ class RuleId(BaseModel):
         return self._value
 
     def __eq__(self, a_other: object) -> bool:
-        if not isinstance(a_other, RuleId):
-            return False
-        return self._value == a_other._value
+        b_continue = True
+        result = False
+        if b_continue and isinstance(a_other, RuleId) and self._value == a_other._value:
+            result = True
+        return result
 
     def __hash__(self) -> int:
         return hash(self._value)

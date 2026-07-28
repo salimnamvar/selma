@@ -75,45 +75,6 @@ def foo():
         findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-002"}).unwrap()
         assert len(findings) == 1
 
-    def test_dunder_excluded(self) -> None:
-        source = """
-class Foo:
-    def __str__(self):
-        return "foo"
-    def __repr__(self):
-        return "Foo()"
-"""
-        tree = _parse(source)
-        config = {
-            "root_node": "FunctionDef",
-            "walk_nodes": ["Return"],
-            "walk_config": {"exclude_dunders": True},
-            "count": {"operator": "gt", "value": 1},
-            "message_template": "Function '{name}' has multiple returns",
-        }
-        evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
-        assert findings == []
-
-    def test_generator_excluded(self) -> None:
-        source = """
-def gen():
-    yield 1
-    yield 2
-    yield 3
-"""
-        tree = _parse(source)
-        config = {
-            "root_node": "FunctionDef",
-            "walk_nodes": ["Yield"],
-            "walk_config": {"exclude_generators": True},
-            "count": {"operator": "gt", "value": 0},
-            "message_template": "Function '{name}' yields",
-        }
-        evaluator = AstWalkEvaluator()
-        findings = evaluator.evaluate(tree, config, {"lineage_id": "SC-001"}).unwrap()
-        assert findings == []
-
 
 class TestAstNodeMatchEvaluator:
     """Tests for AstNodeMatchEvaluator (SC-003, SC-024, etc.)."""

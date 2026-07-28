@@ -16,7 +16,6 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import field_validator
 
 from selma.domain.value_objects.enums import ComparisonOperator
 from selma.domain.value_objects.enums import ConflictStrategy
@@ -31,6 +30,7 @@ from selma.domain.value_objects.enums import RuleStatus
 from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.enums import TargetType
 from selma.domain.value_objects.enums import ThresholdOperator
+from selma.domain.value_objects.result import Result
 
 # ─── Evaluator configs (pure types + flexible engine config) ─────────────────
 
@@ -208,20 +208,21 @@ class ConflictResolution(BaseModel):
     strategy: ConflictStrategy
     defer_to: str | None = None
 
-    @field_validator("defer_to")
-    @classmethod
-    def validate_defer_to(cls, v: str | None, info: Any) -> str | None:
-        """Require defer_to when strategy is defer_to (Pydantic contract)."""
-        b_continue = True
-        result = v
-        needs_defer = info.data.get("strategy") == ConflictStrategy.DEFER_TO
-        if b_continue and needs_defer and not v:
-            b_continue = False
-            msg = "defer_to is required when strategy is defer_to"
-            raise ValueError(msg)
-        if b_continue:
-            result = v
-        return result
+
+def validate_conflict_resolution(
+    a_strategy: ConflictStrategy,
+    a_defer_to: str | None,
+) -> Result[None]:
+    """Validate defer_to is provided when strategy is DEFER_TO."""
+    b_continue = True
+    result: Result[None] = Result.success(None)
+    if b_continue and a_strategy == ConflictStrategy.DEFER_TO and not a_defer_to:
+        b_continue = False
+        result = Result.failure("defer_to is required when strategy is DEFER_TO")
+    if b_continue:
+        b_continue = False
+        result = Result.success(None)
+    return result
 
 
 class Lineage(BaseModel):
