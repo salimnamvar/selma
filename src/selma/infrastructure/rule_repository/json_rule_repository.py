@@ -1,38 +1,32 @@
-"""JSON rule repository — loads rules from JSON files.
+"""Filesystem directive repository — pairs rule JSON with policy YAML.
 
-Implements the RuleRepository port from the application layer.
-
-Machine lint logic comes exclusively from directive/rule/*.json.
-Optional policy YAML under directive/policy/ supplies human guidance
-(examples, reasoning) only — never evaluator configuration.
+Implements DirectiveRepository and RuleRepository. Maps into domain only.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
 from typing import cast
 
-import yaml
-
-from selma.application.ports.rule_repository_port import RuleRepository
+from selma.application.ports.directive_repository_port import DirectiveRepository
+from selma.domain.aggregates.directive import Directive
+from selma.domain.aggregates.directive import DirectiveCatalog
+from selma.domain.entities.policy import DirectivePolicy
 from selma.domain.entities.rule import EvaluatorConfig
-from selma.domain.entities.rule import RuleDefinition
-from selma.domain.value_objects.guidance import RuleGuidance
+from selma.domain.entities.rule import Rule
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
-from selma.infrastructure.config.rule_schema_models import Rule
+from selma.infrastructure.config.policy_doctrine_validator import (
+    PolicyDoctrineValidator,
+)
 from selma.infrastructure.config.rule_schema_validator import RuleSchemaValidator
 
 
-class JsonRuleRepository(RuleRepository):
-    """Load rules from JSON files from a configured rules directory.
-
-    Implements RuleRepository port. Caches loaded rules.
-    The rules directory and schema path MUST be provided — no hardcoded defaults.
-    Optional policy_dir attaches guidance from paired YAML doctrines (not lint).
-    """
+class JsonRuleRepository(DirectiveRepository):
+    """Load directives from directive/rule and optional directive/policy."""
 
     def __init__(
         self,
@@ -42,211 +36,170 @@ class JsonRuleRepository(RuleRepository):
     ) -> None:
         self._rules_dir = a_rules_dir
         self._policy_dir = a_policy_dir
-        self._cached_rules: tuple[RuleDefinition, ...] | None = None
+        self._cached_catalog: DirectiveCatalog | None = None
         self._schema_validator = RuleSchemaValidator(a_schema_path=a_schema_path)
+        self._policy_validator = PolicyDoctrineValidator()
 
-    def find_all(
-        self,
-    ) -> Result[tuple[RuleDefinition, ...]]:
-        """Retrieve all active rules.
+    async def list_catalog(self) -> Result[DirectiveCatalog]:
+        """Load the full directive catalog (cached)."""
+        return await asyncio.to_thread(self._list_catalog_sync)
 
-        Preconditions: None.
-        Postconditions: Returns Ok with tuple of all active rules.
-        Side Effects: None.
-        Resource: Reads JSON files on first call, then cached.
-        Failure: Returns Failure on load error.
-        """
+    async def list_active_rules(self) -> Result[tuple[Rule, ...]]:
+        """List executable rules for inspection."""
+        catalog_result = await self.list_catalog()
+        if catalog_result.is_failure():
+            return Result.failure(catalog_result.message)
+        return Result.success(catalog_result.unwrap().list_active_rules())
+
+    async def find_by_lineage_id(self, a_id: RuleId) -> Result[Directive]:
+        """Find one directive by lineage id."""
+        catalog_result = await self.list_catalog()
+        if catalog_result.is_failure():
+            return Result.failure(catalog_result.message)
+        found = catalog_result.unwrap().find_by_lineage_id(a_id.value)
+        if found is None:
+            return Result.failure(f"Directive not found: {a_id}")
+        return Result.success(found)
+
+    async def find_by_codes(
+        self, a_codes: tuple[str, ...]
+    ) -> Result[tuple[Directive, ...]]:
+        """Find directives matching codes."""
+        catalog_result = await self.list_catalog()
+        if catalog_result.is_failure():
+            return Result.failure(catalog_result.message)
+        return Result.success(catalog_result.unwrap().find_by_codes(a_codes))
+
+    async def get_policy(self, a_id: RuleId) -> Result[DirectivePolicy]:
+        """Get reasoning policy for a Machine ID."""
+        directive_result = await self.find_by_lineage_id(a_id)
+        if directive_result.is_failure():
+            return Result.failure(directive_result.message)
+        policy = directive_result.unwrap().policy
+        if policy is None:
+            return Result.failure(f"No policy for directive: {a_id}")
+        return Result.success(policy)
+
+    async def get_rule(self, a_id: RuleId) -> Result[Rule]:
+        """Get executable rule for a Machine ID."""
+        directive_result = await self.find_by_lineage_id(a_id)
+        if directive_result.is_failure():
+            return Result.failure(directive_result.message)
+        return Result.success(directive_result.unwrap().rule)
+
+    def invalidate_cache(self) -> None:
+        """Clear the cached catalog."""
+        self._cached_catalog = None
+
+    def _list_catalog_sync(self) -> Result[DirectiveCatalog]:
+        """Synchronous catalog load with cache."""
         b_continue = True
-        result: Result[tuple[RuleDefinition, ...]] = Result.failure("unreachable")
+        result: Result[DirectiveCatalog] = Result.failure("unreachable")
 
-        if b_continue and self._cached_rules is not None:
+        if self._cached_catalog is not None:
             b_continue = False
-            result = Result.success(self._cached_rules)
+            result = Result.success(self._cached_catalog)
 
         if b_continue:
-            load_result = self._load_all_rules()
-            if b_continue and load_result.is_failure():
+            load_result = self._load_catalog()
+            if load_result.is_failure():
                 b_continue = False
                 result = Result.failure(load_result.message)
-            if b_continue and load_result.is_success():
-                self._cached_rules = load_result.value
-                result = Result.success(load_result.unwrap())
-
-        return result
-
-    def find_by_id(self, a_id: RuleId) -> Result[RuleDefinition]:
-        """Retrieve a rule by ID.
-
-        Preconditions: None.
-        Postconditions: Returns Ok with rule, or Failure if
-        not found.
-        Side Effects: None.
-        Resource: None.
-        Failure: Returns Failure if rule not found.
-        """
-        b_continue = True
-        result: Result[RuleDefinition] = Result.failure("unreachable")
-        all_rules_result = self.find_all()
-
-        if b_continue and all_rules_result.is_failure():
-            b_continue = False
-            result = Result.failure(all_rules_result.message)
-        if b_continue:
-            found: RuleDefinition | None = None
-            for rule in all_rules_result.unwrap():
-                if b_continue and RuleId(rule.lineage_id) == a_id:
-                    b_continue = False
-                    found = rule
             if b_continue:
-                result = Result.failure(f"Rule not found: {a_id}")
-            if not b_continue and found is not None:
-                result = Result.success(found)
+                self._cached_catalog = load_result.unwrap()
+                result = Result.success(self._cached_catalog)
 
         return result
 
-    def find_by_codes(
-        self, a_codes: tuple[str, ...]
-    ) -> Result[tuple[RuleDefinition, ...]]:
-        """Retrieve rules by code list.
-
-        Preconditions: None.
-        Postconditions: Returns Ok with matching rules.
-        Side Effects: None.
-        Resource: None.
-        Failure: Returns Failure on load error.
-        """
+    def _load_catalog(self) -> Result[DirectiveCatalog]:
+        """Load all rule JSON files and pair with policy YAML."""
         b_continue = True
-        result: Result[tuple[RuleDefinition, ...]] = Result.failure("unreachable")
-        all_rules_result = self.find_all()
-
-        if b_continue and all_rules_result.is_failure():
-            b_continue = False
-            result = Result.failure(all_rules_result.message)
-        if b_continue:
-            codes_set = frozenset(a_codes)
-            matched = tuple(
-                rule
-                for rule in all_rules_result.unwrap()
-                if rule.lineage_id in codes_set or rule.id in codes_set
-            )
-            result = Result.success(matched)
-
-        return result
-
-    def _load_all_rules(
-        self,
-    ) -> Result[tuple[RuleDefinition, ...]]:
-        """Load all JSON rule files from the rules directory."""
-        b_continue = True
-        result: Result[tuple[RuleDefinition, ...]] = Result.failure("unreachable")
-        rules: list[RuleDefinition] = []
+        result: Result[DirectiveCatalog] = Result.failure("unreachable")
+        directives: list[Directive] = []
 
         if b_continue and not self._rules_dir.exists():
             b_continue = False
-            result = Result.success(())
+            result = Result.success(DirectiveCatalog(directives=()))
 
         if b_continue:
             json_files = sorted(self._rules_dir.glob("*.json"))
             for file_path in json_files:
                 if b_continue:
                     load_result = self._load_rule_file(file_path)
-                    if b_continue and load_result.is_failure():
+                    if load_result.is_failure():
                         b_continue = False
                         msg = f"Failed to load {file_path.name}: {load_result.message}"
                         result = Result.failure(msg)
                     if b_continue and load_result.is_success():
-                        rules.extend(load_result.unwrap())
+                        for rule in load_result.unwrap():
+                            policy = self._load_policy_for_rule(file_path, rule)
+                            directives.append(Directive(rule=rule, policy=policy))
 
         if b_continue:
-            active = tuple(rule for rule in rules if rule.is_active())
-            result = Result.success(active)
+            catalog = DirectiveCatalog(directives=tuple(directives))
+            result = Result.success(catalog)
 
         return result
 
-    def _load_rule_file(self, a_path: Path) -> Result[tuple[RuleDefinition, ...]]:
-        """Load rules from a single JSON file.
-
-        Supports both formats:
-        - Individual rule object: {"lineage_id": "SC-001", ...}
-        - Wrapped dataset: {"rules": [{"lineage_id": "SC-001", ...}]}
-        """
+    def _load_rule_file(self, a_path: Path) -> Result[tuple[Rule, ...]]:
+        """Load rules from a single JSON file."""
         b_continue = True
-        result: Result[tuple[RuleDefinition, ...]] = Result.failure("unreachable")
+        result: Result[tuple[Rule, ...]] = Result.failure("unreachable")
 
         try:
-            data: dict[str, Any] = {}
+            with a_path.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            raw_rules = data.get("rules", [])
+            if not raw_rules and "lineage_id" in data:
+                raw_rules = [data]
+            parsed: list[Rule] = []
+            for raw_rule in cast("list[object]", raw_rules):
+                if b_continue and isinstance(raw_rule, dict):
+                    parse_result = self._parse_rule(cast("dict[str, Any]", raw_rule))
+                    if parse_result.is_failure():
+                        b_continue = False
+                        result = Result.failure(parse_result.message)
+                    if b_continue and parse_result.is_success():
+                        parsed.append(parse_result.unwrap())
             if b_continue:
-                with a_path.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
-            if b_continue:
-                raw_rules = data.get("rules", [])
-                if not raw_rules and "lineage_id" in data:
-                    raw_rules = [data]
-                parsed: list[RuleDefinition] = []
-                for raw_rule in raw_rules:
-                    if b_continue:
-                        parse_result = self._parse_rule(raw_rule, a_path)
-                        if b_continue and parse_result.is_failure():
-                            b_continue = False
-                            result = Result.failure(parse_result.message)
-                        if b_continue and parse_result.is_success():
-                            parsed.append(parse_result.unwrap())
-                if b_continue:
-                    result = Result.success(tuple(parsed))
-        except (OSError, json.JSONDecodeError) as e:
-            result = Result.failure(str(e))
+                result = Result.success(tuple(parsed))
+        except (OSError, json.JSONDecodeError) as exc:
+            result = Result.failure(str(exc))
 
         return result
 
-    def _parse_rule(
-        self, a_raw: dict[str, Any], a_rule_path: Path
-    ) -> Result[RuleDefinition]:
-        """Validate via jschon JSON Schema + Pydantic, then map to domain RuleDefinition."""
+    def _parse_rule(self, a_raw: dict[str, Any]) -> Result[Rule]:
+        """Validate and normalize a rule document into domain Rule."""
         b_continue = True
-        result: Result[RuleDefinition] = Result.failure("unreachable")
+        result: Result[Rule] = Result.failure("unreachable")
+        raw = dict(a_raw)
 
-        validation = self._schema_validator.validate_document(a_raw)
-        if validation.is_failure():
-            b_continue = False
-            result = Result.failure(validation.message)
-
-        if b_continue:
-            document = validation.unwrap()
-            mapped = self._map_document(document, a_rule_path)
-            if mapped.is_failure():
+        if "evaluator_config" in raw and isinstance(raw["evaluator_config"], dict):
+            config_result = self._parse_evaluator_config(
+                cast("dict[str, Any]", raw["evaluator_config"])
+            )
+            if config_result.is_failure():
                 b_continue = False
-                result = Result.failure(mapped.message)
+                result = Result.failure(config_result.message)
             if b_continue:
-                result = Result.success(mapped.unwrap())
+                raw["evaluator_config"] = config_result.unwrap()
 
-        return result
-
-    @staticmethod
-    def _as_mapping(a_value: object) -> dict[str, object] | None:
-        """Return a string-keyed mapping when the value is a dict."""
-        b_continue = True
-        result: dict[str, object] | None = None
-        if b_continue and not isinstance(a_value, dict):
-            b_continue = False
         if b_continue:
-            raw = cast("dict[object, object]", a_value)
-            result = {key: value for key, value in raw.items() if isinstance(key, str)}
+            validation = self._schema_validator.validate_document(raw)
+            if validation.is_failure():
+                b_continue = False
+                result = Result.failure(validation.message)
+            if b_continue:
+                result = Result.success(validation.unwrap())
+
         return result
 
-    @staticmethod
-    def _str_field(a_map: dict[str, object], a_key: str, a_default: str = "") -> str:
-        """Read a map field as a string with a default."""
-        value = a_map.get(a_key)
-        if value is None:
-            return a_default
-        return str(value)
-
-    def _load_policy_guidance(
-        self, a_rule_path: Path, a_lineage_id: str, a_message: str
-    ) -> RuleGuidance | None:
-        """Load human guidance from paired policy YAML (never used for lint)."""
+    def _load_policy_for_rule(
+        self, a_rule_path: Path, a_rule: Rule
+    ) -> DirectivePolicy | None:
+        """Load paired policy YAML; never used for evaluation."""
         b_continue = True
-        result: RuleGuidance | None = None
+        result: DirectivePolicy | None = None
         if b_continue and self._policy_dir is None:
             b_continue = False
         policy_path: Path | None = None
@@ -256,121 +209,9 @@ class JsonRuleRepository(RuleRepository):
                 b_continue = False
                 policy_path = None
         if b_continue and policy_path is not None:
-            try:
-                with policy_path.open("r", encoding="utf-8") as handle:
-                    raw_obj: object = yaml.safe_load(handle)
-                data = self._as_mapping(raw_obj)
-                if data is None:
-                    b_continue = False
-                if b_continue and data is not None:
-                    # Contamination guard: never accept machine evaluator fields
-                    # as guidance carriers even if a bad policy file contains them.
-                    for forbidden in (
-                        "evaluator_type",
-                        "evaluator_config",
-                        "evaluator_hint",
-                    ):
-                        if forbidden in data:
-                            b_continue = False
-                if b_continue and data is not None:
-                    guide_d = self._as_mapping(data.get("guidance")) or {}
-                    title = a_lineage_id
-                    directives = self._as_mapping(data.get("directives"))
-                    if directives is not None:
-                        specs_obj = directives.get("specific_directives")
-                        if isinstance(specs_obj, list) and specs_obj:
-                            specs_list = cast("list[object]", specs_obj)
-                            first = self._as_mapping(specs_list[0])
-                            if first is not None:
-                                title = (
-                                    self._str_field(first, "title")
-                                    or self._str_field(first, "machine_id")
-                                    or a_lineage_id
-                                )
-                    related: list[str] = []
-                    related_raw = guide_d.get("related_machine_ids")
-                    if isinstance(related_raw, list):
-                        for item in cast("list[object]", related_raw):
-                            related.append(str(item))
-                    doctrine_section = ""
-                    refs = self._as_mapping(data.get("references"))
-                    if refs is not None:
-                        doctrine_section = self._str_field(refs, "anchor_ref")
-                    fix_instructions = ""
-                    sanctions = self._as_mapping(data.get("sanctions"))
-                    if sanctions is not None:
-                        rows_obj = sanctions.get("rows")
-                        if isinstance(rows_obj, list) and rows_obj:
-                            rows_list = cast("list[object]", rows_obj)
-                            first_row = self._as_mapping(rows_list[0])
-                            if first_row is not None:
-                                fix_instructions = self._str_field(
-                                    first_row, "remediation_path"
-                                )
-                    if not fix_instructions:
-                        fix_instructions = (
-                            self._str_field(guide_d, "explanation") or a_message
-                        )
-                    result = RuleGuidance(
-                        rule_code=a_lineage_id,
-                        title=title,
-                        description=self._str_field(guide_d, "explanation")
-                        or a_message,
-                        rationale=self._str_field(guide_d, "reasoning"),
-                        severity="",
-                        fix_instructions=fix_instructions,
-                        correct_example=self._str_field(guide_d, "correct_example"),
-                        anti_pattern=self._str_field(guide_d, "incorrect_example"),
-                        related_rules=tuple(related),
-                        doctrine_section=doctrine_section,
-                        hints=(),
-                    )
-            except (OSError, yaml.YAMLError):
-                result = None
-        return result
-
-    def _map_document(self, a_doc: Rule, a_rule_path: Path) -> Result[RuleDefinition]:
-        """Map a validated Rule model to a domain RuleDefinition."""
-        b_continue = True
-        result: Result[RuleDefinition] = Result.failure("unreachable")
-
-        ec_result = self._parse_evaluator_config(a_doc.evaluator_config)
-        if ec_result.is_failure():
-            b_continue = False
-            result = Result.failure(ec_result.message)
-
-        if b_continue:
-            guidance = self._load_policy_guidance(
-                a_rule_path=a_rule_path,
-                a_lineage_id=a_doc.lineage_id,
-                a_message=a_doc.message,
-            )
-            rule = RuleDefinition(
-                lineage_id=a_doc.lineage_id,
-                id=a_doc.id,
-                rule_type=a_doc.type,
-                message=a_doc.message,
-                evaluator_type=str(a_doc.evaluator_type.value)
-                if hasattr(a_doc.evaluator_type, "value")
-                else str(a_doc.evaluator_type),
-                evaluator_config=ec_result.unwrap(),
-                weight=a_doc.weight,
-                priority=a_doc.priority,
-                status=a_doc.status,
-                created_at=a_doc.created_at,
-                rationale=a_doc.rationale,
-                remediation=a_doc.remediation,
-                guidance=guidance.model_dump() if guidance else None,
-                parameters=dict(a_doc.parameters),
-                depends_on=tuple(a_doc.depends_on),
-                conflicts_with=tuple(a_doc.conflicts_with),
-                anchor_ref=a_doc.anchor_ref,
-                scope=a_doc.scope.model_dump() if a_doc.scope else None,
-                conflict_resolution=a_doc.conflict_resolution.model_dump()
-                if a_doc.conflict_resolution
-                else None,
-            )
-            result = Result.success(rule)
+            validated = self._policy_validator.validate_directive_file(policy_path)
+            if validated.is_success():
+                result = validated.unwrap()
         return result
 
     def _parse_evaluator_config(
@@ -379,11 +220,7 @@ class JsonRuleRepository(RuleRepository):
         a_depth: int = 0,
         a_max_depth: int = 32,
     ) -> Result[EvaluatorConfig]:
-        """Parse raw evaluator config dict into EvaluatorConfig.
-
-        Uses EvaluatorConfig's extra="allow" to accept any fields.
-        a_depth / a_max_depth guard nested sub_evaluators (SC-114).
-        """
+        """Parse raw evaluator config into domain EvaluatorConfig."""
         b_continue = True
         result: Result[EvaluatorConfig] = Result.failure("unreachable")
 
@@ -401,7 +238,6 @@ class JsonRuleRepository(RuleRepository):
                 for item in cast("list[object]", raw_subs_obj):
                     if isinstance(item, dict):
                         sub_raw.append(cast("dict[str, Any]", item))
-
             if sub_raw:
                 parsed_subs: list[EvaluatorConfig] = []
                 for sub_item in sub_raw:
@@ -419,6 +255,17 @@ class JsonRuleRepository(RuleRepository):
                     sub_evaluators = tuple(parsed_subs)
 
         if b_continue:
+            known = {
+                "pattern",
+                "flags",
+                "field",
+                "operator",
+                "value",
+                "threshold",
+                "logic",
+                "sub_evaluators",
+            }
+            extras = {k: v for k, v in a_raw.items() if k not in known}
             config = EvaluatorConfig(
                 pattern=a_raw.get("pattern"),
                 flags=a_raw.get("flags"),
@@ -428,26 +275,8 @@ class JsonRuleRepository(RuleRepository):
                 threshold=a_raw.get("threshold"),
                 logic=a_raw.get("logic"),
                 sub_evaluators=sub_evaluators,
-                **{
-                    k: v
-                    for k, v in a_raw.items()
-                    if k
-                    not in {
-                        "pattern",
-                        "flags",
-                        "field",
-                        "operator",
-                        "value",
-                        "threshold",
-                        "logic",
-                        "sub_evaluators",
-                    }
-                },
+                **extras,
             )
             result = Result.success(config)
 
         return result
-
-    def invalidate_cache(self) -> None:
-        """Clear the cached rules."""
-        self._cached_rules = None

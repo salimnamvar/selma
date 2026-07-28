@@ -4,7 +4,7 @@ import pytest
 
 from selma.domain.exceptions.domain_errors import DomainError
 from selma.domain.exceptions.domain_errors import InvalidFactDocument
-from selma.domain.exceptions.domain_errors import InvalidRuleDefinition
+from selma.domain.exceptions.domain_errors import InvalidRule
 from selma.domain.exceptions.domain_errors import LintResultAlreadyComplete
 from selma.domain.exceptions.domain_errors import RuleNotFound
 
@@ -88,19 +88,19 @@ class TestLintResultAlreadyComplete:
         assert issubclass(LintResultAlreadyComplete, DomainError)
 
 
-class TestInvalidRuleDefinition:
-    """InvalidRuleDefinition exception."""
+class TestInvalidRule:
+    """InvalidRule exception."""
 
     def test_message(self) -> None:
-        """InvalidRuleDefinition should store the message."""
-        e = InvalidRuleDefinition("bad rule")
+        """InvalidRule should store the message."""
+        e = InvalidRule("bad rule")
         assert str(e) == "bad rule"
 
     def test_default_message(self) -> None:
-        """InvalidRuleDefinition with no message should have a default."""
-        e = InvalidRuleDefinition()
-        assert "Invalid rule definition" in str(e)
+        """InvalidRule with no message should have a default."""
+        e = InvalidRule()
+        assert "Invalid rule" in str(e)
 
     def test_is_domain_error(self) -> None:
-        """InvalidRuleDefinition should be a DomainError subclass."""
-        assert issubclass(InvalidRuleDefinition, DomainError)
+        """InvalidRule should be a DomainError subclass."""
+        assert issubclass(InvalidRule, DomainError)

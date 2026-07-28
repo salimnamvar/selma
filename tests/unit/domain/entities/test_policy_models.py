@@ -1,22 +1,22 @@
 """Tests for policy_doctrine_models — Pydantic v2 models for policy_doctrine.yaml."""
 
+from selma.domain.entities.policy import ConflictResolutionBinding
+from selma.domain.entities.policy import CrossLayerBinding
+from selma.domain.entities.policy import DirectiveDoctrineMeta
+from selma.domain.entities.policy import DirectivePolicy
+from selma.domain.entities.policy import DirectiveTerm
+from selma.domain.entities.policy import DoctrineMeta
+from selma.domain.entities.policy import DocumentSection
+from selma.domain.entities.policy import FieldLegality
+from selma.domain.entities.policy import Guidance
+from selma.domain.entities.policy import PriorityLevelDefinition
+from selma.domain.entities.policy import SanctionRow
+from selma.domain.entities.policy import Sanctions
+from selma.domain.entities.policy import SpecificDirective
+from selma.domain.entities.policy import WritingPrinciple
+from selma.domain.value_objects.enums import ContentType
 from selma.domain.value_objects.enums import DeonticType
-from selma.infrastructure.config.policy_doctrine_models import ConflictResolutionBinding
-from selma.infrastructure.config.policy_doctrine_models import ContentType
-from selma.infrastructure.config.policy_doctrine_models import CrossLayerBinding
-from selma.infrastructure.config.policy_doctrine_models import DirectiveDoctrineMeta
-from selma.infrastructure.config.policy_doctrine_models import DirectivePolicy
-from selma.infrastructure.config.policy_doctrine_models import DirectiveTerm
-from selma.infrastructure.config.policy_doctrine_models import DoctrineMeta
-from selma.infrastructure.config.policy_doctrine_models import DocumentSection
-from selma.infrastructure.config.policy_doctrine_models import FieldLegality
-from selma.infrastructure.config.policy_doctrine_models import Guidance
-from selma.infrastructure.config.policy_doctrine_models import PriorityCategory
-from selma.infrastructure.config.policy_doctrine_models import PriorityLevelDefinition
-from selma.infrastructure.config.policy_doctrine_models import SanctionRow
-from selma.infrastructure.config.policy_doctrine_models import Sanctions
-from selma.infrastructure.config.policy_doctrine_models import SpecificDirective
-from selma.infrastructure.config.policy_doctrine_models import WritingPrinciple
+from selma.domain.value_objects.enums import PriorityCategory
 
 
 class TestDoctrineMeta:

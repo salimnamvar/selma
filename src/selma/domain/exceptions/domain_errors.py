@@ -33,8 +33,8 @@ class LintResultAlreadyComplete(DomainError):
         super().__init__(a_message or "Lint result already complete")
 
 
-class InvalidRuleDefinition(DomainError):
-    """Raised when a rule definition is invalid."""
+class InvalidRule(DomainError):
+    """Raised when a rule is invalid."""
 
     def __init__(self, a_message: str = "") -> None:
-        super().__init__(a_message or "Invalid rule definition")
+        super().__init__(a_message or "Invalid rule")

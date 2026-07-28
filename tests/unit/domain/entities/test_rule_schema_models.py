@@ -1,25 +1,25 @@
 """Tests for rule_schema_models — Pydantic v2 models for rule_schema.json."""
 
+from selma.domain.entities.rule import CompositeEvaluatorConfig
+from selma.domain.entities.rule import ConflictResolution
+from selma.domain.entities.rule import EvaluatorConfigEntry
+from selma.domain.entities.rule import FieldCheckEvaluatorConfig
+from selma.domain.entities.rule import Lineage
+from selma.domain.entities.rule import RegexEvaluatorConfig
+from selma.domain.entities.rule import Rule
+from selma.domain.entities.rule import RuleDataset
+from selma.domain.entities.rule import Scope
+from selma.domain.entities.rule import ThresholdEvaluatorConfig
+from selma.domain.value_objects.enums import ComparisonOperator
+from selma.domain.value_objects.enums import ConflictStrategy
+from selma.domain.value_objects.enums import DeonticType
+from selma.domain.value_objects.enums import LineageOperation
+from selma.domain.value_objects.enums import LogicOp
+from selma.domain.value_objects.enums import PriorityLevel
+from selma.domain.value_objects.enums import PureEvaluatorType
+from selma.domain.value_objects.enums import RuleStatus
 from selma.domain.value_objects.enums import Severity
-from selma.infrastructure.config.rule_schema_models import ComparisonOperator
-from selma.infrastructure.config.rule_schema_models import CompositeEvaluatorConfig
-from selma.infrastructure.config.rule_schema_models import ConflictResolution
-from selma.infrastructure.config.rule_schema_models import ConflictStrategy
-from selma.infrastructure.config.rule_schema_models import DeonticType
-from selma.infrastructure.config.rule_schema_models import EvaluatorConfigEntry
-from selma.infrastructure.config.rule_schema_models import EvaluatorType
-from selma.infrastructure.config.rule_schema_models import FieldCheckEvaluatorConfig
-from selma.infrastructure.config.rule_schema_models import Lineage
-from selma.infrastructure.config.rule_schema_models import LineageOperation
-from selma.infrastructure.config.rule_schema_models import LogicOp
-from selma.infrastructure.config.rule_schema_models import PriorityLevel
-from selma.infrastructure.config.rule_schema_models import RegexEvaluatorConfig
-from selma.infrastructure.config.rule_schema_models import Rule
-from selma.infrastructure.config.rule_schema_models import RuleDataset
-from selma.infrastructure.config.rule_schema_models import RuleStatus
-from selma.infrastructure.config.rule_schema_models import Scope
-from selma.infrastructure.config.rule_schema_models import TargetType
-from selma.infrastructure.config.rule_schema_models import ThresholdEvaluatorConfig
+from selma.domain.value_objects.enums import TargetType
 
 
 class TestEnums:
@@ -37,10 +37,10 @@ class TestEnums:
         assert RuleStatus.SUPERSEDED == "superseded"
 
     def test_evaluator_type_values(self) -> None:
-        assert EvaluatorType.REGEX == "regex"
-        assert EvaluatorType.FIELD_CHECK == "field_check"
-        assert EvaluatorType.THRESHOLD == "threshold"
-        assert EvaluatorType.COMPOSITE == "composite"
+        assert PureEvaluatorType.REGEX == "regex"
+        assert PureEvaluatorType.FIELD_CHECK == "field_check"
+        assert PureEvaluatorType.THRESHOLD == "threshold"
+        assert PureEvaluatorType.COMPOSITE == "composite"
 
     def test_severity_values(self) -> None:
         assert Severity.CRITICAL == "critical"
@@ -107,7 +107,7 @@ class TestCompositeEvaluatorConfig:
 
     def test_creation_with_sub_evaluators(self) -> None:
         sub = EvaluatorConfigEntry(
-            evaluator_type=EvaluatorType.REGEX,
+            evaluator_type=PureEvaluatorType.REGEX,
             evaluator_config=RegexEvaluatorConfig(pattern="test"),
         )
         config = CompositeEvaluatorConfig(
@@ -119,7 +119,7 @@ class TestCompositeEvaluatorConfig:
 
     def test_not_logic_max_one(self) -> None:
         sub = EvaluatorConfigEntry(
-            evaluator_type=EvaluatorType.REGEX,
+            evaluator_type=PureEvaluatorType.REGEX,
             evaluator_config=RegexEvaluatorConfig(pattern="test"),
         )
         config = CompositeEvaluatorConfig(
@@ -199,7 +199,7 @@ class TestRule:
             "id": "SC-001",
             "type": DeonticType.OBLIGATION,
             "message": "Test rule",
-            "evaluator_type": EvaluatorType.REGEX,
+            "evaluator_type": PureEvaluatorType.REGEX,
             "evaluator_config": {"pattern": "test"},
             "status": RuleStatus.ACTIVE,
             "created_at": "2026-07-25T00:00:00Z",
@@ -261,7 +261,7 @@ class TestRuleDataset:
                     id="SC-001",
                     type=DeonticType.OBLIGATION,
                     message="Test",
-                    evaluator_type=EvaluatorType.REGEX,
+                    evaluator_type=PureEvaluatorType.REGEX,
                     evaluator_config={"pattern": "test"},
                     status=RuleStatus.ACTIVE,
                     created_at="2026-07-25T00:00:00Z",

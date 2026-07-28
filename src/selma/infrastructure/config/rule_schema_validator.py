@@ -1,11 +1,7 @@
-"""JSON Schema validation using jschon + Pydantic v2 for rule documents.
+"""JSON Schema validation using jschon + domain Pydantic models.
 
-Provides two-layer validation:
-1. jschon JSON Schema structural validation (2020-12)
-2. Pydantic v2 semantic validation with typed models
-
-Schema path MUST be provided — no hardcoded paths.
-No module-level mutable state (SC-070).
+Structural validation (jschon) applies to pure schema evaluator types.
+Language-specific engine types (ast_*) are validated with domain Pydantic only.
 """
 
 from __future__ import annotations
@@ -13,47 +9,27 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 import jschon
 from jschon.exc import JSONError as JschonJSONError
 
+from selma.domain.entities.rule import Rule
+from selma.domain.entities.rule import RuleDataset
+from selma.domain.value_objects.enums import PureEvaluatorType
 from selma.domain.value_objects.result import Result
-from selma.infrastructure.config.rule_schema_models import Rule
-from selma.infrastructure.config.rule_schema_models import RuleDataset
 
 
 class RuleSchemaValidator:
-    """Validate rule JSON with jschon JSON Schema then parse with Pydantic.
+    """Validate rule JSON into domain Rule / RuleDataset models."""
 
-    Two-layer validation:
-    1. jschon structural validation against rule_schema.json
-    2. Pydantic semantic validation into typed models
-
-    The schema path MUST be provided at construction time.
-    All state is instance-level — no module-level globals (SC-070).
-    """
-
-    def __init__(
-        self,
-        a_schema_path: Path,
-    ) -> None:
+    def __init__(self, a_schema_path: Path) -> None:
         self._schema_path = a_schema_path
         self._catalog = jschon.create_catalog("2020-12")
         self._schema: jschon.JSONSchema | None = None
 
     def _ensure_schema(self) -> Result[jschon.JSONSchema]:
-        """Ensure the JSON Schema is loaded from disk.
-
-        Preconditions:
-            - self._schema_path points to a valid JSON Schema file.
-
-        Postconditions:
-            Returns Result.success with jschon schema, or Result.failure.
-
-        Side Effects: Caches schema on self._schema.
-        Resource: Reads file from disk on first call.
-        Failure: Returns Failure on I/O error or invalid JSON.
-        """
+        """Load and cache the JSON Schema from disk."""
         b_continue = True
         result: Result[jschon.JSONSchema] = Result.failure("unreachable")
 
@@ -61,18 +37,21 @@ class RuleSchemaValidator:
             b_continue = False
             result = Result.success(self._schema)
 
+        schema_dict: dict[str, Any] | None = None
         if b_continue:
             try:
                 with self._schema_path.open("r", encoding="utf-8") as handle:
-                    schema_dict = json.load(handle)
-                if not isinstance(schema_dict, dict):
+                    loaded = json.load(handle)
+                if not isinstance(loaded, dict):
                     b_continue = False
                     result = Result.failure("rule schema root must be an object")
+                else:
+                    schema_dict = cast("dict[str, Any]", loaded)
             except (OSError, json.JSONDecodeError) as exc:
                 b_continue = False
                 result = Result.failure(f"Failed to load rule schema: {exc}")
 
-        if b_continue:
+        if b_continue and schema_dict is not None:
             try:
                 self._schema = jschon.JSONSchema(
                     schema_dict,  # type: ignore[arg-type]
@@ -84,39 +63,37 @@ class RuleSchemaValidator:
 
         return result
 
+    @staticmethod
+    def _is_pure_evaluator_document(a_raw: dict[str, Any]) -> bool:
+        """Return True when document uses only pure schema evaluator types."""
+        evaluator_type = a_raw.get("evaluator_type")
+        if not isinstance(evaluator_type, str):
+            return False
+        pure = {member.value for member in PureEvaluatorType}
+        return evaluator_type in pure
+
     def validate_document(self, a_raw: dict[str, Any]) -> Result[Rule]:
-        """Validate a single rule document.
+        """Validate a single rule document into a domain Rule.
 
-        Two-layer validation:
-        1. jschon JSON Schema structural check
-        2. Pydantic semantic check
-
-        Preconditions:
-            - a_raw is a dict representing a rule JSON document.
-
-        Postconditions:
-            Returns Result.success with Rule model, or Result.failure.
-
-        Side Effects: None.
-        Resource: None.
-        Failure: Returns Failure on schema or semantic validation errors.
+        Pure evaluator types: jschon + Pydantic.
+        Language extensions (ast_*): Pydantic domain model only.
         """
         b_continue = True
         result: Result[Rule] = Result.failure("unreachable")
 
-        schema_result = self._ensure_schema()
-        if schema_result.is_failure():
-            b_continue = False
-            result = Result.failure(schema_result.message)
-
-        if b_continue:
-            schema = schema_result.unwrap()
-            output = schema.evaluate(jschon.JSON(a_raw))
-            if not output.valid:
-                errors = list(output.collect_errors())
-                msgs = [str(err) for err in errors[:5]]
+        if b_continue and self._is_pure_evaluator_document(a_raw):
+            schema_result = self._ensure_schema()
+            if schema_result.is_failure():
                 b_continue = False
-                result = Result.failure(f"jschon: {'; '.join(msgs)}")
+                result = Result.failure(schema_result.message)
+            if b_continue:
+                schema = schema_result.unwrap()
+                output = schema.evaluate(jschon.JSON(a_raw))
+                if not output.valid:
+                    errors = list(output.collect_errors())
+                    msgs = [str(err) for err in errors[:5]]
+                    b_continue = False
+                    result = Result.failure(f"jschon: {'; '.join(msgs)}")
 
         if b_continue:
             try:
@@ -128,39 +105,35 @@ class RuleSchemaValidator:
         return result
 
     def validate_dataset(self, a_raw: dict[str, Any]) -> Result[RuleDataset]:
-        """Validate a wrapped rule dataset.
-
-        Two-layer validation:
-        1. jschon JSON Schema structural check
-        2. Pydantic semantic check
-
-        Preconditions:
-            - a_raw is a dict with version, policy_contract_version,
-              policy_contract_id, and rules fields.
-
-        Postconditions:
-            Returns Result.success with RuleDataset model, or Result.failure.
-
-        Side Effects: None.
-        Resource: None.
-        Failure: Returns Failure on schema or semantic validation errors.
-        """
+        """Validate a wrapped rule dataset into domain RuleDataset."""
         b_continue = True
         result: Result[RuleDataset] = Result.failure("unreachable")
 
-        schema_result = self._ensure_schema()
-        if schema_result.is_failure():
-            b_continue = False
-            result = Result.failure(schema_result.message)
+        rules_obj = a_raw.get("rules")
+        all_pure = True
+        if isinstance(rules_obj, list):
+            for item in cast("list[object]", rules_obj):
+                if isinstance(item, dict) and not self._is_pure_evaluator_document(
+                    cast("dict[str, Any]", item)
+                ):
+                    all_pure = False
+                    break
+        else:
+            all_pure = False
 
-        if b_continue:
-            schema = schema_result.unwrap()
-            output = schema.evaluate(jschon.JSON(a_raw))
-            if not output.valid:
-                errors = list(output.collect_errors())
-                msgs = [str(err) for err in errors[:5]]
+        if b_continue and all_pure:
+            schema_result = self._ensure_schema()
+            if schema_result.is_failure():
                 b_continue = False
-                result = Result.failure(f"jschon: {'; '.join(msgs)}")
+                result = Result.failure(schema_result.message)
+            if b_continue:
+                schema = schema_result.unwrap()
+                output = schema.evaluate(jschon.JSON(a_raw))
+                if not output.valid:
+                    errors = list(output.collect_errors())
+                    msgs = [str(err) for err in errors[:5]]
+                    b_continue = False
+                    result = Result.failure(f"jschon: {'; '.join(msgs)}")
 
         if b_continue:
             try:

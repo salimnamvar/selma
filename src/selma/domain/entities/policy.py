@@ -1,44 +1,22 @@
-"""Pydantic v2 models for policy_doctrine.yaml.
+"""Policy doctrine and per-directive policy models.
 
-Models the governance intent layer — reasoning, guidance, examples.
-Contains NO machine-executable logic. Used by agents and humans to
-reason about rule intent, not to execute evaluations.
+Single source of truth for governance intent, guidance, and reasoning.
+Contains NO machine-executable evaluation logic.
 
 Schema contract: schema/policy_doctrine.yaml
-Normative source: SPECIFICATION.md 8.2.4
+Paired instances: directive/policy/*.yaml
 """
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-# ─── Policy-Specific Enums ───────────────────────────────────────────────────
-# These are policy-layer enums, not core domain concepts.
-
-
-class ContentType(StrEnum):
-    """Content type for document sections."""
-
-    PROSE = "prose"
-    TABLE = "table"
-    PROSE_OR_TABLE = "prose_or_table"
-    MIXED = "mixed"
-
-
-class PriorityCategory(StrEnum):
-    """Priority hierarchy categories in policy documents."""
-
-    CONSTITUTIONAL = "constitutional"
-    STATUTORY = "statutory"
-    REGULATORY = "regulatory"
-    OPERATIONAL = "operational"
-    ADVISORY = "advisory"
-
+from selma.domain.value_objects.enums import ContentType
+from selma.domain.value_objects.enums import PriorityCategory
 
 # ─── Doctrine Metadata ────────────────────────────────────────────────────────
 
