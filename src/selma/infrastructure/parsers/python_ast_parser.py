@@ -41,6 +41,7 @@ class PythonAstParser(SourceParser):
             if b_continue:
                 logger.warning("Failed to parse %s: %s", a_path, exc)
                 b_continue = False
+                logger.warning("Parse error: %s", exc)
                 result = Result.failure(f"Parse error: {exc}")
         return result
 
@@ -57,5 +58,6 @@ class PythonAstParser(SourceParser):
         except SyntaxError as exc:
             if b_continue:
                 b_continue = False
+                logger.warning("Syntax error: %s", exc)
                 result = Result.failure(f"Syntax error: {exc}")
         return result

@@ -9,6 +9,7 @@ Language-specific engine types (ast_*) are validated with domain Pydantic only.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -20,6 +21,8 @@ from selma.domain.entities.rule import Rule
 from selma.domain.entities.rule import RuleDataset
 from selma.domain.value_objects.enums import PureEvaluatorType
 from selma.domain.value_objects.result import Result
+
+logger = logging.getLogger(__name__)
 
 
 class RuleSchemaValidator:
@@ -46,12 +49,15 @@ class RuleSchemaValidator:
                     loaded = json.load(handle)
                 if not isinstance(loaded, dict):
                     b_continue = False
+                    logger.warning("rule schema root must be an object")
                     result = Result.failure("rule schema root must be an object")
                 else:
                     schema_dict = cast("dict[str, Any]", loaded)
             except (OSError, json.JSONDecodeError) as exc:
                 b_continue = False
-                result = Result.failure(f"Failed to load rule schema: {exc}")
+                msg = f"Failed to load rule schema: {exc}"
+                logger.exception(msg)
+                result = Result.failure(msg)
 
         if b_continue and schema_dict is not None:
             try:
@@ -61,7 +67,9 @@ class RuleSchemaValidator:
                 )
                 result = Result.success(self._schema)
             except JschonJSONError as exc:
-                result = Result.failure(f"Failed to create jschon schema: {exc}")
+                msg = f"Failed to create jschon schema: {exc}"
+                logger.exception(msg)
+                result = Result.failure(msg)
 
         return result
 
@@ -92,6 +100,7 @@ class RuleSchemaValidator:
             schema_result = self._ensure_schema()
             if schema_result.is_failure():
                 b_continue = False
+                logger.warning(schema_result.message)
                 result = Result.failure(schema_result.message)
             if b_continue:
                 schema = schema_result.unwrap()
@@ -100,14 +109,18 @@ class RuleSchemaValidator:
                     errors = list(output.collect_errors())
                     msgs = [str(err) for err in errors[:5]]
                     b_continue = False
-                    result = Result.failure(f"jschon: {'; '.join(msgs)}")
+                    msg = f"jschon: {'; '.join(msgs)}"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
 
         if b_continue:
             try:
                 model = Rule.model_validate(a_raw)
                 result = Result.success(model)
             except Exception as exc:
-                result = Result.failure(f"pydantic: {exc}")
+                msg = f"pydantic: {exc}"
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         return result
 
@@ -132,6 +145,7 @@ class RuleSchemaValidator:
             schema_result = self._ensure_schema()
             if schema_result.is_failure():
                 b_continue = False
+                logger.warning(schema_result.message)
                 result = Result.failure(schema_result.message)
             if b_continue:
                 schema = schema_result.unwrap()
@@ -140,13 +154,17 @@ class RuleSchemaValidator:
                     errors = list(output.collect_errors())
                     msgs = [str(err) for err in errors[:5]]
                     b_continue = False
-                    result = Result.failure(f"jschon: {'; '.join(msgs)}")
+                    msg = f"jschon: {'; '.join(msgs)}"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
 
         if b_continue:
             try:
                 model = RuleDataset.model_validate(a_raw)
                 result = Result.success(model)
             except Exception as exc:
-                result = Result.failure(f"pydantic: {exc}")
+                msg = f"pydantic: {exc}"
+                logger.warning(msg)
+                result = Result.failure(msg)
 
         return result

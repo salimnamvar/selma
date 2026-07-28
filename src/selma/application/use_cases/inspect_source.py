@@ -56,13 +56,15 @@ class InspectSourceUseCase:
         """
         b_continue = True
         result: Result[InspectResponse] = Result.failure("unreachable")
+        findings_tuple: tuple[Finding, ...] = ()
+        report_text = ""
 
         catalog_result = await self._directive_repository.list_catalog()
         if catalog_result.is_failure():
             b_continue = False
-            result = Result.failure(
-                f"Failed to load directives: {catalog_result.message}"
-            )
+            msg = f"Failed to load directives: {catalog_result.message}"
+            logger.warning(msg)
+            result = Result.failure(msg)
 
         rules: tuple[Rule, ...] = ()
         catalog: DirectiveCatalog | None = None
@@ -71,6 +73,7 @@ class InspectSourceUseCase:
             rules_result = self._filter_rules(catalog, a_request)
             if rules_result.is_failure():
                 b_continue = False
+                logger.warning(rules_result.message)
                 result = Result.failure(rules_result.message)
             if b_continue:
                 rules = rules_result.unwrap()
@@ -86,16 +89,16 @@ class InspectSourceUseCase:
 
         if b_continue:
             findings_tuple = tuple(all_findings)
-            report_text = ""
             if self._reporter is not None:
                 report_result = await self._reporter.report(findings_tuple)
                 if report_result.is_failure():
                     b_continue = False
+                    logger.warning(
+                        "Reporting failed: %s", report_result.message
+                    )
                     result = Result.failure(
                         f"Reporting failed: {report_result.message}"
                     )
-                if b_continue:
-                    report_text = report_result.unwrap()
             if b_continue:
                 response = InspectResponse(
                     findings=findings_tuple,
@@ -146,6 +149,7 @@ class InspectSourceUseCase:
         parse_result = await self._parser.parse(a_path)
         if parse_result.is_failure():
             b_continue = False
+            logger.warning("Failed to parse %s: %s", a_path, parse_result.message)
             result = Result.failure(f"Failed to parse {a_path}: {parse_result.message}")
 
         if b_continue:

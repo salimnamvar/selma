@@ -49,6 +49,8 @@ from selma.domain.value_objects.result import INVALID_RESULT
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.config.models import LoggingConfig
 
+_logger = logging.getLogger(__name__)
+
 
 def _format_utc_timestamp(a_epoch_seconds: float) -> Result[str]:
     """Format Unix epoch seconds as canonical UTC ISO-8601 (microseconds + Z).
@@ -116,6 +118,7 @@ def _build_file_handler(a_config: LoggingConfig) -> Result[dict[str, Any]]:
     b_continue: bool = True
 
     if b_continue and a_config.log_dir is None:
+        logger.warning("No log_dir configured")
         result = Result.failure("No log_dir configured")
         b_continue = False
 
@@ -286,6 +289,7 @@ def _build_logging_config(a_config: LoggingConfig) -> Result[dict[str, Any]]:
             and formatters_result.is_success()
             and loggers_result.is_success()
         ):
+            logger.warning("Failed to build logging sub-configs")
             result = Result.failure("Failed to build logging sub-configs")
             b_continue = False
 
@@ -294,6 +298,7 @@ def _build_logging_config(a_config: LoggingConfig) -> Result[dict[str, Any]]:
         or formatters_result.value is None
         or loggers_result.value is None
     ):
+        logger.warning("Failed to build logging sub-configs")
         result = Result.failure("Failed to build logging sub-configs")
         b_continue = False
 
@@ -355,6 +360,7 @@ def _enable_async_logging() -> Result[logging.handlers.QueueListener]:
     ]
     if b_continue and not targets:
         msg = "Cannot enable async logging: root logger has no handlers"
+        logger.warning(msg)
         result = Result.failure(msg)
         b_continue = False
 
@@ -420,10 +426,12 @@ def configure_logging(
             if async_result.is_success():
                 result = async_result
             else:
-                logger = logging.getLogger(__name__)
-                logger.error("Failed to enable async logging: %s", async_result.message)
+                _logger.error(
+                    "Failed to enable async logging: %s", async_result.message
+                )
                 result = async_result
         else:
+            logger.warning("Async logging not enabled")
             result = Result.failure("Async logging not enabled")
 
     return result

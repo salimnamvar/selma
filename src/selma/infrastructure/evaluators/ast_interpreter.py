@@ -71,6 +71,7 @@ class ASTInterpreter(RuleEvaluator):
         if b_continue and evaluator_type not in self._evaluators:
             b_continue = False
             logger.warning("Unknown evaluator type: %s", evaluator_type)
+            logger.warning("Unknown evaluator type: %s", evaluator_type)
             result = Result.failure(f"Unknown evaluator type: {evaluator_type}")
         if b_continue:
             evaluator = self._evaluators[evaluator_type]
@@ -92,10 +93,12 @@ class ASTInterpreter(RuleEvaluator):
                     )
                     result = Result.success(enriched)
                 else:
+                    logger.warning(eval_result.message)
                     result = Result.failure(eval_result.message)
             except Exception as exc:
                 logger.warning("Evaluator %s failed: %s", evaluator_type, exc)
                 b_continue = False
+                logger.warning("Evaluator error: %s", exc)
                 result = Result.failure(f"Evaluator error: {exc}")
         return result
 

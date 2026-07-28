@@ -6,12 +6,16 @@ Uses Pydantic v2 BaseModel (mutable for aggregate state management).
 
 from __future__ import annotations
 
+import logging
+
 from pydantic import BaseModel
 from pydantic import PrivateAttr
 
 from selma.domain.entities.finding import Finding
 from selma.domain.entities.source_file import SourceFile
 from selma.domain.value_objects.result import Result
+
+logger = logging.getLogger(__name__)
 
 
 class LintResult(BaseModel):
@@ -47,6 +51,7 @@ class LintResult(BaseModel):
         result: Result[None] = Result.failure("unreachable")
         if b_continue and self._is_complete:
             b_continue = False
+            logger.warning("Cannot add finding to completed result")
             result = Result.failure("Cannot add finding to completed result")
         if b_continue:
             # Immutable rebuild avoids in-place mutation methods (SC-092).

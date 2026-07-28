@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -11,6 +12,8 @@ import yaml
 from selma.domain.entities.policy import DirectivePolicy
 from selma.domain.entities.policy import PolicyDoctrine
 from selma.domain.value_objects.result import Result
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyDoctrineValidator:
@@ -27,12 +30,14 @@ class PolicyDoctrineValidator:
                 data = yaml.safe_load(handle)
         except (OSError, yaml.YAMLError) as exc:
             b_continue = False
-            result = Result.failure(f"Failed to load YAML: {exc}")
+            msg = f"Failed to load YAML: {exc}"
+            logger.exception(msg)
+            result = Result.failure(msg)
         if b_continue and not isinstance(data, dict):
             b_continue = False
-            result = Result.failure(
-                f"YAML root must be an object, got {type(data).__name__}"
-            )
+            msg = f"YAML root must be an object, got {type(data).__name__}"
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             result = Result.success(cast("dict[str, Any]", data))
         return result
@@ -46,7 +51,9 @@ class PolicyDoctrineValidator:
             model = PolicyDoctrine.model_validate(a_raw)
         except Exception as exc:
             b_continue = False
-            result = Result.failure(f"pydantic: {exc}")
+            msg = f"pydantic: {exc}"
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue and model is not None:
             result = Result.success(model)
         return result
@@ -58,6 +65,7 @@ class PolicyDoctrineValidator:
         load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
+            logger.warning(load_result.message)
             result = Result.failure(load_result.message)
         if b_continue:
             result = self.validate_doctrine(load_result.unwrap())
@@ -72,7 +80,9 @@ class PolicyDoctrineValidator:
             model = DirectivePolicy.model_validate(a_raw)
         except Exception as exc:
             b_continue = False
-            result = Result.failure(f"pydantic: {exc}")
+            msg = f"pydantic: {exc}"
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue and model is not None:
             result = Result.success(model)
         return result
@@ -84,6 +94,7 @@ class PolicyDoctrineValidator:
         load_result = PolicyDoctrineValidator.load_yaml_file(a_path)
         if load_result.is_failure():
             b_continue = False
+            logger.warning(load_result.message)
             result = Result.failure(load_result.message)
         if b_continue:
             result = self.validate_directive(load_result.unwrap())

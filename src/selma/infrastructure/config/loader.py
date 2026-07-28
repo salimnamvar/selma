@@ -9,6 +9,7 @@ No hardcoded defaults in the loader either.
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 import tomllib
 from typing import Any
@@ -26,6 +27,8 @@ from selma.infrastructure.config.models import SelmaConfig
 from selma.infrastructure.config.models import ToolConfig
 from selma.infrastructure.config.models import ToolsConfig
 from selma.infrastructure.config.validator import ConfigValidator
+
+logger = logging.getLogger(__name__)
 
 _ENV_PREFIX = "SELMA_"
 
@@ -66,6 +69,7 @@ class ConfigLoader:
             toml_result = self._load_toml(a_config_path)
             if b_continue and toml_result.is_failure():
                 b_continue = False
+                logger.warning(f"TOML error: {toml_result.message}")
                 result = Result.failure(f"TOML error: {toml_result.message}")
             if b_continue and toml_result.is_success():
                 toml_data = toml_result.unwrap()
@@ -74,6 +78,7 @@ class ConfigLoader:
             config_result = self._build_config(toml_data, a_cli_args)
             if config_result.is_failure():
                 b_continue = False
+                logger.warning(config_result.message)
                 result = Result.failure(config_result.message)
             if b_continue:
                 config = config_result.unwrap()
@@ -81,6 +86,7 @@ class ConfigLoader:
                 validation = self._validator.validate(config)
                 if validation.is_failure():
                     b_continue = False
+                    logger.warning(f"Validation: {validation.message}")
                     result = Result.failure(f"Validation: {validation.message}")
                 if b_continue:
                     result = Result.success(config)
@@ -107,6 +113,7 @@ class ConfigLoader:
         directive_result = self._resolve_directive(a_toml, a_cli_args)
         if b_continue and directive_result.is_failure():
             b_continue = False
+            logger.warning(directive_result.message)
             result = Result.failure(directive_result.message)
 
         schema_result: Result[SchemaPathsConfig] = Result.failure("unreachable")
@@ -114,6 +121,7 @@ class ConfigLoader:
             schema_result = self._resolve_schema(a_toml, a_cli_args)
             if schema_result.is_failure():
                 b_continue = False
+                logger.warning(schema_result.message)
                 result = Result.failure(schema_result.message)
 
         paths_result: Result[PathsConfig] = Result.failure("unreachable")
@@ -121,6 +129,7 @@ class ConfigLoader:
             paths_result = self._build_paths(a_toml)
             if paths_result.is_failure():
                 b_continue = False
+                logger.warning(paths_result.message)
                 result = Result.failure(paths_result.message)
 
         output_result: Result[OutputConfig] = Result.failure("unreachable")
@@ -128,6 +137,7 @@ class ConfigLoader:
             output_result = self._build_output(a_toml, a_cli_args)
             if output_result.is_failure():
                 b_continue = False
+                logger.warning(output_result.message)
                 result = Result.failure(output_result.message)
 
         execution_result: Result[ExecutionConfig] = Result.failure("unreachable")
@@ -135,6 +145,7 @@ class ConfigLoader:
             execution_result = self._build_execution(a_toml, a_cli_args)
             if execution_result.is_failure():
                 b_continue = False
+                logger.warning(execution_result.message)
                 result = Result.failure(execution_result.message)
 
         rules_result: Result[RulesFilterConfig] = Result.failure("unreachable")
@@ -142,6 +153,7 @@ class ConfigLoader:
             rules_result = self._build_rules_filter(a_toml, a_cli_args)
             if rules_result.is_failure():
                 b_continue = False
+                logger.warning(rules_result.message)
                 result = Result.failure(rules_result.message)
 
         tools_result: Result[ToolsConfig] = Result.failure("unreachable")
@@ -149,6 +161,7 @@ class ConfigLoader:
             tools_result = self._build_tools(a_toml)
             if tools_result.is_failure():
                 b_continue = False
+                logger.warning(tools_result.message)
                 result = Result.failure(tools_result.message)
 
         logging_result: Result[LoggingConfig] = Result.failure("unreachable")
@@ -156,6 +169,7 @@ class ConfigLoader:
             logging_result = self._build_logging(a_toml)
             if logging_result.is_failure():
                 b_continue = False
+                logger.warning(logging_result.message)
                 result = Result.failure(logging_result.message)
 
         if b_continue:
@@ -312,6 +326,7 @@ class ConfigLoader:
             selma = data.get("tool", {}).get("selma", {})
             result = Result.success(selma)
         except (OSError, tomllib.TOMLDecodeError) as e:
+            logger.warning(str(e))
             result = Result.failure(str(e))
         return result
 
@@ -624,16 +639,19 @@ class ConfigLoader:
             ruff_result = self._build_tool_config("ruff", ruff_data)
             if ruff_result.is_failure():
                 b_continue = False
+                logger.warning(ruff_result.message)
                 result = Result.failure(ruff_result.message)
         if b_continue:
             pylint_result = self._build_tool_config("pylint", pylint_data)
             if pylint_result.is_failure():
                 b_continue = False
+                logger.warning(pylint_result.message)
                 result = Result.failure(pylint_result.message)
         if b_continue:
             pyright_result = self._build_tool_config("pyright", pyright_data)
             if pyright_result.is_failure():
                 b_continue = False
+                logger.warning(pyright_result.message)
                 result = Result.failure(pyright_result.message)
 
         if b_continue:
@@ -661,15 +679,19 @@ class ConfigLoader:
 
         if b_continue and enabled is None:
             b_continue = False
+            logger.warning(f"tools.{a_name}.enabled required.")
             result = Result.failure(f"tools.{a_name}.enabled required.")
         if b_continue and not binary:
             b_continue = False
+            logger.warning(f"tools.{a_name}.binary required.")
             result = Result.failure(f"tools.{a_name}.binary required.")
         if b_continue and args_raw is None:
             b_continue = False
+            logger.warning(f"tools.{a_name}.args required (use [] for none).")
             result = Result.failure(f"tools.{a_name}.args required (use [] for none).")
         if b_continue and fail_under is None:
             b_continue = False
+            logger.warning(f"tools.{a_name}.fail_under required.")
             result = Result.failure(f"tools.{a_name}.fail_under required.")
         if (
             b_continue

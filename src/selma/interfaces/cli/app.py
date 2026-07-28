@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 from pathlib import Path
 import sys
 
@@ -20,6 +21,8 @@ from selma.domain.value_objects.result import Result
 from selma.infrastructure.bootstrap import lifespan
 from selma.infrastructure.config import ConfigLoader
 from selma.infrastructure.config.models import SelmaConfig
+
+logger = logging.getLogger(__name__)
 
 
 def _collect_file_paths(a_path_strings: list[str]) -> list[FilePath]:
@@ -192,6 +195,7 @@ def _load_config(a_args: argparse.Namespace) -> Result[SelmaConfig]:
     )
     if config_result.is_failure():
         b_continue = False
+        logger.warning(config_result.message)
         result = Result.failure(config_result.message)
     if b_continue:
         result = Result.success(config_result.unwrap())

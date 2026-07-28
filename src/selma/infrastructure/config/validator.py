@@ -6,8 +6,12 @@ This validator handles infrastructure config only.
 
 from __future__ import annotations
 
+import logging
+
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.config.models import SelmaConfig
+
+logger = logging.getLogger(__name__)
 
 VALID_FORMATS = frozenset({"default", "json", "gcc", "guidance"})
 VALID_CHECKS = frozenset(
@@ -48,7 +52,9 @@ class ConfigValidator:
         result: Result[SelmaConfig] = Result.failure("unreachable")
         if b_continue and errors:
             b_continue = False
-            result = Result.failure("; ".join(errors))
+            msg = "; ".join(errors)
+            logger.warning(msg)
+            result = Result.failure(msg)
         if b_continue:
             result = Result.success(a_config)
         return result

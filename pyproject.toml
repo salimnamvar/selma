@@ -661,6 +661,6 @@ diagnostic_format = "%(levelname)s [%(run_id)s] %(asctime)s %(filename)s:%(linen
 operational_format = "%(levelname)s [%(run_id)s] %(asctime)s%(resource)s : %(message)s"
 file = ""
 enabled = true
-log_dir = ".log"
+log_dir = ".selma/log"
 max_bytes = 10485760
 backup_count = 5

@@ -5,6 +5,7 @@ Agents and humans query policies, rules, and guidance without running inspection
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from typing import cast
 
@@ -14,6 +15,8 @@ from selma.application.dto.query_response import QueryResponse
 from selma.application.ports.directive_repository_port import DirectiveRepository
 from selma.domain.aggregates.directive import Directive
 from selma.domain.value_objects.result import Result
+
+logger = logging.getLogger(__name__)
 
 
 class QueryDirectiveUseCase:
@@ -29,7 +32,7 @@ class QueryDirectiveUseCase:
         Postconditions: Ok with QueryResponse or Failure.
         Side Effects: May load directive files.
         Resource: File I/O via repository.
-        Failure: Not found or load errors.
+        Failure: Returns Failure on critical error.
         """
         b_continue = True
         result: Result[QueryResponse] = Result.failure("unreachable")
@@ -37,6 +40,7 @@ class QueryDirectiveUseCase:
         catalog_result = await self._directive_repository.list_catalog()
         if catalog_result.is_failure():
             b_continue = False
+            logger.warning(catalog_result.message)
             result = Result.failure(catalog_result.message)
 
         if b_continue:
@@ -51,49 +55,21 @@ class QueryDirectiveUseCase:
                 result = Result.success(
                     QueryResponse(
                         kind=kind.value,
-                        summary=f"{len(catalog)} directives in catalog",
+                        summary=f"Found {len(items)} directives",
                         items=items,
                     )
                 )
-            elif kind == QueryKind.SEARCH:
-                needle = a_request.text.lower()
-                matched: list[Directive] = []
-                for directive in catalog.list_all():
-                    blob = (
-                        f"{directive.lineage_id} {directive.rule.message} "
-                        f"{directive.title} {directive.rule.rationale}"
-                    ).lower()
-                    if needle and needle in blob:
-                        matched.append(directive)
-                items = tuple(
-                    self._directive_summary(d) for d in matched[: a_request.limit]
-                )
-                result = Result.success(
-                    QueryResponse(
-                        kind=kind.value,
-                        summary=f"{len(matched)} match(es) for {a_request.text!r}",
-                        items=items,
-                    )
-                )
-            elif kind in {
-                QueryKind.POLICY,
-                QueryKind.RULE,
-                QueryKind.DIRECTIVE,
-                QueryKind.GUIDANCE,
-            }:
-                if not a_request.lineage_id:
+            elif kind == QueryKind.GUIDANCE:
+                directive = catalog.find_by_lineage_id(a_request.lineage_id)
+                if directive is None:
                     b_continue = False
-                    result = Result.failure("lineage_id is required for this query")
-                if b_continue:
-                    directive = catalog.find_by_lineage_id(a_request.lineage_id)
-                    if directive is None:
-                        b_continue = False
-                        result = Result.failure(
-                            f"Directive not found: {a_request.lineage_id}"
-                        )
-                    if b_continue and directive is not None:
-                        result = Result.success(self._detail_response(kind, directive))
+                    msg = f"Directive not found: {a_request.lineage_id}"
+                    logger.warning(msg)
+                    result = Result.failure(msg)
+                if b_continue and directive is not None:
+                    result = Result.success(self._detail_response(kind, directive))
             else:
+                logger.warning("Unsupported query kind: %s", kind)
                 result = Result.failure(f"Unsupported query kind: {kind}")
 
         return result
@@ -162,12 +138,14 @@ class QueryDirectiveUseCase:
         result: Result[str] = Result.failure("unreachable")
         if b_continue and not a_lineage_id:
             b_continue = False
+            logger.warning("lineage_id is required")
             result = Result.failure("lineage_id is required")
         if b_continue:
             query = QueryRequest(kind=QueryKind.GUIDANCE, lineage_id=a_lineage_id)
             response = await self.execute(query)
             if response.is_failure():
                 b_continue = False
+                logger.warning(response.message)
                 result = Result.failure(response.message)
             if b_continue:
                 body = response.unwrap()

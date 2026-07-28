@@ -9,6 +9,7 @@ Infrastructure MUST import these types — never redefine them.
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from typing import Any
 from typing import Literal
@@ -31,6 +32,8 @@ from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.enums import TargetType
 from selma.domain.value_objects.enums import ThresholdOperator
 from selma.domain.value_objects.result import Result
+
+logger = logging.getLogger(__name__)
 
 # ─── Evaluator configs (pure types + flexible engine config) ─────────────────
 
@@ -218,6 +221,7 @@ def validate_conflict_resolution(
     result: Result[None] = Result.success(None)
     if b_continue and a_strategy == ConflictStrategy.DEFER_TO and not a_defer_to:
         b_continue = False
+        logger.warning("defer_to is required when strategy is DEFER_TO")
         result = Result.failure("defer_to is required when strategy is DEFER_TO")
     if b_continue:
         b_continue = False
