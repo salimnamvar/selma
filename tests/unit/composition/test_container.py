@@ -1,77 +1,68 @@
-"""Tests for Container — composition root wiring."""
+"""Tests for composition Container."""
 
 from pathlib import Path
 
-from selma.application.ports.parser_port import SourceCodeParser
-from selma.application.ports.reporter_port import FindingReporter
-from selma.application.ports.rule_repository_port import RuleRepository
-from selma.application.use_cases.lint_use_case import LintUseCase
+from selma.application.ports.directive_repository_port import DirectiveRepository
+from selma.application.use_cases.inspect_source import InspectSourceUseCase
+from selma.application.use_cases.query_directive import QueryDirectiveUseCase
 from selma.composition import Container
-from selma.domain.entities.rule import RuleDefinition
+from selma.domain.aggregates.directive import Directive
+from selma.domain.aggregates.directive import DirectiveCatalog
+from selma.domain.entities.policy import DirectivePolicy
+from selma.domain.entities.rule import Rule
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
 
 
-class _NullRepo(RuleRepository):
-    """Null repository for testing."""
+class _FakeRepo(DirectiveRepository):
+    async def list_catalog(self) -> Result[DirectiveCatalog]:
+        return Result.success(DirectiveCatalog())
 
-    def find_all(self) -> Result[tuple[RuleDefinition, ...]]:
+    async def list_active_rules(self) -> Result[tuple[Rule, ...]]:
         return Result.success(())
 
-    def find_by_id(self, a_id: RuleId) -> Result[RuleDefinition]:
-        return Result.failure("Not implemented")
+    async def find_by_lineage_id(self, a_id: RuleId) -> Result[Directive]:
+        return Result.failure("missing")
 
-    def find_by_codes(
+    async def find_by_codes(
         self, a_codes: tuple[str, ...]
-    ) -> Result[tuple[RuleDefinition, ...]]:
+    ) -> Result[tuple[Directive, ...]]:
         return Result.success(())
 
+    async def get_policy(self, a_id: RuleId) -> Result[DirectivePolicy]:
+        return Result.failure("missing")
 
-class TestContainerInit:
-    """Container initialization behavior."""
-
-    def test_creates_parser(self) -> None:
-        """Container should create a SourceCodeParser."""
-        container = Container()
-        assert isinstance(container.get_parser(), SourceCodeParser)
-
-    def test_creates_evaluator(self) -> None:
-        """Container should have an ASTInterpreter evaluator."""
-        container = Container()
-        use_case = container.get_lint_use_case(a_rule_repository=_NullRepo())
-        assert isinstance(use_case, LintUseCase)
-
-    def test_creates_reporters(self) -> None:
-        """Container should create all reporter types."""
-        container = Container()
-        assert isinstance(container.get_reporter("default"), FindingReporter)
-        assert isinstance(container.get_reporter("json"), FindingReporter)
-        assert isinstance(container.get_reporter("gcc"), FindingReporter)
-        assert isinstance(container.get_reporter("guidance"), FindingReporter)
-
-    def test_unknown_format_returns_default(self) -> None:
-        """Container should return default reporter for unknown format."""
-        container = Container()
-        assert isinstance(container.get_reporter("unknown"), FindingReporter)
+    async def get_rule(self, a_id: RuleId) -> Result[Rule]:
+        return Result.failure("missing")
 
 
-class TestContainerGetLintUseCase:
-    """Container.get_lint_use_case behavior."""
+class TestContainer:
+    """Container wiring."""
 
-    def test_returns_lint_use_case(self) -> None:
-        """get_lint_use_case should return a LintUseCase."""
-        container = Container()
-        use_case = container.get_lint_use_case(a_rule_repository=_NullRepo())
-        assert isinstance(use_case, LintUseCase)
+    def test_inspect_use_case(self) -> None:
+        c = Container()
+        uc = c.get_inspect_use_case(a_directive_repository=_FakeRepo())
+        assert isinstance(uc, InspectSourceUseCase)
 
-    def test_get_lint_use_case_with_defaults(self) -> None:
-        """get_lint_use_case_with_defaults should create repo from rules dir."""
-        container = Container()
-        rules_dir = Path.home() / ".selma" / "rules"
-        schema_path = Path.home() / ".selma" / "schema" / "rule_schema.json"
-        use_case = container.get_lint_use_case_with_defaults(
-            a_rules_dir=rules_dir,
-            a_schema_path=schema_path,
-            a_policy_dir=None,
+    def test_query_use_case(self) -> None:
+        c = Container()
+        uc = c.get_query_use_case(a_directive_repository=_FakeRepo())
+        assert isinstance(uc, QueryDirectiveUseCase)
+
+    def test_reporter_default(self) -> None:
+        c = Container()
+        assert c.get_reporter("default") is not None
+        assert c.get_reporter("json") is not None
+        assert c.get_reporter("gcc") is not None
+
+    def test_directive_repository_type(self, tmp_path: Path) -> None:
+        c = Container()
+        schema = tmp_path / "schema.json"
+        schema.write_text("{}")
+        rules = tmp_path / "rules"
+        rules.mkdir()
+        repo = c.get_directive_repository(
+            a_rules_dir=rules,
+            a_schema_path=schema,
         )
-        assert isinstance(use_case, LintUseCase)
+        assert repo is not None

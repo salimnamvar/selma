@@ -1,6 +1,7 @@
-"""Rule repository port — abstract interface for loading rules.
+"""Rule repository port — executable rules for inspection.
 
-Domain depends on this interface, not on implementation.
+Prefer DirectiveRepository for catalog and policy queries.
+This port remains for inspection paths that need only Rule.
 """
 
 from __future__ import annotations
@@ -8,19 +9,16 @@ from __future__ import annotations
 from abc import ABC
 from abc import abstractmethod
 
-from selma.domain.entities.rule import RuleDefinition
+from selma.domain.entities.rule import Rule
 from selma.domain.value_objects.result import Result
 from selma.domain.value_objects.rule_id import RuleId
 
 
 class RuleRepository(ABC):
-    """Port: access and manage lint rules.
-
-    Infrastructure implements this interface (e.g., from JSON files).
-    """
+    """Port: access executable rules for inspection."""
 
     @abstractmethod
-    def find_all(self) -> Result[tuple[RuleDefinition, ...]]:
+    async def find_all(self) -> Result[tuple[Rule, ...]]:
         """Retrieve all active rules.
 
         Preconditions: None.
@@ -32,7 +30,7 @@ class RuleRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_id(self, a_id: RuleId) -> Result[RuleDefinition]:
+    async def find_by_id(self, a_id: RuleId) -> Result[Rule]:
         """Retrieve a rule by ID.
 
         Preconditions: None.
@@ -44,9 +42,7 @@ class RuleRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_codes(
-        self, a_codes: tuple[str, ...]
-    ) -> Result[tuple[RuleDefinition, ...]]:
+    async def find_by_codes(self, a_codes: tuple[str, ...]) -> Result[tuple[Rule, ...]]:
         """Retrieve rules by code list.
 
         Preconditions: None.

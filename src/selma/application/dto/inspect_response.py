@@ -1,7 +1,4 @@
-"""LintResponse DTO — output from the lint use case.
-
-Uses Pydantic v2 BaseModel with frozen config.
-"""
+"""Inspect response DTO — output from source inspection."""
 
 from __future__ import annotations
 
@@ -11,19 +8,17 @@ from pydantic import ConfigDict
 from selma.domain.entities.finding import Finding
 
 
-class LintResponse(BaseModel):
-    """Output DTO for lint use case."""
+class InspectResponse(BaseModel):
+    """Result of inspecting source paths."""
 
     model_config = ConfigDict(frozen=True)
 
-    findings: tuple[Finding, ...]
+    findings: tuple[Finding, ...] = ()
     summary: str = ""
     has_errors: bool = False
+    report_text: str = ""
 
     @property
     def finding_count(self) -> int:
+        """Number of findings."""
         return len(self.findings)
-
-    @property
-    def violation_count(self) -> int:
-        return sum(1 for f in self.findings if f.is_violation)

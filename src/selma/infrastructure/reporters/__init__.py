@@ -1,7 +1,8 @@
-"""Reporters — finding output formatters."""
+"""Reporters — finding output formatters (async port adapters)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from selma.application.ports.reporter_port import FindingReporter
@@ -12,10 +13,12 @@ from selma.domain.value_objects.result import Result
 class DefaultReporter(FindingReporter):
     """Default human-readable reporter."""
 
-    def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
-        lines: list[str] = []
-        for f in a_findings:
-            lines.append(str(f))
+    async def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
+        return await asyncio.to_thread(self._report_sync, a_findings)
+
+    @staticmethod
+    def _report_sync(a_findings: tuple[Finding, ...]) -> Result[str]:
+        lines = [str(f) for f in a_findings]
         return Result.success("\n".join(lines))
 
 
@@ -25,7 +28,10 @@ class JsonReporter(FindingReporter):
     def __init__(self, a_guide: bool = False) -> None:
         self._guide = a_guide
 
-    def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
+    async def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
+        return await asyncio.to_thread(self._report_sync, a_findings)
+
+    def _report_sync(self, a_findings: tuple[Finding, ...]) -> Result[str]:
         output: list[dict[str, object]] = []
         for f in a_findings:
             d: dict[str, object] = {
@@ -56,7 +62,11 @@ class JsonReporter(FindingReporter):
 class GccReporter(FindingReporter):
     """GCC-style reporter."""
 
-    def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
+    async def report(self, a_findings: tuple[Finding, ...]) -> Result[str]:
+        return await asyncio.to_thread(self._report_sync, a_findings)
+
+    @staticmethod
+    def _report_sync(a_findings: tuple[Finding, ...]) -> Result[str]:
         lines: list[str] = []
         for f in a_findings:
             lines.append(

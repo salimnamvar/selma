@@ -1,14 +1,15 @@
-"""ASTInterpreter — main engine that dispatches JSON rules to evaluator strategies."""
+"""ASTInterpreter — dispatches executable rules to evaluator strategies."""
 
 from __future__ import annotations
 
 import ast
+import asyncio
 import logging
 from typing import Any
 
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
-from selma.domain.entities.rule import RuleDefinition
+from selma.domain.entities.rule import Rule
 from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.result import Result
 from selma.infrastructure.evaluators.ast_call_check import AstCallCheckEvaluator
@@ -32,39 +33,37 @@ _EVALUATOR_MAP: dict[str, type[EvaluatorBase]] = {
 
 
 class ASTInterpreter(RuleEvaluator):
-    """Interpret JSON rule definitions against Python AST.
-
-    The interpreter reads the evaluator_type from a rule dict,
-    looks up the corresponding evaluator strategy, and delegates
-    evaluation to it.
-    """
+    """Interpret domain Rule objects against Python AST."""
 
     def __init__(self) -> None:
         self._evaluators: dict[str, EvaluatorBase] = {}
         for name, cls in _EVALUATOR_MAP.items():
             self._evaluators[name] = cls()
 
-    def evaluate(
+    async def evaluate(
         self,
         a_tree: ast.AST,
-        a_rule: RuleDefinition,
+        a_rule: Rule,
         a_file_path: str = "",
         a_source_code: str = "",
     ) -> Result[list[Finding]]:
-        """Evaluate a single rule against an AST.
+        """Evaluate a single rule against an AST (CPU-bound via to_thread)."""
+        return await asyncio.to_thread(
+            self._evaluate_sync,
+            a_tree,
+            a_rule,
+            a_file_path,
+            a_source_code,
+        )
 
-        Preconditions:
-            - a_tree is a valid parsed AST.
-            - a_rule is a RuleDefinition domain object.
-            - a_file_path is the file path for findings.
-
-        Postconditions:
-            Returns Result.success(list[Finding]) or Result.failure(...).
-
-        Side Effects: None.
-        Resource: None.
-        Failure: Returns Failure on unknown evaluator type.
-        """
+    def _evaluate_sync(
+        self,
+        a_tree: ast.AST,
+        a_rule: Rule,
+        a_file_path: str = "",
+        a_source_code: str = "",
+    ) -> Result[list[Finding]]:
+        """Blocking evaluation for one rule."""
         b_continue = True
         result: Result[list[Finding]] = Result.failure("unreachable")
         evaluator_type = a_rule.evaluator_type
@@ -100,33 +99,6 @@ class ASTInterpreter(RuleEvaluator):
                 result = Result.failure(f"Evaluator error: {exc}")
         return result
 
-    def evaluate_many(
-        self,
-        a_tree: ast.AST,
-        a_rules: list[RuleDefinition],
-        a_file_path: str = "",
-        a_source_code: str = "",
-    ) -> Result[list[Finding]]:
-        """Evaluate multiple rules against an AST.
-
-        Preconditions:
-            - a_tree is a valid parsed AST.
-            - a_rules is a list of RuleDefinition objects.
-
-        Postconditions:
-            Returns Result.success with all findings merged.
-
-        Side Effects: None.
-        Resource: None.
-        Failure: Never fails — skips invalid rules.
-        """
-        all_findings: list[Finding] = []
-        for rule in a_rules:
-            eval_result = self.evaluate(a_tree, rule, a_file_path, a_source_code)
-            if eval_result.is_success():
-                all_findings.extend(eval_result.unwrap())
-        return Result.success(all_findings)
-
     @staticmethod
     def _enrich_findings(
         a_findings: list[Finding],
@@ -142,7 +114,6 @@ class ASTInterpreter(RuleEvaluator):
         if b_continue:
             severity = Severity.MEDIUM
             weight = str(a_rule.get("weight", "medium"))
-            # Validate against known members without try/except (SC-006).
             valid_weights = {member.value for member in Severity}
             if weight in valid_weights:
                 severity = Severity(weight)

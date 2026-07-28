@@ -41,12 +41,14 @@ dependencies = [
   "jsonpath-ng>=1.6",
   "jschon>=0.11",
   "PyYAML>=6.0",
+  "textual>=0.80",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest",
   "pytest-cov",
+  "pytest-asyncio>=0.24",
   "ruff",
   "pyright",
   "pre-commit",
@@ -244,6 +246,8 @@ pythonpath = ["src"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 addopts = [
   "-ra",
   "--strict-markers",

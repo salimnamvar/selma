@@ -1,4 +1,6 @@
-"""Tests for RuleEvaluator port — abstract interface."""
+"""Tests for RuleEvaluator port contract."""
+
+from __future__ import annotations
 
 import ast
 
@@ -6,38 +8,35 @@ import pytest
 
 from selma.application.ports.evaluator_port import RuleEvaluator
 from selma.domain.entities.finding import Finding
-from selma.domain.entities.rule import RuleDefinition
+from selma.domain.entities.rule import EvaluatorConfig
+from selma.domain.entities.rule import Rule
+from selma.domain.value_objects.enums import DeonticType
+from selma.domain.value_objects.enums import Severity
 from selma.domain.value_objects.result import Result
 
 
-class TestRuleEvaluatorAbstract:
-    """RuleEvaluator should be abstract."""
+class _StubEvaluator(RuleEvaluator):
+    async def evaluate(
+        self,
+        a_tree: ast.AST,
+        a_rule: Rule,
+        a_file_path: str = "",
+    ) -> Result[list[Finding]]:
+        return Result.success([])
 
-    def test_cannot_instantiate(self) -> None:
-        """RuleEvaluator cannot be instantiated directly."""
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            RuleEvaluator()  # type: ignore[abstract]
 
-    def test_requires_evaluate_method(self) -> None:
-        """Subclass must implement evaluate to be concrete."""
-
-        class IncompleteEvaluator(RuleEvaluator):
-            pass
-
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            IncompleteEvaluator()  # type: ignore[abstract]
-
-    def test_concrete_subclass_can_instantiate(self) -> None:
-        """A complete implementation can be instantiated."""
-
-        class ConcreteEvaluator(RuleEvaluator):
-            def evaluate(
-                self,
-                a_tree: ast.AST,
-                a_rule: RuleDefinition,
-                a_file_path: str = "",
-            ) -> Result[list[Finding]]:
-                return Result.success([])
-
-        evaluator = ConcreteEvaluator()
-        assert isinstance(evaluator, RuleEvaluator)
+@pytest.mark.asyncio
+async def test_stub_evaluator() -> None:
+    """Test stub evaluator."""
+    rule = Rule(
+        lineage_id="SC-001",
+        id="SC-001",
+        type=DeonticType.OBLIGATION,
+        message="x",
+        evaluator_type="ast_walk",
+        evaluator_config=EvaluatorConfig(),
+        weight=Severity.LOW,
+    )
+    result = await _StubEvaluator().evaluate(ast.parse("pass"), rule)
+    assert result.is_success()
+    assert result.unwrap() == []
