@@ -34,8 +34,8 @@ preamble:
   title: Preamble
   purpose: Establish human-readable obligations for SC-003 (Structured Result Return) so authors, reviewers,
     and AI agents can reason about intent without reading evaluator configuration.
-  scope: All production code under this coding doctrine, including tests and AI-generated
-    code, unless a documented exemption applies.
+  scope: All Python functions and methods under this coding doctrine, including tests, dunders,
+    properties, async defs, and AI-generated code. No exemptions.
   existential_need: Tuple returns are ambiguous. Callers must remember positional semantics. Typed results
     are self-documenting and statically analyzable.
 governance:
@@ -106,10 +106,13 @@ directives:
   title: Directives (Rules & Standards)
   specific_directives:
   - type: Obligation
-    description: 'Every function SHALL return Result[T] (or equivalent explicit result type) with success
-      discrimination, optional value, and a human-readable message. No exceptions.'
+    description: 'Every function and method SHALL return Result[T] (or equivalent explicit result type
+      whose annotation contains Result) with success discrimination, optional value, and a human-readable
+      message. No exceptions.'
     machine_id: SC-003
-    context_conditions: 'Applies to every function with a return type annotation. No exceptions.'
+    context_conditions: 'Applies to every function and method, including those with missing annotations,
+      None/NoReturn annotations, dunders, properties, and async defs. No exemptions and no project-specific
+      path skips.'
     title: Explicit Result for Every Function
   flexible_standards: []
 sanctions:

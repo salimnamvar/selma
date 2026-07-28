@@ -108,9 +108,10 @@ directives:
     description: Every function SHALL contain zero `raise` statements. All exceptions SHALL be caught
       within the function and converted to the function's deterministic structured result.
     machine_id: SC-002
-    context_conditions: 'Every function SHALL contain zero raise statements. Application
-      logic SHALL NOT raise for normal failure paths — convert to an explicit result type instead. Do not
-      maintain project-specific lists of function names to exclude.'
+    context_conditions: 'Every function and method (sync and async) SHALL contain zero raise statements —
+      including dunders, properties, tests, and nested functions. Application logic SHALL NOT raise for
+      normal failure paths — convert to an explicit result type instead. No project-specific path,
+      name, or file exclusions.'
     title: Zero-Raise Policy
   flexible_standards: []
 sanctions:

@@ -5,24 +5,15 @@
   "message": "Function must return Result[T] — every function must surface success/failure explicitly",
   "evaluator_type": "ast_node_match",
   "evaluator_config": {
-    "target_node": "FunctionDef",
+    "target_nodes": [
+      "FunctionDef",
+      "AsyncFunctionDef"
+    ],
     "conditions": [
-      {
-        "field": "returns",
-        "operator": "exists"
-      },
       {
         "field": "returns",
         "operator": "unparse_not_contains",
         "value": "Result"
-      },
-      {
-        "field": "returns",
-        "operator": "unparse_not_in",
-        "value": [
-          "None",
-          "NoReturn"
-        ]
       }
     ],
     "message_template": "Function '{name}' must return Result[T]"
@@ -32,6 +23,6 @@
   "status": "active",
   "created_at": "2026-07-25T00:00:00Z",
   "anchor_ref": "section:directives/sc003_result_return",
-  "rationale": "Every function must surface success or failure explicitly in its return type. Result[T] makes the contract visible and statically analyzable. All functions MUST return Result[T] — no exceptions.",
-  "remediation": "Return a typed Result[T] (or equivalent explicit result type) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work."
+  "rationale": "Every function and method must surface success or failure explicitly in its return type. Result[T] makes the contract visible and statically analyzable. Missing annotations, bare types (int, str, None, NoReturn, etc.), and async defs without Result[T] all violate this rule. No exemptions.",
+  "remediation": "Annotate and return a typed Result[T] (or equivalent explicit result type whose annotation contains Result) with success/failure discrimination. Catch local failures and convert them at the boundary of the fallible work."
 }
