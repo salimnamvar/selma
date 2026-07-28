@@ -2,19 +2,19 @@
 # MUST NOT be used for linting/evaluation at runtime.
 # Machine lint source: matching file under directive/rule/*.json
 # Schema contract: schema/policy_doctrine.yaml
-# Normative source: .nasim/rules/code/safe-coding.md
+# Normative source: doctrinal-source.md
 
 doctrine:
-  name: safe-coding-policy-index
+  name: coding-policy-index
   version: 8.2.4
-  description: Index of Safe Coding policy doctrines. Policy YAML is for guidance, examples, and reasoning
+  description: Index of coding policy doctrines. Policy YAML is for guidance, examples, and reasoning
     only. Linting sources are ONLY directive/rule/*.json.
   spec_version: 8.2.4
   schema_version: 8.2.4
   schema_id: universal-rule-schema
   runtime_prohibition: This file and all directive/policy/*.yaml files MUST NOT be read at lint runtime.
 cross_layer_binding:
-  normative_source: .nasim/rules/code/safe-coding.md
+  normative_source: doctrinal-source.md
   policy_purpose: Governance intent description
   lint_source_glob: directive/rule/*.json
   policy_glob: directive/policy/*.yaml
@@ -346,8 +346,8 @@ sanctions:
   rows:
   - violation_context: Missing paired policy or rule for an SC directive
     enforcement_action: Authoring gate — do not merge incomplete pairs
-    remediation_path: Add both directive/rule/*.json and directive/policy/*.yaml
+    remediation_path: Add both the paired rule JSON and policy YAML files
 references:
-  source_doctrine: .nasim/rules/code/safe-coding.md
+  source_doctrine: doctrinal-source.md
   policy_schema: schema/policy_doctrine.yaml
   rule_schema: schema/rule_schema.json

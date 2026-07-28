@@ -2,7 +2,7 @@
 # MUST NOT be used for linting/evaluation at runtime.
 # Machine lint source: matching file under directive/rule/*.json
 # Schema contract: schema/policy_doctrine.yaml
-# Normative source: .nasim/rules/code/safe-coding.md
+# Normative source: doctrinal-source.md
 
 doctrine:
   name: sc-008-sc008_no_assert_disabled
@@ -18,7 +18,7 @@ doctrine:
   runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
     or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
 cross_layer_binding:
-  normative_source: .nasim/rules/code/safe-coding.md
+  normative_source: doctrinal-source.md
   policy_purpose: Governance intent, examples, reasoning, and human guidance
   schema_purpose: Structural projection of machine-evaluable invariants
   lint_source: directive/rule/sc008_no_assert_disabled.json
@@ -34,13 +34,13 @@ preamble:
   title: Preamble
   purpose: Establish human-readable obligations for SC-008 (No Assertions Disabled by Flags) so authors,
     reviewers, and AI agents can reason about intent without reading evaluator configuration.
-  scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
+  scope: All production code under this coding doctrine, including tests and AI-generated
     code, unless a documented exemption applies.
   existential_need: The purpose of validation is to catch invalid states before they cause damage. Disabling
     validation in production — where the stakes are highest — defeats this purpose entirely.
 governance:
   title: Governance & Amendment
-  authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
+  authority: Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
     identical in intent to the paired machine rule.
   amendment_process:
   - Propose change via PR touching both this policy YAML and the paired rule JSON when semantics change.
@@ -67,7 +67,7 @@ definitions:
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
-  description: This directive operationalizes one or more Safe Coding Doctrine core principles.
+  description: This directive operationalizes one or more Coding Doctrine core principles.
   items:
   - id: P1
     title: Determinism Over Cleverness
@@ -126,7 +126,7 @@ guidance:
   explanation: Comply with SC-008 by ensuring code structure matches the obligation/prohibition above.
   correct_example: |-
     # Correct: satisfy SC-008 — No Assertions Disabled by Flags
-    # See also Safe Coding Doctrine examples where applicable.
+    # See also Coding Doctrine examples where applicable.
   incorrect_example: |-
     # Incorrect: violates SC-008 — No Assertions Disabled by Flags
     # Avoid patterns that contradict the directive description.
@@ -136,7 +136,7 @@ guidance:
   exceptions: None.
 references:
   title: References & Annexes
-  source_doctrine: .nasim/rules/code/safe-coding.md
+  source_doctrine: doctrinal-source.md
   policy_schema: schema/policy_doctrine.yaml
   rule_schema: schema/rule_schema.json
   paired_rule: directive/rule/sc008_no_assert_disabled.json

@@ -12,7 +12,7 @@
         "operator": "exists"
       }
     ],
-    "message_template": "Safe coding rules must be enforced via automated CI/CD checks"
+    "message_template": "Coding rules must be enforced via automated pipeline checks"
   },
   "weight": "informational",
   "priority": "advisory",

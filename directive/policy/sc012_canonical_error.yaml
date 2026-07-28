@@ -2,7 +2,7 @@
 # MUST NOT be used for linting/evaluation at runtime.
 # Machine lint source: matching file under directive/rule/*.json
 # Schema contract: schema/policy_doctrine.yaml
-# Normative source: .nasim/rules/code/safe-coding.md
+# Normative source: doctrinal-source.md
 
 doctrine:
   name: sc-012-sc012_canonical_error
@@ -18,7 +18,7 @@ doctrine:
   runtime_prohibition: This file MUST NOT be read during inspection, evaluation, finding FSM transitions,
     or conflict resolution at runtime. Linting sources are ONLY the JSON rules under directive/rule/.
 cross_layer_binding:
-  normative_source: .nasim/rules/code/safe-coding.md
+  normative_source: doctrinal-source.md
   policy_purpose: Governance intent, examples, reasoning, and human guidance
   schema_purpose: Structural projection of machine-evaluable invariants
   lint_source: directive/rule/sc012_canonical_error.json
@@ -34,14 +34,14 @@ preamble:
   title: Preamble
   purpose: Establish human-readable obligations for SC-012 (Canonical Error Handling Pattern) so authors,
     reviewers, and AI agents can reason about intent without reading evaluator configuration.
-  scope: All production Python under this project's safe-coding doctrine, including tests and AI-generated
+  scope: All production code under this coding doctrine, including tests and AI-generated
     code, unless a documented exemption applies.
   existential_need: 'The canonical pattern ensures every function: (a) validates inputs, (b) handles exceptions
     locally, (c) cleans up resources, (d) returns a structured result, and (e) has a single exit point.
     Deviation from this pattern creates inconsistency and increases the likelihood of missed error handling.'
 governance:
   title: Governance & Amendment
-  authority: Safe Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
+  authority: Coding Doctrine / Architecture Owner. Amendments require PR review and must keep policy
     identical in intent to the paired machine rule.
   amendment_process:
   - Propose change via PR touching both this policy YAML and the paired rule JSON when semantics change.
@@ -75,7 +75,7 @@ definitions:
     exclusion: Not optional style preference when deontic type is Obligation or Prohibition.
 principles:
   title: Foundational Principles
-  description: This directive operationalizes one or more Safe Coding Doctrine core principles.
+  description: This directive operationalizes one or more Coding Doctrine core principles.
   items:
   - id: P1
     title: Determinism Over Cleverness
@@ -140,7 +140,7 @@ guidance:
     locally, (c) cleans up resources, (d) returns a structured result, and (e) has a single exit point.
     Deviation from this pattern creates inconsistency and increases the likelihood of missed error handling.'
   explanation: Comply with SC-012 by ensuring code structure matches the obligation/prohibition above.
-  correct_example: '# See canonical pattern in safe-coding.md §18.1 (calculate_model_score)'
+  correct_example: '# See canonical pattern in doctrinal-source.md §18.1'
   incorrect_example: |-
     # Incorrect: violates SC-012 — Canonical Error Handling Pattern
     # Avoid patterns that contradict the directive description.
@@ -153,7 +153,7 @@ guidance:
     `b_continue` if they have no exception-throwing operations.
 references:
   title: References & Annexes
-  source_doctrine: .nasim/rules/code/safe-coding.md
+  source_doctrine: doctrinal-source.md
   policy_schema: schema/policy_doctrine.yaml
   rule_schema: schema/rule_schema.json
   paired_rule: directive/rule/sc012_canonical_error.json

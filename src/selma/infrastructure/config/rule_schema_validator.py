@@ -4,6 +4,8 @@ Structural validation (jschon) applies to pure schema evaluator types.
 Language-specific engine types (ast_*) are validated with domain Pydantic only.
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportUnknownArgumentType=false
+
 from __future__ import annotations
 
 import json

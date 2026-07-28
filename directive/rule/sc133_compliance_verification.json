@@ -12,7 +12,7 @@
         "operator": "exists"
       }
     ],
-    "message_template": "Compliance with safe coding rules must be verified periodically"
+    "message_template": "Compliance with coding rules must be verified periodically"
   },
   "weight": "informational",
   "priority": "advisory",
