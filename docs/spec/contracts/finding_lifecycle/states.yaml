@@ -1,0 +1,134 @@
+# states.yaml
+# Normative source for finding FSM state definitions.
+# Replaces ARCHIVE_SPECIFICATION.md §3.1 state definitions.
+
+contract_id: "finding_lifecycle.states"
+schema_version: "1.0.0"
+owner_component: "finding_fsm_engine"
+state_machine_ref: "../../state-machine/selma_finding_lifecycle.puml"
+description: >
+  Defines the 10 states of the Finding FSM. Each state has a clear
+  semantics, terminal flag, and disposition mapping. The FSM governs
+  all finding lifecycle transitions — no state may be added or removed
+  without a MAJOR version bump.
+
+states:
+  - name: "Created"
+    terminal: false
+    description: "Initial state on finding creation by the inspection pipeline"
+    transitions_out: ["Open"]
+    transitions_in: []
+    disposition: null
+    notes: "System-automatic transition to Open immediately on creation"
+
+  - name: "Open"
+    terminal: false
+    description: "Finding is active and awaiting action"
+    transitions_out: ["Acknowledged", "Dismissed", "Waived"]
+    transitions_in: ["Created", "Rejected"]
+    disposition: "valid"
+    notes: "Entry point for human interaction; all human transitions originate here"
+
+  - name: "Acknowledged"
+    terminal: false
+    description: "Compliance Representative has accepted the finding and begun remediation"
+    transitions_out: ["Evidence Submitted"]
+    transitions_in: ["Open"]
+    disposition: "valid"
+    notes: "Also known as 'In Remedy' in some UIs"
+
+  - name: "Evidence Submitted"
+    terminal: false
+    description: "Remediation evidence has been attached to the finding"
+    transitions_out: ["Pending Verification"]
+    transitions_in: ["Acknowledged"]
+    disposition: "valid"
+    notes: "System-automatic transition to Pending Verification on evidence receipt"
+
+  - name: "Pending Verification"
+    terminal: false
+    description: "Evidence is awaiting review by a Regulatory Official"
+    transitions_out: ["Verified", "Rejected"]
+    transitions_in: ["Evidence Submitted"]
+    disposition: "valid"
+    notes: "Requires Regulatory Official action — no system-automatic transitions"
+
+  - name: "Verified"
+    terminal: false
+    description: "Regulatory Official has approved the remediation evidence"
+    transitions_out: ["Closed"]
+    transitions_in: ["Pending Verification"]
+    disposition: "valid"
+    notes: "System-automatic transition to Closed immediately after verification"
+
+  - name: "Rejected"
+    terminal: false
+    description: "Regulatory Official has rejected the remediation evidence"
+    transitions_out: ["Open"]
+    transitions_in: ["Pending Verification"]
+    disposition: "valid"
+    notes: "Requires comments on reopen; transitions back to Open for re-remediation"
+
+  - name: "Dismissed"
+    terminal: true
+    description: "Finding was determined to be invalid — no action needed"
+    transitions_out: []
+    transitions_in: ["Open"]
+    disposition: "invalid"
+    notes: "Terminal state; no outgoing transitions; remains in Finding Event Stream for audit"
+
+  - name: "Waived"
+    terminal: false
+    description: "Finding is legitimate but risk is accepted by Regulatory Official"
+    transitions_out: ["Closed"]
+    transitions_in: ["Open"]
+    disposition: "waived"
+    notes: "System-automatic transition to Closed after waive; requires SoD check"
+
+  - name: "Closed"
+    terminal: true
+    description: "Finding lifecycle is complete"
+    transitions_out: []
+    transitions_in: ["Verified", "Waived", "Dismissed"]
+    disposition: null
+    notes: "Terminal state; disposition inherited from preceding state"
+
+invariants:
+  - id: "INV-FL-001"
+    statement: "A finding MUST be in exactly one state at any time"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FL-002"
+    statement: "Dismissed and Closed are terminal states with no outgoing transitions"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FL-003"
+    statement: "System-automatic transitions (Created→Open, Evidence Submitted→Pending Verification, Verified→Closed, Waived→Closed) MUST NOT require human actor"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FL-004"
+    statement: "All human-initiated transitions MUST be gated by capability checks per authorization contract"
+    enforcement: "fsm_engine + capability_gate"
+
+  - id: "INV-FL-005"
+    statement: "Finding FSM state transitions MUST NOT be influenced by policy_doctrine.yaml at runtime"
+    enforcement: "architectural_audit (AA-02)"
+
+stories:
+  - story_id: "US-FL-001"
+    as: "finding_fsm_engine"
+    i_want: "to enforce strict state transitions on findings"
+    so_that: "findings follow a predictable lifecycle with no illegal state jumps"
+    acceptance_criteria:
+      - "Given a finding in Open state. When an acknowledge action is received. Then the finding transitions to Acknowledged."
+      - "Given a finding in Dismissed state. When any action is received. Then the action is rejected with FSM violation error."
+      - "Given a finding is created. When the creation event is processed. Then the finding transitions automatically from Created to Open."
+
+  - story_id: "US-FL-002"
+    as: "finding_fsm_engine"
+    i_want: "to track disposition alongside FSM state"
+    so_that: "every finding has a clear resolution status"
+    acceptance_criteria:
+      - "Given a finding transitions to Dismissed. When the transition completes. Then disposition is set to 'invalid'."
+      - "Given a finding transitions to Waived. When the transition completes. Then disposition is set to 'waived'."
+      - "Given a finding transitions to Verified. When the transition completes. Then disposition remains 'valid'."

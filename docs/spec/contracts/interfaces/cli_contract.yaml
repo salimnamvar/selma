@@ -1,0 +1,146 @@
+# cli_contract.yaml
+# Normative source for CLI behavior contract.
+# Defines command families and their expected behavior.
+
+contract_id: "interfaces.cli_contract"
+schema_version: "1.0.0"
+owner_component: "application_service"
+description: >
+  Defines the CLI behavior contract for the Selma system. Commands
+  map to the same capability-gated operations as the REST API.
+
+command_families:
+  - family: "directive"
+    description: "Directive lifecycle commands"
+    commands:
+      - name: "create"
+        capability: "directive.create"
+        args: "Directive file path"
+        behavior: "Create directive from file, compile to CG-IR"
+        output: "Directive ID, lineage_id, CG-IR snapshot hash"
+
+      - name: "modify"
+        capability: "directive.modify"
+        args: "Directive ID + changes file"
+        behavior: "Create new revision, incrementally compile"
+        output: "New revision ID, CG-IR snapshot hash"
+
+      - name: "retire"
+        capability: "directive.retire"
+        args: "Directive ID"
+        behavior: "Transition to deprecated"
+        output: "Confirmation"
+
+      - name: "fork"
+        capability: "directive.fork"
+        args: "Directive ID + fork description"
+        behavior: "Fork into two directives"
+        output: "Two new execution IDs"
+
+      - name: "merge"
+        capability: "directive.merge"
+        args: "Two directive IDs + merge description"
+        behavior: "Merge into one directive"
+        output: "Merged execution ID"
+
+      - name: "list"
+        capability: null
+        args: "Optional filters"
+        behavior: "List active directives"
+        output: "Directive list"
+
+  - family: "inspect"
+    description: "Inspection commands"
+    commands:
+      - name: "submit"
+        capability: "inspection.submit"
+        args: "Target file path"
+        behavior: "Submit target for inspection against current CG-IR"
+        output: "Inspection snapshot, findings, system_state_hash"
+
+      - name: "reinspect"
+        capability: "inspection.reinspect"
+        args: "Target ID"
+        behavior: "Reinspect against latest CG-IR"
+        output: "New inspection snapshot"
+
+  - family: "finding"
+    description: "Finding management commands"
+    commands:
+      - name: "list"
+        capability: "finding.view"
+        args: "Optional filters"
+        behavior: "List findings"
+        output: "Finding list"
+
+      - name: "acknowledge"
+        capability: "finding.acknowledge"
+        args: "Finding ID"
+        behavior: "Transition Open → Acknowledged"
+        output: "Updated finding"
+
+      - name: "dismiss"
+        capability: "finding.dismiss"
+        args: "Finding ID + reason"
+        behavior: "Transition Open → Dismissed"
+        output: "Updated finding"
+
+      - name: "waive"
+        capability: "finding.waive"
+        args: "Finding ID + justification"
+        behavior: "Transition Open → Waived (with SoD check)"
+        output: "Updated finding"
+
+      - name: "approve"
+        capability: "finding.approve_remediation"
+        args: "Finding ID"
+        behavior: "Transition Pending Verification → Verified"
+        output: "Updated finding"
+
+      - name: "reject"
+        capability: "finding.reject_remediation"
+        args: "Finding ID + reason"
+        behavior: "Transition Pending Verification → Rejected"
+        output: "Updated finding"
+
+  - family: "audit"
+    description: "Audit and verification commands"
+    commands:
+      - name: "verify"
+        capability: null
+        args: "Scope (determinism, portability, provenance, complexity)"
+        behavior: "Run verification checks"
+        output: "Verification results"
+
+      - name: "certify"
+        capability: null
+        args: "Implementation path"
+        behavior: "Run architectural audit gates AA-01 through AA-07"
+        output: "Certification results with gate-ID traceability"
+
+error_behavior:
+  rules:
+    - "Non-zero exit code on any error"
+    - "Structured error output (JSON or human-readable)"
+    - "403 CapabilityDenied shown as permission error"
+    - "SoD violations shown with specific reason"
+    - "No partial state mutation on any error"
+
+invariants:
+  - id: "INV-CL-001"
+    statement: "CLI commands MUST check capability before processing"
+    enforcement: "cli_handler"
+
+  - id: "INV-CL-002"
+    statement: "CLI errors MUST produce non-zero exit code"
+    enforcement: "cli_handler"
+
+stories:
+  - story_id: "US-CL-001"
+    as: "application_service"
+    i_want: "to expose CLI commands for all system operations"
+    so_that: "users can interact with Selma from the terminal"
+    acceptance_criteria:
+      - "Given a valid directive file. When 'selma directive create' is run. Then a new directive is created and CG-IR is compiled."
+      - "Given a target file. When 'selma inspect submit' is run. Then inspection runs and findings are displayed."
+      - "Given a finding ID. When 'selma finding waive' is run by the directive creator. Then SoD violation is shown and no state change occurs."

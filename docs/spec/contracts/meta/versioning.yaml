@@ -1,0 +1,55 @@
+# versioning.yaml
+# Normative source for version compatibility rules.
+# Replaces SPECIFICATION.md §5.
+
+contract_id: "meta.versioning"
+schema_version: "1.0.0"
+owner: null
+description: >
+  Defines how versions work across all contract layers.
+  All contracts in this tree MUST follow these rules.
+
+version_format:
+  pattern: "MAJOR.MINOR.PATCH"
+  regex: "^\\d+\\.\\d+\\.\\d+$"
+  description: "Semantic versioning per SemVer 2.0.0"
+
+compatibility_rules:
+  - rule_id: "VER-001"
+    statement: "All contracts in the same MAJOR version MUST be compatible"
+    scope: "cross-layer"
+    example: "spec contracts 1.x, schema contracts 1.x, directive instances 1.x"
+
+  - rule_id: "VER-002"
+    statement: "MAJOR version increment in any layer MAY break compatibility"
+    scope: "cross-layer"
+    requires: "Coordinated migration across all layers"
+
+  - rule_id: "VER-003"
+    statement: "MINOR version MAY add new fields/stages/states without breaking existing ones"
+    scope: "within-layer"
+
+  - rule_id: "VER-004"
+    statement: "PATCH version MUST be backward-compatible bug fixes only"
+    scope: "within-layer"
+
+  - rule_id: "VER-005"
+    statement: "schema_version field in each contract file MUST match this format"
+    scope: "all-contracts"
+
+  - rule_id: "VER-006"
+    statement: "Contract files with different schema_version values MUST NOT be mixed"
+    scope: "within-layer"
+
+layer_versioning:
+  specification_contracts:
+    current_major: 1
+    note: "Breaking from 8.x (markdown) to 1.x (structured contracts)"
+
+  schema_contracts:
+    current_major: 1
+    note: "rule_schema.json and policy_doctrine.yaml at 1.0.0"
+
+  directive_instances:
+    current_major: 0
+    note: "Will migrate from SC-*/ST-* to GOV-*/COD-* taxonomy"

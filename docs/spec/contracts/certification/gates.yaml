@@ -1,0 +1,118 @@
+# gates.yaml
+# Normative source for architectural audit certification gates.
+# Replaces ARCHIVE_SPECIFICATION.md §9.9.
+
+contract_id: "certification.gates"
+schema_version: "1.0.0"
+owner_component: "architectural_auditor"
+description: >
+  Defines the 7 architectural audit gates required for production-grade
+  reference implementation certification. Gates are non-blocking for spec
+  conformance of the document suite but MUST be satisfied for implementation
+  certification.
+
+gates:
+  - gate_id: "AA-01"
+    name: "Mediated Feedback"
+    invariant: "Analytics engine has no write path to CG-IR or Finding FSM"
+    validation_method: "Integration test proving finding events cannot trigger compilation"
+    story_refs: ["S-17", "S-18"]
+    criteria:
+      - "Analytics engine cannot write to CG-IR store"
+      - "Analytics engine cannot modify finding FSM state"
+      - "Finding events cannot trigger compilation"
+      - "Mediated feedback flow: Event Stream → Analytics → Human → Directive change → Recompile"
+
+  - gate_id: "AA-02"
+    name: "Declarative Governance"
+    invariant: "Runtime modules load only schema/CG-IR fields; policy_doctrine.yaml absent from runtime"
+    validation_method: "Static analysis confirming runtime modules load only schema/CG-IR fields"
+    story_refs: ["S-05"]
+    criteria:
+      - "Runtime modules do not import or load policy_doctrine.yaml"
+      - "CI static analysis scans runtime source paths for policy references"
+      - "Boot-time assertion (recommended): verify policy file absent from runtime data paths"
+      - "Conflict resolution uses spec algorithm over schema/CG-IR fields only"
+
+  - gate_id: "AA-03"
+    name: "Evaluator Purity"
+    invariant: "Evaluators perform no IO, no randomness, no environment reads"
+    validation_method: "AST analysis or sandboxed execution"
+    story_refs: ["S-10", "S-21"]
+    criteria:
+      - "Evaluators perform no network calls"
+      - "Evaluators perform no file I/O"
+      - "Evaluators perform no randomness"
+      - "Evaluators perform no environment variable reads"
+      - "Same inputs produce same outputs (determinism)"
+
+  - gate_id: "AA-04"
+    name: "Segregation of Duties"
+    invariant: "SoD enforced at FSM transition gates"
+    validation_method: "Integration test"
+    story_refs: ["S-14a", "S-29"]
+    criteria:
+      - "finding.waive denied when actor ∈ creator_provenance"
+      - "finding.approve_remediation denied when actor submitted evidence"
+      - "Denial produces 403 CapabilityDenied with audit log entry"
+      - "No state mutation on denial"
+
+  - gate_id: "AA-05"
+    name: "Conflict Resolution Determinism"
+    invariant: "Identical CG-IR snapshot + identical target → byte-identical conflict outcomes"
+    validation_method: "Replay test"
+    story_refs: ["S-05", "S-28"]
+    criteria:
+      - "Identical inputs produce identical outcomes"
+      - "compatible_overrides pairs resolve deterministically"
+      - "defer_to cycle detection produces consistent results"
+      - "Cross-lineage advisory produces identical artifacts"
+
+  - gate_id: "AA-06"
+    name: "Discriminator Completeness"
+    invariant: "Invalid evaluator_type/evaluator_config pairings rejected"
+    validation_method: "Corpus of invalid pairings must be rejected by reference validator"
+    story_refs: ["S-21", "S-27"]
+    criteria:
+      - "Invalid evaluator_type/evaluator_config pairings are rejected"
+      - "AST-walking discriminator validator is used (not just JSON Schema)"
+      - "Rejection corpus covers all evaluator types"
+
+  - gate_id: "AA-07"
+    name: "Portable Serialization"
+    invariant: "RE2 canary vectors and UTC/NaN rejection tests pass"
+    validation_method: "RE2 canary test vectors + UTC/NaN rejection tests"
+    story_refs: ["S-21", "S-31"]
+    criteria:
+      - "RE2 canary test vectors pass (§9.2.6)"
+      - "UTC-only timestamp validation passes"
+      - "NaN/Infinity rejection passes"
+      - "Regex flags whitelist validation passes"
+      - "NFC string normalization (warning)"
+
+certification_requirements:
+  description: "Requirements for production-grade certification"
+  rules:
+    - "All 7 gates (AA-01 through AA-07) MUST pass"
+    - "Gates are non-blocking for document suite conformance"
+    - "Gates are REQUIRED for production-grade reference implementation certification"
+    - "Gate results MUST be recorded with pass/fail per gate and explicit gate-ID traceability"
+
+invariants:
+  - id: "INV-GA-001"
+    statement: "All 7 gates MUST pass for production certification"
+    enforcement: "certification_process"
+
+  - id: "INV-GA-002"
+    statement: "Gate results MUST include explicit gate-ID traceability"
+    enforcement: "certification_process"
+
+stories:
+  - story_id: "US-GA-001"
+    as: "architectural_auditor"
+    i_want: "to verify architectural audit gates before production certification"
+    so_that: "reference implementations are production-grade"
+    acceptance_criteria:
+      - "Given a reference implementation. When architectural audit runs. Then all 7 gates (AA-01 through AA-07) are verified with pass/fail per gate."
+      - "Given gate AA-01 (Mediated Feedback). When verification runs. Then it is confirmed that analytics has no write path to CG-IR or FSM."
+      - "Given gate AA-04 (Segregation of Duties). When verification runs. Then it is confirmed that finding.waive is denied when actor is in creator_provenance."

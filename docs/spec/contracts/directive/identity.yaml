@@ -1,0 +1,102 @@
+# identity.yaml
+# Normative source for directive identity rules.
+# Replaces ARCHIVE_SPECIFICATION.md §2.3.
+
+contract_id: "directive.identity"
+schema_version: "1.0.0"
+owner_component: "directives_adapter"
+description: >
+  Defines the dual identity model: Lineage ID (immutable root) and
+  Execution ID (active node identity). Also defines deterministic merge
+  semantics and lineage DAG invariants.
+
+identity_types:
+  - type: "lineage_id"
+    name: "Lineage ID (Immutable Root)"
+    purpose: "Audit trail and historical traceability"
+    mutability: "Never changes across revisions, forks, merges, or splits"
+    format: "^[A-Z][A-Z0-9]+-[0-9]+$"
+    examples: ["TRAF-001", "AUTH-001", "PAY-800"]
+    assignment: "Assigned once at directive creation from Machine ID"
+
+  - type: "execution_id"
+    name: "Execution ID (Active Node Identity)"
+    purpose: "CG-IR compilation and runtime evaluation"
+    mutability: "Changes on fork, merge, or split"
+    format: "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$"
+    examples: ["TRAF-001", "TRAF-001-A", "AUTH-001-M3A7F2B1C4D5E6F7"]
+    assignment: "On first creation: equals lineage_id. After fork/merge/split: suffix appended."
+
+identity_mapping:
+  description: "How IDs map across layers"
+  layers:
+    - layer: "Policy Doctrine"
+      lineage_field: "Machine ID → lineage_id"
+      execution_field: "Not represented"
+    - layer: "Rule Schema"
+      lineage_field: "rule.lineage_id"
+      execution_field: "rule.id"
+    - layer: "CG-IR"
+      lineage_field: "node.lineage_id"
+      execution_field: "node.directive_id"
+    - layer: "Finding"
+      lineage_field: "finding.lineage_id"
+      execution_field: "finding.control_id"
+
+machine_id:
+  description: "Single interpretation across all layers"
+  rules:
+    - "Machine ID has exactly one meaning: stable external lineage identifier"
+    - "Assigned once when directive first authored; never reassigned"
+    - "At compile: rule.lineage_id = Machine ID (bijective at root-assignment level)"
+    - "On first creation: rule.id = rule.lineage_id"
+    - "After fork/split: lineage_id unchanged or inherited; execution_id diverges"
+    - "Referential integrity: every Machine ID maps to exactly one lineage root"
+    - "Runtime: engine uses rule.lineage_id — never reads policy tables"
+
+merge_semantics:
+  description: "Deterministic merge identity resolution"
+  algorithm:
+    step_1: "lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically"
+    step_2: "execution_id := lineage_id + '-M' + SHA-256(canonical_json({parents, operation: 'merge', timestamp}))[0:16].uppercase()"
+    step_3: "lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])"
+    step_4: "lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])"
+    step_5: "Both parent rules transition to status=deprecated"
+  invariant: "Merged lineage_id equals lexicographically minimum parent lineage_id"
+  accepted_risk: >
+    Lexicographic MIN is deterministic but semantically lossy. Non-surviving
+    parent's lineage_id preserved in lineage.parent_lineage_ids and optional
+    metadata.migration.merge_provenance.
+
+lineage_dag_invariants:
+  - id: "INV-ID-001"
+    statement: "No directed cycle in ancestry graph"
+  - id: "INV-ID-002"
+    statement: "Each active rule has exactly one lineage_id"
+  - id: "INV-ID-003"
+    statement: "Every parent_lineage_ids entry references a rule that existed"
+  - id: "INV-ID-004"
+    statement: "Fork/split: exactly one parent. Merge: exactly two parents."
+  - id: "INV-ID-005"
+    statement: "No self-reference in lineage"
+  - id: "INV-ID-006"
+    statement: "Maximum ancestry depth = 64 operations"
+  - id: "INV-ID-007"
+    statement: "lineage.timestamp ≥ max(parent timestamps)"
+
+uniqueness:
+  rules:
+    - "lineage_id root uniqueness: no two distinct roots share same lineage_id"
+    - "Post-fork/split: multiple active rules may share lineage_id with distinct execution_ids"
+    - "Primary key: (lineage_id, id) is unique within ruleset"
+    - "Execution id alone is also globally unique"
+
+stories:
+  - story_id: "US-ID-001"
+    as: "directives_adapter"
+    i_want: "to maintain dual identity with immutable lineage and mutable execution"
+    so_that: "audit trail is preserved while allowing lifecycle operations"
+    acceptance_criteria:
+      - "Given a directive created with Machine ID 'TRAF-001'. When compiled. Then rule.lineage_id = 'TRAF-001' and rule.id = 'TRAF-001'."
+      - "Given a directive forked. When fork completes. Then both children share the parent lineage_id with distinct execution_ids."
+      - "Given two directives merged. When merge completes. Then lineage_id = lexicographic min of parents."

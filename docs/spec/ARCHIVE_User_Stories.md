@@ -1,3 +1,11 @@
+# ARCHIVED — Replaced by docs/spec/contracts/
+
+This file is preserved for reference during migration.
+The normative source is now the contract tree under docs/spec/contracts/.
+
+Migration status: PENDING
+Archived on: 2026-07-29
+
 # Selma — Unified User Stories
 
 **Project:** Selma — Rule Regularity Platform  

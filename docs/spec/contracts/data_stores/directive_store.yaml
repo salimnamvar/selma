@@ -1,0 +1,108 @@
+# directive_store.yaml
+# Normative source for the Directive Graph store contract.
+# Replaces ARCHIVE_SPECIFICATION.md §2.5 and §3.4 (locking).
+
+contract_id: "data_stores.directive_store"
+schema_version: "1.0.0"
+owner_component: "directives_adapter"
+description: >
+  Defines the contract for the Directive Graph storage layer.
+  Supports versioned, mutable directives with read/write locking.
+
+storage_model:
+  format: "Structured document (YAML/JSON with prose sections)"
+  versioning: "Semantic versioning (MAJOR.MINOR.PATCH)"
+  mutability: "Mutable (new revisions created on change)"
+  content: "Directives, scope, priority, prose sections, metadata"
+
+operations:
+  - name: "create"
+    capability: "directive.create"
+    description: "Create new directive with lineage_id + execution_id"
+    locking: "write_lock"
+    produces: "new directive + new CG-IR snapshot"
+
+  - name: "modify"
+    capability: "directive.modify"
+    description: "Create new revision of existing directive"
+    locking: "write_lock"
+    preserves: "lineage_id unchanged"
+    produces: "new revision + incremental CG-IR snapshot"
+
+  - name: "retire"
+    capability: "directive.retire"
+    description: "Transition directive to deprecated status"
+    locking: "write_lock"
+    produces: "deprecated directive + new CG-IR snapshot"
+
+  - name: "fork"
+    capability: "directive.fork"
+    description: "Fork directive into two distinct directives"
+    locking: "write_lock"
+    produces: "two new execution_ids (shared lineage_id) + new CG-IR snapshot"
+
+  - name: "merge"
+    capability: "directive.merge"
+    description: "Merge two directives into one"
+    locking: "write_lock"
+    produces: "merged directive (lexicographic min lineage_id) + new CG-IR snapshot"
+
+  - name: "split"
+    capability: "directive.split"
+    description: "Split directive into multiple independent directives"
+    locking: "write_lock"
+    produces: "multiple new execution_ids (shared lineage_id) + new CG-IR snapshot"
+
+  - name: "restore"
+    capability: "directive.restore"
+    description: "Restore directive to a previous revision"
+    locking: "write_lock"
+    produces: "new revision copying target + new CG-IR snapshot"
+
+  - name: "read"
+    capability: null
+    description: "Read directive by lineage_id or execution_id"
+    locking: "read_lock"
+    produces: "directive document"
+
+concurrency_model:
+  description: "Locking semantics for directive store"
+  rules:
+    - "Compilation acquires read lock on Directive Graph"
+    - "Concurrent compilations are allowed (read-only)"
+    - "Directive modifications acquire write lock (exclusive)"
+    - "Write lock blocks compilation; compilation blocks writes"
+    - "Write lock uses FIFO queue ordering (writer-preference)"
+    - "Read locks never wait on other read locks"
+  deadlock_prevention:
+    - "No circular wait: dependency is strictly read_lock → optional write_lock"
+    - "Engines MUST NOT hold write lock while awaiting compilation"
+    - "Queue position and lock holder identity MUST be observable"
+    - "Compilation holds read locks only; no lock type inversion"
+
+invariants:
+  - id: "INV-DS-001"
+    statement: "Write lock MUST be exclusive (no concurrent writes)"
+    enforcement: "store_engine"
+
+  - id: "INV-DS-002"
+    statement: "Read lock MUST allow concurrent reads"
+    enforcement: "store_engine"
+
+  - id: "INV-DS-003"
+    statement: "lineage_id is immutable across all lifecycle operations"
+    enforcement: "store_engine"
+
+  - id: "INV-DS-004"
+    statement: "Each modification MUST create a new revision (append-only history)"
+    enforcement: "store_engine"
+
+stories:
+  - story_id: "US-DS-001"
+    as: "directives_adapter"
+    i_want: "to enforce read/write locking on directive operations"
+    so_that: "concurrent access is safe and modifications are serialized"
+    acceptance_criteria:
+      - "Given a compilation in progress. When a directive modification is attempted. Then the modification waits until compilation releases read lock."
+      - "Given two concurrent compilations. When both run. Then both succeed (read locks are compatible)."
+      - "Given a write lock held. When a new compilation is attempted. Then the compilation waits until write lock is released."

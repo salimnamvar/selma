@@ -1,0 +1,150 @@
+# finding_contract.yaml
+# Normative source for finding object schema.
+# Replaces ARCHIVE_SPECIFICATION.md §3.1 (Finding Object Schema).
+
+contract_id: "inspection.finding"
+schema_version: "1.0.0"
+owner_component: "rule_inspector"
+description: >
+  Defines the schema and semantics for finding objects produced by the
+  inspection pipeline. Findings are the primary output of evaluation
+  and the input to the finding lifecycle FSM.
+
+finding_schema:
+  type: "object"
+  required_fields:
+    - field: "finding_id"
+      type: "string (UUID)"
+      description: "Unique finding identifier"
+    - field: "lineage_id"
+      type: "string"
+      description: "Immutable lineage root of the source directive"
+      reference: "→ CG-IR node lineage_id"
+    - field: "control_id"
+      type: "string"
+      description: "Execution ID of the source directive"
+      reference: "→ CG-IR node directive_id"
+    - field: "inspection_id"
+      type: "string (UUID)"
+      description: "Reference to the inspection that produced this finding"
+    - field: "fsm_state"
+      type: "enum"
+      values: ["Created", "Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Verified", "Rejected", "Dismissed", "Waived", "Closed"]
+      description: "Current FSM state per finding_lifecycle.states contract"
+    - field: "disposition"
+      type: "enum"
+      values: ["valid", "invalid", "waived", "superseded"]
+      description: "Resolution status"
+    - field: "severity"
+      type: "enum"
+      values: ["critical", "high", "medium", "low", "informational"]
+      description: "Finding severity (computed from evaluator outcome + deontic type)"
+    - field: "outcome"
+      type: "enum"
+      values: ["Pass", "Fail", "Partial", "NeedsReview"]
+      description: "Raw evaluator outcome from §2.9 evaluator contract"
+    - field: "confidence"
+      type: "float"
+      range: "0.0–1.0"
+      description: "Evaluator confidence score"
+    - field: "evidence"
+      type: "string"
+      description: "Evaluator evidence description"
+    - field: "reasoning"
+      type: "string"
+      description: "Evaluator reasoning chain"
+    - field: "created_at"
+      type: "datetime (ISO 8601, UTC)"
+      description: "Finding creation timestamp"
+    - field: "updated_at"
+      type: "datetime (ISO 8601, UTC)"
+      description: "Timestamp of most recent FSM transition"
+    - field: "actor"
+      type: "string"
+      description: "Actor ID of last state transition"
+
+outcome_to_finding_mapping:
+  description: "How evaluator outcomes map to finding creation and severity"
+  rules:
+    - outcome: "Pass"
+      finding_created: false
+      default_severity: null
+      notes: "No finding generated"
+    - outcome: "Fail"
+      finding_created: true
+      default_severity: "node.severity_default"
+      notes: "Standard failure finding"
+    - outcome: "Partial"
+      finding_created: true
+      default_severity: "downgraded by one level"
+      downgrade_map:
+        critical: "high"
+        high: "medium"
+        medium: "low"
+        low: "informational"
+        informational: "informational"
+    - outcome: "NeedsReview"
+      finding_created: true
+      default_severity: "informational"
+      notes: "Always informational — cannot escalate without human review"
+
+deontic_type_semantics:
+  description: "How deontic type affects finding creation"
+  rules:
+    - type: "obligation"
+      pass: "No finding"
+      fail: "Finding (severity_default)"
+      partial: "Finding (downgraded)"
+      needs_review: "Finding (informational)"
+    - type: "prohibition"
+      pass: "No finding"
+      fail: "Finding (severity_default)"
+      partial: "Finding (downgraded)"
+      needs_review: "Finding (informational)"
+    - type: "permission"
+      pass: "No finding"
+      fail: "Finding (informational, advisory)"
+      partial: "No finding"
+      needs_review: "No finding"
+
+confidence_threshold:
+  description: "Optional severity cap based on evaluator confidence"
+  default: 0.5
+  source: "frozen_env.confidence_severity_cap_threshold"
+  rule: "If confidence < threshold, severity capped at informational regardless of outcome"
+  notes: "Prevents low-confidence failures from appearing as critical"
+
+invariants:
+  - id: "INV-FC-001"
+    statement: "finding_id MUST be unique (UUID)"
+    enforcement: "inspection_pipeline"
+
+  - id: "INV-FC-002"
+    statement: "updated_at MUST equal created_at on creation"
+    enforcement: "inspection_pipeline"
+
+  - id: "INV-FC-003"
+    statement: "updated_at MUST be set to timestamp of most recent FSM transition"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FC-004"
+    statement: "fsm_state MUST be 'Open' immediately after creation (Created → Open automatic)"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FC-005"
+    statement: "Permission Fail findings MUST be severity informational"
+    enforcement: "aggregate_stage"
+
+  - id: "INV-FC-006"
+    statement: "Confidence below threshold caps severity at informational"
+    enforcement: "aggregate_stage"
+
+stories:
+  - story_id: "US-FC-001"
+    as: "rule_inspector"
+    i_want: "to produce well-structured finding objects"
+    so_that: "findings carry all information needed for lifecycle management"
+    acceptance_criteria:
+      - "Given an evaluator returns Fail for an obligation rule. When a finding is created. Then it contains finding_id, lineage_id, control_id, inspection_id, severity, outcome, confidence, evidence, and reasoning."
+      - "Given an evaluator returns Partial. When severity is computed. Then severity is downgraded by one level from severity_default."
+      - "Given an evaluator returns NeedsReview. When severity is computed. Then severity is always informational."

@@ -1,0 +1,91 @@
+# amendment.yaml
+# Normative source for directive amendment rules.
+# Replaces ARCHIVE_SPECIFICATION.md §7.1–§7.3.
+
+contract_id: "directive.amendment"
+schema_version: "1.0.0"
+owner_component: "directives_adapter"
+description: >
+  Defines how directives are amended — metadata rules, anchor references,
+  and parameter field behavior.
+
+metadata_namespacing:
+  description: "Rules for directive metadata"
+  rules:
+    - "Metadata is informational only — no executable hints"
+    - "x-* keys MUST NOT influence evaluation outcomes or conflict resolution"
+    - "Engines MUST treat all metadata as informational at runtime"
+    - "Metadata does NOT participate in semantic_hash"
+    - "Declared namespaces: audit, vendor, author, migration, domain, jurisdiction, project"
+  required_structure:
+    audit:
+      authored_by: "string (actor ID) — REQUIRED"
+      approved_by: "string (actor ID, optional)"
+      approved_at: "datetime (ISO 8601 UTC, optional)"
+    vendor: "object (vendor-specific)"
+    author: "object (author-specific)"
+    migration:
+      superseded_by: "string (rule id, when status=superseded)"
+      migration_notes: "string (optional)"
+      merge_provenance:
+        non_surviving_parents:
+          - lineage_id: "string"
+            semantic_weight: "primary | secondary | informational (optional)"
+            context: "string (optional)"
+        merged_at: "datetime (optional, strongly RECOMMENDED)"
+        merge_notes: "string (optional)"
+  structural_guard:
+    description: "rule_schema.json rejects keys matching executable patterns"
+    pattern: "^(x-exec|x-eval|x-hint|evaluator_|evaluator\\.\\.).*"
+
+anchor_reference:
+  description: "Syntax for anchor_ref field"
+  syntax: |
+    anchor_ref ::= section_ref | json_pointer
+    section_ref ::= "section:" section_id ["/" subsection_id]
+    section_id ::= [a-z][a-z_]*
+    subsection_id ::= [a-z_]+
+    json_pointer ::= "/" path_segment ("/" path_segment)*
+  examples:
+    - "section:directives/specific_directives"
+    - "section:definitions"
+    - "/directives/TRAF-001"
+  validation: "Compile-time MUST verify section: references against policy document structure"
+
+parameters_field:
+  description: "How parameters merge into evaluator_config"
+  merge_algorithm:
+    step_1: "Start with a copy of evaluator_config"
+    step_2: "For each key in parameters, if key exists in copy, overwrite it"
+    step_3: "If key does not exist in copy, add it"
+    step_4: "Merged result becomes CG-IR node's evaluator.config"
+  constraint: "parameters MUST NOT contain keys that change evaluator structural type"
+  example:
+    input:
+      evaluator_type: "threshold"
+      evaluator_config: {"field": "coverage", "operator": "gte", "threshold": 80}
+      parameters: {"threshold": 95}
+    output: {"field": "coverage", "operator": "gte", "threshold": 95}
+
+invariants:
+  - id: "INV-AM-001"
+    statement: "Metadata MUST NOT contain executable hints or runtime flags"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-AM-002"
+    statement: "Parameters MUST NOT change evaluator structural type"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-AM-003"
+    statement: "anchor_ref section: references MUST be verified against policy structure"
+    enforcement: "compile_time_validation"
+
+stories:
+  - story_id: "US-AM-001"
+    as: "directives_adapter"
+    i_want: "to enforce metadata non-executability"
+    so_that: "metadata cannot influence evaluation or conflict resolution"
+    acceptance_criteria:
+      - "Given a rule with x-exec-hint in metadata. When schema validation runs. Then the key is rejected by structural guard."
+      - "Given a rule with valid audit metadata. When compiled. Then metadata does not participate in semantic_hash."
+      - "Given a parameters field that overrides threshold. When compiled. Then evaluator.config has the overridden value."

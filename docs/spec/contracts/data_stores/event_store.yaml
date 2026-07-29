@@ -1,0 +1,161 @@
+# event_store.yaml
+# Normative source for the Finding Event Stream store contract.
+# Replaces ARCHIVE_SPECIFICATION.md §2.14.
+
+contract_id: "data_stores.event_store"
+schema_version: "1.0.0"
+owner_component: "event_adapter"
+description: >
+  Defines the contract for the Finding Event Stream — an append-only
+  audit log with HLC ordering and event hashing.
+
+storage_model:
+  type: "Append-only log"
+  ordering: "Hybrid Logical Clock (HLC) total order"
+  immutability: "Events are never modified once written"
+  integrity: "event_hash ensures content integrity"
+
+event_schema:
+  required_fields:
+    - field: "event_id"
+      type: "string (UUID)"
+      description: "Unique event identifier"
+    - field: "finding_id"
+      type: "string"
+      description: "Reference to the finding"
+    - field: "event_type"
+      type: "enum"
+      values: ["FindingCreated", "DispositionChanged", "FindingClosed"]
+    - field: "timestamp"
+      type: "datetime (ISO 8601, UTC)"
+      description: "Event time"
+    - field: "logical_clock"
+      type: "object"
+      description: "Hybrid logical clock for ordering"
+    - field: "actor"
+      type: "string"
+      description: "Human ID or AI agent ID"
+    - field: "payload"
+      type: "object"
+      description: "Event-specific data"
+    - field: "event_hash"
+      type: "string (SHA-256)"
+      description: "Hash of event (excluding event_hash itself)"
+
+event_payloads:
+  - event_type: "FindingCreated"
+    required_fields:
+      - "finding_id"
+      - "lineage_id"
+      - "control_id (directive_id)"
+      - "inspection_id"
+      - "fsm_state (Created)"
+      - "severity"
+      - "outcome"
+      - "confidence"
+      - "evidence"
+      - "reasoning"
+
+  - event_type: "DispositionChanged"
+    required_fields:
+      - "previous_disposition"
+      - "new_disposition"
+      - "previous_fsm_state"
+      - "new_fsm_state"
+      - "reason (optional)"
+
+  - event_type: "FindingClosed"
+    required_fields:
+      - "final_disposition"
+      - "final_fsm_state"
+      - "closure_reason (optional)"
+
+hlc:
+  description: "Hybrid Logical Clock for distributed event ordering"
+  schema:
+    - field: "physical_time"
+      type: "datetime (wall clock, UTC)"
+    - field: "logical_counter"
+      type: "integer (monotonic, starts at 0)"
+    - field: "node_id"
+      type: "string (unique node identifier)"
+  ordering: >
+    Total ordering by: physical_time → logical_counter → node_id → event_id.
+    Per-node tuple (physical_time, logical_counter) is strictly non-decreasing.
+  clock_advancement:
+    send: >
+      pt_new = max(pt, pt_wall)
+      if pt_new > pt: lc_new = 0
+      else: lc_new = lc + 1
+    receive: >
+      pt_new = max(pt, pt_wall, remote_pt)
+      if pt_new > pt: lc_new = 0
+      elif pt_new == pt: lc_new = max(lc, remote_lc) + 1
+      else: lc_new = lc + 1
+  monotonicity_guarantee:
+    - "physical_time in persisted state NEVER decreases"
+    - "logical_counter NEVER decreases"
+    - "Counter resets to 0 only when physical_time strictly advances"
+    - "Wall clock regression absorbed by incrementing logical_counter"
+
+event_hash:
+  formula: "SHA-256(canonical_json(event minus event_hash field))"
+  notes: "Covers all event fields including logical_clock and payload"
+
+analytics:
+  description: "Read-only analytics over the event stream"
+  types:
+    - name: "finding_aggregates"
+      description: "Pre-computed for context object"
+    - name: "trend_analysis"
+      description: "Finding rates over time (read-only)"
+    - name: "compliance_dashboard"
+      description: "Real-time posture view"
+  constraint: "Analytics never modify CG-IR or finding FSM state"
+
+mediated_feedback:
+  description: "How analytics inform directive changes"
+  flow: "Event Stream → Read-only analytics → Human review → Directive Graph change → Recompile"
+  constraint: "No direct finding → CG-IR path"
+
+retention_policy:
+  - artifact: "Finding Events"
+    retention: "Indefinite (audit trail)"
+    pruning: "Never pruned"
+  - artifact: "Pipeline Traces"
+    retention: "Configurable (default: 1 year)"
+    pruning: "Pruned after retention period"
+  - artifact: "Inspection Snapshots"
+    retention: "Configurable (default: 7 years)"
+    pruning: "Pruned after retention period"
+
+invariants:
+  - id: "INV-ES-001"
+    statement: "Events are immutable once written"
+    enforcement: "event_store"
+
+  - id: "INV-ES-002"
+    statement: "event_hash ensures integrity of all event fields"
+    enforcement: "event_store"
+
+  - id: "INV-ES-003"
+    statement: "Per-node HLC tuple is strictly lexicographically non-decreasing"
+    enforcement: "hlc_engine"
+
+  - id: "INV-ES-004"
+    statement: "No duplicate event_ids"
+    enforcement: "event_store"
+
+  - id: "INV-ES-005"
+    statement: "Analytics are read-only; no write path to CG-IR or FSM"
+    enforcement: "architectural_audit (AA-01)"
+
+stories:
+  - story_id: "US-ES-001"
+    as: "event_adapter"
+    i_want: "to maintain an append-only event log with HLC ordering"
+    so_that: "finding lifecycle has a complete, ordered, immutable audit trail"
+    acceptance_criteria:
+      - "Given any FSM transition. When an event is written. Then the event is immutable and has a valid event_hash."
+      - "Given two events from the same node. When ordering is checked. Then the HLC tuple is strictly non-decreasing."
+      - "Given wall clock regression. When hlc_send is called. Then logical_counter increments (monotonicity preserved)."

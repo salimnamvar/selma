@@ -1,0 +1,99 @@
+# role_matrix.yaml
+# Normative source for role-based capability assignments.
+# Replaces ARCHIVE_SPECIFICATION.md §3.2 and §3.2.1.
+
+contract_id: "authorization.role_matrix"
+schema_version: "1.0.0"
+owner_component: "application_service"
+description: >
+  Defines the three roles and their capability assignments.
+  Roles bind to authenticated actor identity (human or AI agent).
+
+roles:
+  - role_id: "regulatory_official"
+    name: "Regulatory Official"
+    description: "Rule author and governance owner (Human or AI Agent)"
+    actor_type: "Human or AI Agent"
+    acts_on_behalf_of: "Regulatory Authority"
+    capabilities:
+      - "directive.create"
+      - "directive.modify"
+      - "directive.retire"
+      - "directive.fork"
+      - "directive.merge"
+      - "directive.restore"
+      - "finding.view"
+      - "finding.dismiss"
+      - "finding.waive"
+      - "finding.approve_remediation"
+      - "finding.reject_remediation"
+      - "finding.supersede"
+      - "analytics.view"
+      - "conflict.resolve"
+    ai_agent_constraint: "Same capabilities as humans. All actions audit-logged with actor identity."
+
+  - role_id: "compliance_representative"
+    name: "Compliance Representative"
+    description: "Compliance seeker and remediation owner (Human or System)"
+    actor_type: "Human or System"
+    acts_on_behalf_of: "Regulated Entity"
+    capabilities:
+      - "inspection.submit"
+      - "inspection.reinspect"
+      - "finding.view"
+      - "finding.acknowledge"
+      - "evidence.submit"
+      - "analytics.view"
+    non_capabilities:
+      - "directive.create"
+      - "directive.modify"
+      - "directive.retire"
+      - "finding.waive"
+      - "finding.dismiss"
+
+  - role_id: "system"
+    name: "System"
+    description: "Automated processes and services"
+    actor_type: "Service Account"
+    capabilities:
+      - "inspection.submit"
+      - "finding.view"
+      - "analytics.view"
+
+sod_constraints:
+  - constraint_id: "SOD-001"
+    name: "Creator Cannot Waive Own Findings"
+    capability: "finding.waive"
+    check: "actor NOT IN creator_provenance(finding.control_id)"
+    enforcement: "finding_fsm_engine"
+    story_refs: ["S-29", "S-32"]
+
+  - constraint_id: "SOD-002"
+    name: "Evidence Submitter Cannot Approve Own Remediation"
+    capability: "finding.approve_remediation"
+    check: "actor != evidence_submitter(finding_id)"
+    enforcement: "finding_fsm_engine"
+    story_refs: ["S-14a", "S-33"]
+
+invariants:
+  - id: "INV-RM-001"
+    statement: "Capabilities bind directly to authenticated actor identity (no delegation)"
+    enforcement: "capability_gate"
+
+  - id: "INV-RM-002"
+    statement: "AI agents use the same capability matrix as humans"
+    enforcement: "capability_gate"
+
+  - id: "INV-RM-003"
+    statement: "SoD constraints are checked at FSM transition gates"
+    enforcement: "finding_fsm_engine"
+
+stories:
+  - story_id: "US-RM-001"
+    as: "application_service"
+    i_want: "to enforce role-based capability assignments"
+    so_that: "each role has exactly the capabilities it needs"
+    acceptance_criteria:
+      - "Given a Regulatory Official. When any directive.* action is attempted. Then the action succeeds."
+      - "Given a Compliance Representative. When directive.create is attempted. Then the action is denied (not in role capabilities)."
+      - "Given an AI agent with Regulatory Official role. When any action is attempted. Then the same capability matrix applies as for humans."

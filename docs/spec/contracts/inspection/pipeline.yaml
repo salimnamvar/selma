@@ -1,0 +1,223 @@
+# pipeline.yaml
+# Normative source for the inspection pipeline contract.
+# Replaces ARCHIVE_SPECIFICATION.md §3.3–§3.7.
+
+contract_id: "inspection.pipeline"
+schema_version: "1.0.0"
+owner_component: "rule_inspector"
+state_machine_ref: "../../state-machine/selma_inspection_pipeline.puml"
+description: >
+  Defines the 6-stage inspection pipeline that evaluates a target against a
+  frozen CG-IR snapshot. Each stage has defined inputs, outputs, and error
+  handling. The pipeline produces an immutable inspection snapshot.
+
+pipeline:
+  - order: 1
+    name: "normalize"
+    description: "Validate target schema and compute target hash"
+    input: "Target (conforming to target schema)"
+    output: "Validated Target + target_hash"
+    operations:
+      - "Validate target conforms to target schema (target_id, target_type, content_hash, submitted_at, content, metadata)"
+      - "Verify content_hash matches actual content"
+      - "Compute target_hash from canonical JSON"
+      - "Ensure submitted_at is UTC"
+    invariants:
+      - id: "INV-IP-001"
+        statement: "Target MUST conform to target schema before any evaluation"
+      - id: "INV-IP-002"
+        statement: "content_hash MUST match actual content (integrity check)"
+    error_handling: "reject_with_schema_error"
+    story_refs: ["S-10"]
+
+  - order: 2
+    name: "classify"
+    description: "Determine target_type and select evaluation strategy"
+    input: "Validated Target"
+    output: "Classification metadata"
+    operations:
+      - "Determine target_type (text | structured | binary)"
+      - "Select evaluation strategy based on target_type"
+      - "Populate context object with target_metadata"
+    invariants:
+      - id: "INV-IP-010"
+        statement: "target_type MUST be one of: text, structured, binary"
+    error_handling: "reject_with_classification_error"
+    story_refs: ["S-10"]
+
+  - order: 3
+    name: "select_controls"
+    description: "Filter CG-IR nodes by scope applicability"
+    input: "Classification metadata + CG-IR Snapshot"
+    output: "Applicable control nodes"
+    operations:
+      - "Load CG-IR snapshot by cg_ir_snapshot_hash"
+      - "For each node: evaluate scope against target metadata"
+      - "Filter nodes where scope matches target (target_type, domain, jurisdiction, filters)"
+      - "Include nodes with scope.target_type = 'any'"
+      - "Sort by dependency order (topological)"
+    invariants:
+      - id: "INV-IP-020"
+        statement: "Only nodes with applicable scope enter evaluation"
+      - id: "INV-IP-021"
+        statement: "Scope matching MUST use scope specificity score algorithm (§2.8.2)"
+    error_handling: "skip_non_applicable_nodes"
+
+  - order: 4
+    name: "evaluate"
+    description: "Execute DAG with topological ordering using pure evaluators"
+    input: "Applicable control nodes + Target + Context"
+    output: "Evaluator outcomes"
+    operations:
+      - "Execute nodes in topological order respecting depends_on"
+      - "For each node: invoke pure evaluator (evaluate(node, target, context))"
+      - "Enforce per-node timeout (default: 30s)"
+      - "Handle infrastructure timeouts with configurable retry (default: 0, max: 3)"
+      - "Dependency-failed nodes produce NO finding (Skipped trace entry only)"
+      - "Record pipeline_trace for each node"
+    invariants:
+      - id: "INV-IP-030"
+        statement: "Evaluators MUST be pure functions (no IO, no randomness)"
+      - id: "INV-IP-031"
+        statement: "Same inputs MUST produce same outputs (determinism)"
+      - id: "INV-IP-032"
+        statement: "Context object is read-only; evaluators MUST NOT mutate it"
+      - id: "INV-IP-033"
+        statement: "Dependency-failed nodes produce no finding (prevent cascading false positives)"
+    error_handling: "per_fault_taxonomy"
+    fault_taxonomy:
+      - fault: "deterministic_evaluation"
+        behavior: "Node → Fail finding"
+        retry: false
+      - fault: "deterministic_partial"
+        behavior: "Node → Partial finding"
+        retry: false
+      - fault: "ambiguous_evaluation"
+        behavior: "Node → NeedsReview finding"
+        retry: false
+      - fault: "dependency_failure"
+        behavior: "Node skipped → Skipped trace entry only"
+        retry: false
+      - fault: "timeout"
+        behavior: "Node → NeedsReview finding"
+        retry: true
+        max_retries: 3
+      - fault: "resource_exhaustion"
+        behavior: "Node → NeedsReview finding"
+        retry: false
+      - fault: "schema_violation"
+        behavior: "Pipeline → SchemaError"
+        retry: false
+      - fault: "cgir_corruption"
+        behavior: "Pipeline → Fatal (abort inspection)"
+        retry: false
+    story_refs: ["S-10"]
+
+  - order: 5
+    name: "aggregate"
+    description: "Collect findings, compute severities, apply deontic semantics"
+    input: "Evaluator outcomes"
+    output: "Finding set with severities"
+    operations:
+      - "Map evaluator outcomes to findings per outcome-to-finding mapping"
+      - "Apply deontic type semantics (obligation/prohibition/permission)"
+      - "Compute severity: Fail → severity_default, Partial → downgraded, NeedsReview → informational"
+      - "Apply confidence threshold (frozen_env.confidence_severity_cap_threshold, default 0.5)"
+      - "Permission type: Fail → always informational"
+      - "Within-lineage conflict resolution via resolve_conflict"
+      - "Cross-lineage findings reported independently (advisory only)"
+    invariants:
+      - id: "INV-IP-040"
+        statement: "Permission Fail findings MUST be severity informational regardless of severity_default"
+      - id: "INV-IP-041"
+        statement: "Confidence below threshold caps severity at informational"
+      - id: "INV-IP-042"
+        statement: "Conflict resolution outcomes MUST be deterministic for identical CG-IR snapshot"
+    error_handling: "abort_with_detailed_reason"
+    story_refs: ["S-10", "S-05"]
+
+  - order: 6
+    name: "report"
+    description: "Generate immutable inspection snapshot"
+    input: "Finding set + Pipeline trace"
+    output: "Inspection Snapshot (immutable)"
+    operations:
+      - "Generate inspection_id (UUID)"
+      - "Record all findings with FSM state = Created → Open"
+      - "Record skipped_nodes (ordered by pipeline execution)"
+      - "Record pipeline_trace (ordered chronologically)"
+      - "Compute system_state_hash"
+      - "Record frozen_env_hash, engine_version, cg_ir_snapshot_hash"
+      - "Mark snapshot as immutable"
+      - "Note: finding_aggregates in context reflects PREVIOUS inspections only"
+    invariants:
+      - id: "INV-IP-050"
+        statement: "Inspection snapshot is immutable once completed"
+      - id: "INV-IP-051"
+        statement: "system_state_hash captures inspection reproducibility (event ordering excluded)"
+      - id: "INV-IP-052"
+        statement: "skipped_nodes preserves pipeline execution order"
+      - id: "INV-IP-053"
+        statement: "finding_aggregates reflects pre-inspection state only (at-least-one-cycle latency)"
+    error_handling: "abort_with_detailed_reason"
+    story_refs: ["S-10"]
+
+inspector_obligations:
+  description: "What a target must provide for inspection"
+  required_fields:
+    - "target_id (string, required)"
+    - "target_type (enum: text, structured, binary)"
+    - "content_hash (SHA-256 of content)"
+    - "submitted_at (ISO 8601, UTC)"
+    - "content (text | fields | reference)"
+    - "metadata (domain, jurisdiction, format)"
+
+context_object:
+  description: "Read-only context passed to evaluators"
+  fields:
+    - "target_metadata (from validated target)"
+    - "domain_constants (domain, jurisdiction, scope_filters)"
+    - "finding_aggregates (pre-computed from previous inspections)"
+  constraints:
+    - "Evaluators MUST NOT mutate context"
+    - "finding_aggregates reflects prior inspection state only"
+
+reinspection:
+  description: "Semantics for reinspecting a target"
+  rules:
+    - "Reinspection creates completely new inspection with new inspection_id"
+    - "Findings from previous inspections are NOT automatically affected"
+    - "Findings correlated by target_id + lineage_id (presentation concern)"
+    - "Supersession is manual only via finding.supersede capability"
+
+invariants:
+  - id: "INV-IP-060"
+    statement: "Same CG-IR + same target + same frozen_env = same inspection snapshot"
+    enforcement: "determinism_guarantee"
+
+  - id: "INV-IP-061"
+    statement: "Inspection produces point-in-time snapshot (consistent view)"
+    enforcement: "inspection_snapshot"
+
+  - id: "INV-IP-062"
+    statement: "Partial execution records skipped nodes; report marks partial results"
+    enforcement: "inspection_snapshot"
+
+stories:
+  - story_id: "US-IP-001"
+    as: "rule_inspector"
+    i_want: "to evaluate targets against frozen CG-IR snapshots"
+    so_that: "compliance findings are deterministic and reproducible"
+    acceptance_criteria:
+      - "Given a valid target and published CG-IR snapshot. When inspection runs. Then an immutable inspection snapshot is produced with findings, pipeline trace, and system_state_hash."
+      - "Given the same CG-IR + target + frozen_env. When inspection runs twice. Then both produce identical system_state_hash."
+      - "Given a dependency-failed node. When evaluation runs. Then the dependent node is skipped with no finding (Skipped trace entry only)."
+
+  - story_id: "US-IP-002"
+    as: "rule_inspector"
+    i_want: "to apply deontic type semantics to evaluator outcomes"
+    so_that: "findings correctly reflect the nature of the rule violation"
+    acceptance_criteria:
+      - "Given an obligation rule with evaluator outcome Fail. When aggregation runs. Then a finding with severity_default is created."
+      - "Given a permission rule with evaluator outcome Fail. When aggregation runs. Then a finding with severity informational is created (advisory only)."
+      - "Given an evaluator outcome with confidence below threshold. When aggregation runs. Then finding severity is capped at informational."

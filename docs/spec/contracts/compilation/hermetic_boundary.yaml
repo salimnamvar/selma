@@ -1,0 +1,149 @@
+# hermetic_boundary.yaml
+# Normative source for hermetic compilation boundary invariants.
+# Replaces ARCHIVE_SPECIFICATION.md §2.7.
+
+contract_id: "compilation.hermetic_boundary"
+schema_version: "1.0.0"
+owner_component: "hermetic_compiler"
+state_machine_ref: "../../state-machine/selma_compilation_pipeline.puml"
+description: >
+  Defines the invariants that ensure compilation is hermetic — fully
+  reproducible given identical inputs. The frozen environment captures
+  all external dependencies that could affect compilation output.
+
+frozen_environment:
+  description: "All dimensions that must be pinned for reproducibility"
+  schema:
+    type: "object"
+    required_fields:
+      - field: "engine_version"
+        type: "semver"
+        description: "Version of the compilation engine"
+      - field: "toolchain"
+        type: "object"
+        subfields:
+          - field: "compiler"
+            type: "string"
+          - field: "os_runtime_hash"
+            type: "sha256"
+      - field: "ai_components"
+        type: "array"
+        items:
+          - field: "name"
+            type: "string"
+          - field: "model_hash"
+            type: "sha256"
+          - field: "prompt_hash"
+            type: "sha256"
+          - field: "decoder_hash"
+            type: "sha256"
+        description: "Empty array if no AI-assisted compilation"
+      - field: "confidence_severity_cap_threshold"
+        type: "number"
+        default: 0.5
+        description: "Confidence threshold below which severity is capped at informational"
+      - field: "frozen_env_hash"
+        type: "sha256"
+        description: "SHA-256 of the above object (excluding this field itself)"
+
+  hash_computation: >
+    frozen_env_hash = SHA-256(canonical_json(frozen_env minus frozen_env_hash field))
+    The hash input is the frozen environment object with the frozen_env_hash key excluded.
+    Implementations MUST NOT include frozen_env_hash in its own computation.
+
+hermeticity_rules:
+  - id: "HERM-001"
+    statement: "Compilation is reproducible only when the entire environment is frozen"
+    enforcement: "compile_time_validation"
+
+  - id: "HERM-002"
+    statement: "The frozen environment hash MUST be recorded in CG-IR provenance"
+    enforcement: "publish_stage"
+
+  - id: "HERM-003"
+    statement: "To reproduce: pin all frozen_env dimensions"
+    enforcement: "documentation"
+
+  - id: "HERM-004"
+    statement: "AI outputs are cached and serialized into CG-IR before publication"
+    enforcement: "compile_time_validation"
+
+  - id: "HERM-005"
+    statement: "Once published, CG-IR snapshot is immutable"
+    enforcement: "content_addressed_store"
+
+  - id: "HERM-006"
+    statement: "compiled_at MUST NOT be included in snapshot hash (execution artifact metadata only)"
+    enforcement: "snapshot_hash_computation"
+
+  - id: "HERM-007"
+    statement: "Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical regardless of wall clock time"
+    enforcement: "determinism_guarantee"
+
+version_incompatibility:
+  description: "How version mismatches are handled"
+  rules:
+    - scenario: "Engine version < CG-IR schema version"
+      behavior: "Reject with error: 'Engine too old for this CG-IR'"
+    - scenario: "Engine version > CG-IR schema version"
+      behavior: "Accept if backward-compatible; otherwise reject"
+    - scenario: "Policy version != Schema policy_contract_version"
+      behavior: "Reject with warning; require synchronization"
+    - scenario: "Frozen env mismatch"
+      behavior: "Reject with error: 'Cannot reproduce without exact frozen_env'"
+
+  downgrade_policy: "Downgrades are not supported. The system only moves forward. Legacy CG-IR snapshots remain reproducible with pinned engine versions."
+
+reproducibility:
+  description: "How to reproduce any historical inspection"
+  required_dimensions:
+    - "directive_graph_version"
+    - "cg_ir_hash (cg_ir_snapshot_hash)"
+    - "frozen_env_hash"
+    - "engine_version"
+    - "target_hash"
+  formula: >
+    system_state_hash = SHA-256(canonical_json({
+      directive_graph_version, cg_ir_hash, frozen_env_hash,
+      engine_version, target_hash
+    }))
+  notes: >
+    system_state_hash captures inspection reproducibility, NOT event stream
+    ordering. Event ordering is guaranteed by HLC and recorded independently
+    in the Finding Event Stream.
+
+invariants:
+  - id: "INV-HB-001"
+    statement: "frozen_env_hash MUST NOT include itself in its own computation"
+    enforcement: "hash_computation"
+
+  - id: "INV-HB-002"
+    statement: "All provenance fields MUST be canonicalized before inclusion in hash"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-HB-003"
+    statement: "NaN and Infinity are NOT permitted in frozen environment or evaluator configs"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-HB-004"
+    statement: "confidence_severity_cap_threshold defaults to 0.5 if not specified"
+    enforcement: "frozen_environment_schema"
+
+stories:
+  - story_id: "US-HB-001"
+    as: "hermetic_compiler"
+    i_want: "to guarantee compilation reproducibility via frozen environment"
+    so_that: "any historical CG-IR snapshot can be exactly reproduced"
+    acceptance_criteria:
+      - "Given identical directive graph + engine version + frozen env. When compilation runs at different times. Then both produce identical cg_ir_snapshot_hash."
+      - "Given a frozen environment with AI components. When compilation runs. Then AI outputs are cached and serialized into CG-IR before publication."
+      - "Given a frozen environment. When frozen_env_hash is computed. Then the hash excludes the frozen_env_hash field itself."
+
+  - story_id: "US-HB-002"
+    as: "hermetic_compiler"
+    i_want: "to reject version incompatibilities at compile time"
+    so_that: "incompatible artifacts are never mixed"
+    acceptance_criteria:
+      - "Given an engine version < CG-IR schema version. When compilation is attempted. Then the compilation is rejected with 'Engine too old for this CG-IR'."
+      - "Given a frozen env mismatch. When reproduction is attempted. Then the attempt is rejected with 'Cannot reproduce without exact frozen_env'."
+      - "Given a policy version != schema policy_contract_version. When compilation is attempted. Then a warning is issued and synchronization is required."

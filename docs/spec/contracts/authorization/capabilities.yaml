@@ -1,0 +1,159 @@
+# capabilities.yaml
+# Normative source for the capability catalog.
+# Replaces ARCHIVE_SPECIFICATION.md §3.2.
+
+contract_id: "authorization.capabilities"
+schema_version: "1.0.0"
+owner_component: "application_service"
+description: >
+  Defines the complete capability catalog for the Selma system.
+  Capabilities are the atomic units of authorization — each action
+  maps to exactly one capability.
+
+capabilities:
+  directive:
+    - cap_id: "directive.create"
+      description: "Create a new directive"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+    - cap_id: "directive.modify"
+      description: "Modify an existing directive (new revision)"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+    - cap_id: "directive.retire"
+      description: "Retire a directive (deprecated status)"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+    - cap_id: "directive.fork"
+      description: "Fork a directive into two distinct directives"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+    - cap_id: "directive.merge"
+      description: "Merge two directives into one"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+    - cap_id: "directive.restore"
+      description: "Restore directive to a previous revision"
+      enforcement_gate: "directive_mutations"
+      failure: "403 CapabilityDenied"
+
+  inspection:
+    - cap_id: "inspection.submit"
+      description: "Submit a target for inspection"
+      enforcement_gate: "inspection_submit"
+      failure: "403 CapabilityDenied"
+    - cap_id: "inspection.reinspect"
+      description: "Reinspect a previously inspected target"
+      enforcement_gate: "inspection_submit"
+      failure: "403 CapabilityDenied"
+
+  finding:
+    - cap_id: "finding.view"
+      description: "View findings"
+      enforcement_gate: null
+      failure: null
+    - cap_id: "finding.acknowledge"
+      description: "Acknowledge a finding (Open → Acknowledged)"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+    - cap_id: "finding.dismiss"
+      description: "Dismiss a finding as invalid (Open → Dismissed)"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+    - cap_id: "finding.waive"
+      description: "Waive a finding as accepted risk (Open → Waived)"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+      sod_check: "creator_cannot_waive"
+    - cap_id: "finding.approve_remediation"
+      description: "Approve remediation evidence (Pending Verification → Verified)"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+      sod_check: "submitter_cannot_approve"
+    - cap_id: "finding.reject_remediation"
+      description: "Reject remediation evidence (Pending Verification → Rejected)"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+    - cap_id: "finding.supersede"
+      description: "Mark finding as superseded"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+
+  evidence:
+    - cap_id: "evidence.submit"
+      description: "Submit remediation evidence"
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
+
+  analytics:
+    - cap_id: "analytics.view"
+      description: "View analytics and aggregates"
+      enforcement_gate: "analytics"
+      failure: "403 CapabilityDenied"
+
+  conflict:
+    - cap_id: "conflict.resolve"
+      description: "Resolve conflicts between rules"
+      enforcement_gate: "conflict_resolution"
+      failure: "403 CapabilityDenied"
+
+enforcement_gates:
+  - gate: "request_ingress"
+    location: "API Gateway / Command Handler"
+    description: "All mutating capabilities checked before dispatch"
+    failure: "403 CapabilityDenied; no state mutation; audit log entry"
+
+  - gate: "directive_mutations"
+    location: "Compilation Engine"
+    description: "directive.* capabilities checked"
+    failure: "Reject before write lock acquired"
+
+  - gate: "inspection_submit"
+    location: "Pipeline entry"
+    description: "inspection.submit, inspection.reinspect checked"
+    failure: "Reject before target validation"
+
+  - gate: "finding_fsm_transitions"
+    location: "Finding FSM Engine"
+    description: "Per-transition capability + SoD checks"
+    failure: "Reject transition; FSM state unchanged; no event appended"
+
+  - gate: "conflict_resolution"
+    location: "Conflict Resolution Engine"
+    description: "conflict.resolve checked"
+    failure: "Reject; Conflict Artifact remains open"
+
+  - gate: "analytics"
+    location: "Analytics Engine"
+    description: "analytics.view checked"
+    failure: "Reject; no aggregate data returned"
+
+failure_semantics:
+  rules:
+    - "Deny = hard reject; no partial writes, no compensating events"
+    - "All denials produce append-only audit record: {actor, capability, action, outcome: denied, timestamp, reason}"
+    - "Escalation is NOT automatic on denial; caller receives error and decides next action"
+    - "Delegation model: not supported in v8.2.2; capabilities bind directly to actor identity"
+
+invariants:
+  - id: "INV-CA-001"
+    statement: "All actions MUST be checked against capability matrix at defined enforcement gates"
+    enforcement: "capability_gate"
+
+  - id: "INV-CA-002"
+    statement: "Denied requests MUST NOT produce partial state mutation"
+    enforcement: "enforcement_gate"
+
+  - id: "INV-CA-003"
+    statement: "All denials MUST produce append-only audit record"
+    enforcement: "audit_log"
+
+stories:
+  - story_id: "US-CA-001"
+    as: "application_service"
+    i_want: "to gate all actions on capability checks"
+    so_that: "only authorized actors can perform system actions"
+    acceptance_criteria:
+      - "Given any action request. When the actor lacks the required capability. Then the action is denied with 403 CapabilityDenied."
+      - "Given a denied action. When the denial is processed. Then an audit record is created with actor, capability, action, outcome, timestamp, and reason."
+      - "Given a denied action. When the denial completes. Then no partial state mutation has occurred."

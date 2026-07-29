@@ -1,0 +1,99 @@
+# lifecycle.yaml
+# Normative source for directive lifecycle states.
+# Replaces ARCHIVE_SPECIFICATION.md §2.2.4 and §2.5.
+
+contract_id: "directive.lifecycle"
+schema_version: "1.0.0"
+owner_component: "directives_adapter"
+description: >
+  Defines the lifecycle states and operations for directives.
+  Directives are the human-authored source-of-truth that compile
+  into CG-IR snapshots.
+
+lifecycle_states:
+  - name: "draft"
+    description: "Initial state; directive is being authored"
+    transitions_to: ["active", "deprecated"]
+    notes: "Drafts compile as active for testing per §2.8.1"
+
+  - name: "active"
+    description: "Directive is in effect and compiled into CG-IR"
+    transitions_to: ["deprecated", "superseded"]
+    notes: "Primary operational state"
+
+  - name: "deprecated"
+    description: "Directive is retired; audit trail preserved"
+    transitions_to: []
+    notes: "CG-IR nodes marked deprecated; no new compilations"
+
+  - name: "superseded"
+    description: "Directive replaced by another rule"
+    transitions_to: []
+    notes: "metadata.migration.superseded_by MUST reference successor"
+
+lifecycle_operations:
+  - operation: "revision"
+    lineage_id: "Unchanged"
+    execution_id: "Unchanged"
+    lineage_field: "NOT required"
+    description: "Content change; same identity"
+
+  - operation: "fork"
+    lineage_id: "Inherited (shared)"
+    execution_id: "Two new unique IDs"
+    lineage_field: "REQUIRED (operation=fork)"
+    description: "One directive becomes two"
+
+  - operation: "merge"
+    lineage_id: "New root (lexicographic min)"
+    execution_id: "One new unique ID"
+    lineage_field: "REQUIRED (operation=merge)"
+    description: "Two directives become one"
+
+  - operation: "split"
+    lineage_id: "Inherited (shared)"
+    execution_id: "Multiple new unique IDs"
+    lineage_field: "REQUIRED (operation=split)"
+    description: "One directive becomes many"
+
+  - operation: "rename"
+    lineage_id: "Unchanged"
+    execution_id: "Unchanged"
+    lineage_field: "NOT required"
+    description: "Display name change; same identity"
+
+  - operation: "retire"
+    lineage_id: "Unchanged"
+    execution_id: "Unchanged; status=deprecated"
+    lineage_field: "NOT required"
+    description: "Directive retired"
+
+supersession:
+  description: "How directives are replaced"
+  rules:
+    - "active → superseded: Rule replaced by another rule"
+    - "metadata.migration.superseded_by MUST reference the successor id"
+    - "Compile-time validator MUST verify superseded_by references an active or draft rule"
+
+invariants:
+  - id: "INV-DL-001"
+    statement: "lineage_id is immutable across all lifecycle operations"
+    enforcement: "store_engine"
+
+  - id: "INV-DL-002"
+    statement: "execution_id changes only on fork/merge/split"
+    enforcement: "store_engine"
+
+  - id: "INV-DL-003"
+    statement: "superseded_by MUST reference an active or draft rule"
+    enforcement: "compile_time_validation"
+
+stories:
+  - story_id: "US-DL-001"
+    as: "directives_adapter"
+    i_want: "to manage directive lifecycle states"
+    so_that: "directives follow a predictable lifecycle"
+    acceptance_criteria:
+      - "Given a draft directive. When activation occurs. Then the directive transitions to active."
+      - "Given an active directive. When retirement occurs. Then the directive transitions to deprecated and CG-IR nodes are marked deprecated."
+      - "Given a fork operation. When completed. Then two new execution_ids exist sharing the parent lineage_id."

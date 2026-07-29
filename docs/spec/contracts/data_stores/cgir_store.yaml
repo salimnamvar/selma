@@ -1,0 +1,109 @@
+# cgir_store.yaml
+# Normative source for the CG-IR content-addressed store contract.
+# Replaces ARCHIVE_SPECIFICATION.md §2.6 and §3.5.
+
+contract_id: "data_stores.cgir_store"
+schema_version: "1.0.0"
+owner_component: "cgir_adapter"
+description: >
+  Defines the contract for the CG-IR content-addressed store.
+  Immutable snapshots with deduplication by content hash.
+
+storage_model:
+  type: "Content-Addressed Store (CAS)"
+  structure:
+    - path: "snapshots/"
+      description: "Full DAG snapshots, keyed by hash"
+      contents:
+        - "manifest.json (snapshot metadata)"
+        - "nodes/ (individual node objects, keyed by node_hash)"
+        - "edges/ (dependency graph, keyed by edge_hash)"
+    - path: "shared/"
+      description: "Deduplicated node objects shared across snapshots"
+      contents:
+        - "{node_hash}.json"
+
+hashing_granularity:
+  - level: "node"
+    target: "Individual control node content (node_body)"
+    purpose: "Deduplication across snapshots"
+    formula: "node_hash = SHA-256(canonical_json({semantic_hash, presentation_hash}))"
+  - level: "edge"
+    target: "Dependency relationship ({source, target} directive_id pair)"
+    purpose: "Graph structure verification"
+    formula: "edge_hash = SHA-256(canonical_json({source, target}))"
+    notes: "Directional; independent of node content"
+  - level: "snapshot"
+    target: "Full DAG manifest (node_hashes + edge_hashes + provenance)"
+    purpose: "CG-IR version identity"
+    formula: "cg_ir_snapshot_hash = SHA-256(canonical_json({node_hashes: sorted[], edge_hashes: sorted[], provenance}))"
+  - level: "frozen_env"
+    target: "Entire compilation environment"
+    purpose: "Reproducibility guarantee"
+
+deduplication_rules:
+  - "Nodes with identical node_body share storage (same node_hash)"
+  - "Edges stored once per unique (source, target) pair"
+  - "Snapshots reference nodes/edges by hash, not copy"
+  - "Incremental compilation reuses prior node_hash when node_body unchanged"
+  - "Storage cost scales with unique content, not total rule count"
+
+operations:
+  - name: "publish"
+    description: "Publish a new CG-IR snapshot"
+    precondition: "Snapshot hash does not already exist (deduplication)"
+    behavior: "Store snapshot immutably; deduplicate nodes/edges"
+    locking: "atomic (all-or-nothing)"
+
+  - name: "read_snapshot"
+    description: "Read snapshot by cg_ir_snapshot_hash"
+    behavior: "Return immutable snapshot"
+    locking: "none (immutable)"
+
+  - name: "read_node"
+    description: "Read individual node by node_hash"
+    behavior: "Return node object from shared store"
+    locking: "none (immutable)"
+
+  - name: "verify_integrity"
+    description: "Verify snapshot integrity by recomputing hashes"
+    behavior: "Recompute all node/edge/snapshot hashes and compare"
+
+retention_policy:
+  - artifact: "CG-IR Snapshots"
+    retention: "Indefinite (immutable)"
+    pruning: "Never pruned"
+  - artifact: "Node Objects"
+    retention: "Indefinite (shared)"
+    pruning: "Never pruned"
+
+invariants:
+  - id: "INV-CS-001"
+    statement: "CG-IR snapshot is immutable once published"
+    enforcement: "content_addressed_store"
+
+  - id: "INV-CS-002"
+    statement: "Identical node_body produces identical node_hash (local scope)"
+    enforcement: "hash_computation"
+
+  - id: "INV-CS-003"
+    statement: "node_hash excludes graph position and neighbor content"
+    enforcement: "hash_computation"
+
+  - id: "INV-CS-004"
+    statement: "Two compilations of identical inputs produce identical snapshot hash"
+    enforcement: "determinism_guarantee"
+
+  - id: "INV-CS-005"
+    statement: "compiled_at is NOT included in snapshot hash"
+    enforcement: "hash_computation"
+
+stories:
+  - story_id: "US-CS-001"
+    as: "cgir_adapter"
+    i_want: "to store CG-IR snapshots with content-addressed deduplication"
+    so_that: "storage is efficient and integrity is verifiable"
+    acceptance_criteria:
+      - "Given two nodes with identical node_body. When stored. Then both reference the same node_hash (deduplication)."
+      - "Given a published snapshot. When any mutation is attempted. Then the mutation is rejected (immutability)."
+      - "Given a snapshot. When integrity verification runs. Then all recomputed hashes match stored hashes."

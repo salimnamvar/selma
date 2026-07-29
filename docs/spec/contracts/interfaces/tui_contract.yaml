@@ -1,0 +1,161 @@
+# tui_contract.yaml
+# Normative source for TUI behavior contract.
+# Defines screen families and their expected behavior.
+
+contract_id: "interfaces.tui_contract"
+schema_version: "1.0.0"
+owner_component: "application_service"
+description: >
+  Defines the TUI (Terminal User Interface) behavior contract for the
+  Selma system. Screens map to the same capability-gated operations
+  as REST and CLI interfaces.
+
+screen_families:
+  - family: "directive_management"
+    description: "Directive browsing and editing"
+    screens:
+      - name: "directive_list"
+        capability: null
+        behavior: "Browse active directives with filters"
+        features:
+          - "Filter by status, domain, jurisdiction"
+          - "Sort by priority, created_at, lineage_id"
+          - "Quick-view directive summary"
+
+      - name: "directive_detail"
+        capability: null
+        behavior: "View directive details and history"
+        features:
+          - "Full directive content"
+          - "Revision history with diffs"
+          - "Lineage graph visualization"
+          - "Compiled CG-IR node reference"
+
+      - name: "directive_editor"
+        capability: "directive.create/modify"
+        behavior: "Create or modify directives"
+        features:
+          - "Schema-aware editor with validation"
+          - "Preview CG-IR impact before save"
+          - "Requires capability check on save"
+
+  - family: "inspection"
+    description: "Inspection submission and review"
+    screens:
+      - name: "submit_inspection"
+        capability: "inspection.submit"
+        behavior: "Submit target for inspection"
+        features:
+          - "Target file selection"
+          - "Real-time validation feedback"
+          - "Inspection progress indicator"
+
+      - name: "inspection_results"
+        capability: null
+        behavior: "View inspection results"
+        features:
+          - "Finding list with severity indicators"
+          - "Pipeline trace visualization"
+          - "Skipped nodes explanation"
+          - "System state hash display"
+
+  - family: "finding_management"
+    description: "Finding lifecycle management"
+    screens:
+      - name: "finding_list"
+        capability: "finding.view"
+        behavior: "Browse findings with filters"
+        features:
+          - "Filter by FSM state, severity, directive"
+          - "Sort by severity, created_at"
+          - "Bulk actions (where permitted)"
+
+      - name: "finding_detail"
+        capability: "finding.view"
+        behavior: "View finding details"
+        features:
+          - "Full finding content (evidence, reasoning)"
+          - "FSM state visualization"
+          - "Available transitions (capability-gated)"
+          - "Event history timeline"
+
+      - name: "finding_action"
+        capability: "varies by action"
+        behavior: "Perform FSM transition"
+        features:
+          - "Capability check before action is available"
+          - "SoD check with clear violation message"
+          - "Confirmation dialog for irreversible actions"
+          - "Comment/reason input where required"
+
+  - family: "analytics"
+    description: "Analytics dashboard"
+    screens:
+      - name: "dashboard"
+        capability: "analytics.view"
+        behavior: "View analytics and trends"
+        features:
+          - "Finding rate trends"
+          - "Severity distribution"
+          - "Recurrence patterns"
+          - "Compliance posture overview"
+
+  - family: "conflict_resolution"
+    description: "Conflict review and resolution"
+    screens:
+      - name: "conflict_list"
+        capability: "conflict.resolve"
+        behavior: "Browse conflict artifacts"
+        features:
+          - "Filter by status (open, resolved)"
+          - "Conflict details with rule comparison"
+
+      - name: "conflict_resolution"
+        capability: "conflict.resolve"
+        behavior: "Resolve conflict"
+        features:
+          - "Side-by-side rule comparison"
+          - "Resolution strategy selection"
+          - "Impact preview"
+
+interaction_patterns:
+  description: "Common interaction patterns"
+  patterns:
+    - name: "capability_gating"
+      description: "Actions are only visible/available when actor has capability"
+      implementation: "Menu items, buttons, and actions are hidden or disabled when capability check fails"
+
+    - name: "sod_feedback"
+      description: "SoD violations show clear explanation"
+      implementation: "When SoD check fails, display: 'You cannot [action] because you [reason]'"
+
+    - name: "confirmation_required"
+      description: "Irreversible actions require confirmation"
+      implementation: "Confirmation dialog with action summary before execution"
+
+    - name: "audit_trail"
+      description: "All actions are audit-logged"
+      implementation: "Actor identity, action, timestamp, and outcome recorded"
+
+invariants:
+  - id: "INV-TU-001"
+    statement: "TUI MUST check capability before showing or enabling actions"
+    enforcement: "tui_engine"
+
+  - id: "INV-TU-002"
+    statement: "TUI MUST show clear SoD violation messages"
+    enforcement: "tui_engine"
+
+  - id: "INV-TU-003"
+    statement: "TUI MUST require confirmation for irreversible actions"
+    enforcement: "tui_engine"
+
+stories:
+  - story_id: "US-TU-001"
+    as: "application_service"
+    i_want: "to provide a terminal UI for all system operations"
+    so_that: "users can interact with Selma visually from the terminal"
+    acceptance_criteria:
+      - "Given a user with Regulatory Official role. When the TUI opens. Then all directive management screens are accessible."
+      - "Given a user without finding.waive capability. When viewing a finding. Then the waive action is not available."
+      - "Given a SoD violation on finding.waive. When the action is attempted. Then a clear message explains why the action is denied."

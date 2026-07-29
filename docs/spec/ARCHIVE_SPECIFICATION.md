@@ -1,3 +1,11 @@
+# ARCHIVED — Replaced by docs/spec/contracts/
+
+This file is preserved for reference during migration.
+The normative source is now the contract tree under docs/spec/contracts/.
+
+Migration status: PENDING
+Archived on: 2026-07-29
+
 # Universal Rule Governance Specification
 
 **Version:** 8.2.4

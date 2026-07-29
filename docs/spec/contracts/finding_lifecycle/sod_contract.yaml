@@ -1,0 +1,178 @@
+# sod_contract.yaml
+# Normative source for Segregation of Duties (SoD) rules.
+# Replaces ARCHIVE_SPECIFICATION.md §3.2 SoD constraints.
+
+contract_id: "finding_lifecycle.sod"
+schema_version: "1.0.0"
+owner_component: "finding_fsm_engine"
+description: >
+  Defines segregation of duties constraints that prevent conflicts of interest
+  in finding lifecycle operations. These rules are enforced at FSM transition
+  gates and capability enforcement points.
+
+sod_rules:
+  - rule_id: "SOD-001"
+    name: "Creator Cannot Waive Own Findings"
+    description: >
+      An actor who authored a directive MUST NOT waive findings raised by that
+      directive. This prevents rule authors from dismissing their own compliance
+      failures.
+    capability: "finding.waive"
+    constraint:
+      type: "actor_not_in_creator_provenance"
+      check: "actor NOT IN creator_provenance(finding.control_id)"
+      fields:
+        - "actor (current request identity)"
+        - "finding.control_id (directive execution ID)"
+        - "creator_provenance (sorted array of actor IDs from CG-IR snapshot node provenance)"
+    enforcement_point: "finding_fsm_engine"
+    denial:
+      code: "403 CapabilityDenied"
+      reason: "segregation of duties: creator cannot waive own findings"
+      audit: true
+    provenance_source: "metadata.audit.authored_by (compiled to creator_provenance at snapshot time)"
+    inheritance:
+      description: "creator_provenance is inherited through lifecycle operations"
+      rules:
+        - "directive.create: authored_by = authenticated actor"
+        - "directive.modify: authored_by preserved from parent revision"
+        - "fork: child inherits authored_by from parent"
+        - "split: child inherits authored_by from parent"
+        - "merge: creator_provenance = sorted-set union of all parent authored_by values"
+    story_refs: ["S-29", "S-32"]
+
+  - rule_id: "SOD-002"
+    name: "Evidence Submitter Cannot Approve Own Remediation"
+    description: >
+      An actor who submitted evidence for a finding MUST NOT approve remediation
+      for the same finding. This prevents self-approval of compliance fixes.
+    capability: "finding.approve_remediation"
+    constraint:
+      type: "actor_not_evidence_submitter"
+      check: "actor != evidence_submitter(finding_id)"
+      fields:
+        - "actor (current request identity)"
+        - "finding_id"
+        - "evidence_submitter (derived from Finding Event Stream DispositionChanged events with evidence.submit actor)"
+    enforcement_point: "finding_fsm_engine"
+    denial:
+      code: "403 CapabilityDenied"
+      reason: "segregation of duties: evidence submitter cannot approve own remediation"
+      audit: true
+    provenance_source: "Finding Event Stream (DispositionChanged events)"
+    story_refs: ["S-14a", "S-33"]
+
+capability_matrix:
+  description: "Role-based capability assignments"
+  roles:
+    - name: "regulatory_official"
+      description: "Rule author and governance owner (Human or AI Agent)"
+      capabilities:
+        - "directive.create"
+        - "directive.modify"
+        - "directive.retire"
+        - "directive.fork"
+        - "directive.merge"
+        - "directive.restore"
+        - "finding.view"
+        - "finding.dismiss"
+        - "finding.waive"
+        - "finding.approve_remediation"
+        - "finding.reject_remediation"
+        - "finding.supersede"
+        - "analytics.view"
+        - "conflict.resolve"
+
+    - name: "compliance_representative"
+      description: "Compliance seeker and remediation owner (Human or System)"
+      capabilities:
+        - "inspection.submit"
+        - "inspection.reinspect"
+        - "finding.view"
+        - "finding.acknowledge"
+        - "evidence.submit"
+        - "analytics.view"
+
+    - name: "system"
+      description: "Automated processes and services"
+      capabilities:
+        - "inspection.submit"
+        - "finding.view"
+        - "analytics.view"
+
+enforcement_gates:
+  - gate: "request_ingress"
+    location: "API Gateway / Command Handler"
+    description: "All mutating capabilities checked before dispatch"
+    failure: "403 CapabilityDenied; no state mutation; audit log entry"
+
+  - gate: "directive_mutations"
+    location: "Compilation Engine"
+    description: "directive.* capabilities checked"
+    failure: "Reject before write lock acquired"
+
+  - gate: "inspection_submit"
+    location: "Pipeline entry"
+    description: "inspection.submit, inspection.reinspect checked"
+    failure: "Reject before target validation"
+
+  - gate: "finding_fsm_transitions"
+    location: "Finding FSM Engine"
+    description: "Per-transition capability + SoD checks"
+    failure: "Reject transition; FSM state unchanged; no event appended"
+
+  - gate: "conflict_resolution"
+    location: "Conflict Resolution Engine"
+    description: "conflict.resolve checked"
+    failure: "Reject; Conflict Artifact remains open"
+
+failure_semantics:
+  description: "Uniform failure behavior across all gates"
+  rules:
+    - "Deny = hard reject; no partial writes, no compensating events"
+    - "All denials produce append-only audit record: {actor, capability, action, outcome: denied, timestamp, reason}"
+    - "Escalation is NOT automatic on denial; caller receives error and decides next action"
+    - "Delegation model: not supported in v8.2.2; capabilities bind directly to actor identity"
+
+invariants:
+  - id: "INV-SD-001"
+    statement: "creator_provenance MUST be non-empty for every active rule in CG-IR snapshot"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-SD-002"
+    statement: "creator_provenance MUST be sorted array of unique actor IDs"
+    enforcement: "compile_time_validation"
+
+  - id: "INV-SD-003"
+    statement: "SoD checks MUST execute BEFORE state mutation in FSM transitions"
+    enforcement: "fsm_engine"
+
+  - id: "INV-SD-004"
+    statement: "Denied SoD transitions MUST produce audit log entry with actor, capability, action, and denial reason"
+    enforcement: "audit_log"
+
+stories:
+  - story_id: "US-SD-001"
+    as: "finding_fsm_engine"
+    i_want: "to prevent directive creators from waiving findings they caused"
+    so_that: "compliance failures cannot be dismissed by the responsible party"
+    acceptance_criteria:
+      - "Given a finding raised by directive TRAF-001. When the actor who authored TRAF-001 attempts finding.waive. Then the action is denied with 403 CapabilityDenied."
+      - "Given a finding raised by directive TRAF-001. When an actor NOT in creator_provenance attempts finding.waive. Then the action succeeds."
+      - "Given a merged directive with creator_provenance = [actor-A, actor-B]. When actor-A attempts finding.waive. Then the action is denied (actor appears in provenance)."
+
+  - story_id: "US-SD-002"
+    as: "finding_fsm_engine"
+    i_want: "to prevent evidence submitters from approving their own remediation"
+    so_that: "compliance fixes receive independent review"
+    acceptance_criteria:
+      - "Given a finding where actor-X submitted evidence. When actor-X attempts finding.approve_remediation. Then the action is denied with 403 CapabilityDenied."
+      - "Given a finding where actor-X submitted evidence. When actor-Y (different actor) attempts finding.approve_remediation. Then the action succeeds."
+
+  - story_id: "US-SD-003"
+    as: "finding_fsm_engine"
+    i_want: "to enforce capability checks at all mutation gates"
+    so_that: "unauthorized actions are rejected before any state change"
+    acceptance_criteria:
+      - "Given any FSM transition request. When the actor lacks the required capability. Then the transition is rejected with 403 CapabilityDenied and no state mutation occurs."
+      - "Given a denied capability check. When the denial is processed. Then an audit record is created with actor, capability, action, outcome, timestamp, and reason."

@@ -1,0 +1,104 @@
+# detection.yaml
+# Normative source for conflict detection rules.
+# Replaces ARCHIVE_SPECIFICATION.md §2.15.1.
+
+contract_id: "conflict.detection"
+schema_version: "1.0.0"
+owner_component: "conflict_resolver"
+state_machine_ref: "../../state-machine/selma_conflict_resolution.puml"
+description: >
+  Defines when conflicts exist between rules. Conflicts are identified
+  through two mechanisms: declared conflicts (compile-time) and outcome
+  contradictions (evaluation-time).
+
+detection_mechanisms:
+  - mechanism_id: "CD-001"
+    name: "Declared Conflicts (compile-time)"
+    description: >
+      The conflicts_with schema field declares explicit conflict pairs.
+      At compilation, the engine generates candidate conflict pairs from
+      all active rules' conflicts_with arrays. These pairs are recorded
+      in the CG-IR snapshot metadata and fed to resolve_conflict at
+      evaluation time if both rules in a pair produce findings for the
+      same target.
+    when: "compile_time"
+    inputs:
+      - "conflicts_with field from each active rule"
+    outputs: "candidate conflict pairs in CG-IR snapshot metadata"
+    notes: "conflicts_with is compile-time-only; not present in CG-IR nodes"
+
+  - mechanism_id: "CD-002"
+    name: "Outcome Contradiction (evaluation-time)"
+    description: >
+      When two active rules sharing a lineage_id both produce Fail findings
+      for the same target, and their type fields are contradictory (one
+      obligation and one prohibition about the same target aspect), the
+      engine flags this as a conflict and applies resolve_conflict.
+    when: "evaluation_time"
+    conditions:
+      - "Both rules share the same lineage_id"
+      - "Both produce Fail findings for the same target"
+      - "One is obligation, one is prohibition"
+    outputs: "conflict for resolve_conflict"
+
+non_conflicting_outcomes:
+  description: "Outcomes that do NOT trigger conflict detection"
+  rules:
+    - "Both Pass: no conflict"
+    - "One Pass, one Fail: no conflict (only failing rules enter resolution)"
+    - "Both Fail with same type: no conflict (both findings stand independently)"
+    - "One Fail, one NeedsReview: no conflict (NeedsReview does not contradict)"
+
+operational_guidance:
+  description: "Guidance for NeedsReview + Fail overlap"
+  rule: >
+    When one rule produces Fail and another produces NeedsReview for the same
+    target within the same lineage, automatic conflict detection does not fire.
+    Operational review workflows SHOULD treat co-occurring Fail and NeedsReview
+    findings as a related set requiring joint human review.
+
+cross_lineage:
+  description: "Cross-lineage conflict handling"
+  rules:
+    - "Mechanism 2 does NOT apply across lineage boundaries"
+    - "Cross-lineage findings never trigger automatic conflict resolution"
+    - "Cross-lineage findings are always reported as independent findings"
+    - "Humans may request cross-lineage analysis via conflict.resolve (S-05)"
+    - "Cross-lineage analysis produces advisory Conflict Artifacts only"
+
+temporal_binding:
+  description: "Guarantee that conflict outcomes are deterministic"
+  rule: >
+    The created_at field used in conflict resolution is the directive's
+    authoring timestamp, frozen into node_body at compilation time. It is
+    a static property of the CG-IR node — NOT evaluation time, NOT wall
+    clock time. For a given CG-IR snapshot, conflict resolution outcomes
+    are fully deterministic because all inputs (priority, conflict_resolution,
+    created_at, scope for specificity) are frozen in the immutable snapshot.
+
+invariants:
+  - id: "INV-CD-001"
+    statement: "Conflict detection MUST be deterministic for identical CG-IR snapshot"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-CD-002"
+    statement: "Cross-lineage conflicts MUST NOT trigger automatic resolution"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-CD-003"
+    statement: "NeedsReview findings MUST NOT trigger conflict detection"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-CD-004"
+    statement: "created_at is frozen in CG-IR node_body — conflict outcomes are snapshot-bound"
+    enforcement: "cgir_snapshot"
+
+stories:
+  - story_id: "US-CD-001"
+    as: "conflict_resolver"
+    i_want: "to detect conflicts between rules deterministically"
+    so_that: "conflict resolution produces identical outcomes for identical inputs"
+    acceptance_criteria:
+      - "Given two rules sharing a lineage_id that both produce Fail (obligation vs prohibition). When conflict detection runs. Then a conflict is flagged for resolve_conflict."
+      - "Given two rules across different lineage_ids that both produce Fail. When conflict detection runs. Then no automatic conflict is flagged (cross-lineage)."
+      - "Given a CG-IR snapshot with declared conflicts_with pairs. When evaluation runs. Then candidate pairs are checked if both rules produce findings."

@@ -1,0 +1,197 @@
+# transitions.yaml
+# Normative source for finding FSM transition rules.
+# Replaces ARCHIVE_SPECIFICATION.md §3.1 transition table.
+
+contract_id: "finding_lifecycle.transitions"
+schema_version: "1.0.0"
+owner_component: "finding_fsm_engine"
+state_machine_ref: "../../state-machine/selma_finding_lifecycle.puml"
+description: >
+  Defines all allowed state transitions, their triggers, gating capabilities,
+  and SoD constraints. Each transition is a discrete, auditable event appended
+  to the Finding Event Stream.
+
+transitions:
+  - id: "TR-FL-001"
+    from: "Created"
+    to: "Open"
+    trigger: "automatic"
+    actor: "system"
+    capability: null
+    sod_check: null
+    story_ref: null
+    notes: "Immediate on finding creation; no human action required"
+
+  - id: "TR-FL-002"
+    from: "Open"
+    to: "Acknowledged"
+    trigger: "finding.acknowledge"
+    actor: "compliance_representative"
+    capability: "finding.acknowledge"
+    sod_check: null
+    story_ref: "S-12"
+    notes: "Compliance Representative accepts finding and begins remediation"
+
+  - id: "TR-FL-003"
+    from: "Open"
+    to: "Dismissed"
+    trigger: "finding.dismiss"
+    actor: "regulatory_official"
+    capability: "finding.dismiss"
+    sod_check: null
+    story_ref: "S-25"
+    notes: "Regulatory Official determines finding is invalid"
+
+  - id: "TR-FL-004"
+    from: "Open"
+    to: "Waived"
+    trigger: "finding.waive"
+    actor: "regulatory_official"
+    capability: "finding.waive"
+    sod_check:
+      type: "creator_cannot_waive"
+      description: "Actor MUST NOT be in creator_provenance for the finding's directive"
+      fields:
+        - "finding.control_id"
+        - "creator_provenance (from CG-IR snapshot)"
+      enforcement_point: "finding_fsm_engine"
+      denial_code: "403 CapabilityDenied"
+      denial_reason: "segregation of duties violation"
+    story_ref: "S-29"
+    notes: "Regulatory Official accepts risk; SoD check required before transition"
+
+  - id: "TR-FL-005"
+    from: "Acknowledged"
+    to: "Evidence Submitted"
+    trigger: "evidence.submit"
+    actor: "compliance_representative"
+    capability: "evidence.submit"
+    sod_check: null
+    story_ref: "S-13"
+    notes: "Compliance Representative attaches remediation evidence"
+
+  - id: "TR-FL-006"
+    from: "Evidence Submitted"
+    to: "Pending Verification"
+    trigger: "automatic"
+    actor: "system"
+    capability: null
+    sod_check: null
+    story_ref: null
+    notes: "Immediate on evidence receipt; no human action required"
+
+  - id: "TR-FL-007"
+    from: "Pending Verification"
+    to: "Verified"
+    trigger: "finding.approve_remediation"
+    actor: "regulatory_official"
+    capability: "finding.approve_remediation"
+    sod_check:
+      type: "submitter_cannot_approve"
+      description: "Actor MUST NOT be the same actor who submitted the evidence"
+      fields:
+        - "actor (current request)"
+        - "evidence_submitter (from Finding Event Stream DispositionChanged events)"
+      enforcement_point: "finding_fsm_engine"
+      denial_code: "403 CapabilityDenied"
+      denial_reason: "segregation of duties violation"
+    story_ref: "S-14a"
+    notes: "Regulatory Official approves remediation; triggers automatic Verified→Closed"
+
+  - id: "TR-FL-008"
+    from: "Pending Verification"
+    to: "Rejected"
+    trigger: "finding.reject_remediation"
+    actor: "regulatory_official"
+    capability: "finding.reject_remediation"
+    sod_check: null
+    story_ref: "S-14b"
+    notes: "Regulatory Official rejects remediation evidence"
+
+  - id: "TR-FL-009"
+    from: "Rejected"
+    to: "Open"
+    trigger: "finding.reopen"
+    actor: "regulatory_official"
+    capability: "finding.reject_remediation"
+    sod_check: null
+    story_ref: "S-14c"
+    notes: >
+      Regulatory Official reopens with comments.
+      Gating capability is finding.reject_remediation (same as reject).
+      Requires comments field on transition.
+
+  - id: "TR-FL-010"
+    from: "Verified"
+    to: "Closed"
+    trigger: "automatic"
+    actor: "system"
+    capability: null
+    sod_check: null
+    story_ref: null
+    notes: "Immediate after verification; disposition inherited as 'valid'"
+
+  - id: "TR-FL-011"
+    from: "Waived"
+    to: "Closed"
+    trigger: "automatic"
+    actor: "system"
+    capability: null
+    sod_check: null
+    story_ref: null
+    notes: "Immediate after waive; disposition inherited as 'waived'"
+
+event_schema:
+  description: "Each transition produces a Finding Event Stream event"
+  event_types:
+    - "FindingCreated"
+    - "DispositionChanged"
+    - "FindingClosed"
+  required_fields:
+    - "event_id (UUID)"
+    - "finding_id"
+    - "event_type"
+    - "timestamp (ISO 8601 UTC)"
+    - "logical_clock (HLC)"
+    - "actor"
+    - "payload"
+    - "event_hash (SHA-256)"
+
+invariants:
+  - id: "INV-FL-010"
+    statement: "Every transition MUST produce an append-only event in the Finding Event Stream"
+    enforcement: "event_store"
+
+  - id: "INV-FL-011"
+    statement: "Events are immutable once written; event_hash ensures integrity"
+    enforcement: "event_store"
+
+  - id: "INV-FL-012"
+    statement: "FSM transitions MUST be rejected if the source state does not match current finding state"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FL-013"
+    statement: "Human-initiated transitions MUST check capability BEFORE state mutation"
+    enforcement: "capability_gate"
+
+  - id: "INV-FL-014"
+    statement: "Denied transitions MUST NOT produce partial state mutation or compensating events"
+    enforcement: "fsm_engine"
+
+stories:
+  - story_id: "US-FL-010"
+    as: "finding_fsm_engine"
+    i_want: "to gate all human transitions on capability checks"
+    so_that: "only authorized actors can change finding state"
+    acceptance_criteria:
+      - "Given a finding in Open state. When a Compliance Representative calls finding.acknowledge. Then the transition succeeds and an event is appended."
+      - "Given a finding in Open state. When an actor without finding.waive capability calls finding.waive. Then the transition is rejected with 403 CapabilityDenied and no state change occurs."
+      - "Given a finding in Pending Verification state. When the evidence submitter calls finding.approve_remediation. Then the transition is rejected with 403 CapabilityDenied (SoD violation)."
+
+  - story_id: "US-FL-011"
+    as: "finding_fsm_engine"
+    i_want: "to produce append-only events for every transition"
+    so_that: "the Finding Event Stream provides a complete audit trail"
+    acceptance_criteria:
+      - "Given any valid FSM transition. When the transition completes. Then a new event is appended to the Finding Event Stream with event_hash and HLC ordering."
+      - "Given an event is written. When a subsequent read occurs. Then the event is unchanged (immutability)."

@@ -1,0 +1,165 @@
+# rest_api.yaml
+# Normative source for REST API behavior contract.
+# Defines endpoint families and their expected behavior.
+
+contract_id: "interfaces.rest_api"
+schema_version: "1.0.0"
+owner_component: "application_service"
+description: >
+  Defines the REST API contract for the Selma system. This is a
+  behavioral contract — specific endpoint paths are implementation-
+  specific, but behavior and error semantics are normative.
+
+endpoint_families:
+  - family: "directives"
+    description: "Directive CRUD and lifecycle operations"
+    operations:
+      - method: "POST"
+        action: "Create directive"
+        capability: "directive.create"
+        request: "Directive document (conforming to rule schema)"
+        response: "Created directive with lineage_id and execution_id"
+        errors:
+          - "400 SchemaError: invalid directive structure"
+          - "403 CapabilityDenied: actor lacks capability"
+          - "409 Conflict: execution_id already exists"
+        locking: "write_lock"
+
+      - method: "PUT"
+        action: "Modify directive (new revision)"
+        capability: "directive.modify"
+        request: "Directive execution_id + changes"
+        response: "New revision with same lineage_id"
+        errors:
+          - "400 SchemaError: invalid changes"
+          - "403 CapabilityDenied"
+          - "404 NotFound: execution_id does not exist"
+        locking: "write_lock"
+
+      - method: "GET"
+        action: "Read directive"
+        capability: null
+        request: "lineage_id or execution_id"
+        response: "Directive document"
+        errors:
+          - "404 NotFound"
+        locking: "read_lock"
+
+      - method: "POST"
+        action: "Lifecycle operation (fork/merge/split/retire)"
+        capability: "directive.fork/merge/split/retire"
+        request: "Operation type + target directive(s)"
+        response: "Resulting directive(s)"
+        errors:
+          - "400 SchemaError: invalid operation"
+          - "403 CapabilityDenied"
+          - "404 NotFound"
+          - "409 Conflict: invalid lifecycle transition"
+        locking: "write_lock"
+
+  - family: "inspections"
+    description: "Inspection submission and results"
+    operations:
+      - method: "POST"
+        action: "Submit target for inspection"
+        capability: "inspection.submit"
+        request: "Target (conforming to target schema)"
+        response: "Inspection snapshot with findings"
+        errors:
+          - "400 SchemaError: invalid target"
+          - "403 CapabilityDenied"
+        locking: "read_lock (compilation)"
+
+      - method: "GET"
+        action: "Read inspection results"
+        capability: null
+        request: "inspection_id"
+        response: "Inspection snapshot"
+        errors:
+          - "404 NotFound"
+
+      - method: "POST"
+        action: "Reinspect target"
+        capability: "inspection.reinspect"
+        request: "target_id"
+        response: "New inspection snapshot"
+        errors:
+          - "403 CapabilityDenied"
+          - "404 NotFound"
+
+  - family: "findings"
+    description: "Finding lifecycle management"
+    operations:
+      - method: "GET"
+        action: "List findings"
+        capability: "finding.view"
+        request: "Optional filters (target_id, lineage_id, fsm_state)"
+        response: "Array of finding objects"
+
+      - method: "POST"
+        action: "FSM transition (acknowledge/dismiss/waive/approve/reject/reopen)"
+        capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation"
+        request: "finding_id + transition-specific payload"
+        response: "Updated finding"
+        errors:
+          - "400 FSMError: invalid transition"
+          - "403 CapabilityDenied"
+          - "403 CapabilityDenied: SoD violation"
+          - "404 NotFound"
+        locking: "fsm_engine"
+
+  - family: "analytics"
+    description: "Read-only analytics"
+    operations:
+      - method: "GET"
+        action: "View analytics"
+        capability: "analytics.view"
+        request: "Analytics query parameters"
+        response: "Aggregated data"
+        errors:
+          - "403 CapabilityDenied"
+
+  - family: "conflicts"
+    description: "Conflict resolution"
+    operations:
+      - method: "GET"
+        action: "List conflict artifacts"
+        capability: "conflict.resolve"
+        request: "Optional filters"
+        response: "Array of conflict artifacts"
+
+      - method: "POST"
+        action: "Resolve conflict"
+        capability: "conflict.resolve"
+        request: "conflict_id + resolution"
+        response: "Resolved conflict artifact"
+        errors:
+          - "403 CapabilityDenied"
+          - "404 NotFound"
+
+error_semantics:
+  description: "Uniform error behavior across all endpoints"
+  rules:
+    - "All errors return structured JSON with error code, message, and details"
+    - "403 CapabilityDenied includes denial reason for audit"
+    - "No partial state mutation on any error"
+    - "All denials produce audit log entry"
+
+invariants:
+  - id: "INV-RA-001"
+    statement: "All mutating endpoints MUST check capability before processing"
+    enforcement: "api_gateway"
+
+  - id: "INV-RA-002"
+    statement: "Error responses MUST NOT leak internal state"
+    enforcement: "api_gateway"
+
+stories:
+  - story_id: "US-RA-001"
+    as: "application_service"
+    i_want: "to expose REST endpoints for all system operations"
+    so_that: "clients can interact with Selma via HTTP"
+    acceptance_criteria:
+      - "Given a valid directive creation request. When POST /directives is called. Then a new directive is created with lineage_id and execution_id."
+      - "Given an invalid target. When POST /inspections is called. Then 400 SchemaError is returned."
+      - "Given a finding FSM transition. When POST /findings/{id}/transition is called. Then capability is checked before processing."

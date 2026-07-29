@@ -1,0 +1,169 @@
+# precedence.yaml
+# Normative source for conflict resolution precedence rules.
+# Replaces ARCHIVE_SPECIFICATION.md §2.15 (resolve_conflict algorithm).
+
+contract_id: "conflict.precedence"
+schema_version: "1.0.0"
+owner_component: "conflict_resolver"
+state_machine_ref: "../../state-machine/selma_conflict_resolution.puml"
+description: >
+  Defines the unified conflict resolution function and precedence chain.
+  Override > priority > specificity > recency. Explicit override takes
+  precedence over all computed factors.
+
+resolution_algorithm:
+  description: "resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact"
+  steps:
+    - step: 1
+      name: "Explicit Override (single-sided)"
+      description: >
+        If only one rule has conflict_resolution, apply its strategy.
+        Strategies: always_wins, never_wins, defer_to.
+        If strategy resolves to a winning rule, return it.
+        If null (defer_to target not found), fall through to Step 2.
+      substeps:
+        - "1a. if rule_a has conflict_resolution and rule_b does not: apply strategy"
+        - "1b. if rule_b has conflict_resolution and rule_a does not: apply strategy"
+
+    - step: "1b"
+      name: "Dual Explicit Overrides"
+      description: >
+        If both rules have conflict_resolution, check for compatible pairs.
+        Compatible pairs: {always_wins, never_wins} and identical defer_to targets.
+        Incompatible pairs: escalate to Conflict Artifact.
+
+    - step: 2
+      name: "Computed Resolution"
+      description: "When no explicit override applies"
+      substeps:
+        - "2a. Priority: lower priority_level number wins"
+        - "2b. Specificity: higher specificity_score wins"
+        - "2c. Recency: newer created_at wins"
+
+    - step: 3
+      name: "Unresolvable"
+      description: "If all factors tie, return Conflict Artifact for human review"
+
+priority_levels:
+  description: "Schema priority enum → internal integer mapping"
+  mapping:
+    - enum: "constitutional"
+      level: 1
+    - enum: "statutory"
+      level: 2
+    - enum: "regulatory"
+      level: 3
+    - enum: "operational"
+      level: 4
+    - enum: "advisory"
+      level: 5
+  notes: "Enum values are presentation; all comparisons use priority_level integers"
+
+specificity_score:
+  description: "Normative specificity score algorithm"
+  formula: >
+    specificity_score(node) =
+      scope_specificity_score(scope) * 100 + count_bound_fields(evaluator)
+  components:
+    - component: "scope_specificity_score"
+      formula: >
+        (1 if target_type != "any" else 0) +
+        (1 if domain is non-empty else 0) +
+        (1 if jurisdiction is non-empty else 0) +
+        length(filters)
+      notes: "Rules with no scope have score 0"
+    - component: "count_bound_fields"
+      formula: >
+        Count required evaluator config fields recursively.
+        regex=1, field_check=3, threshold=3, composite=sum(children).
+      notes: "Composite evaluators sum child scores"
+  determinism: "Two engines MUST produce identical scores for identical CG-IR node bodies"
+
+compatible_overrides:
+  description: "When dual explicit overrides can resolve deterministically"
+  rules:
+    - pair: "{always_wins, never_wins}"
+      result: "always_wins rule wins"
+      compatible: true
+    - pair: "identical defer_to targets"
+      result: "Resolve to target if active"
+      compatible: true
+    - pair: "any other combination"
+      result: "Conflict Artifact (incompatible)"
+      compatible: false
+
+defer_to_resolution:
+  description: "How defer_to strategy resolves"
+  algorithm: >
+    1. target_execution_id = strategy.defer_to
+    2. If self-reference: ignore override; fall through to computed
+    3. If target exists as active rule: resolve to that rule
+    4. If target is deprecated/superseded:
+       a. Find all active rules with same lineage_id
+       b. If exactly one: resolve to it (lineage chain successor)
+       c. If zero: ignore override; fall through to computed
+       d. If multiple: Conflict Artifact (post-fork ambiguity)
+    5. If target not found: ignore override; fall through to computed
+  cycle_detection: >
+    Before applying any defer_to override, run DFS cycle detection
+    on the defer_to subgraph. If cycle detected, both defer_to
+    overrides ignored → fall through to computed resolution.
+
+cross_lineage_advisory:
+  description: "Advisory resolution for cross-lineage conflicts"
+  algorithm: >
+    1. Compute pairwise specificity_score for both rules
+    2. Compute priority_level integers
+    3. Record created_at timestamps
+    4. Apply precedence chain: priority → specificity → recency
+    5. Emit AdvisoryConflictArtifact with recommended_winner and resolution_basis
+  constraints:
+    - "Advisory outcomes MUST NOT modify finding FSM state"
+    - "Advisory outcomes MUST NOT be replayed as automatic resolution"
+    - "Identical CG-IR snapshot + identical rule pair → identical advisory output"
+    - "binding_status = 'advisory' (requires_human_action = true)"
+
+invariants:
+  - id: "INV-PR-001"
+    statement: "Explicit override takes precedence over all computed factors"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-PR-002"
+    statement: "Conflict resolution MUST be deterministic for identical CG-IR snapshot"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-PR-003"
+    statement: "Unresolvable conflicts MUST produce Conflict Artifact (not silent default)"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-PR-004"
+    statement: "defer_to self-reference MUST be ignored (fall through to computed)"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-PR-005"
+    statement: "defer_to cycles cause all defer_to overrides in the pair to be ignored"
+    enforcement: "conflict_resolver"
+
+  - id: "INV-PR-006"
+    statement: "Cross-lineage advisory artifacts MUST NOT auto-modify findings or CG-IR"
+    enforcement: "conflict_resolver"
+
+stories:
+  - story_id: "US-PR-001"
+    as: "conflict_resolver"
+    i_want: "to resolve conflicts using a deterministic precedence chain"
+    so_that: "conflict outcomes are reproducible and auditable"
+    acceptance_criteria:
+      - "Given two rules with same lineage_id and both Fail. When one has conflict_resolution override. Then the override strategy determines the winner."
+      - "Given two rules with no overrides, different priority. When resolve_conflict runs. Then the rule with lower priority_level number wins."
+      - "Given two rules with no overrides, same priority, different specificity. When resolve_conflict runs. Then the rule with higher specificity_score wins."
+      - "Given two rules that tie on all factors. When resolve_conflict runs. Then a Conflict Artifact is produced for human review."
+
+  - story_id: "US-PR-002"
+    as: "conflict_resolver"
+    i_want: "to handle defer_to strategies safely"
+    so_that: "defer_to never produces cycles or self-references"
+    acceptance_criteria:
+      - "Given a defer_to that references its own rule id. When resolution runs. Then the override is ignored and computed resolution applies."
+      - "Given two defer_to overrides that form a cycle. When resolution runs. Then both overrides are ignored and computed resolution applies."
+      - "Given a defer_to referencing a deprecated rule with one active successor. When resolution runs. Then the successor is resolved as the target."

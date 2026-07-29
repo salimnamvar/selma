@@ -1,0 +1,117 @@
+# artifact_store.yaml
+# Normative source for execution artifact storage contract.
+# Replaces ARCHIVE_SPECIFICATION.md §3.6–§3.7.
+
+contract_id: "data_stores.artifact_store"
+schema_version: "1.0.0"
+owner_component: "artifact_adapter"
+description: >
+  Defines the contract for execution artifact storage — inspection
+  snapshots, pipeline traces, and system state hashes. All artifacts
+  are immutable and reproducible.
+
+artifact_types:
+  - name: "inspection_snapshot"
+    description: "Complete evaluation state at inspection completion"
+    schema:
+      required_fields:
+        - field: "inspection_id"
+          type: "string (UUID)"
+        - field: "target_id"
+          type: "string"
+        - field: "target_hash"
+          type: "string (SHA-256)"
+        - field: "cg_ir_snapshot_hash"
+          type: "string (SHA-256)"
+        - field: "frozen_env_hash"
+          type: "string"
+        - field: "engine_version"
+          type: "string"
+        - field: "inspector"
+          type: "string (actor ID)"
+        - field: "started_at"
+          type: "datetime (ISO 8601, UTC)"
+        - field: "completed_at"
+          type: "datetime (ISO 8601, UTC)"
+        - field: "status"
+          type: "enum"
+          values: ["completed", "partial", "failed"]
+        - field: "finding_count"
+          type: "integer"
+        - field: "skipped_nodes"
+          type: "array of strings (node_ids, ordered)"
+        - field: "pipeline_trace"
+          type: "array of trace entries (ordered chronologically)"
+        - field: "system_state_hash"
+          type: "string (SHA-256)"
+    immutability: "Once completed, never modified"
+
+  - name: "pipeline_trace_entry"
+    description: "Individual stage execution record"
+    schema:
+      required_fields:
+        - field: "stage"
+          type: "enum"
+          values: ["normalize", "classify", "select_controls", "evaluate", "aggregate", "report"]
+        - field: "node_id"
+          type: "string (optional, for evaluate stage)"
+        - field: "started_at"
+          type: "datetime"
+        - field: "completed_at"
+          type: "datetime"
+        - field: "status"
+          type: "enum"
+          values: ["success", "skipped", "failed"]
+        - field: "error"
+          type: "string (optional)"
+        - field: "duration_ms"
+          type: "integer"
+
+  - name: "system_state_hash"
+    description: "Inspection reproducibility hash"
+    formula: >
+      SHA-256(canonical_json({
+        directive_graph_version, cg_ir_hash, frozen_env_hash,
+        engine_version, target_hash
+      }))
+    dimensions: 5
+    notes: >
+      Captures inspection reproducibility only. Event stream ordering
+      excluded (circular dependency avoidance).
+
+reproducibility:
+  description: "How to reproduce any historical inspection"
+  required_dimensions:
+    - "directive_graph_version"
+    - "cg_ir_hash (cg_ir_snapshot_hash)"
+    - "frozen_env_hash"
+    - "engine_version"
+    - "target_hash"
+  guarantee: "Pin all five dimensions to reproduce any inspection deterministically"
+
+invariants:
+  - id: "INV-AS-001"
+    statement: "Inspection snapshot is immutable once completed"
+    enforcement: "artifact_store"
+
+  - id: "INV-AS-002"
+    statement: "system_state_hash captures inspection reproducibility (event ordering excluded)"
+    enforcement: "hash_computation"
+
+  - id: "INV-AS-003"
+    statement: "skipped_nodes preserves pipeline execution order"
+    enforcement: "inspection_pipeline"
+
+  - id: "INV-AS-004"
+    statement: "pipeline_trace preserves chronological order"
+    enforcement: "inspection_pipeline"
+
+stories:
+  - story_id: "US-AS-001"
+    as: "artifact_adapter"
+    i_want: "to store immutable execution artifacts"
+    so_that: "inspections are reproducible and auditable"
+    acceptance_criteria:
+      - "Given a completed inspection. When the snapshot is stored. Then it is immutable and contains all required fields."
+      - "Given a historical inspection. When all five dimensions are pinned. Then the inspection is exactly reproducible."
+      - "Given a pipeline trace. When stored. Then entries preserve chronological order."
