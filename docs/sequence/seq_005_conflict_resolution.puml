@@ -1,0 +1,99 @@
+@startuml seq_005_conflict_resolution
+!include common/seq_styles.puml
+
+title SEQ-005 Conflict Resolution\nDeterministic + Human Conflict Resolution
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "conflict_resolver\n(Python/Pydantic)" as CR #A3BE8C
+participant "snapshots_adapter\n(Python/Object Store)" as SA #81A1C1
+participant "findings_audit_adapter\n(Python/SHA-256/Append-Only)" as FAA #D08770
+database "event_store\n(Append-Only Log)" as ES #4C566A
+
+autonumber
+
+== Conflict Detection Phase ==
+
+activate CR
+CR -> CR: scan directive graph for conflicts
+note right of CR
+    Two conflict classes:
+    - Within-lineage: deterministic pairs
+    - Cross-lineage: advisory warnings
+end note
+
+group Precedence Resolution
+    CR -> CR: apply resolution precedence
+    note right of CR
+        Priority order:
+        1. explicit override
+        2. directive priority
+        3. specificity (narrow wins)
+        4. recency (newer wins)
+    end note
+end
+
+alt Deterministically Resolvable
+    CR -> CR: apply deterministic resolution
+    CR -> FAA: append ConflictResolved event
+    activate FAA
+    FAA -> ES: write record
+    activate ES
+    ES --> FAA: acknowledged
+    deactivate ES
+    FAA --> CR: committed
+    deactivate FAA
+
+else Unresolvable (Human Review Required)
+    CR -> SA: store conflict artifact
+    activate SA
+    SA --> CR: artifact stored (artifact_ref)
+    deactivate SA
+
+    == Human Review Flow ==
+
+    user -> SI: review conflict (artifact_ref)
+    activate SI
+
+    SI -> AS: GET /conflicts/{artifact_ref}
+    activate AS
+
+    AS -> CR: route review(artifact_ref, decision)
+    activate CR
+
+    CR -> SA: update conflict artifact (decision)
+    activate SA
+    SA --> CR: artifact updated
+    deactivate SA
+
+    CR -> FAA: append ResolutionDecided event
+    activate FAA
+    FAA -> ES: write record
+    activate ES
+    ES --> FAA: acknowledged
+    deactivate ES
+    FAA --> CR: committed
+    deactivate FAA
+
+    CR --> AS: resolution result
+    deactivate CR
+
+    AS --> SI: conflict resolved
+    deactivate AS
+
+    SI --> user: confirmation
+    deactivate SI
+end
+
+deactivate CR
+
+note right of CR
+    All resolutions are auditable.
+    Deterministic resolutions are
+    reproducible from directive state.
+end note
+
+footer SEQ-005 | Selma Project | Conflict Resolution
+
+@enduml

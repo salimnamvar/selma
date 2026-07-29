@@ -1,0 +1,110 @@
+@startuml seq_007_certification_gates
+!include common/seq_styles.puml
+
+title SEQ-007 Certification Gates\n7-Gate Architectural Certification
+
+actor "CI/CD Pipeline" as cicd
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "architectural_auditor\n(Python)" as AA #A3BE8C
+participant "snapshots_adapter\n(Python/Object Store)" as SA #81A1C1
+
+autonumber
+
+cicd -> AS: POST /certifications (target_ref)
+activate AS
+
+AS -> AA: route certification(target_ref)
+activate AA
+
+group AA-01: Mediated Feedback
+    AA -> AA: check mediated feedback model
+    note right of AA
+        All feedback flows must go
+        through the mediation layer,
+        not direct mutation.
+    end note
+end
+
+group AA-02: Declarative Governance
+    AA -> AA: check evaluation vs guidance_only
+    note right of AA
+        Controls must declare their
+        governance mode explicitly.
+    end note
+end
+
+group AA-03: Evaluator Purity
+    AA -> AA: check evaluator side-effects
+    note right of AA
+        Rule evaluators must be pure
+        functions. No I/O, no state
+        mutation during evaluation.
+    end note
+end
+
+group AA-04: Segregation of Duties
+    AA -> AA: check SoD enforcement
+    note right of AA
+        Creator cannot approve own
+        findings. Author cannot waive
+        own violations.
+    end note
+end
+
+group AA-05: Conflict Determinism
+    AA -> AA: check conflict resolution determinism
+    note right of AA
+        Same inputs must produce
+        same resolution. No
+        non-deterministic tiebreakers.
+    end note
+end
+
+group AA-06: Discriminator Completeness
+    AA -> AA: check strategy discriminator coverage
+    note right of AA
+        All control types must have
+        complete discriminator chains
+        for target classification.
+    end note
+end
+
+group AA-07: Portability
+    AA -> AA: check platform portability
+    note right of AA
+        RE2-only regex, UTC timestamps,
+        finite numbers, no platform-
+        specific assumptions.
+    end note
+end
+
+group Store Certification Artifact
+    AA -> SA: store certification artifact
+    activate SA
+    SA --> AA: artifact stored (artifact_ref)
+    deactivate SA
+end
+
+AA -> AA: compute CertificationResult
+note right of AA
+    Result includes:
+    - gate pass/fail status
+    - per-gate diagnostics
+    - overall certification verdict
+end note
+
+AA --> AS: CertificationResult
+deactivate AA
+
+AS --> cicd: certification response
+deactivate AS
+
+note right of AA
+    All 7 gates must pass
+    for certification to succeed.
+    Partial pass is not valid.
+end note
+
+footer SEQ-007 | Selma Project | Certification Gates
+
+@enduml

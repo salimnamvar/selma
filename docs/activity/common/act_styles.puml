@@ -1,0 +1,71 @@
+' ============================================================
+' Selma — Shared Activity Diagram Theme
+' Contract: docs/spec/contracts/ 1.0.0
+' Usage:    !include ../common/act_styles.puml
+'
+' Governance:
+'   Doctrine:      .nasim/rules/state-machine-policy-doctrine.md
+'   Specification: .nasim/rules/state-machine-specification.md
+' ============================================================
+
+skinparam defaultFontName       "Segoe UI"
+skinparam defaultFontSize       11
+skinparam defaultTextAlignment  center
+skinparam shadowing             false
+skinparam roundCorner           8
+skinparam handwritten           false
+skinparam backgroundColor       #FAFBFC
+skinparam titleFontSize         16
+skinparam titleFontStyle        bold
+skinparam titleFontColor        #1A2332
+
+' Activity diagram elements
+skinparam activity {
+  BorderColor                #2C3E50
+  FontColor                  #2E3440
+  BackgroundColor            #ECEFF4
+  BorderThickness            2
+  StartColor                 #1B7A6E
+  EndColor                   #4A4A4A
+  ArrowColor                 #34495E
+  ArrowThickness             1.5
+  DiamondBorderColor         #2C3E50
+  DiamondBackgroundColor     #EBCB8B
+  DiamondFontColor           #2E3440
+}
+
+' Partition (swim-lane) styling
+skinparam partition {
+  BorderColor                #5E81AC
+  BackgroundColor            #E8F4F8
+  FontColor                  #2E3440
+  FontSize                   12
+  FontStyle                  bold
+}
+
+' Note styling
+skinparam note {
+  BorderColor                #D08770
+  BackgroundColor            #FFF3E0
+  FontColor                  #2E3440
+  FontSize                   10
+}
+
+' Arrow / connector styling
+skinparam arrow {
+  Color                      #34495E
+  Thickness                  1.5
+  FontColor                  #4C566A
+  FontSize                   10
+}
+
+' Semantic palette (matching sm_styles.puml):
+'   System action          teal       #1B7A6E
+'   Human action           blue       #3B7DD8
+'   Decision / branch      amber      #EBCB8B
+'   Error / abort           red        #A93226
+'   Success / terminal      green      #2C6E49
+'   Neutral / wait          grey       #4A4A4A
+
+' Constraint: render limit
+skinparam maxActivitySize 200

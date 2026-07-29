@@ -1,0 +1,72 @@
+@startuml seq_006_guidance_resolution
+!include common/seq_styles.puml
+
+title SEQ-006 Guidance Resolution\nResolve Paired Policy Doctrine for Finding Guidance
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "finding_analyzer\n(Python/Pydantic)" as FA #A3BE8C
+participant "policy_doctrine\n(YAML files, read-only)" as PD #B48EAD
+
+autonumber
+
+user -> SI: request guidance for finding
+activate SI
+
+SI -> AS: GET /findings/{id}/guidance
+activate AS
+
+AS -> FA: route query(finding_id)
+activate FA
+
+group Load Finding Projection
+    FA -> FA: load finding projection
+    note right of FA
+        Extract paired_policy_ref
+        from finding record.
+    end note
+end
+
+group Load Policy Doctrine
+    FA -> PD: read doctrine by ref (paired_policy_ref)
+    activate PD
+    PD --> FA: doctrine content (YAML)
+    deactivate PD
+end
+
+group Map Guidance Components
+    FA -> FA: map vocabulary (domain terms)
+    FA -> FA: map remediation (action steps)
+    FA -> FA: map domain_examples (reference cases)
+end
+
+FA -> FA: compose GuidanceView
+
+FA --> AS: GuidanceView
+deactivate FA
+
+AS --> SI: guidance response
+deactivate AS
+
+SI --> user: guidance view
+deactivate SI
+
+note right of PD
+    Policy doctrine is read-only
+    and version-controlled.
+    Changes require governance
+    approval workflow.
+end note
+
+note right of FA
+    GuidanceView contains:
+    - vocabulary mapping
+    - remediation steps
+    - domain examples
+    - severity context
+end note
+
+footer SEQ-006 | Selma Project | Guidance Resolution
+
+@enduml

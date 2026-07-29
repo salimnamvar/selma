@@ -1,0 +1,120 @@
+@startuml seq_003_inspection_pipeline
+!include common/seq_styles.puml
+
+title SEQ-003 Inspection Pipeline\n6-Stage Inspection Pipeline
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "rule_inspector\n(Python/RE2/SHA-256)" as RI #A3BE8C
+participant "compiled_rules_adapter\n(Python/SHA-256/CAS)" as CRA #B48EAD
+participant "snapshots_adapter\n(Python/Object Store)" as SA #81A1C1
+participant "lifecycle_finder\n(Python/Pydantic)" as LF #B48EAD
+participant "findings_audit_adapter\n(Python/SHA-256/Append-Only)" as FAA #D08770
+database "event_store\n(Append-Only Log)" as ES #4C566A
+
+autonumber
+
+user -> SI: submit target for inspection
+activate SI
+
+SI -> AS: POST /inspections (target_ref)
+activate AS
+
+group Authorization Gate
+    AS -> AS: CapabilityGate.check(inspection.submit)
+    alt capability denied
+        AS --> SI: 403 Forbidden
+        SI --> user: error response
+    end
+end
+
+AS -> RI: route inspection(target_ref, snapshot_id)
+activate RI
+
+group Stage 1: Load Frozen CG-IR
+    RI -> CRA: load CG-IR snapshot (snapshot_id)
+    activate CRA
+    CRA --> RI: frozen CG-IR (nodes + edges)
+    deactivate CRA
+end
+
+group Stage 2: Normalize Target
+    RI -> RI: normalize target content
+    note right of RI
+        Canonical form extraction
+        from raw target data.
+    end note
+end
+
+group Stage 3: Classify Target
+    RI -> RI: classify target type
+    note right of RI
+        Determine applicable
+        control categories.
+    end note
+end
+
+group Stage 4: Select Controls
+    RI -> RI: applicability filter
+    note right of RI
+        Select only controls relevant
+        to this target classification.
+    end note
+end
+
+group Stage 5: Evaluate Rules
+    RI -> RI: evaluate rules (pure detection)
+    note right of RI
+        Deterministic, side-effect-free
+        rule evaluation against CG-IR.
+    end note
+end
+
+group Stage 6: Aggregate & Report
+    RI -> RI: aggregate results
+    RI -> RI: generate inspection report
+end
+
+group Persist Results
+    RI -> SA: store inspection snapshot
+    activate SA
+    SA --> RI: snapshot stored (snapshot_ref)
+    deactivate SA
+end
+
+group Emit Finding Events
+    RI -> LF: emit FindingCreated events
+    activate LF
+
+    LF -> FAA: append events to event_store
+    activate FAA
+    FAA -> ES: write FindingCreated records
+    activate ES
+    ES --> FAA: acknowledged
+    deactivate ES
+    FAA --> LF: events committed
+    deactivate FAA
+
+    LF --> RI: events processed
+    deactivate LF
+end
+
+RI --> AS: inspection result (snapshot_ref, findings)
+deactivate RI
+
+AS --> SI: inspection response
+deactivate AS
+
+SI --> user: inspection results
+deactivate SI
+
+note right of ES
+    All finding events are
+    append-only and immutable.
+    Full audit trail preserved.
+end note
+
+footer SEQ-003 | Selma Project | Inspection Pipeline
+
+@enduml

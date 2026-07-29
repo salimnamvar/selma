@@ -1,0 +1,84 @@
+' Selma Sequence Diagram Styles
+' Common skinparam and styling definitions for all sequence diagrams
+
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+skinparam sequence {
+    ArrowColor #3B4252
+    ArrowFontColor #2E3440
+    ArrowFontSize 11
+    ArrowThickness 1.5
+
+    LifeLineBorderColor #5E81AC
+    LifeLineBackgroundColor #ECEFF4
+    LifeLineFontSize 11
+
+    ParticipantBorderColor #5E81AC
+    ParticipantBackgroundColor #EBCB8B
+    ParticipantFontColor #2E3440
+    ParticipantFontSize 12
+
+    GroupBorderColor #88C0D0
+    GroupBackgroundColor #E8F4F8
+    GroupFontColor #2E3440
+    GroupFontSize 12
+    GroupHeaderFontColor #5E81AC
+
+    DividerBorderColor #81A1C1
+    DividerBackgroundColor #ECEFF4
+    DividerFontColor #5E81AC
+    DividerFontSize 12
+
+    BoxBorderColor #4C566A
+    BoxBackgroundColor #ECEFF4
+
+    NoteBorderColor #D08770
+    NoteBackgroundColor #FFF3E0
+    NoteFontColor #2E3440
+    NoteFontSize 11
+
+    ReferenceBorderColor #88C0D0
+    ReferenceBackgroundColor #E8F4F8
+    ReferenceFontColor #2E3440
+    ReferenceFontSize 11
+
+    SequenceGroupBorderThickness 1.5
+    SequenceDividerBorderThickness 1
+    SequenceReferenceBorderThickness 1
+}
+
+skinparam note {
+    BorderColor #D08770
+    BackgroundColor #FFF3E0
+    FontColor #2E3440
+    FontSize 11
+}
+
+skinparam header {
+    FontColor #5E81AC
+    FontSize 14
+    BackgroundColor transparent
+}
+
+skinparam footer {
+    FontColor #4C566A
+    FontSize 10
+    BackgroundColor transparent
+}
+
+skinparam title {
+    FontColor #2E3440
+    FontSize 16
+    FontStyle bold
+}
+
+' Highlight colors for critical paths
+skinparam sequence {
+    ArrowColor #3B4252
+    LifeLineBorderColor #5E81AC
+}
+
+' Constraint: render limit
+skinparam maxMessageSize 200

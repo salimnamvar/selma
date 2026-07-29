@@ -1,0 +1,91 @@
+@startuml act_002_finding_disposition
+' ============================================================
+' Selma — ACT-002: Finding Disposition (Activity Diagram)
+' Source:  docs/spec/contracts/finding_lifecycle/lifecycle.yaml
+'          docs/spec/contracts/finding_lifecycle/transitions.yaml
+' C4:      Lifecycle Finder → Event Store
+' Contract: 1.0.0
+'
+' Finding lifecycle transitions driven by Regulatory Officials
+' and Compliance Representatives with capability + SoD gates.
+' ============================================================
+
+title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Validated | Waived | Dismissed | EvidenceSubmitted] → Terminal</i></size>
+
+!include ../common/act_styles.puml
+
+|#E8F4F8|System Auto-Transition|
+start
+:Finding Created\n(system auto-transition to Open);
+
+|#ECEFF4|Actor Routing|
+if (Who is Acting?) then (Regulatory Official)
+  :Authenticate\n<b>Regulatory Official</b>;
+  if (What Action?) then (Validate)
+    :Check Capability\n<color:#1B7A6E><b>finding.validate</b></color>;
+    :Check SoD\n(not the creator);
+    note right
+      Separation of Duties:
+      creator ≠ validator.
+    end note
+    :Transition: Open → Validated;
+    :Append DispositionChanged Event;
+  elseif (Waive) then
+    :Check Capability\n<color:#1B7A6E><b>finding.waive</b></color>;
+    :Check SoD\n(not the creator);
+    :Transition: Open → Waived;
+    :Auto-transition: Waived → Closed;
+    :Append DispositionChanged\n+ FindingClosed Events;
+  elseif (Dismiss) then
+    :Check Capability\n<color:#1B7A6E><b>finding.dismiss</b></color>;
+    :Transition: Open → Dismissed;
+    :Append DispositionChanged Event;
+  elseif (Approve Remediation) then
+    :Check Capability\n<color:#1B7A6E><b>finding.approve_remediation</b></color>;
+    :Transition: Validated → Remediated;
+    :Append DispositionChanged Event;
+  elseif (Reject Remediation) then
+    :Check Capability\n<color:#1B7A6E><b>finding.reject_remediation</b></color>;
+    :Transition: Validated → UnderReview;
+    :Append DispositionChanged Event;
+  endif
+elseif (Compliance Rep) then
+  :Authenticate\n<b>Compliance Representative</b>;
+  if (What Action?) then (Submit Evidence)
+    :Check Capability\n<color:#1B7A6E><b>finding.submit_evidence</b></color>;
+    :Transition: Open → EvidenceSubmitted;
+    :Auto-transition: EvidenceSubmitted → Validated;
+    :Append DispositionChanged Events;
+  elseif (Acknowledge) then
+    :Check Capability\n<color:#1B7A6E><b>finding.acknowledge</b></color>;
+    :Record Acknowledgment;
+    note right
+      Acknowledgment does not
+      change disposition state.
+    end note
+  elseif (Request Reinspection) then
+    :Check Capability\n<color:#1B7A6E><b>finding.request_reinspection</b></color>;
+    :Trigger New Inspection;
+    note right
+      Creates a new inspection
+      with reference to this finding.
+    end note
+  endif
+endif
+
+|#E8F4F8|Terminal Check|
+if (Is Terminal State?\nClosed / Dismissed) then (yes)
+  #4A4A4A:Final State Reached;
+  stop
+else (no)
+  :Wait for Next Action;
+  note right
+    Finding remains in current
+    disposition state until
+    next authorized action.
+  end note
+  backward :Next Actor Action;
+  stop
+endif
+
+@enduml

@@ -1,0 +1,99 @@
+@startuml seq_001_directive_crud
+!include common/seq_styles.puml
+
+title SEQ-001 Directive CRUD\nCreate / Modify / Retire / Fork / Merge / Split / Restore
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "directives_adapter\n(Python/SQLAlchemy/PostgreSQL)" as DA #81A1C1
+database "directive_store\n(PostgreSQL)" as DS #4C566A
+participant "hermetic_compiler\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
+participant "compiled_rules_adapter\n(Python/SHA-256/CAS)" as CRA #B48EAD
+
+autonumber
+
+user -> SI: directive operation request
+activate SI
+
+SI -> AS: REST request (create/modify/retire/fork/merge/split/restore)
+activate AS
+
+group Authorization Gate
+    AS -> AS: CapabilityGate.check(required_capability)
+    alt capability denied
+        AS --> SI: 403 Forbidden
+        SI --> user: error response
+    end
+end
+
+group Directive Operation
+    AS -> DA: route operation(type, payload)
+    activate DA
+
+    DA -> DS: acquire write_lock(directive_id)
+    activate DS
+    DS --> DA: lock acquired
+    deactivate DS
+
+    group Atomic Write
+        DA -> DS: execute operation (create revision)
+        activate DS
+        DS --> DA: operation result (revision_id)
+        deactivate DS
+    end
+
+    DA -> DS: release write_lock(directive_id)
+    activate DS
+    DS --> DA: lock released
+    deactivate DS
+
+    DA --> AS: operation result
+    deactivate DA
+end
+
+group Recompilation (on change)
+    AS -> HC: trigger compilation(directive_id)
+    activate HC
+
+    HC -> DS: acquire read_lock(directive_id)
+    activate DS
+    DS --> HC: lock acquired
+    deactivate DS
+
+    HC -> HC: compile directive graph to CG-IR
+    HC -> CRA: publish CG-IR snapshot
+    activate CRA
+    CRA --> HC: snapshot published
+    deactivate CRA
+
+    HC -> DS: release read_lock(directive_id)
+    activate DS
+    DS --> HC: lock released
+    deactivate DS
+
+    HC --> AS: compilation complete
+    deactivate HC
+end
+
+AS --> SI: response (directive_dto)
+deactivate AS
+
+SI --> user: operation result
+deactivate SI
+
+note right of DS
+    All directive mutations are
+    versioned revisions with
+    immutable history.
+end note
+
+note right of HC
+    Compilation is hermetic:
+    deterministic output from
+    directive state alone.
+end note
+
+footer SEQ-001 | Selma Project | Directive CRUD Lifecycle
+
+@enduml

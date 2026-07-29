@@ -1,0 +1,94 @@
+@startuml act_003_directive_amendment
+' ============================================================
+' Selma — ACT-003: Directive Amendment (Activity Diagram)
+' Source:  docs/spec/contracts/directive/lifecycle.yaml
+'          docs/spec/contracts/compilation/pipeline.yaml
+' C4:      Directive Store ← Authoring Service → Compilation Pipeline
+' Contract: 1.0.0
+'
+' Modify directive content/status, then trigger hermetic
+' compilation to produce a new CG-IR snapshot.
+' ============================================================
+
+title ACT-003: Directive Amendment\n<size:12><i>Amend → Validate → Persist → Compile → Publish or Rollback</i></size>
+
+!include ../common/act_styles.puml
+
+|#E8F4F8|Ingress|
+start
+:Receive Amendment Request;
+
+:Authenticate & Check Capability\n<color:#1B7A6E><b>directive.modify</b></color>;
+
+|#ECEFF4|Concurrency Control|
+:Acquire Write Lock\non Directive Graph;
+
+if (Compilation in Progress?) then (yes)
+  :Wait for Compilation\nto Release Read Lock;
+  note right
+    Write lock blocks until
+    active compilation finishes.
+  end note
+else (no)
+endif
+
+|#EBCB8B|Amendment|
+:Load Current Directive;
+
+if (Amendment Type?) then (Content Change)
+  :Create New Revision;
+  note right
+    - Update content fields
+    - Increment revision number
+    - Set updated_at
+  end note
+elseif (Status Change: Retire) then
+  :Transition Status to Deprecated;
+elseif (Fork) then
+  :Create Two New execution_ids;
+  :Preserve lineage_id;
+  :Create Lineage Operation Record;
+elseif (Merge) then
+  :Merge Two Directives;
+  :Use Lexicographic Min lineage_id;
+  :Create Merged Revision;
+elseif (Split) then
+  :Split into Multiple Directives;
+  :Create Multiple execution_ids;
+  :Preserve lineage_id;
+endif
+
+|#ECEFF4|Validation|
+:Validate Amendment\n(schema + invariants);
+
+if (Amendment Valid?) then (no)
+  :Release Write Lock;
+  #A93226:Return Validation Error;
+  stop
+else (yes)
+endif
+
+:Persist to Directive Store;
+
+:Release Write Lock;
+
+|#E8F4F8|Compilation|
+:Trigger Hermetic Compilation;
+
+fork
+  :Acquire Read Lock;
+  :Run Compilation Pipeline;
+  :Publish CG-IR Snapshot;
+  :Release Read Lock;
+end fork
+
+if (Compilation Succeeded?) then (yes)
+  #2C6E49:Return Success\n+ New Snapshot Hash;
+  stop
+else (no)
+  #A93226:Rollback Directive Change;
+  :Return Error\nwith Compilation Failure Details;
+  stop
+endif
+
+@enduml

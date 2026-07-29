@@ -1,0 +1,141 @@
+@startuml seq_004_finding_lifecycle
+!include common/seq_styles.puml
+
+title SEQ-004 Finding Lifecycle\n10-State FSM Finding State Transitions
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "lifecycle_finder\n(Python/Pydantic)" as LF #B48EAD
+participant "findings_audit_adapter\n(Python/SHA-256/Append-Only)" as FAA #D08770
+database "event_store\n(Append-Only Log)" as ES #4C566A
+
+autonumber
+
+== Auto-Transition: Created -> Open ==
+
+LF -> LF: FindingFsm: Created -> Open
+activate LF
+LF -> FAA: append FindingOpened event
+activate FAA
+FAA -> ES: write record
+activate ES
+ES --> FAA: acknowledged
+deactivate ES
+FAA --> LF: committed
+deactivate FAA
+deactivate LF
+
+== Evidence Submission Flow ==
+
+user -> SI: submit evidence for finding
+activate SI
+
+SI -> AS: POST /findings/{id}/evidence
+activate AS
+
+AS -> LF: route transition(finding_id, evidence)
+activate LF
+
+group SoD Policy Check
+    LF -> LF: SodPolicy.evaluate(actor, finding)
+    note right of LF
+        Segregation of Duties:
+        creator cannot approve
+        their own finding evidence.
+    end note
+    alt SoD violation
+        LF --> AS: SoD violation error
+        AS --> SI: 403 Forbidden
+        SI --> user: error response
+    end
+end
+
+LF -> LF: FindingFsm: Open -> EvidenceSubmitted
+LF -> FAA: append DispositionChanged event
+activate FAA
+FAA -> ES: write record
+activate ES
+ES --> FAA: acknowledged
+deactivate ES
+FAA --> LF: committed
+deactivate FAA
+
+LF -> LF: auto-transition: EvidenceSubmitted -> Validated
+LF -> FAA: append DispositionChanged event
+activate FAA
+FAA -> ES: write record
+activate ES
+ES --> FAA: acknowledged
+deactivate ES
+FAA --> LF: committed
+deactivate FAA
+
+LF --> AS: transition result
+deactivate LF
+
+AS --> SI: evidence accepted
+deactivate AS
+
+SI --> user: confirmation
+deactivate SI
+
+== Waiver Flow ==
+
+user -> SI: waive finding
+activate SI
+
+SI -> AS: POST /findings/{id}/waive
+activate AS
+
+AS -> LF: route waive(finding_id, reason)
+activate LF
+
+group Authorization Gate
+    LF -> LF: CapabilityGate.check(finding.waive)
+    alt capability denied
+        LF --> AS: 403 Forbidden
+        AS --> SI: error response
+        SI --> user: error
+    end
+end
+
+group SoD Policy Check
+    LF -> LF: SodPolicy.creator_cannot_waive(actor, finding)
+    alt SoD violation
+        LF --> AS: SoD violation error
+        AS --> SI: 403 Forbidden
+        SI --> user: error
+    end
+end
+
+LF -> LF: FindingFsm: Open -> Waived
+LF -> LF: FindingFsm: Waived -> Closed
+LF -> FAA: append FindingClosed event
+activate FAA
+FAA -> ES: write record
+activate ES
+ES --> FAA: acknowledged
+deactivate ES
+FAA --> LF: committed
+deactivate FAA
+
+LF --> AS: waive result
+deactivate LF
+
+AS --> SI: finding waived and closed
+deactivate AS
+
+SI --> user: confirmation
+deactivate SI
+
+note right of LF
+    Finding FSM States (10):
+    Created -> Open -> EvidenceSubmitted ->
+    Validated -> Remediated -> Verified ->
+    Closed | Waived | Superseded | Expired
+end note
+
+footer SEQ-004 | Selma Project | Finding Lifecycle
+
+@enduml

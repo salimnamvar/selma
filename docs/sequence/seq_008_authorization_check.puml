@@ -1,0 +1,93 @@
+@startuml seq_008_authorization_check
+!include common/seq_styles.puml
+
+title SEQ-008 Authorization Check\nCapability-Based Access Control with SoD
+
+actor "User" as user
+participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
+participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "findings_audit_adapter\n(Python/SHA-256/Append-Only)" as FAA #D08770
+database "event_store\n(Append-Only Log)" as ES #4C566A
+
+autonumber
+
+user -> SI: request with credentials
+activate SI
+
+SI -> AS: REST request (with auth token)
+activate AS
+
+group Authentication
+    AS -> AS: authenticate (extract actor identity)
+    note right of AS
+        Verify token signature.
+        Extract actor_id and roles.
+    end note
+end
+
+group Capability Check
+    AS -> AS: load actor capabilities
+    AS -> AS: check required capability
+
+    alt Capability Denied
+        AS -> FAA: append CapabilityDenied event
+        activate FAA
+        FAA -> ES: write audit record
+        activate ES
+        ES --> FAA: acknowledged
+        deactivate ES
+        FAA --> AS: committed
+        deactivate FAA
+
+        AS --> SI: 403 Forbidden
+        SI --> user: access denied
+    end
+end
+
+group Segregation of Duties Check
+    AS -> AS: check SoD constraints
+    note right of AS
+        Verify no SoD violations:
+        - creator cannot approve own work
+        - author cannot waive own findings
+        - conflicting role pairs enforced
+    end note
+
+    alt SoD Violation
+        AS -> FAA: append SoDDenied event
+        activate FAA
+        FAA -> ES: write audit record
+        activate ES
+        ES --> FAA: acknowledged
+        deactivate ES
+        FAA --> AS: committed
+        deactivate FAA
+
+        AS --> SI: 403 Forbidden
+        SI --> user: access denied
+    end
+end
+
+== Authorized Path ==
+
+AS -> AS: proceed with operation
+note right of AS
+    All authorization checks passed.
+    Execute the requested operation.
+end note
+
+AS --> SI: operation result
+deactivate AS
+
+SI --> user: response
+deactivate SI
+
+note right of FAA
+    All authorization decisions
+    (allow and deny) are audited.
+    Append-only, immutable log.
+end note
+
+footer SEQ-008 | Selma Project | Authorization Check
+
+@enduml
