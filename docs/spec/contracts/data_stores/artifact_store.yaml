@@ -1,6 +1,6 @@
 # artifact_store.yaml
 # Normative source for execution artifact storage contract.
-# Replaces ARCHIVE_SPECIFICATION.md §3.6–§3.7.
+# Contract for execution artifact storage.
 
 contract_id: "data_stores.artifact_store"
 schema_version: "1.0.0"

@@ -61,7 +61,7 @@ deactivate ES
 FAA --> LF: committed
 deactivate FAA
 
-LF -> LF: auto-transition: EvidenceSubmitted -> Validated
+LF -> LF: auto-transition: EvidenceSubmitted -> PendingVerification
 LF -> FAA: append DispositionChanged event
 activate FAA
 FAA -> ES: write record
@@ -131,9 +131,9 @@ deactivate SI
 
 note right of LF
     Finding FSM States (10):
-    Created -> Open -> EvidenceSubmitted ->
-    Validated -> Remediated -> Verified ->
-    Closed | Waived | Superseded | Expired
+    Created → Open → Acknowledged →
+    EvidenceSubmitted → PendingVerification →
+    Verified → Closed | Waived | Dismissed | Rejected
 end note
 
 footer SEQ-004 | Selma Project | Finding Lifecycle

@@ -1,6 +1,6 @@
 # hermetic_boundary.yaml
 # Normative source for hermetic compilation boundary invariants.
-# Replaces ARCHIVE_SPECIFICATION.md §2.7.
+# Contract for hermetic compilation boundary invariants.
 
 contract_id: "compilation.hermetic_boundary"
 schema_version: "1.0.0"
@@ -26,18 +26,6 @@ frozen_environment:
             type: "string"
           - field: "os_runtime_hash"
             type: "sha256"
-      - field: "ai_components"
-        type: "array"
-        items:
-          - field: "name"
-            type: "string"
-          - field: "model_hash"
-            type: "sha256"
-          - field: "prompt_hash"
-            type: "sha256"
-          - field: "decoder_hash"
-            type: "sha256"
-        description: "Empty array if no AI-assisted compilation"
       - field: "confidence_severity_cap_threshold"
         type: "number"
         default: 0.5
@@ -65,10 +53,6 @@ hermeticity_rules:
     enforcement: "documentation"
 
   - id: "HERM-004"
-    statement: "AI outputs are cached and serialized into CG-IR before publication"
-    enforcement: "compile_time_validation"
-
-  - id: "HERM-005"
     statement: "Once published, CG-IR snapshot is immutable"
     enforcement: "content_addressed_store"
 
@@ -136,7 +120,6 @@ stories:
     so_that: "any historical CG-IR snapshot can be exactly reproduced"
     acceptance_criteria:
       - "Given identical directive graph + engine version + frozen env. When compilation runs at different times. Then both produce identical cg_ir_snapshot_hash."
-      - "Given a frozen environment with AI components. When compilation runs. Then AI outputs are cached and serialized into CG-IR before publication."
       - "Given a frozen environment. When frozen_env_hash is computed. Then the hash excludes the frozen_env_hash field itself."
 
   - story_id: "US-HB-002"

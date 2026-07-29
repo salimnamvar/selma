@@ -44,7 +44,7 @@
     },
     "fsm_state": {
       "type": "string",
-      "description": "Current FSM state per finding_lifecycle.states contract. 10 states defined; Created and Closed are terminal.",
+      "description": "Current FSM state per finding_lifecycle.states contract. 11 states defined; Created, Dismissed, Superseded, and Closed are terminal.",
       "enum": [
         "Created",
         "Open",
@@ -55,6 +55,7 @@
         "Rejected",
         "Dismissed",
         "Waived",
+        "Superseded",
         "Closed"
       ]
     },
@@ -82,42 +83,68 @@
     },
     "location": {
       "type": "object",
-      "description": "Location within the target where the finding was detected.",
+      "description": "Location within the target where the finding was detected. Structure varies by target_type: code targets use file/line/function, config targets use path-based addressing, binary targets use offset/section.",
       "properties": {
         "file": {
           "type": "string",
-          "description": "File path within the target."
+          "description": "File path within the target (for text/structured targets)."
         },
         "line_start": {
           "type": "integer",
-          "description": "Starting line number (1-indexed).",
+          "description": "Starting line number (1-indexed, for text targets).",
           "minimum": 1
         },
         "line_end": {
           "type": "integer",
-          "description": "Ending line number (1-indexed, inclusive).",
+          "description": "Ending line number (1-indexed, inclusive, for text targets).",
           "minimum": 1
         },
         "column_start": {
           "type": "integer",
-          "description": "Starting column number (1-indexed).",
+          "description": "Starting column number (1-indexed, for text targets).",
           "minimum": 1
         },
         "column_end": {
           "type": "integer",
-          "description": "Ending column number (1-indexed, exclusive).",
+          "description": "Ending column number (1-indexed, exclusive, for text targets).",
           "minimum": 1
         },
         "function": {
           "type": "string",
-          "description": "Enclosing function or method name."
+          "description": "Enclosing function or method name (for code targets)."
         },
         "class": {
           "type": "string",
-          "description": "Enclosing class name."
+          "description": "Enclosing class name (for code targets)."
+        },
+        "json_path": {
+          "type": "string",
+          "description": "JSONPath expression (for JSON/YAML structured targets)."
+        },
+        "xpath": {
+          "type": "string",
+          "description": "XPath expression (for XML targets)."
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Byte offset from beginning (for binary targets).",
+          "minimum": 0
+        },
+        "section": {
+          "type": "string",
+          "description": "Section or segment name (for binary/document targets)."
+        },
+        "paragraph": {
+          "type": "integer",
+          "description": "Paragraph number (for document targets).",
+          "minimum": 1
+        },
+        "resource_path": {
+          "type": "string",
+          "description": "Resource path in structured data (for Kubernetes, Terraform, etc.)."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "evidence": {
       "type": "object",

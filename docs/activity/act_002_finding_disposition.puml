@@ -1,7 +1,7 @@
 @startuml act_002_finding_disposition
 ' ============================================================
 ' Selma — ACT-002: Finding Disposition (Activity Diagram)
-' Source:  docs/spec/contracts/finding_lifecycle/lifecycle.yaml
+' Source:  docs/spec/contracts/finding_lifecycle/states.yaml
 '          docs/spec/contracts/finding_lifecycle/transitions.yaml
 ' C4:      Lifecycle Finder → Event Store
 ' Contract: 1.0.0
@@ -10,7 +10,7 @@
 ' and Compliance Representatives with capability + SoD gates.
 ' ============================================================
 
-title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Validated | Waived | Dismissed | EvidenceSubmitted] → Terminal</i></size>
+title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Acknowledged | Waived | Dismissed] → EvidenceSubmitted → PendingVerification → [Verified | Rejected] → Terminal</i></size>
 
 !include common/act_styles.puml
 
@@ -21,48 +21,66 @@ start
 |#ECEFF4|Actor Routing|
 if (Who is Acting?) then (Regulatory Official)
   :Authenticate\n<b>Regulatory Official</b>;
-  if (What Action?) then (Validate)
-    :Check Capability\n<color:#1B7A6E><b>finding.validate</b></color>;
+  if (What Action?) then (Acknowledge)
+    :Check Capability\n<color:#1B7A6E><b>finding.acknowledge</b></color>;
     :Check SoD\n(not the creator);
     note right
       Separation of Duties:
-      creator ≠ validator.
+      creator ≠ actor for acknowledgement.
     end note
-    :Transition: Open → Validated;
+    :Transition: Open → Acknowledged;
     :Append DispositionChanged Event;
   elseif (Waive) then
     :Check Capability\n<color:#1B7A6E><b>finding.waive</b></color>;
     :Check SoD\n(not the creator);
+    note right
+      Separation of Duties:
+      creator ≠ waiving official.
+    end note
     :Transition: Open → Waived;
     :Auto-transition: Waived → Closed;
     :Append DispositionChanged\n+ FindingClosed Events;
   elseif (Dismiss) then
     :Check Capability\n<color:#1B7A6E><b>finding.dismiss</b></color>;
+    :Check SoD\n(not the creator);
+    note right
+      Separation of Duties:
+      creator ≠ dismissing official.
+    end note
     :Transition: Open → Dismissed;
     :Append DispositionChanged Event;
-  elseif (Approve Remediation) then
-    :Check Capability\n<color:#1B7A6E><b>finding.approve_remediation</b></color>;
-    :Transition: Validated → Remediated;
-    :Append DispositionChanged Event;
-  elseif (Reject Remediation) then
+  elseif (Verify Evidence) then
+    :Check Capability\n<color:#1B7A6E><b>finding.verify</b></color>;
+    :Check SoD\n(not the creator);
+    note right
+      Separation of Duties:
+      creator ≠ verifying official.
+    end note
+    :Transition: Pending Verification → Verified;
+    :Auto-transition: Verified → Closed;
+    :Append DispositionChanged\n+ FindingClosed Events;
+  elseif (Reject Evidence) then
     :Check Capability\n<color:#1B7A6E><b>finding.reject_remediation</b></color>;
-    :Transition: Validated → UnderReview;
+    :Check SoD\n(not the creator);
+    note right
+      Separation of Duties:
+      creator ≠ rejecting official.
+    end note
+    :Transition: Pending Verification → Rejected;
     :Append DispositionChanged Event;
   endif
 elseif (Compliance Rep) then
   :Authenticate\n<b>Compliance Representative</b>;
   if (What Action?) then (Submit Evidence)
     :Check Capability\n<color:#1B7A6E><b>finding.submit_evidence</b></color>;
-    :Transition: Open → EvidenceSubmitted;
-    :Auto-transition: EvidenceSubmitted → Validated;
-    :Append DispositionChanged Events;
-  elseif (Acknowledge) then
-    :Check Capability\n<color:#1B7A6E><b>finding.acknowledge</b></color>;
-    :Record Acknowledgment;
+    :Check SoD\n(not the creator);
     note right
-      Acknowledgment does not
-      change disposition state.
+      Separation of Duties:
+      creator ≠ evidence submitter.
     end note
+    :Transition: Acknowledged → Evidence Submitted;
+    :Auto-transition: Evidence Submitted → Pending Verification;
+    :Append DispositionChanged Events;
   elseif (Request Reinspection) then
     :Check Capability\n<color:#1B7A6E><b>finding.request_reinspection</b></color>;
     :Trigger New Inspection;

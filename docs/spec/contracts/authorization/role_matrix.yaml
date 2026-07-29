@@ -1,6 +1,6 @@
 # role_matrix.yaml
 # Normative source for role-based capability assignments.
-# Replaces ARCHIVE_SPECIFICATION.md §3.2 and §3.2.1.
+# Contract for role-based capability assignments.
 
 contract_id: "authorization.role_matrix"
 schema_version: "1.0.0"

@@ -1,6 +1,6 @@
 # transitions.yaml
 # Normative source for finding FSM transition rules.
-# Replaces ARCHIVE_SPECIFICATION.md §3.1 transition table.
+# Contract for finding FSM transition rules.
 
 contract_id: "finding_lifecycle.transitions"
 schema_version: "1.0.0"
@@ -140,6 +140,24 @@ transitions:
     sod_check: null
     story_ref: null
     notes: "Immediate after waive; disposition inherited as 'waived'"
+
+  - id: "TR-FL-012"
+    from: "Open"
+    to: "Superseded"
+    trigger: "finding.supersede"
+    actor: "regulatory_official"
+    capability: "finding.supersede"
+    sod_check:
+      type: "creator_cannot_supersede"
+      description: "Actor MUST NOT be in creator_provenance for the finding's directive"
+      fields:
+        - "finding.control_id"
+        - "creator_provenance (from CG-IR snapshot)"
+      enforcement_point: "finding_fsm_engine"
+      denial_code: "403 CapabilityDenied"
+      denial_reason: "segregation of duties violation"
+    story_ref: "US-FL-012"
+    notes: "Regulatory Official supersedes finding; requires SoD check"
 
 event_schema:
   description: "Each transition produces a Finding Event Stream event"

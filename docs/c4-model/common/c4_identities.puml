@@ -143,3 +143,7 @@
 !$NAME_target_adapter = "Target Adapter"
 !$TECH_target_adapter = "Python / HTTP Client / Schema Validation"
 !$DESC_target_adapter = "Mediates all outbound communication with external target and regulated entity systems. Handles authentication, transport, retries, schema validation, and response normalization."
+
+!$NAME_policy_doctrine_reader = "Policy Doctrine Reader"
+!$TECH_policy_doctrine_reader = "Python / YAML / Read-Only"
+!$DESC_policy_doctrine_reader = "Read-only adapter for policy doctrine YAML files from governance contracts. Provides guidance resolution after evaluation — never used for rule evaluation or FSM transitions. Reads from governance_contracts (Git) at runtime."

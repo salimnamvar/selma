@@ -8,7 +8,7 @@ package "Directive Store" {
     * lineage_id : UUID <<PK, immutable>>
     --
     execution_id : UUID
-    status : ENUM(active, deprecated, draft)
+    status : ENUM(active, deprecated, draft, superseded)
     revision : INTEGER
     metadata : JSONB
     created_at : TIMESTAMPTZ

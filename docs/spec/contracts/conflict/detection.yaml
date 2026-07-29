@@ -1,6 +1,6 @@
 # detection.yaml
 # Normative source for conflict detection rules.
-# Replaces ARCHIVE_SPECIFICATION.md §2.15.1.
+# Contract for conflict detection rules.
 
 contract_id: "conflict.detection"
 schema_version: "1.0.0"

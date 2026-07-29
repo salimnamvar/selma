@@ -17,7 +17,7 @@ may lag the freeze; gaps are tracked in [08-implementation-gap-map.md](08-implem
 | Criterion | Evidence |
 | :--- | :--- |
 | Normative behavioral source is contract tree | `docs/spec/contracts/` + `docs/spec/README.md` |
-| Archives frozen with headers | `ARCHIVE_SPECIFICATION.md`, `ARCHIVE_User_Stories.md` (2026-07-29) |
+| Archives migrated to contract tree | All content migrated to `docs/spec/contracts/`; archives deleted |
 | Universal schemas v1.0.0 | `rule_schema.json`, `policy_doctrine.yaml` |
 | Dual-document directives (eval vs guidance) | C4 identities + meta/authority concern_split |
 | State machines linked to contracts | `docs/state-machine/README.md` catalog |

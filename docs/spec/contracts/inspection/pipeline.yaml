@@ -1,6 +1,6 @@
 # pipeline.yaml
 # Normative source for the inspection pipeline contract.
-# Replaces ARCHIVE_SPECIFICATION.md §3.3–§3.7.
+# Contract for the inspection pipeline.
 
 contract_id: "inspection.pipeline"
 schema_version: "1.0.0"

@@ -1,6 +1,6 @@
 # capabilities.yaml
 # Normative source for the capability catalog.
-# Replaces ARCHIVE_SPECIFICATION.md §3.2.
+# Contract for the capability catalog.
 
 contract_id: "authorization.capabilities"
 schema_version: "1.0.0"

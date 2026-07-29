@@ -62,6 +62,7 @@ Container_Boundary(selma_app, $NAME_selma_app) {
     Component(findings_audit_adapter, $NAME_findings_audit_adapter, $TECH_findings_audit_adapter, $DESC_findings_audit_adapter)
     Component(snapshots_adapter, $NAME_snapshots_adapter, $TECH_snapshots_adapter, $DESC_snapshots_adapter)
     Component(target_adapter, $NAME_target_adapter, $TECH_target_adapter, $DESC_target_adapter)
+    Component(policy_doctrine_reader, $NAME_policy_doctrine_reader, $TECH_policy_doctrine_reader, $DESC_policy_doctrine_reader)
 
 }
 
@@ -80,6 +81,7 @@ Rel(selma_interface, application_service, "forwards user requests as REST API ca
 Rel(target_adapter, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, application_service, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
 Rel(hermetic_compiler, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
+Rel(policy_doctrine_reader, governance_contracts, "reads policy doctrine YAML files at runtime for guidance only", "Git / Read-Only", $tags="guidance_only")
 Rel(lifecycle_finder, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 
@@ -141,7 +143,7 @@ Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution perm
 
 Rel(finding_analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal", $tags="validation_only")
 Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal", $tags="validation_only")
-Rel(finding_analyzer, directives_adapter, "reads policy doctrines for guidance resolution after evaluation", "Internal", $tags="guidance_only")
+Rel(finding_analyzer, policy_doctrine_reader, "reads policy doctrines for guidance resolution after evaluation", "Internal", $tags="guidance_only")
 
 
 ' ============================================================

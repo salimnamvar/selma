@@ -1,6 +1,6 @@
 # gates.yaml
 # Normative source for architectural audit certification gates.
-# Replaces ARCHIVE_SPECIFICATION.md §9.9.
+# Contract for architectural audit certification gates.
 
 contract_id: "certification.gates"
 schema_version: "1.0.0"

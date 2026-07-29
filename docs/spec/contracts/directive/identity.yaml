@@ -1,6 +1,6 @@
 # identity.yaml
 # Normative source for directive identity rules.
-# Replaces ARCHIVE_SPECIFICATION.md §2.3.
+# Contract for directive identity rules.
 
 contract_id: "directive.identity"
 schema_version: "1.0.0"
@@ -14,7 +14,7 @@ identity_types:
   - type: "lineage_id"
     name: "Lineage ID (Immutable Root)"
     purpose: "Audit trail and historical traceability"
-    mutability: "Never changes across revisions, forks, merges, or splits"
+    mutability: "Immutable across revisions, forks, and splits. Changes only on merge to lexicographic minimum of parent lineage_ids."
     format: "^[A-Z][A-Z0-9]+-[0-9]+$"
     examples: ["TRAF-001", "AUTH-001", "PAY-800"]
     assignment: "Assigned once at directive creation from Machine ID"

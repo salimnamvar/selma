@@ -10,12 +10,14 @@ package "Event Store" {
     finding_id : UUID <<indexed>>
     event_type : ENUM(FindingCreated, DispositionChanged, FindingClosed)
     timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
-    logical_clock_physical : BIGINT
-    logical_clock_logical : INTEGER
-    logical_clock_node_id : TEXT
+    physical_time : TIMESTAMPTZ <<HLC wall clock>>
+    logical_counter : INTEGER <<HLC counter>>
+    node_id : TEXT <<HLC node identifier>>
     actor : TEXT
     payload : JSONB
     event_hash : CHAR(64) <<SHA-256>>
+    prev_event_hash : CHAR(64) <<SHA-256, nullable>>
+    chain_hash : CHAR(64) <<SHA-256>>
   }
 }
 
@@ -23,11 +25,17 @@ note bottom of Events
   **Hybrid Logical Clock (HLC)**
   Total ordering: physical_time → logical_counter → node_id → event_id
 
+  **Tamper-Evidence Chain**
+  • event_hash = SHA-256(event_id ‖ payload ‖ prev_event_hash)
+  • chain_hash = SHA-256(event_hash ‖ prev_chain_hash)
+  • prev_event_hash is NULL for the first event in the stream
+  • chain_hash enables detection of deleted or reordered events
+
   **Invariants**
   • Events are immutable once written
   • No duplicate event_ids
   • HLC is monotonically non-decreasing
-  • event_hash = SHA-256(event_id ‖ payload)
+  • chain_hash forms a contiguous hash chain from first event
 end note
 
 @enduml

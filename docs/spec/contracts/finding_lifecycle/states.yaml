@@ -1,13 +1,13 @@
 # states.yaml
 # Normative source for finding FSM state definitions.
-# Replaces ARCHIVE_SPECIFICATION.md §3.1 state definitions.
+# Contract for finding FSM state definitions.
 
 contract_id: "finding_lifecycle.states"
 schema_version: "1.0.0"
 owner_component: "finding_fsm_engine"
 state_machine_ref: "../../state-machine/selma_finding_lifecycle.puml"
 description: >
-  Defines the 10 states of the Finding FSM. Each state has a clear
+  Defines the 11 states of the Finding FSM. Each state has a clear
   semantics, terminal flag, and disposition mapping. The FSM governs
   all finding lifecycle transitions — no state may be added or removed
   without a MAJOR version bump.
@@ -84,6 +84,14 @@ states:
     transitions_in: ["Open"]
     disposition: "waived"
     notes: "System-automatic transition to Closed after waive; requires SoD check"
+
+  - name: "Superseded"
+    terminal: true
+    description: "Finding is superseded by a newer finding or directive update"
+    transitions_out: []
+    transitions_in: ["Open"]
+    disposition: "superseded"
+    notes: "Terminal state; finding replaced by newer rule or finding"
 
   - name: "Closed"
     terminal: true

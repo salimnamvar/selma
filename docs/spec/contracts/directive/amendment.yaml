@@ -1,6 +1,6 @@
 # amendment.yaml
 # Normative source for directive amendment rules.
-# Replaces ARCHIVE_SPECIFICATION.md §7.1–§7.3.
+# Contract for directive amendment rules.
 
 contract_id: "directive.amendment"
 schema_version: "1.0.0"

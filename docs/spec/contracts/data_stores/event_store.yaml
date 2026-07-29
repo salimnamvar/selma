@@ -1,6 +1,6 @@
 # event_store.yaml
 # Normative source for the Finding Event Stream store contract.
-# Replaces ARCHIVE_SPECIFICATION.md §2.14.
+# Contract for the Finding Event Stream store.
 
 contract_id: "data_stores.event_store"
 schema_version: "1.0.0"
@@ -41,6 +41,12 @@ event_schema:
     - field: "event_hash"
       type: "string (SHA-256)"
       description: "Hash of event (excluding event_hash itself)"
+    - field: "prev_event_hash"
+      type: "string (SHA-256) or null"
+      description: "Hash of the previous event in the stream; null for first event"
+    - field: "chain_hash"
+      type: "string (SHA-256)"
+      description: "Hash chain linking all events for tamper-evidence"
 
 event_payloads:
   - event_type: "FindingCreated"
@@ -99,8 +105,13 @@ hlc:
     - "Wall clock regression absorbed by incrementing logical_counter"
 
 event_hash:
-  formula: "SHA-256(canonical_json(event minus event_hash field))"
-  notes: "Covers all event fields including logical_clock and payload"
+  formula: "SHA-256(canonical_json(event_id ‖ payload ‖ prev_event_hash))"
+  notes: "Covers all event fields including logical_clock and payload; links to previous event for chain integrity"
+
+chain_hash:
+  formula: "SHA-256(event_hash ‖ prev_chain_hash)"
+  notes: "Contiguous hash chain from first event; enables detection of deleted or reordered events"
+  initial_value: "event_hash of the first event in the stream"
 
 analytics:
   description: "Read-only analytics over the event stream"
@@ -149,6 +160,10 @@ invariants:
   - id: "INV-ES-005"
     statement: "Analytics are read-only; no write path to CG-IR or FSM"
     enforcement: "architectural_audit (AA-01)"
+
+  - id: "INV-ES-006"
+    statement: "chain_hash forms a contiguous hash chain; deletion or reordering of events breaks the chain"
+    enforcement: "event_store"
 
 stories:
   - story_id: "US-ES-001"

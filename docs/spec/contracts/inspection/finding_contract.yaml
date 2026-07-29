@@ -1,6 +1,6 @@
 # finding_contract.yaml
 # Normative source for finding object schema.
-# Replaces ARCHIVE_SPECIFICATION.md §3.1 (Finding Object Schema).
+# Contract for finding object schema.
 
 contract_id: "inspection.finding"
 schema_version: "1.0.0"

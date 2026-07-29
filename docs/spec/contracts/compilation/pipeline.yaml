@@ -1,6 +1,6 @@
 # pipeline.yaml
 # Normative source for the compilation pipeline contract.
-# Replaces ARCHIVE_SPECIFICATION.md §2.4 and §2.6 (compilation stages).
+# Contract for the compilation pipeline.
 
 contract_id: "compilation.pipeline"
 schema_version: "1.0.0"

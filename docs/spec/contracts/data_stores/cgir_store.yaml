@@ -1,6 +1,6 @@
 # cgir_store.yaml
 # Normative source for the CG-IR content-addressed store contract.
-# Replaces ARCHIVE_SPECIFICATION.md §2.6 and §3.5.
+# Contract for the CG-IR content-addressed store.
 
 contract_id: "data_stores.cgir_store"
 schema_version: "1.0.0"

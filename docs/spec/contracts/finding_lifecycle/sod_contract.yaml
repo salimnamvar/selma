@@ -1,6 +1,6 @@
 # sod_contract.yaml
 # Normative source for Segregation of Duties (SoD) rules.
-# Replaces ARCHIVE_SPECIFICATION.md §3.2 SoD constraints.
+# Contract for Segregation of Duties rules.
 
 contract_id: "finding_lifecycle.sod"
 schema_version: "1.0.0"

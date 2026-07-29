@@ -1,6 +1,6 @@
 # lifecycle.yaml
 # Normative source for directive lifecycle states.
-# Replaces ARCHIVE_SPECIFICATION.md §2.2.4 and §2.5.
+# Contract for directive lifecycle states.
 
 contract_id: "directive.lifecycle"
 schema_version: "1.0.0"
@@ -77,7 +77,7 @@ supersession:
 
 invariants:
   - id: "INV-DL-001"
-    statement: "lineage_id is immutable across all lifecycle operations"
+    statement: "lineage_id is immutable across revisions, forks, and splits. On merge, lineage_id becomes the lexicographic minimum of parent lineage_ids (see identity.yaml merge semantics)."
     enforcement: "store_engine"
 
   - id: "INV-DL-002"

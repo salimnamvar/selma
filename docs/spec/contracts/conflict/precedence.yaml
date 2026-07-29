@@ -1,6 +1,6 @@
 # precedence.yaml
 # Normative source for conflict resolution precedence rules.
-# Replaces ARCHIVE_SPECIFICATION.md §2.15 (resolve_conflict algorithm).
+# Contract for conflict resolution precedence rules.
 
 contract_id: "conflict.precedence"
 schema_version: "1.0.0"

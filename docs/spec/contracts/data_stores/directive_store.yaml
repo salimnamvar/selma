@@ -1,6 +1,6 @@
 # directive_store.yaml
 # Normative source for the Directive Graph store contract.
-# Replaces ARCHIVE_SPECIFICATION.md §2.5 and §3.4 (locking).
+# Contract for the Directive Graph store.
 
 contract_id: "data_stores.directive_store"
 schema_version: "1.0.0"
