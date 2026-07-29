@@ -16,7 +16,7 @@ gates:
     name: "Mediated Feedback"
     invariant: "Analytics engine has no write path to CG-IR or Finding FSM"
     validation_method: "Integration test proving finding events cannot trigger compilation"
-    story_refs: ["S-17", "S-18"]
+    story_refs: ["US-GA-001"]
     criteria:
       - "Analytics engine cannot write to CG-IR store"
       - "Analytics engine cannot modify finding FSM state"
@@ -25,32 +25,32 @@ gates:
 
   - gate_id: "AA-02"
     name: "Declarative Governance"
-    invariant: "Runtime modules load only schema/CG-IR fields; policy_doctrine.yaml absent from runtime"
-    validation_method: "Static analysis confirming runtime modules load only schema/CG-IR fields"
-    story_refs: ["S-05"]
+    invariant: "Evaluation and FSM paths use only schema/CG-IR fields; policy doctrine is guidance_only after finding creation"
+    validation_method: "Static analysis + architectural audit of guidance_only edges"
+    story_refs: ["US-CD-001"]
     criteria:
-      - "Runtime modules do not import or load policy_doctrine.yaml"
-      - "CI static analysis scans runtime source paths for policy references"
-      - "Boot-time assertion (recommended): verify policy file absent from runtime data paths"
-      - "Conflict resolution uses spec algorithm over schema/CG-IR fields only"
+      - "Rule Inspector and Finding FSM MUST NOT read policy_doctrine.yaml for evaluation or state transitions"
+      - "Finding Analyzer MAY read policy_doctrine.yaml via paired_policy_ref for guidance_only resolution"
+      - "CI static analysis scans evaluation/FSM paths for policy imports used as executable logic"
+      - "Conflict resolution uses contract algorithm over schema/CG-IR fields only"
 
   - gate_id: "AA-03"
-    name: "Evaluator Purity"
-    invariant: "Evaluators perform no IO, no randomness, no environment reads"
+    name: "Detection Evaluator Purity"
+    invariant: "Detection evaluators perform no IO, no randomness, no environment reads"
     validation_method: "AST analysis or sandboxed execution"
-    story_refs: ["S-10", "S-21"]
+    story_refs: ["US-IP-001", "US-CP-002"]
     criteria:
-      - "Evaluators perform no network calls"
-      - "Evaluators perform no file I/O"
-      - "Evaluators perform no randomness"
-      - "Evaluators perform no environment variable reads"
+      - "Detection evaluators perform no network calls"
+      - "Detection evaluators perform no file I/O"
+      - "Detection evaluators perform no randomness"
+      - "Detection evaluators perform no environment variable reads"
       - "Same inputs produce same outputs (determinism)"
 
   - gate_id: "AA-04"
     name: "Segregation of Duties"
     invariant: "SoD enforced at FSM transition gates"
     validation_method: "Integration test"
-    story_refs: ["S-14a", "S-29"]
+    story_refs: ["US-SD-002", "US-SD-001"]
     criteria:
       - "finding.waive denied when actor ∈ creator_provenance"
       - "finding.approve_remediation denied when actor submitted evidence"
@@ -61,7 +61,7 @@ gates:
     name: "Conflict Resolution Determinism"
     invariant: "Identical CG-IR snapshot + identical target → byte-identical conflict outcomes"
     validation_method: "Replay test"
-    story_refs: ["S-05", "S-28"]
+    story_refs: ["US-CD-001", "US-PR-001"]
     criteria:
       - "Identical inputs produce identical outcomes"
       - "compatible_overrides pairs resolve deterministically"
@@ -70,21 +70,21 @@ gates:
 
   - gate_id: "AA-06"
     name: "Discriminator Completeness"
-    invariant: "Invalid evaluator_type/evaluator_config pairings rejected"
+    invariant: "Invalid detection.strategy / *_spec pairings rejected"
     validation_method: "Corpus of invalid pairings must be rejected by reference validator"
-    story_refs: ["S-21", "S-27"]
+    story_refs: ["US-CP-002"]
     criteria:
-      - "Invalid evaluator_type/evaluator_config pairings are rejected"
+      - "Invalid detection.strategy vs structural_spec/semantic_spec/pattern_spec/composite_spec pairings are rejected"
       - "AST-walking discriminator validator is used (not just JSON Schema)"
-      - "Rejection corpus covers all evaluator types"
+      - "Rejection corpus covers all detection strategies and adapter_config mismatches"
 
   - gate_id: "AA-07"
     name: "Portable Serialization"
     invariant: "RE2 canary vectors and UTC/NaN rejection tests pass"
     validation_method: "RE2 canary test vectors + UTC/NaN rejection tests"
-    story_refs: ["S-21", "S-31"]
+    story_refs: ["US-CP-002"]
     criteria:
-      - "RE2 canary test vectors pass (§9.2.6)"
+      - "RE2 canary test vectors pass (compilation portable-validation contract)"
       - "UTC-only timestamp validation passes"
       - "NaN/Infinity rejection passes"
       - "Regex flags whitelist validation passes"

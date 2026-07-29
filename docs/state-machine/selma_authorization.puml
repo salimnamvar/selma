@@ -1,12 +1,12 @@
 @startuml selma_authorization
 ' ============================================================
 ' Selma — Capability Authorization State Machine
-' Source:  SPECIFICATION.md §3.2, §3.2.1, §9.6
-'          User_Stories.md S-32, S-33, S-34
+' Source:  docs/spec/contracts/authorization/capabilities.yaml
+'          docs/spec/contracts/authorization/role_matrix.yaml
 ' C4:      Application Service (ingress gate)
 '          + Lifecycle Finder / Conflict Resolver (domain gates)
 '          denials → Findings & Audit Trail Adapter → event_store
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Capability Authorization FSM\n<size:12><i>Hierarchical evaluate · allow | deny+audit · hard-reject</i></size>

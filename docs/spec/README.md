@@ -65,19 +65,21 @@ stories:                                # Acceptance criteria live HERE
 
 ## Migration Status
 
-| Artifact | From | To | Status |
+Historical mapping from the archived monolithic specification. **Active
+normative source is the `contracts/` tree.** Archives are frozen historical
+records only.
+
+| Artifact | Historical source | Current location | Status |
 | :--- | :--- | :--- | :--- |
-| SPECIFICATION.md | `SPECIFICATION.md` | `contracts/` tree | Archived |
-| User_Stories.md | `User_Stories.md` | Embedded in contracts | Archived |
-| Schema files | `../schema/` | `../schema/` | Unchanged |
-| §2.2–§2.5 Directive | `SPECIFICATION.md §2.2–§2.5` | `contracts/directive/*.yaml` | **Migrated** |
-| §2.4–§2.7 Compilation | `SPECIFICATION.md §2.4–§2.7` | `contracts/compilation/*.yaml` | **Migrated** |
-| §2.14–§2.16 Event Stream | `SPECIFICATION.md §2.14–§2.16` | `contracts/data_stores/event_store.yaml` | **Migrated** |
-| §3.1 Finding FSM | `SPECIFICATION.md §3.1` | `contracts/finding_lifecycle/*.yaml` | **Migrated** |
-| §3.2 SoD / Capabilities | `SPECIFICATION.md §3.2` | `contracts/finding_lifecycle/sod_contract.yaml` | **Migrated** |
-| §3.3–§3.7 Inspection | `SPECIFICATION.md §3.3–§3.7` | `contracts/inspection/*.yaml` | **Migrated** |
-| §3.4–§3.5 Data Stores | `SPECIFICATION.md §3.4–§3.5` | `contracts/data_stores/*.yaml` | **Migrated** |
-| §2.15 Conflict Resolution | `SPECIFICATION.md §2.15` | `contracts/conflict/*.yaml` | **Migrated** |
-| §7 Metadata / Amendment | `SPECIFICATION.md §7` | `contracts/directive/amendment.yaml` | **Migrated** |
-| §9.9 Audit Gates | `SPECIFICATION.md §9.9` | `contracts/certification/gates.yaml` | **Migrated** |
-| §2.7 Hermetic Boundary | `SPECIFICATION.md §2.7` | `contracts/compilation/hermetic_boundary.yaml` | **Migrated** |
+| Behavioral specification | `ARCHIVE_SPECIFICATION.md` | `contracts/**` | **Migrated** |
+| User stories | `ARCHIVE_User_Stories.md` | `stories:` in each contract (`US-DOMAIN-NNN`) | **Migrated** |
+| Rule schema | `../schema/rule_schema.json` | same (v1.0.0 universal) | **Current** |
+| Policy doctrine | `../schema/policy_doctrine.yaml` | same (v1.0.0 guidance) | **Current** |
+| Directive identity / lifecycle / amendment | archive §2.2–§2.5, §7 | `contracts/directive/*.yaml` | **Migrated** |
+| Compilation / hermetic boundary | archive §2.4–§2.7 | `contracts/compilation/*.yaml` | **Migrated** |
+| Event stream / HLC | archive §2.14–§2.16 | `contracts/data_stores/event_store.yaml` | **Migrated** |
+| Finding FSM / SoD | archive §3.1–§3.2 | `contracts/finding_lifecycle/*.yaml` | **Migrated** |
+| Inspection | archive §3.3–§3.7 | `contracts/inspection/*.yaml` | **Migrated** |
+| Data stores | archive §3.4–§3.5 | `contracts/data_stores/*.yaml` | **Migrated** |
+| Conflict resolution | archive §2.15 | `contracts/conflict/*.yaml` | **Migrated** |
+| Certification gates | archive §9.9 | `contracts/certification/gates.yaml` | **Migrated** |

@@ -14,7 +14,7 @@ lifecycle_states:
   - name: "draft"
     description: "Initial state; directive is being authored"
     transitions_to: ["active", "deprecated"]
-    notes: "Drafts compile as active for testing per §2.8.1"
+    notes: "Drafts compile as active for testing per compilation/pipeline contract"
 
   - name: "active"
     description: "Directive is in effect and compiled into CG-IR"

@@ -63,7 +63,7 @@ cross_lineage:
     - "Mechanism 2 does NOT apply across lineage boundaries"
     - "Cross-lineage findings never trigger automatic conflict resolution"
     - "Cross-lineage findings are always reported as independent findings"
-    - "Humans may request cross-lineage analysis via conflict.resolve (S-05)"
+    - "Humans may request cross-lineage analysis via conflict.resolve (US-CD-001)"
     - "Cross-lineage analysis produces advisory Conflict Artifacts only"
 
 temporal_binding:

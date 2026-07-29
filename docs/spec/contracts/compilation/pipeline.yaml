@@ -19,16 +19,16 @@ pipeline:
     output: "Directive Graph (structured, versioned)"
     operations:
       - "Parse directive tables from policy document"
-      - "Extract: Machine ID, Type, Description, Context"
+      - "Extract: Machine ID, deontic, subject, predicate, Description, Context"
       - "Assign lineage_id from Machine ID (bijective at root level)"
       - "Assign execution_id (equals lineage_id on first creation)"
     invariants:
       - id: "INV-CP-001"
         statement: "Every Machine ID in policy MUST map to exactly one lineage_id root"
       - id: "INV-CP-002"
-        statement: "lineage_id MUST match pattern ^[A-Z][A-Z0-9]+-[0-9]+$"
+        statement: "lineage_id MUST match pattern ^[A-Z]{2,5}-\\d{3}[A-Z]?$"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-01"]
+    story_refs: ["US-CP-001"]
 
   - order: 2
     name: "resolve_identity"
@@ -51,7 +51,7 @@ pipeline:
       - id: "INV-CP-013"
         statement: "(lineage_id, id) pair MUST be unique within ruleset"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-01", "S-19", "S-20", "S-26"]
+    story_refs: ["US-CP-001", "US-ID-001"]
 
   - order: 3
     name: "validate_schema"
@@ -59,10 +59,11 @@ pipeline:
     input: "Rule Schema"
     output: "Validated Rule Schema"
     operations:
-      - "JSON Schema structural validation (Draft-07 first-pass)"
-      - "Custom evaluator complexity validator (depth ≤ 32, nodes ≤ 256, width ≤ 64)"
+      - "JSON Schema structural validation (Draft 2020-12 first-pass)"
+      - "Custom detection complexity validator (depth ≤ 32, nodes ≤ 256, width ≤ 64)"
       - "Regex pattern RE2 compatibility check (length ≤ 4096)"
-      - "evaluator_type ↔ evaluator_config AST-walking discriminator validation"
+      - "detection.strategy ↔ active *_spec AST-walking discriminator validation"
+      - "adapters[].adapter_id registered and adapter_config shape validation"
       - "Metadata size check (≤ 16,384 bytes)"
       - "UTC-only timestamp validation"
       - "Finite numeric validation (no NaN/Infinity)"
@@ -71,11 +72,11 @@ pipeline:
       - id: "INV-CP-020"
         statement: "Custom complexity validator MUST execute AFTER JSON Schema and BEFORE CG-IR generation"
       - id: "INV-CP-021"
-        statement: "evaluator_config MUST match evaluator_type (AST-walking validator is normative gate)"
+        statement: "detection.strategy MUST match the active detection sub-object (structural_spec | semantic_spec | pattern_spec | composite_spec | external_spec | manual_spec); AST-walking discriminator is the normative gate"
       - id: "INV-CP-022"
         statement: "All regex patterns MUST be RE2-compatible"
     error_handling: "reject_with_schema_errors"
-    story_refs: ["S-21", "S-27", "S-31"]
+    story_refs: ["US-CP-002"]
 
   - order: 4
     name: "compile_cgir"
@@ -83,8 +84,8 @@ pipeline:
     input: "Validated Rule Schema"
     output: "CG-IR Snapshot (immutable)"
     operations:
-      - "For each rule: generate control node with pure evaluator"
-      - "Map rule fields to CG-IR node fields per §2.8.1"
+      - "For each rule: generate control node with pure detection evaluation"
+      - "Map rule fields (deontic, subject, predicate, detection, paired_policy_ref) to CG-IR node fields"
       - "Resolve depends_on references (execution IDs, not lineage_ids)"
       - "Apply conflict resolution mapping"
       - "Compute node_hash (dual hash: semantic_hash + presentation_hash)"
@@ -104,7 +105,7 @@ pipeline:
       - id: "INV-CP-034"
         statement: "DAG MUST be acyclic (cycle detection at compile time)"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-01", "S-23", "S-24"]
+    story_refs: ["US-CP-001"]
 
   - order: 5
     name: "incremental_reuse"
@@ -124,7 +125,7 @@ pipeline:
       - id: "INV-CP-041"
         statement: "Incremental reuse MUST NOT lose conflict resolution metadata"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-02"]
+    story_refs: ["US-CP-003"]
 
   - order: 6
     name: "publish"
@@ -147,8 +148,7 @@ pipeline:
       - id: "INV-CP-052"
         statement: "creator_provenance MUST be excluded from node_body hash"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-02", "S-22", "S-23"]
-
+    story_refs: ["US-CP-001", "US-CP-003"]
 concurrency_model:
   description: "Locking semantics for compilation"
   rules:
@@ -191,8 +191,8 @@ stories:
     i_want: "to validate schema before any CG-IR generation"
     so_that: "invalid directives never reach the execution layer"
     acceptance_criteria:
-      - "Given a rule with evaluator_type 'regex' but evaluator_config with 'field' key. When schema validation runs. Then the rule is rejected with SchemaError (evaluator pairing mismatch)."
-      - "Given a rule with composite evaluator depth > 32. When the custom complexity validator runs. Then the rule is rejected with SchemaError."
+      - "Given a rule with detection.strategy 'pattern' but only structural_spec present. When schema validation runs. Then the rule is rejected with SchemaError (detection strategy mismatch)."
+      - "Given a rule with composite detection depth > 32. When the custom complexity validator runs. Then the rule is rejected with SchemaError."
       - "Given a rule with non-UTC timestamp. When validation runs. Then the rule is rejected with SchemaError."
 
   - story_id: "US-CP-003"
@@ -201,4 +201,4 @@ stories:
     so_that: "compilation is efficient for large directive sets"
     acceptance_criteria:
       - "Given a directive set where only one rule changed. When incremental compilation runs. Then unchanged nodes reuse their previous node_hash values."
-      - "Given a node with only description changed. When incremental compilation runs. Then semantic_hash is preserved and downstream evaluator subgraphs are reused."
+      - "Given a node with only presentation fields changed. When incremental compilation runs. Then semantic_hash is preserved and downstream detection subgraphs are reused."

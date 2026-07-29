@@ -1,18 +1,18 @@
 @startuml selma_inspection_pipeline
 ' ============================================================
 ' Selma — Inspection Execution Pipeline
-' Source:  SPECIFICATION.md §2.10–§2.13, §3.3, §3.6, §3.7
-'          User_Stories.md S-10, S-15, S-16
+' Source:  docs/spec/contracts/inspection/pipeline.yaml
+'          docs/spec/contracts/inspection/finding_contract.yaml
 ' C4:      Rule Inspector → Snapshots Adapter → artifact_store
 '          Rule Inspector → Lifecycle Finder (finding birth)
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Submitted : <b>InspectionSubmitted</b>\nactor: Compliance Representative | System\ncommand: inspection.submit | reinspect\n[capability: inspection.submit | inspection.reinspect]\nstory: S-10 / S-15
+[*] --> Submitted : <b>InspectionSubmitted</b>\nactor: Compliance Representative | System\ncommand: inspection.submit | reinspect\n[capability: inspection.submit | inspection.reinspect]\nstory: US-IP-001 / US-IP-001
 
 state "Submitted" as Submitted #B9770E : **entry** target payload received\n**allowed** ingress check only\n**forbidden** evaluate without pin
 state "Ingress\nGranted" as IngressGranted #1B7A6E : **entry** capability + schema OK\n**allowed** set point-in-time pins\n**forbidden** mutate prior snapshots\npins: target_hash · cg_ir_snapshot_hash\nfrozen_env_hash · engine_version

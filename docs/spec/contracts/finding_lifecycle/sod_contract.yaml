@@ -39,7 +39,7 @@ sod_rules:
         - "fork: child inherits authored_by from parent"
         - "split: child inherits authored_by from parent"
         - "merge: creator_provenance = sorted-set union of all parent authored_by values"
-    story_refs: ["S-29", "S-32"]
+    story_refs: ["US-SD-001"]
 
   - rule_id: "SOD-002"
     name: "Evidence Submitter Cannot Approve Own Remediation"
@@ -60,7 +60,7 @@ sod_rules:
       reason: "segregation of duties: evidence submitter cannot approve own remediation"
       audit: true
     provenance_source: "Finding Event Stream (DispositionChanged events)"
-    story_refs: ["S-14a", "S-33"]
+    story_refs: ["US-SD-002"]
 
 capability_matrix:
   description: "Role-based capability assignments"

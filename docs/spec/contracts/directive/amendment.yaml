@@ -49,23 +49,26 @@ anchor_reference:
   examples:
     - "section:directives/specific_directives"
     - "section:definitions"
-    - "/directives/TRAF-001"
+    - "/directives/GOV-001"
   validation: "Compile-time MUST verify section: references against policy document structure"
 
 parameters_field:
-  description: "How parameters merge into evaluator_config"
+  description: "How parameters merge into detection_spec (and adapter_config overrides)"
   merge_algorithm:
-    step_1: "Start with a copy of evaluator_config"
-    step_2: "For each key in parameters, if key exists in copy, overwrite it"
-    step_3: "If key does not exist in copy, add it"
-    step_4: "Merged result becomes CG-IR node's evaluator.config"
-  constraint: "parameters MUST NOT contain keys that change evaluator structural type"
+    step_1: "Start with a deep copy of rule.detection (detection_spec)"
+    step_2: "For each key in parameters, apply shallow overwrite to the active strategy sub-object or adapters[].adapter_config"
+    step_3: "If key does not exist in the target object, add it"
+    step_4: "Merged result becomes CG-IR node's detection payload"
+  constraint: "parameters MUST NOT change detection.strategy or remove required strategy sub-objects"
   example:
     input:
-      evaluator_type: "threshold"
-      evaluator_config: {"field": "coverage", "operator": "gte", "threshold": 80}
+      detection:
+        strategy: "structural"
+        structural_spec: {"field": "coverage", "operator": "gte", "threshold": 80}
       parameters: {"threshold": 95}
-    output: {"field": "coverage", "operator": "gte", "threshold": 95}
+    output:
+      strategy: "structural"
+      structural_spec: {"field": "coverage", "operator": "gte", "threshold": 95}
 
 invariants:
   - id: "INV-AM-001"
@@ -73,7 +76,7 @@ invariants:
     enforcement: "compile_time_validation"
 
   - id: "INV-AM-002"
-    statement: "Parameters MUST NOT change evaluator structural type"
+    statement: "Parameters MUST NOT change detection.strategy or its required sub-object shape"
     enforcement: "compile_time_validation"
 
   - id: "INV-AM-003"
@@ -88,4 +91,4 @@ stories:
     acceptance_criteria:
       - "Given a rule with x-exec-hint in metadata. When schema validation runs. Then the key is rejected by structural guard."
       - "Given a rule with valid audit metadata. When compiled. Then metadata does not participate in semantic_hash."
-      - "Given a parameters field that overrides threshold. When compiled. Then evaluator.config has the overridden value."
+      - "Given a parameters field that overrides structural_spec.threshold. When compiled. Then detection.structural_spec has the overridden value."

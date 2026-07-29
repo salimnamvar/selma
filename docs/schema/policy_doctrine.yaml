@@ -5,7 +5,7 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 1.0.0
+# NORMATIVE BEHAVIORAL SOURCE: docs/spec/contracts/
 # This file is a governance intent layer, not a structural or behavioral source.
 #
 # BREAKING CHANGE: Version 1.0.0 introduces universal vocabulary abstraction.
@@ -40,18 +40,18 @@ doctrine:
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
 # This policy is the governance intent layer.
-# SPECIFICATION.md is the normative behavioral source.
-# rule_schema.json is the structural projection of spec invariants.
+# docs/spec/contracts/ is the normative behavioral source.
+# rule_schema.json is the structural projection of contract invariants.
 # Policy MUST NOT contain elements that contradict spec invariants.
 cross_layer_binding:
-  normative_source: "SPECIFICATION.md"
+  normative_source: "docs/spec/contracts/"
   policy_purpose: "Governance intent description"
   schema_purpose: "Structural projection of spec invariants"
   enforcement: "Governance intent is enforced indirectly: compile-time validators check schema field legality against spec invariants"
   conflict_resolution_binding:
     policy_layer: "Declares computed-factor intent (priority, specificity, recency). No override fields."
     schema_layer: "Optional conflict_resolution field is structural override data only."
-    spec_layer: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
+    spec_layer: "Normative resolve_conflict algorithm defined in docs/spec/contracts/conflict/"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_role: >
     This file IS read at runtime, but ONLY AFTER evaluation produces a finding.
@@ -93,7 +93,7 @@ identity_resolution:
       because governance processes (amendments, sanctions, reviews) depend
       on stable identity references. Implementation mapping to
       rule.lineage_id and compile-time binding details are defined in
-      SPECIFICATION.md §2.3.
+      docs/spec/contracts/directive/identity.yaml.
   uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z]{2,5}-\\d{3}[A-Z]?$"
   taxonomy_prefixes:
     GOV: "Cross-cutting governance"
@@ -107,25 +107,25 @@ identity_resolution:
     DOC: "Documentation rules"
   lifecycle_reference: >
     Identity lifecycle operations (fork, merge, split) are defined in
-    SPECIFICATION.md Section 2.2 and encoded in rule_schema.json lineage field.
+    docs/spec/contracts/directive/identity.yaml and encoded in rule_schema.json lineage field.
     This policy describes governance intent for when to use each operation.
 
 # ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
 # Describes WHEN to use each lifecycle operation. Implementation details
-# are in SPECIFICATION.md and rule_schema.json.
+# are in docs/spec/contracts/directive/ and rule_schema.json.
 lifecycle_definition:
   revision: "Use when changing description, parameters, scope, or detection within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
   merge: >
     Use when two directives combine into one with unified semantic intent.
     The governing body intends that the lexicographically smaller parent
-    Machine ID becomes the merged lineage root (see SPECIFICATION.md §2.2.2).
+    Machine ID becomes the merged lineage root (see docs/spec/contracts/directive/identity.yaml).
     NOTE: The lexicographic minimum approach is deterministic but
     semantically lossy — e.g. merging PAY-800 and AUTH-001 produces
     AUTH-001 as root, which loses the PAY-800 provenance. A future
     MERGE-NN namespace (e.g. MGR-18) could preserve provenance explicitly.
     Current approach is accepted with mandatory mitigations per
-    SPECIFICATION.md §2.2.2 (provenance surfacing, parent_lineage_ids
+    docs/spec/contracts/directive/identity.yaml (provenance surfacing, parent_lineage_ids
     display, non-surviving parent tracing).
   split: "Use when one directive restructured into multiple independent directives."
   rename: "Use when display name changes but semantic intent is unchanged."
@@ -133,7 +133,7 @@ lifecycle_definition:
   dag_intent: >
     Lineage ancestry MUST form a directed acyclic graph. Cycles and excessive
     depth (>64 operations) are prohibited. Implementation invariants are
-    defined in SPECIFICATION.md §2.2.3.
+    defined in docs/spec/contracts/directive/identity.yaml.
 
 # ─── VOCABULARY ─────────────────────────────────────────────────
 # Domain vocabulary makes this policy applicable across languages and domains.
@@ -579,7 +579,7 @@ contamination_guard:
   metadata_constraints: >
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
-    declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
+    declared namespaces (audit, vendor, author, migration) per docs/spec/contracts/directive/amendment.yaml.
   vocabulary_enforcement: >
     Prohibited also: any domain-specific term used outside of vocabulary.domain_mappings
     (e.g., using "function" in policy text instead of "operation"; using "raise" instead
@@ -614,7 +614,7 @@ writing_principles:
 # ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
 # This is a DESCRIPTION of governance intent, not an executable algorithm.
 # The compilation engine translates this into CG-IR conflict resolution logic
-# via the Conflict Resolution Mapping in SPECIFICATION.md Section 2.15.
+# via the Conflict Resolution Mapping in docs/spec/contracts/conflict/.
 priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
@@ -653,12 +653,12 @@ priority_hierarchy:
     conflict_resolution field) → compatible_overrides (symmetric pairs)
     → priority → specificity → recency → Conflict Artifact.
     This is governance intent only — not executable logic in this file.
-    The compilation engine implements this via SPECIFICATION.md
+    The compilation engine implements this via docs/spec/contracts/conflict/
     Section 2.15. Optional explicit override (conflict_resolution field in
     rule_schema.json) is a structural data carrier checked FIRST by the engine
     before any computed factor. Policy MUST NOT define override fields.
   cross_layer_precedence:
-    precedence_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
+    precedence_algorithm: "docs/spec/contracts/conflict/precedence.yaml resolve_conflict"
     structural_override: "rule_schema.json conflict_resolution field (optional)"
     policy_role: "Declarative intent for computed factors only"
     order: "explicit override (schema) → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
@@ -685,7 +685,7 @@ version_strategy:
     All three documents MUST share the same MAJOR version. MINOR and PATCH
     versions MAY differ independently within the same MAJOR family.
     MAJOR mismatch is incompatible. This is a compatibility matrix, not
-    strict version equality. See SPECIFICATION.md §5 for the normative
+    strict version equality. See docs/spec/contracts/meta/versioning.yaml for the normative
     compatibility matrix and formal compatibility rule.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────

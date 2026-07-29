@@ -66,14 +66,14 @@ sod_constraints:
     capability: "finding.waive"
     check: "actor NOT IN creator_provenance(finding.control_id)"
     enforcement: "finding_fsm_engine"
-    story_refs: ["S-29", "S-32"]
+    story_refs: ["US-SD-001"]
 
   - constraint_id: "SOD-002"
     name: "Evidence Submitter Cannot Approve Own Remediation"
     capability: "finding.approve_remediation"
     check: "actor != evidence_submitter(finding_id)"
     enforcement: "finding_fsm_engine"
-    story_refs: ["S-14a", "S-33"]
+    story_refs: ["US-SD-002"]
 
 invariants:
   - id: "INV-RM-001"

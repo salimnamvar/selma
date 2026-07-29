@@ -1,18 +1,18 @@
 @startuml selma_directive_lifecycle
 ' ============================================================
 ' Selma — Directive Lifecycle State Machine
-' Source:  SPECIFICATION.md §2.2, §2.2.4, §2.3, §2.5
-'          User_Stories.md S-01, S-02, S-03, S-08, S-19, S-20, S-26
+' Source:  docs/spec/contracts/directive/lifecycle.yaml
+'          docs/spec/contracts/directive/identity.yaml
 ' C4:      Application Service + Directives Adapter → directive_store
 '          Hermetic Compiler on every publish / identity op
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Draft : <b>DirectiveCreated</b>\nactor: Regulatory Official\ncommand: directive.create\n[capability: directive.create]\n/ assignLineageId()\n/ executionIdEqualsLineage()\n/ authoredByActor()\nstory: S-01
+[*] --> Draft : <b>DirectiveCreated</b>\nactor: Regulatory Official\ncommand: directive.create\n[capability: directive.create]\n/ assignLineageId()\n/ executionIdEqualsLineage()\n/ authoredByActor()\nstory: US-CP-001
 
 state "Draft" as Draft #B9770E : **entry** mutable drafting\n**allowed** modify · publish compile\n**forbidden** retire · fork · merge · split\n**identity** lineage_id + execution_id fixed
 state "Active" as Active #2C6E49 : **entry** published & operational in CG-IR\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split\n**forbidden** create (new root uses Draft)
@@ -29,21 +29,21 @@ state "Identity Spawn" as IdentitySpawn #1B7A6E {
 }
 
 ' ---------- Internal revisions (STM-018 / STM-035: no re-entry) ----------
-Draft : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n/ recordRevision()\n/ idsUnchanged()\nstory: S-02
-Active : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n[exclusiveWriteLockAndCompileSuccess]\n/ recordRevision()\n/ idsUnchanged()\nstory: S-02
+Draft : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n/ recordRevision()\n/ idsUnchanged()\nstory: US-CP-003
+Active : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n[exclusiveWriteLockAndCompileSuccess]\n/ recordRevision()\n/ idsUnchanged()\nstory: US-CP-003
 
 ' ---------- Status transitions ----------
-Draft --> Active : <b>DirectivePublished</b>\nactor: Regulatory Official + System\ncommand: directive.modify (publish)\n[capability: directive.modify]\n[hermeticCompileSuccess]\n/ publishCgIrSnapshot()\nstory: S-01 / S-02
+Draft --> Active : <b>DirectivePublished</b>\nactor: Regulatory Official + System\ncommand: directive.modify (publish)\n[capability: directive.modify]\n[hermeticCompileSuccess]\n/ publishCgIrSnapshot()\nstory: US-CP-001 / US-CP-003
 
-Active --> Deprecated : <b>DirectiveRetired</b>\nactor: Regulatory Official\ncommand: directive.retire\n[capability: directive.retire]\n/ recordReason()\n/ markCgIrDeprecated()\nstory: S-03
+Active --> Deprecated : <b>DirectiveRetired</b>\nactor: Regulatory Official\ncommand: directive.retire\n[capability: directive.retire]\n/ recordReason()\n/ markCgIrDeprecated()\nstory: US-DL-001
 Active --> Superseded : <b>DirectiveSuperseded</b>\nactor: Regulatory Official\ncommand: directive.modify (supersede)\n[capability: directive.modify]\n[supersededByActiveOrDraftId]\n[successorCompileValidated]\n§2.2.4
 
-Deprecated --> Draft : <b>DirectiveRestored</b>\nactor: Regulatory Official\ncommand: directive.restore\n[capability: directive.restore]\n/ copyTargetRevision()\n/ preserveLineageId()\n[must recompile to re-activate]\nstory: S-08
+Deprecated --> Draft : <b>DirectiveRestored</b>\nactor: Regulatory Official\ncommand: directive.restore\n[capability: directive.restore]\n/ copyTargetRevision()\n/ preserveLineageId()\n[must recompile to re-activate]\nstory: US-DL-001
 
 ' ---------- Enter identity spawn (target specific substate) ----------
-Active --> ForkChildren : <b>DirectiveForked</b>\nactor: Regulatory Official\ncommand: directive.fork\n[capability: directive.fork]\n/ parentSideEffectDeprecated()\nstory: S-19
-Active --> MergeResult : <b>DirectiveMerged</b>\nactor: Regulatory Official\ncommand: directive.merge\n[capability: directive.merge]\n/ bothParentsSideEffectDeprecated()\nstory: S-20
-Active --> SplitChildren : <b>DirectiveSplit</b>\nactor: Regulatory Official\ncommand: directive.split\n[capability: directive.fork]\n[nArySplitSharesForkGate]\n/ parentSideEffectDeprecated()\nstory: S-26
+Active --> ForkChildren : <b>DirectiveForked</b>\nactor: Regulatory Official\ncommand: directive.fork\n[capability: directive.fork]\n/ parentSideEffectDeprecated()\nstory: US-ID-001
+Active --> MergeResult : <b>DirectiveMerged</b>\nactor: Regulatory Official\ncommand: directive.merge\n[capability: directive.merge]\n/ bothParentsSideEffectDeprecated()\nstory: US-ID-001
+Active --> SplitChildren : <b>DirectiveSplit</b>\nactor: Regulatory Official\ncommand: directive.split\n[capability: directive.fork]\n[nArySplitSharesForkGate]\n/ parentSideEffectDeprecated()\nstory: US-ID-001
 
 ForkChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncommand: materialize child rules\n/ newExecutionIdInstances()\n/ draftStatus()
 MergeResult --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncommand: materialize merge result\n/ newExecutionId()\n/ draftStatus()

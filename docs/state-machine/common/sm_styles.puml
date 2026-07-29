@@ -1,6 +1,6 @@
 ' ============================================================
 ' Selma — Shared State Machine Theme
-' Contract: SPECIFICATION.md 8.2.4
+' Contract: docs/spec/contracts/ 1.0.0
 ' Usage:    !include ./common/sm_styles.puml
 '
 ' Governance:

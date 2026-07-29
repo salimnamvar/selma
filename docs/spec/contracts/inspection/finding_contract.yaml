@@ -38,11 +38,11 @@ finding_schema:
     - field: "severity"
       type: "enum"
       values: ["critical", "high", "medium", "low", "informational"]
-      description: "Finding severity (computed from evaluator outcome + deontic type)"
+      description: "Finding severity (computed from detection outcome + deontic modality)"
     - field: "outcome"
       type: "enum"
       values: ["Pass", "Fail", "Partial", "NeedsReview"]
-      description: "Raw evaluator outcome from §2.9 evaluator contract"
+      description: "Raw detection outcome from the inspection evaluation contract (detection_spec / adapters)"
     - field: "confidence"
       type: "float"
       range: "0.0–1.0"
@@ -64,7 +64,7 @@ finding_schema:
       description: "Actor ID of last state transition"
 
 outcome_to_finding_mapping:
-  description: "How evaluator outcomes map to finding creation and severity"
+  description: "How detection outcomes map to finding creation and severity"
   rules:
     - outcome: "Pass"
       finding_created: false
@@ -89,7 +89,7 @@ outcome_to_finding_mapping:
       notes: "Always informational — cannot escalate without human review"
 
 deontic_type_semantics:
-  description: "How deontic type affects finding creation"
+  description: "How deontic modality affects finding creation"
   rules:
     - type: "obligation"
       pass: "No finding"

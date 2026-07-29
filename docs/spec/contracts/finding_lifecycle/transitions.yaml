@@ -29,7 +29,7 @@ transitions:
     actor: "compliance_representative"
     capability: "finding.acknowledge"
     sod_check: null
-    story_ref: "S-12"
+    story_ref: "US-FL-010"
     notes: "Compliance Representative accepts finding and begins remediation"
 
   - id: "TR-FL-003"
@@ -39,7 +39,7 @@ transitions:
     actor: "regulatory_official"
     capability: "finding.dismiss"
     sod_check: null
-    story_ref: "S-25"
+    story_ref: "US-FL-001"
     notes: "Regulatory Official determines finding is invalid"
 
   - id: "TR-FL-004"
@@ -57,7 +57,7 @@ transitions:
       enforcement_point: "finding_fsm_engine"
       denial_code: "403 CapabilityDenied"
       denial_reason: "segregation of duties violation"
-    story_ref: "S-29"
+    story_ref: "US-SD-001"
     notes: "Regulatory Official accepts risk; SoD check required before transition"
 
   - id: "TR-FL-005"
@@ -67,7 +67,7 @@ transitions:
     actor: "compliance_representative"
     capability: "evidence.submit"
     sod_check: null
-    story_ref: "S-13"
+    story_ref: "US-FL-010"
     notes: "Compliance Representative attaches remediation evidence"
 
   - id: "TR-FL-006"
@@ -95,7 +95,7 @@ transitions:
       enforcement_point: "finding_fsm_engine"
       denial_code: "403 CapabilityDenied"
       denial_reason: "segregation of duties violation"
-    story_ref: "S-14a"
+    story_ref: "US-SD-002"
     notes: "Regulatory Official approves remediation; triggers automatic Verified→Closed"
 
   - id: "TR-FL-008"
@@ -105,7 +105,7 @@ transitions:
     actor: "regulatory_official"
     capability: "finding.reject_remediation"
     sod_check: null
-    story_ref: "S-14b"
+    story_ref: "US-FL-010"
     notes: "Regulatory Official rejects remediation evidence"
 
   - id: "TR-FL-009"
@@ -115,7 +115,7 @@ transitions:
     actor: "regulatory_official"
     capability: "finding.reject_remediation"
     sod_check: null
-    story_ref: "S-14c"
+    story_ref: "US-FL-010"
     notes: >
       Regulatory Official reopens with comments.
       Gating capability is finding.reject_remediation (same as reject).

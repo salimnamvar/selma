@@ -1,19 +1,19 @@
 @startuml selma_conflict_resolution
 ' ============================================================
 ' Selma — Conflict Resolution State Machine
-' Source:  SPECIFICATION.md §2.15, §2.15.1, §2.15.2
-'          User_Stories.md S-05, S-28
+' Source:  docs/spec/contracts/conflict/detection.yaml
+'          docs/spec/contracts/conflict/precedence.yaml
 ' C4:      Conflict Resolver
 '          artifacts → Snapshots Adapter → artifact_store
 '          denials → Findings & Audit Trail Adapter → event_store
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> DetectPair : <b>ConflictDetectionStarted</b>\nactor: System (Compiler | Rule Inspector)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nstory: S-05 / S-28
+[*] --> DetectPair : <b>ConflictDetectionStarted</b>\nactor: System (Compiler | Rule Inspector)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nstory: US-CD-001 / US-PR-001
 
 state "Detect\nConflicting Pair" as DetectPair #B9770E : **entry** scan conflicts_with or\noutcome contradiction\n(same lineage, both Fail,\ncontradictory deontics)\n**allowed** pair classify only\n**forbidden** mutate findings
 state "No Conflict" as NoConflict #2C6E49 : **entry** no pair / both Pass\nPass+Fail / same-type Fail\n**allowed** terminal no-op\n**forbidden** artifact creation

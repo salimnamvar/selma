@@ -2,9 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas/universal-rule-schema.json",
   "title": "Universal Rule Schema 1.0.0",
-  "description": "Domain-agnostic rule structure with deontic logic, adapter-based detection, and lineage tracking. Finding lifecycle states are documented in x-finding-fsm (informative; normative source: SPECIFICATION.md §3.1).",
+  "description": "Domain-agnostic rule structure with deontic logic, adapter-based detection, and lineage tracking. Finding lifecycle states are documented in x-finding-fsm (informative; normative source: docs/spec/contracts/finding_lifecycle/).",
   "x-spec-version": "1.0.0",
-  "x-normative-status": "All x-* keys in this schema are informative and non-normative. SPECIFICATION.md is the sole normative source.",
+  "x-normative-status": "All x-* keys in this schema are informative and non-normative. docs/spec/contracts/ is the sole normative behavioral source.",
   "x-breaking-change": {
     "from_version": "8.2.4",
     "to_version": "1.0.0",
@@ -33,34 +33,34 @@
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
     "policy_runtime_role": "policy_doctrine.yaml is read AFTER evaluation for guidance/reasoning. It is NOT used for evaluation, inspection, or FSM transitions. The finding analyzer reads the paired policy doctrine to populate guidance fields for humans and AI agents.",
-    "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
-    "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
+    "runtime_executable_source": "docs/spec/contracts/conflict/ resolve_conflict over schema/CG-IR fields only",
+    "rule": "docs/spec/contracts/ is the normative behavioral source. Schema is a structural projection of contract invariants. Policy describes governance intent only.",
     "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
     "adapter_pattern_note": "Language-specific detection details belong ONLY in detection_spec.adapters[].adapter_config. The universal detection spec (structural_spec, semantic_spec, pattern_spec, composite_spec) MUST remain language-agnostic. Adapters translate abstract detection to concrete language-specific evaluators.",
     "policy_contract_version_check": "JSON Schema cannot enforce that policy_contract_version matches the paired policy_doctrine.yaml version. The compilation engine MUST reject datasets where major(policy_contract_version) != major(policy.version) at compile time.",
-    "audit_corpus": "Formal verification audits MUST include SPECIFICATION.md, rule_schema.json, policy_doctrine.yaml, User_Stories.md, and this Contracts Directory (README.md) as the complete normative corpus."
+    "audit_corpus": "Formal verification audits MUST include docs/spec/contracts/, rule_schema.json, policy_doctrine.yaml, and docs/spec/README.md as the complete normative corpus. Archived prose lives under docs/spec/ARCHIVE_* for historical reference only."
   },
   "x-discriminator-note": {
     "normative_status": "informative",
     "primary_discriminator": "detection_spec.strategy determines which spec sub-object is active (structural_spec, semantic_spec, pattern_spec, composite_spec)",
     "adapter_discriminator": "detection_spec.adapters[].target identifies the language/platform for each adapter; adapter_id references registered adapter implementation",
-    "normative_gate": "SPECIFICATION.md §2.9 AST-walking discriminator validator is mandatory; engines relying on JSON Schema alone are non-conformant"
+    "normative_gate": "docs/spec/contracts/compilation/pipeline.yaml AST-walking detection.strategy discriminator is mandatory; engines relying on JSON Schema alone are non-conformant"
   },
   "x-finding-fsm": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §3.1",
+    "normative_reference": "docs/spec/contracts/finding_lifecycle/",
     "states": ["Created", "Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Verified", "Rejected", "Dismissed", "Waived", "Closed"],
     "terminal_states": ["Closed", "Dismissed"],
     "transitions": [
       {"from": "Created", "to": "Open", "trigger": "automatic", "actor": "system"},
-      {"from": "Open", "to": "Acknowledged", "trigger": "finding.acknowledge", "actor": "compliance_representative", "story": "S-12"},
-      {"from": "Open", "to": "Dismissed", "trigger": "finding.dismiss", "actor": "regulatory_official", "story": "S-25"},
-      {"from": "Open", "to": "Waived", "trigger": "finding.waive", "actor": "regulatory_official", "story": "S-29"},
-      {"from": "Acknowledged", "to": "Evidence Submitted", "trigger": "evidence.submit", "actor": "compliance_representative", "story": "S-13"},
+      {"from": "Open", "to": "Acknowledged", "trigger": "finding.acknowledge", "actor": "compliance_representative", "story": "US-FL-010"},
+      {"from": "Open", "to": "Dismissed", "trigger": "finding.dismiss", "actor": "regulatory_official", "story": "US-FL-001"},
+      {"from": "Open", "to": "Waived", "trigger": "finding.waive", "actor": "regulatory_official", "story": "US-SD-001"},
+      {"from": "Acknowledged", "to": "Evidence Submitted", "trigger": "evidence.submit", "actor": "compliance_representative", "story": "US-FL-010"},
       {"from": "Evidence Submitted", "to": "Pending Verification", "trigger": "automatic", "actor": "system"},
-      {"from": "Pending Verification", "to": "Verified", "trigger": "finding.approve_remediation", "actor": "regulatory_official", "story": "S-14a"},
-      {"from": "Pending Verification", "to": "Rejected", "trigger": "finding.reject_remediation", "actor": "regulatory_official", "story": "S-14b"},
-      {"from": "Rejected", "to": "Open", "trigger": "finding.reopen", "actor": "regulatory_official", "story": "S-14c"},
+      {"from": "Pending Verification", "to": "Verified", "trigger": "finding.approve_remediation", "actor": "regulatory_official", "story": "US-SD-002"},
+      {"from": "Pending Verification", "to": "Rejected", "trigger": "finding.reject_remediation", "actor": "regulatory_official", "story": "US-FL-010"},
+      {"from": "Rejected", "to": "Open", "trigger": "finding.reopen", "actor": "regulatory_official", "story": "US-FL-010"},
       {"from": "Verified", "to": "Closed", "trigger": "automatic", "actor": "system"},
       {"from": "Waived", "to": "Closed", "trigger": "automatic", "actor": "system"}
     ],
@@ -68,7 +68,7 @@
   },
   "x-portability-note": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §2.9, §9.2.15",
+    "normative_reference": "docs/spec/contracts/compilation/ (pipeline + hermetic_boundary); certification/gates.yaml AA-07",
     "schema_limitation": "JSON Schema structural validation is necessary but insufficient for cross-runtime determinism",
     "compile_time_engine_invariants": [
       "RE2-compatible regex patterns only — PCRE features (backreferences, atomic groups) rejected by RE2 linter pass",
@@ -76,12 +76,12 @@
       "IEEE 754 finite doubles only — NaN and ±Infinity rejected in numeric fields",
       "UTC-only timestamps — ISO 8601 with Z suffix; ±HH:MM offsets rejected"
     ],
-    "enforcement": "Reference validator (§9.2.15) and RE2 canary vectors (§9.2.6) are mandatory compile-time gates; see User_Stories.md S-21, S-31"
+    "enforcement": "Reference validator and RE2 canary vectors are mandatory compile-time gates; see US-CP-002 and certification AA-07"
   },
   "x-cg-ir-hashing": {
     "normative_status": "informative",
     "node_hash_scope": "local",
-    "dual_hash_model": "semantic_hash (detection, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (message, directive_revision, control_version) compose node_hash per SPECIFICATION.md §2.6",
+    "dual_hash_model": "semantic_hash (detection, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (message, directive_revision, control_version) compose node_hash per docs/spec/contracts/compilation/pipeline.yaml",
     "semantic_body_fields": ["directive_id", "lineage_id", "deontic", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
     "presentation_body_fields": ["message", "directive_revision", "control_version"],
     "node_body_fields": ["directive_id", "lineage_id", "deontic", "directive_revision", "control_version", "message", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
@@ -113,7 +113,7 @@
     "lifecycle": {
       "revision": "Same lineage_id, same id, new revision. lineage field NOT required.",
       "fork": "Same lineage_id inherited, two new ids. lineage field REQUIRED.",
-      "merge": "Merged lineage_id = lexicographic min of parent lineage_ids; new execution id per §2.2.2. lineage field REQUIRED.",
+      "merge": "Merged lineage_id = lexicographic min of parent lineage_ids; new execution id per docs/spec/contracts/directive/identity.yaml. lineage field REQUIRED.",
       "split": "Same lineage_id inherited, multiple new ids. lineage field REQUIRED.",
       "rename": "Same lineage_id, same id. lineage field NOT required.",
       "retire": "Same lineage_id, same id, status=deprecated. lineage field NOT required."
@@ -145,12 +145,12 @@
   },
   "x-identity-limits": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §2.2.3",
+    "normative_reference": "docs/spec/contracts/directive/identity.yaml",
     "max_ancestry_depth": 64
   },
   "x-creator-provenance": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §3.2",
+    "normative_reference": "docs/spec/contracts/finding_lifecycle/sod_contract.yaml; authorization/",
     "field": "metadata.audit.authored_by",
     "cg_ir_field": "creator_provenance",
     "inheritance": {
@@ -164,7 +164,7 @@
   },
   "x-complexity-limits": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §2.9",
+    "normative_reference": "docs/spec/contracts/compilation/pipeline.yaml",
     "max_composite_depth": 32,
     "max_detection_nodes_per_rule": 256,
     "max_composite_width": 64,
@@ -176,22 +176,22 @@
   },
   "x-portable-validation": {
     "normative_status": "informative",
-    "normative_reference": "SPECIFICATION.md §9.2.15",
+    "normative_reference": "docs/spec/contracts/compilation/pipeline.yaml; certification/gates.yaml AA-07",
     "utc_datetime_pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
     "finite_numeric_required": "All type:number fields MUST be finite (not NaN, not ±Infinity). Enforced at compile time by reference validator pre-pass, not JSON Schema alone.",
-    "re2_canary_vectors": "SPECIFICATION.md §9.2.6"
+    "re2_canary_vectors": "docs/spec/contracts/certification/gates.yaml AA-07; compilation portable-validation"
   },
   "x-conflict-resolution-binding": {
     "normative_status": "informative",
-    "specificity_algorithm": "SPECIFICATION.md §2.15 specificity_score (normative)",
-    "specificity_metric": "SPECIFICATION.md §2.15 defines specificity as a composite score using scope_specificity_score from §2.8.2 and detection field binding. Two implementations MUST agree on specificity ranking for identical CG-IR node bodies.",
+    "specificity_algorithm": "docs/spec/contracts/conflict/precedence.yaml specificity_score (normative)",
+    "specificity_metric": "docs/spec/contracts/conflict/precedence.yaml defines specificity as a composite score using scope_specificity_score and detection field binding. Two implementations MUST agree on specificity ranking for identical CG-IR node bodies.",
     "priority_level_mapping": {"constitutional": 1, "statutory": 2, "regulatory": 3, "operational": 4, "advisory": 5},
     "spec_model": "Deterministic multi-factor: explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency",
     "schema_model": "conflict_resolution field provides explicit override only; not a standalone algorithm",
     "precedence": "Explicit override (conflict_resolution field) takes precedence over computed resolution. If no conflict_resolution field, spec multi-factor algorithm applies.",
-    "cycle_handling": "defer_to_cycle_detection via DFS (§2.15): any directed cycle in defer_to subgraph causes all defer_to overrides to be ignored; fall through to computed resolution. If target rule in defer_to does not exist or is ambiguous (post-fork), the override is ignored; fall through to computed resolution.",
-    "compatible_overrides": "Symmetric pairs {always_wins, never_wins} and identical defer_to targets resolve deterministically per §2.15 compatible_overrides(). Incompatible dual overrides escalate to Conflict Artifact.",
-    "defer_to_resolution": "SPECIFICATION.md §2.15 defer_to_reference_resolution (normative): resolve to active rule by execution ID; follow lineage chain for deprecated targets; if multiple active children exist post-fork, escalate to Conflict Artifact",
+    "cycle_handling": "defer_to_cycle_detection via DFS (docs/spec/contracts/conflict/precedence.yaml): any directed cycle in defer_to subgraph causes all defer_to overrides to be ignored; fall through to computed resolution. If target rule in defer_to does not exist or is ambiguous (post-fork), the override is ignored; fall through to computed resolution.",
+    "compatible_overrides": "Symmetric pairs {always_wins, never_wins} and identical defer_to targets resolve deterministically per conflict/precedence compatible_overrides(). Incompatible dual overrides escalate to Conflict Artifact.",
+    "defer_to_resolution": "docs/spec/contracts/conflict/precedence.yaml defer_to_reference_resolution (normative): resolve to active rule by execution ID; follow lineage chain for deprecated targets; if multiple active children exist post-fork, escalate to Conflict Artifact",
     "scope_boundary": "Conflict resolution applies within same lineage. Cross-lineage conflicts are flagged as Conflict Artifacts for human review.",
     "policy_model": "Declarative intent description only. Compilation engine implements via spec multi-factor algorithm."
   },
@@ -206,7 +206,7 @@
     "version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Directive graph version (semantic version of this rule dataset). Distinct from cg_ir_snapshot_hash in SPECIFICATION.md §2.6. MUST share the same MAJOR version as the spec for compatibility."
+      "description": "Directive graph version (semantic version of this rule dataset). Distinct from cg_ir_snapshot_hash in compilation/pipeline. MUST share the same MAJOR version as schema_version for compatibility."
     },
     "policy_contract_version": {
       "type": "string",
@@ -220,7 +220,7 @@
     },
     "metadata": {
       "type": "object",
-      "description": "Informational context only. MUST NOT contain executable hints. See SPECIFICATION.md §7.1.",
+      "description": "Informational context only. MUST NOT contain executable hints. See docs/spec/contracts/directive/amendment.yaml.",
       "properties": {
         "audit": {
           "type": "object",
@@ -290,7 +290,7 @@
     "utc_datetime": {
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
-      "description": "ISO 8601 UTC timestamp (Z suffix required). Offsets (±HH:MM) are rejected per SPECIFICATION.md §9.2.15."
+      "description": "ISO 8601 UTC timestamp (Z suffix required). Offsets (±HH:MM) are rejected per compilation portable-validation and certification AA-07."
     },
     "deontic_modality": {
       "type": "string",
@@ -673,7 +673,7 @@
         "anchor_ref": {
           "type": "string",
           "pattern": "^(section:[a-z][a-z_]*(/[a-z_]+)?|/.+)$",
-          "description": "Link back to policy document. section: refs or JSON Pointer per SPECIFICATION.md §7.2. JSON Pointer format follows RFC 6901."
+          "description": "Link back to policy document. section: refs or JSON Pointer per docs/spec/contracts/directive/amendment.yaml. JSON Pointer format follows RFC 6901."
         },
         "directive_revision": {
           "type": "string",
@@ -685,7 +685,7 @@
         },
         "scope": {
           "type": "object",
-          "description": "Structured applicability context. Replaces bare target string for deterministic scope filtering and specificity scoring per SPECIFICATION.md §2.8.2.",
+          "description": "Structured applicability context. Replaces bare target string for deterministic scope filtering and specificity scoring per docs/spec/contracts/conflict/precedence.yaml.",
           "properties": {
             "target_type": {
               "type": "string",
@@ -719,7 +719,7 @@
         },
         "metadata": {
           "type": "object",
-          "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See SPECIFICATION.md §7.1. metadata.audit.authored_by is required for active rules and compiled to creator_provenance per §3.2.",
+          "description": "Per-rule metadata. Informational only — MUST NOT contain executable hints. See docs/spec/contracts/directive/amendment.yaml. metadata.audit.authored_by is required for active rules and compiled to creator_provenance per finding_lifecycle/sod_contract.",
           "properties": {
             "audit": {
               "type": "object",
@@ -764,7 +764,7 @@
         },
         "conflict_resolution": {
           "type": "object",
-          "description": "Explicit conflict resolution override. Takes precedence over computed resolution per SPECIFICATION.md Section 2.15.",
+          "description": "Explicit conflict resolution override. Takes precedence over computed resolution per docs/spec/contracts/conflict/precedence.yaml.",
           "properties": {
             "strategy": { "type": "string", "enum": ["always_wins", "never_wins", "defer_to"] },
             "defer_to": { "type": "string", "description": "Rule ID to defer to (required if strategy=defer_to)" }
@@ -776,7 +776,7 @@
         },
         "created_at": {
           "$ref": "#/$defs/utc_datetime",
-          "description": "ISO 8601 UTC timestamp. Participates in conflict resolution recency step (§2.15)."
+          "description": "ISO 8601 UTC timestamp. Participates in conflict resolution recency step (docs/spec/contracts/conflict/precedence.yaml)."
         },
         "expires_at": {
           "$ref": "#/$defs/utc_datetime",

@@ -1,8 +1,8 @@
 @startuml selma_machine_interaction
 ' ============================================================
 ' Selma — State Machine Interaction Overview
-' Source:  C4 component map + docs/state-machine ownership
-' Contract: 8.2.4
+' Source:  docs/c4-model/c4_selma_component.puml + docs/state-machine ownership
+' Contract: 1.0.0
 ' Role:    Cross-machine handoff overview (not a lifecycle aggregate)
 ' ============================================================
 

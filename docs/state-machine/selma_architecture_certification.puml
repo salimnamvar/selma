@@ -1,11 +1,10 @@
 @startuml selma_architecture_certification
 ' ============================================================
 ' Selma — Architectural Certification State Machine
-' Source:  SPECIFICATION.md §9.9 (AA-01 … AA-07)
-'          User_Stories.md S-30
+' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-07)
 ' C4:      Architectural Auditor → Snapshots Adapter → artifact_store
 '          trigger: CI/CD → Application Service
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · hierarchical AA composite · no runtime policy contamination</i></size>
@@ -61,7 +60,7 @@ AA06 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa06()
 AA07 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa07()
 
 Passed --> Certified : <b>CertificationSealed</b>\nactor: System\ncommand: write-once pass evidence + gate report
-Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: S-30
+Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: US-GA-001
 Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nactor: System
 
 Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async audit_platform replica

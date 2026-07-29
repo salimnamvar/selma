@@ -1,6 +1,6 @@
 # versioning.yaml
 # Normative source for version compatibility rules.
-# Replaces SPECIFICATION.md §5.
+# Replaces ARCHIVE_SPECIFICATION.md §5.
 
 contract_id: "meta.versioning"
 schema_version: "1.0.0"

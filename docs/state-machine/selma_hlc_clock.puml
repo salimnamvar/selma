@@ -1,9 +1,9 @@
 @startuml selma_hlc_clock
 ' ============================================================
 ' Selma — Hybrid Logical Clock (HLC) State Machine
-' Source:  SPECIFICATION.md §2.14
+' Source:  docs/spec/contracts/data_stores/event_store.yaml
 ' C4:      Lifecycle Finder / Findings & Audit Trail Adapter
-' Contract: 8.2.4
+' Contract: 1.0.0
 ' ============================================================
 
 title Selma — Hybrid Logical Clock (Detail View)\n<size:12><i>Hierarchical tick · wall-clock regression absorption · partition reconciliation</i></size>

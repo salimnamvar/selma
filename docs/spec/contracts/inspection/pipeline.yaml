@@ -28,7 +28,7 @@ pipeline:
       - id: "INV-IP-002"
         statement: "content_hash MUST match actual content (integrity check)"
     error_handling: "reject_with_schema_error"
-    story_refs: ["S-10"]
+    story_refs: ["US-IP-001"]
 
   - order: 2
     name: "classify"
@@ -43,7 +43,7 @@ pipeline:
       - id: "INV-IP-010"
         statement: "target_type MUST be one of: text, structured, binary"
     error_handling: "reject_with_classification_error"
-    story_refs: ["S-10"]
+    story_refs: ["US-IP-001"]
 
   - order: 3
     name: "select_controls"
@@ -60,17 +60,17 @@ pipeline:
       - id: "INV-IP-020"
         statement: "Only nodes with applicable scope enter evaluation"
       - id: "INV-IP-021"
-        statement: "Scope matching MUST use scope specificity score algorithm (§2.8.2)"
+        statement: "Scope matching MUST use scope specificity score algorithm (conflict/precedence contract)"
     error_handling: "skip_non_applicable_nodes"
 
   - order: 4
     name: "evaluate"
-    description: "Execute DAG with topological ordering using pure evaluators"
+    description: "Execute DAG with topological ordering using pure detection evaluators"
     input: "Applicable control nodes + Target + Context"
-    output: "Evaluator outcomes"
+    output: "Detection outcomes"
     operations:
       - "Execute nodes in topological order respecting depends_on"
-      - "For each node: invoke pure evaluator (evaluate(node, target, context))"
+      - "For each node: invoke pure detection evaluator (evaluate(node, target, context))"
       - "Enforce per-node timeout (default: 30s)"
       - "Handle infrastructure timeouts with configurable retry (default: 0, max: 3)"
       - "Dependency-failed nodes produce NO finding (Skipped trace entry only)"
@@ -81,7 +81,7 @@ pipeline:
       - id: "INV-IP-031"
         statement: "Same inputs MUST produce same outputs (determinism)"
       - id: "INV-IP-032"
-        statement: "Context object is read-only; evaluators MUST NOT mutate it"
+        statement: "Context object is read-only; detection evaluators MUST NOT mutate it"
       - id: "INV-IP-033"
         statement: "Dependency-failed nodes produce no finding (prevent cascading false positives)"
     error_handling: "per_fault_taxonomy"
@@ -111,16 +111,16 @@ pipeline:
       - fault: "cgir_corruption"
         behavior: "Pipeline → Fatal (abort inspection)"
         retry: false
-    story_refs: ["S-10"]
+    story_refs: ["US-IP-001"]
 
   - order: 5
     name: "aggregate"
     description: "Collect findings, compute severities, apply deontic semantics"
-    input: "Evaluator outcomes"
+    input: "Detection outcomes"
     output: "Finding set with severities"
     operations:
-      - "Map evaluator outcomes to findings per outcome-to-finding mapping"
-      - "Apply deontic type semantics (obligation/prohibition/permission)"
+      - "Map detection outcomes to findings per outcome-to-finding mapping"
+      - "Apply deontic modality semantics (obligation/prohibition/permission)"
       - "Compute severity: Fail → severity_default, Partial → downgraded, NeedsReview → informational"
       - "Apply confidence threshold (frozen_env.confidence_severity_cap_threshold, default 0.5)"
       - "Permission type: Fail → always informational"
@@ -134,7 +134,7 @@ pipeline:
       - id: "INV-IP-042"
         statement: "Conflict resolution outcomes MUST be deterministic for identical CG-IR snapshot"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-10", "S-05"]
+    story_refs: ["US-IP-001", "US-CD-001"]
 
   - order: 6
     name: "report"
@@ -160,7 +160,7 @@ pipeline:
       - id: "INV-IP-053"
         statement: "finding_aggregates reflects pre-inspection state only (at-least-one-cycle latency)"
     error_handling: "abort_with_detailed_reason"
-    story_refs: ["S-10"]
+    story_refs: ["US-IP-001"]
 
 inspector_obligations:
   description: "What a target must provide for inspection"
@@ -173,7 +173,7 @@ inspector_obligations:
     - "metadata (domain, jurisdiction, format)"
 
 context_object:
-  description: "Read-only context passed to evaluators"
+  description: "Read-only context passed to detection evaluators"
   fields:
     - "target_metadata (from validated target)"
     - "domain_constants (domain, jurisdiction, scope_filters)"
@@ -215,9 +215,9 @@ stories:
 
   - story_id: "US-IP-002"
     as: "rule_inspector"
-    i_want: "to apply deontic type semantics to evaluator outcomes"
+    i_want: "to apply deontic modality semantics to detection outcomes"
     so_that: "findings correctly reflect the nature of the rule violation"
     acceptance_criteria:
-      - "Given an obligation rule with evaluator outcome Fail. When aggregation runs. Then a finding with severity_default is created."
-      - "Given a permission rule with evaluator outcome Fail. When aggregation runs. Then a finding with severity informational is created (advisory only)."
-      - "Given an evaluator outcome with confidence below threshold. When aggregation runs. Then finding severity is capped at informational."
+      - "Given an obligation rule with detection outcome Fail. When aggregation runs. Then a finding with severity_default is created."
+      - "Given a permission rule with detection outcome Fail. When aggregation runs. Then a finding with severity informational is created (advisory only)."
+      - "Given an detection outcome with confidence below threshold. When aggregation runs. Then finding severity is capped at informational."
