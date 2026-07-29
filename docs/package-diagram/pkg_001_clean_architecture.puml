@@ -1,0 +1,325 @@
+@startuml pkg_001_clean_architecture
+' ─────────────────────────────────────────────────────────────
+' PKG-001 · Clean Architecture Package Diagram — Selma
+' PlantUML package diagram
+' ─────────────────────────────────────────────────────────────
+
+!includeurl ../class-diagram/common/cd_styles.puml
+
+title **PKG-001 — Clean Architecture Packages**\nSelma · Rule Regularity Platform\n
+
+skinparam package {
+  BackgroundColor #F0F4F8
+  BorderColor #5B7BA5
+  FontSize 13
+  FontStyle bold
+}
+
+' ═══════════════════════════════════════════════════════════
+'  INTERFACES LAYER (outermost)
+' ═══════════════════════════════════════════════════════════
+package "<<interfaces>>\nInterfaces Layer" as INTERFACES #E3F2FD/1565C0 {
+
+  package "interfaces.rest" as IF_REST #BBDEFB/1976D2 {
+    [HTTP Router\n(FastAPI)] as REST_ROUTER
+  }
+
+  package "interfaces.cli" as IF_CLI #BBDEFB/1976D2 {
+    [CLI Interface] as CLI_IF
+  }
+
+  package "interfaces.tui" as IF_TUI #BBDEFB/1976D2 {
+    [TUI Interface] as TUI_IF
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  COMPOSITION LAYER (wiring only)
+' ═══════════════════════════════════════════════════════════
+package "<<composition>>\nComposition Layer" as COMPOSITION #E8EAF6/3F51B5 {
+  package "composition" as COMP_WIRING #C5CAE9/3949AB {
+    [DI Container] as DI_CONTAINER
+    [Wiring] as WIRING
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  INFRASTRUCTURE LAYER
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure>>\nInfrastructure Layer" as INFRASTRUCTURE #FFF3E0/E65100 {
+
+  package "infrastructure.persistence.directives" as INFRA_DIR #FFE0B2/F57C00 {
+    [SqlDirectiveRepository] as SQL_DIR_REPO <<implements DirectiveRepository>>
+  }
+
+  package "infrastructure.persistence.cgir" as INFRA_CGIR #FFE0B2/F57C00 {
+    [ContentAddressedCgIrStore] as CAS_CGIR <<implements CgIrRepository>>
+  }
+
+  package "infrastructure.persistence.events" as INFRA_EVT #FFE0B2/F57C00 {
+    [AppendOnlyEventLog] as APPEND_EVT <<implements EventStore>>
+  }
+
+  package "infrastructure.persistence.artifacts" as INFRA_ART #FFE0B2/F57C00 {
+    [ObjectArtifactStore] as OBJ_ART <<implements ArtifactRepository>>
+  }
+
+  package "infrastructure.detection" as INFRA_DET #FFE0B2/F57C00 {
+    [AdapterRegistry] as ADAPTER_REG
+    [PatternEvaluator] as PAT_EVAL
+    [StructuralEvaluator] as STR_EVAL
+    [CompositeEvaluator] as COMP_EVAL
+  }
+
+  package "infrastructure.policy" as INFRA_POL #FFE0B2/F57C00 {
+    [FilesystemPolicyDoctrineReader] as FS_POL <<implements PolicyDoctrineReader>>
+  }
+
+  package "infrastructure.targets" as INFRA_TGT #FFE0B2/F57C00 {
+    [HttpTargetGateway] as HTTP_TGT <<implements TargetGateway>>
+  }
+
+  package "infrastructure.auth" as INFRA_AUTH #FFE0B2/F57C00 {
+    [CapabilitySource] as CAP_SRC
+  }
+
+  package "infrastructure.hashing" as INFRA_HASH #FFE0B2/F57C00
+  package "infrastructure.clock" as INFRA_CLK #FFE0B2/F57C00
+
+  package "infrastructure.bootstrap" as INFRA_BOOT #FFE0B2/F57C00 {
+    [Logging] as LOGGING
+    [Lifespan] as LIFESPAN
+    [Config Load] as CONFIG_LOAD
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  APPLICATION LAYER
+' ═══════════════════════════════════════════════════════════
+package "<<application>>\nApplication Layer" as APPLICATION #E8F5E9/2E7D32 {
+
+  package "application.ports" as APP_PORTS #C8E6C9/388E3C {
+    interface DirectiveRepository <<Port>>
+    interface CgIrRepository <<Port>>
+    interface EventStore <<Port>>
+    interface ArtifactRepository <<Port>>
+    interface TargetGateway <<Port>>
+    interface PolicyDoctrineReader <<Port>>
+  }
+
+  package "application.use_cases.governance" as UC_GOVERNANCE #C8E6C9/388E3C {
+    [CreateDirective] as UC_CREATE_DIR
+    [ModifyDirective] as UC_MOD_DIR
+    [RetireDirective] as UC_RET_DIR
+    [ForkDirective] as UC_FORK_DIR
+    [MergeDirective] as UC_MERGE_DIR
+    [SplitDirective] as UC_SPLIT_DIR
+    [RestoreDirective] as UC_RESTORE_DIR
+  }
+
+  package "application.use_cases.compilation" as UC_COMPILATION #C8E6C9/388E3C {
+    [TriggerCompilation] as UC_TRIG_COMP
+    [ValidateSchema] as UC_VAL_SCHEMA
+    [DetectStrategy] as UC_DET_STRAT
+    [MaterializeCgIr] as UC_MAT_CGIR
+    [PublishSnapshot] as UC_PUB_SNAP
+  }
+
+  package "application.use_cases.inspection" as UC_INSPECTION #C8E6C9/388E3C {
+    [SubmitInspection] as UC_SUB_INS
+    [NormalizeTarget] as UC_NORM_TGT
+    [ClassifyTarget] as UC_CLASS_TGT
+    [SelectControls] as UC_SEL_CTRL
+    [EvaluateRules] as UC_EVAL_RULES
+    [AggregateResults] as UC_AGG_RES
+    [GenerateReport] as UC_GEN_REP
+  }
+
+  package "application.use_cases.finding" as UC_FINDING #C8E6C9/388E3C {
+    [CreateFinding] as UC_CREATE_FIND
+    [OpenFinding] as UC_OPEN_FIND
+    [SubmitEvidence] as UC_SUB_EVID
+    [ValidateFinding] as UC_VAL_FIND
+    [RemediateFinding] as UC_REM_FIND
+    [VerifyFinding] as UC_VER_FIND
+    [WaiveFinding] as UC_WAIVE_FIND
+    [DismissFinding] as UC_DISM_FIND
+    [CloseFinding] as UC_CLOSE_FIND
+  }
+
+  package "application.use_cases.conflict" as UC_CONFLICT #C8E6C9/388E3C {
+    [DetectConflict] as UC_DET_CONFLICT
+    [ResolveConflict] as UC_RES_CONFLICT
+    [EscalateToHuman] as UC_ESC_HUMAN
+    [ReviewArtifact] as UC_REV_ART
+  }
+
+  package "application.use_cases.guidance" as UC_GUIDANCE #C8E6C9/388E3C {
+    [ResolveGuidance] as UC_RES_GUID
+    [ViewAggregates] as UC_VIEW_AGG
+    [ViewTrends] as UC_VIEW_TREND
+    [ViewDashboard] as UC_VIEW_DASH
+    [ExplainCausally] as UC_EXPLAIN
+  }
+
+  package "application.use_cases.certification" as UC_CERT #C8E6C9/388E3C {
+    [RunCertification] as UC_RUN_CERT
+    [ValidateGate] as UC_VAL_GATE
+  }
+
+  package "application.dto" as APP_DTO #C8E6C9/388E3C {
+    [InspectRequest] as DTO_INSPECT_REQ
+    [InspectResponse] as DTO_INSPECT_RESP
+    [QueryRequest] as DTO_QUERY_REQ
+    [DirectiveCreateRequest] as DTO_DIR_CREATE
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  DOMAIN LAYER (innermost)
+' ═══════════════════════════════════════════════════════════
+package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
+
+  package "domain.shared" as DOM_SHARED #F7F9FB/95A5B6 {
+    [LineageId] as DI_LINEAGE
+    [Hlc] as DI_HLC
+    [Hashes] as DI_HASHES
+    [Errors] as DI_ERRORS
+  }
+
+  package "domain.governance" as DOM_GOVERNANCE #F0F4F8/5B7BA5 {
+    [Directive\n<<Aggregate>>] as AGG_DIRECTIVE
+    [LineageService] as SVC_LINEAGE
+    [DirectiveRevision] as ENT_DIR_REV
+    [LineageOperation] as VO_LINEAGE_OP
+  }
+
+  package "domain.compilation" as DOM_COMPILATION #F0F4F8/5B7BA5 {
+    [CgIrSnapshot\n<<Aggregate>>] as AGG_CGIR
+    [ControlNode] as ENT_CTRL_NODE
+    [DependencyEdge] as ENT_DEP_EDGE
+    [Hash Composition Types] as VO_HASH_COMP
+  }
+
+  package "domain.inspection" as DOM_INSPECTION #F0F4F8/5B7BA5 {
+    [Target] as VO_TARGET
+    [InspectionSnapshot\n<<Aggregate>>] as AGG_INSPECT
+    [DetectionOutcome] as VO_DET_OUT
+  }
+
+  package "domain.finding" as DOM_FINDING #F0F4F8/5B7BA5 {
+    [Finding\n<<Aggregate>>] as AGG_FINDING
+    [FindingFsm] as SVC_FSM
+    [Disposition] as VO_DISP
+    [SodPolicy] as VO_SOD
+  }
+
+  package "domain.conflict" as DOM_CONFLICT #F0F4F8/5B7BA5 {
+    [ConflictArtifact\n<<Aggregate>>] as AGG_CONFLICT
+    [ResolveConflict\n<<Pure Service>>] as SVC_RES_CONFLICT
+  }
+
+  package "domain.authorization" as DOM_AUTHZ #F0F4F8/5B7BA5 {
+    [Capability\n<<Value Object>>] as VO_CAPABILITY
+  }
+
+  package "domain.certification" as DOM_CERT #F0F4F8/5B7BA5 {
+    [Gate IDs] as VO_GATE_IDS
+    [CertificationRun\n<<Aggregate>>] as AGG_CERT_RUN
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  C4 COMPONENT MAPPING ANNOTATIONS
+' ═══════════════════════════════════════════════════════════
+
+note right of INTERFACES
+  **C4 Components**
+  • application_service → interfaces.rest
+  • selma_interface → cli / tui
+end note
+
+note right of INFRASTRUCTURE
+  **C4 Adapter Components**
+  • directives_adapter → persistence.directives
+  • compiled_rules_adapter → persistence.cgir
+  • findings_audit_adapter → persistence.events
+  • snapshots_adapter → persistence.artifacts
+  • target_adapter → targets
+end note
+
+note right of APPLICATION
+  **C4 Core Components**
+  • hermetic_compiler → use_cases.compilation
+  • rule_inspector → use_cases.inspection
+  • conflict_resolver → use_cases.conflict
+  • lifecycle_finder → use_cases.finding
+  • finding_analyzer → use_cases.guidance
+  • architectural_auditor → use_cases.certification
+end note
+
+' ═══════════════════════════════════════════════════════════
+'  DEPENDENCY ARROWS (inward only)
+' ═══════════════════════════════════════════════════════════
+
+' Interfaces → Application
+INTERFACES .down.> APPLICATION : <<uses>>
+
+' Composition → all layers
+COMPOSITION .down.> INTERFACES : <<wires>>
+COMPOSITION .down.> INFRASTRUCTURE : <<wires>>
+COMPOSITION .down.> APPLICATION : <<wires>>
+COMPOSITION .down.> DOMAIN : <<wires>>
+
+' Infrastructure → Application.ports (implements)
+INFRA_DIR ..> APP_PORTS : <<implements>>
+INFRA_CGIR ..> APP_PORTS : <<implements>>
+INFRA_EVT ..> APP_PORTS : <<implements>>
+INFRA_ART ..> APP_PORTS : <<implements>>
+INFRA_TGT ..> APP_PORTS : <<implements>>
+INFRA_POL ..> APP_PORTS : <<implements>>
+
+' Application → Domain (depends on)
+UC_GOVERNANCE .down.> DOM_GOVERNANCE : <<depends>>
+UC_COMPILATION .down.> DOM_COMPILATION : <<depends>>
+UC_INSPECTION .down.> DOM_INSPECTION : <<depends>>
+UC_FINDING .down.> DOM_FINDING : <<depends>>
+UC_CONFLICT .down.> DOM_CONFLICT : <<depends>>
+UC_GUIDANCE .down.> DOM_FINDING : <<depends>>
+UC_CERT .down.> DOM_CERT : <<depends>>
+APP_PORTS .down.> DOMAIN : <<depends>>
+
+' Infrastructure → Domain (accesses)
+INFRA_DIR .down.> DOM_GOVERNANCE : <<accesses>>
+INFRA_CGIR .down.> DOM_COMPILATION : <<accesses>>
+INFRA_EVT .down.> DOM_FINDING : <<accesses>>
+INFRA_ART .down.> DOM_INSPECTION : <<accesses>>
+INFRA_DET .down.> DOM_INSPECTION : <<accesses>>
+INFRA_POL .down.> DOM_FINDING : <<accesses>>
+INFRA_AUTH .down.> DOM_AUTHZ : <<accesses>>
+
+' Domain internal (shared is depended on by all bounded contexts)
+DOM_GOVERNANCE .down.> DOM_SHARED : <<uses>>
+DOM_COMPILATION .down.> DOM_SHARED : <<uses>>
+DOM_INSPECTION .down.> DOM_SHARED : <<uses>>
+DOM_FINDING .down.> DOM_SHARED : <<uses>>
+DOM_CONFLICT .down.> DOM_SHARED : <<uses>>
+DOM_AUTHZ .down.> DOM_SHARED : <<uses>>
+DOM_CERT .down.> DOM_SHARED : <<uses>>
+
+' ═══════════════════════════════════════════════════════════
+'  LEGEND
+' ═══════════════════════════════════════════════════════════
+legend bottom
+  |= Layer |= Colour |= Dependency Rule |
+  | <back:#E3F2FD>   </back> | **Interfaces** | outermost — depends on Application |
+  | <back:#FFF3E0>   </back> | **Infrastructure** | implements ports — depends on Domain + Application |
+  | <back:#E8F5E9>   </back> | **Application** | use cases — depends on Domain only |
+  | <back:#FFFFFF>   </back> | **Domain** | innermost — no external dependencies |
+  | <back:#E8EAF6>   </back> | **Composition** | wiring — depends on all layers |
+  | - | - | All arrows point **inward** |
+endlegend
+
+footer PKG-001 · Clean Architecture · Selma · Rule Regularity Platform
+
+@enduml

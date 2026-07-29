@@ -1,0 +1,340 @@
+@startuml cd_003_infrastructure_adapters
+' ─────────────────────────────────────────────────────────────
+' CLS-003 · Infrastructure Adapters — Selma Rule Regularity Platform
+' PlantUML class diagram
+' ─────────────────────────────────────────────────────────────
+
+!includeurl common/cd_styles.puml
+
+title **CLS-003 — Infrastructure Adapters**\nSelma · Rule Regularity Platform\n
+
+' ═══════════════════════════════════════════════════════════
+'  PORT INTERFACES (from application layer)
+' ═══════════════════════════════════════════════════════════
+package "<<application.ports>>\nPort Interfaces" as PORTS #FCE4EC/C62828 {
+
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>> {
+    + findById(id: LineageId): Directive
+    + save(directive: Directive): void
+    + findByStatus(status: DirectiveStatus): List~Directive~
+    + nextExecutionId(): ExecutionId
+  }
+
+  interface "**CgIrRepository**" as CgIrRepository <<Port>> {
+    + findByHash(hash: String): CgIrSnapshot
+    + save(snapshot: CgIrSnapshot): void
+    + latest(): CgIrSnapshot
+  }
+
+  interface "**EventStore**" as EventStore <<Port>> {
+    + append(event: DomainEvent): void
+    + stream(aggregate_id: String): List~DomainEvent~
+    + stream(from: HlcTimestamp): List~DomainEvent~
+  }
+
+  interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {
+    + saveInspection(snapshot: InspectionSnapshot): void
+    + findInspection(id: UUID): InspectionSnapshot
+    + saveFinding(finding: Finding): void
+    + findFinding(id: FindingId): Finding
+    + saveConflict(artifact: ConflictArtifact): void
+  }
+
+  interface "**TargetGateway**" as TargetGateway <<Port>> {
+    + fetchTarget(target_id: String): Target
+    + hashTarget(target: Target): TargetHash
+  }
+
+  interface "**PolicyDoctrineReader**" as PolicyDoctrineReader <<Port>> {
+    + read(ref: PairedPolicyRef): GuidancePayload
+    + listAvailable(): List~PairedPolicyRef~
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  PERSISTENCE ADAPTERS
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.persistence>>\nPersistence Adapters" as PERSISTENCE #FFE0B2/F57C00 {
+
+  package "infrastructure.persistence.directives" as PD_DIR #FFF3E0/E65100 {
+    class "**SqlDirectiveRepository**" as SqlDirectiveRepository <<Adapter>> #FFE0B2/F57C00 {
+      - session_factory: sessionmaker
+      - engine: Engine
+      --
+      + findById(id: LineageId): Directive
+      + save(directive: Directive): void
+      + findByStatus(status: DirectiveStatus): List~Directive~
+      + nextExecutionId(): ExecutionId
+      --
+      _Uses: SQLAlchemy ORM_
+    }
+  }
+
+  package "infrastructure.persistence.cgir" as PD_CGIR #FFF3E0/E65100 {
+    class "**ContentAddressedCgIrStore**" as ContentAddressedCgIrStore <<Adapter>> #FFE0B2/F57C00 {
+      - base_path: Path
+      - hasher: Hasher
+      --
+      + findByHash(hash: String): CgIrSnapshot
+      + save(snapshot: CgIrSnapshot): void
+      + latest(): CgIrSnapshot
+      --
+      _Uses: SHA-256 CAS, filesystem_
+    }
+  }
+
+  package "infrastructure.persistence.events" as PD_EVT #FFF3E0/E65100 {
+    class "**AppendOnlyEventLog**" as AppendOnlyEventLog <<Adapter>> #FFE0B2/F57C00 {
+      - session_factory: sessionmaker
+      - engine: Engine
+      --
+      + append(event: DomainEvent): void
+      + stream(aggregate_id: String): List~DomainEvent~
+      + stream(from: HlcTimestamp): List~DomainEvent~
+      --
+      _Uses: SQLAlchemy, append-only table_
+    }
+  }
+
+  package "infrastructure.persistence.artifacts" as PD_ART #FFF3E0/E65100 {
+    class "**ObjectArtifactStore**" as ObjectArtifactStore <<Adapter>> #FFE0B2/F57C00 {
+      - bucket: str
+      - client: S3Client
+      --
+      + saveInspection(snapshot: InspectionSnapshot): void
+      + findInspection(id: UUID): InspectionSnapshot
+      + saveFinding(finding: Finding): void
+      + findFinding(id: FindingId): Finding
+      + saveConflict(artifact: ConflictArtifact): void
+      --
+      _Uses: S3-compatible object store_
+    }
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  DETECTION INFRASTRUCTURE
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.detection>>\nDetection Infrastructure" as DETECTION #FFE0B2/F57C00 {
+
+  class "**AdapterRegistry**" as AdapterRegistry <<Service>> #FFE0B2/F57C00 {
+    - adapters: Map~String, Evaluator~
+    --
+    + register(key: String, evaluator: Evaluator): void
+    + resolve(key: String): Evaluator
+    + listAvailable(): List~String~
+  }
+
+  interface "**Evaluator**" as Evaluator <<Interface>> #EAF7F0/3DAA6D {
+    + evaluate(target: Target, control: ControlNode): DetectionOutcome
+  }
+
+  class "**PatternEvaluator**" as PatternEvaluator <<Evaluator>> #FFE0B2/F57C00 {
+    - pattern_engine: RegexEngine
+    --
+    + evaluate(target: Target, control: ControlNode): DetectionOutcome
+    --
+    _Uses: RE2 regex engine_
+  }
+
+  class "**StructuralEvaluator**" as StructuralEvaluator <<Evaluator>> #FFE0B2/F57C00 {
+    - graph_walker: GraphWalker
+    --
+    + evaluate(target: Target, control: ControlNode): DetectionOutcome
+    --
+    _Uses: AST/graph analysis_
+  }
+
+  class "**CompositeEvaluator**" as CompositeEvaluator <<Evaluator>> #FFE0B2/F57C00 {
+    - evaluators: List~Evaluator~
+    - strategy: CompositeStrategy
+    --
+    + evaluate(target: Target, control: ControlNode): DetectionOutcome
+    + addEvaluator(evaluator: Evaluator): void
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  POLICY DOCTRINE READER
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.policy>>\nPolicy Doctrine" as POLICY #FFE0B2/F57C00 {
+
+  class "**FilesystemPolicyDoctrineReader**" as FilesystemPolicyDoctrineReader <<Adapter>> #FFE0B2/F57C00 {
+    - doctrine_root: Path
+    --
+    + read(ref: PairedPolicyRef): GuidancePayload
+    + listAvailable(): List~PairedPolicyRef~
+    --
+    _Uses: YAML files, filesystem_
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  TARGET GATEWAY
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.targets>>\nTarget Gateway" as TARGETS #FFE0B2/F57C00 {
+
+  class "**HttpTargetGateway**" as HttpTargetGateway <<Adapter>> #FFE0B2/F57C00 {
+    - http_client: AsyncClient
+    - base_url: str
+    --
+    + fetchTarget(target_id: String): Target
+    + hashTarget(target: Target): TargetHash
+    --
+    _Uses: httpx async HTTP client_
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  AUTHENTICATION & CAPABILITY
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.auth>>\nAuth & Capability" as AUTH #FFE0B2/F57C00 {
+
+  class "**CapabilitySource**" as CapabilitySource <<Service>> #FFE0B2/F57C00 {
+    - grants: Map~String, Set~CapabilityId~~
+    --
+    + resolve(actor_id: String): Set~CapabilityId~
+    + check(actor_id: String, capability: CapabilityId): boolean
+    --
+    _Caches capability grants per actor_
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  HASHING & CLOCK UTILITIES
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.hashing>>\nHashing" as HASHING #FFE0B2/F57C00 {
+  class "**Hasher**" as Hasher <<Utility>> #FFE0B2/F57C00 {
+    + sha256(data: bytes): String
+    + compose(parts: List~String~): String
+  }
+}
+
+package "<<infrastructure.clock>>\nClock" as CLOCK #FFE0B2/F57C00 {
+  class "**HybridLogicalClock**" as HybridLogicalClock <<Utility>> #FFE0B2/F57C00 {
+    + now(): HlcTimestamp
+    + advance(remote: HlcTimestamp): HlcTimestamp
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  BOOTSTRAP
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure.bootstrap>>\nBootstrap" as BOOTSTRAP #FFE0B2/F57C00 {
+  class "**LoggingSetup**" as LoggingSetup <<Bootstrap>> #FFE0B2/F57C00 {
+    + configure(level: str, format: str): void
+  }
+
+  class "**Lifespan**" as Lifespan <<Bootstrap>> #FFE0B2/F57C00 {
+    + startup(): Context
+    + shutdown(ctx: Context): void
+  }
+
+  class "**ConfigLoader**" as ConfigLoader <<Bootstrap>> #FFE0B2/F57C00 {
+    + load(path: Path): Config
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  EXTERNAL DEPENDENCIES
+' ═══════════════════════════════════════════════════════════
+package "<<external>>\nExternal Dependencies" as EXTERNAL #ECEFF1/546E7A {
+
+  class "**SQLAlchemy**" as SQLAlchemy <<Library>> #ECEFF1/546E7A {
+    Engine, Session, ORM
+  }
+
+  class "**httpx**" as httpx <<Library>> #ECEFF1/546E7A {
+    AsyncClient
+  }
+
+  class "**PyYAML**" as PyYAML <<Library>> #ECEFF1/546E7A {
+    safe_load, safe_dump
+  }
+
+  class "**RE2**" as RE2 <<Library>> #ECEFF1/546E7A {
+    Regex engine
+  }
+
+  class "**boto3**" as boto3 <<Library>> #ECEFF1/546E7A {
+    S3 client
+  }
+
+  class "**PostgreSQL**" as PostgreSQL <<Database>> #ECEFF1/546E7A {
+    directive_store, event_store
+  }
+
+  class "**Object Store**" as ObjectStore <<Storage>> #ECEFF1/546E7A {
+    artifact_store (S3-compatible)
+  }
+
+  class "**Filesystem**" as Filesystem <<Storage>> #ECEFF1/546E7A {
+    cgir_store (CAS), policy doctrines
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  RELATIONSHIPS
+' ═══════════════════════════════════════════════════════════
+
+' ── Adapters implement ports ─────────────────────────────
+DirectiveRepository <|.. SqlDirectiveRepository : implements >
+CgIrRepository <|.. ContentAddressedCgIrStore : implements >
+EventStore <|.. AppendOnlyEventLog : implements >
+ArtifactRepository <|.. ObjectArtifactStore : implements >
+TargetGateway <|.. HttpTargetGateway : implements >
+PolicyDoctrineReader <|.. FilesystemPolicyDoctrineReader : implements >
+
+' ── Evaluator hierarchy ──────────────────────────────────
+Evaluator <|.. PatternEvaluator : implements >
+Evaluator <|.. StructuralEvaluator : implements >
+Evaluator <|.. CompositeEvaluator : implements >
+CompositeEvaluator o-right- "0..*" Evaluator : composes >
+AdapterRegistry o-right- "0..*" Evaluator : registers >
+
+' ── Adapters → external dependencies ────────────────────
+SqlDirectiveRepository ..> SQLAlchemy : uses >
+SqlDirectiveRepository ..> PostgreSQL : connects >
+AppendOnlyEventLog ..> SQLAlchemy : uses >
+AppendOnlyEventLog ..> PostgreSQL : connects >
+ContentAddressedCgIrStore ..> Filesystem : reads/writes >
+ContentAddressedCgIrStore ..> Hasher : uses >
+ObjectArtifactStore ..> boto3 : uses >
+ObjectArtifactStore ..> ObjectStore : connects >
+HttpTargetGateway ..> httpx : uses >
+FilesystemPolicyDoctrineReader ..> PyYAML : parses >
+FilesystemPolicyDoctrineReader ..> Filesystem : reads >
+PatternEvaluator ..> RE2 : uses >
+
+' ── Bootstrap wiring ────────────────────────────────────
+Lifespan ..> SqlDirectiveRepository : initializes >
+Lifespan ..> ContentAddressedCgIrStore : initializes >
+Lifespan ..> AppendOnlyEventLog : initializes >
+Lifespan ..> ObjectArtifactStore : initializes >
+Lifespan ..> HttpTargetGateway : initializes >
+Lifespan ..> FilesystemPolicyDoctrineReader : initializes >
+Lifespan ..> CapabilitySource : initializes >
+Lifespan ..> AdapterRegistry : initializes >
+Lifespan ..> LoggingSetup : calls >
+Lifespan ..> ConfigLoader : calls >
+
+' ── Auth capability source references domain ────────────
+CapabilitySource ..> Hasher : uses >
+
+' ═══════════════════════════════════════════════════════════
+'  LEGEND
+' ═══════════════════════════════════════════════════════════
+legend bottom
+  |= Symbol |= Meaning |
+  | <back:#FCE4EC>   </back> | **Port** — interface from application layer |
+  | <back:#FFE0B2>   </back> | **Adapter** — infrastructure implementation |
+  | <back:#EAF7F0>   </back> | **Interface** — infrastructure abstraction |
+  | <back:#ECEFF1>   </back> | **External** — library or storage system |
+  | <|.. | implements |
+  | o-right- | composes / registers |
+  | ..▷ | dependency / uses |
+endlegend
+
+footer CLS-003 · Infrastructure Adapters · Selma · Clean Architecture
+
+@enduml

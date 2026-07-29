@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://selma.dev/schemas/finding_view.json",
+  "title": "FindingView",
+  "description": "Representation of a finding produced by the inspection pipeline. Schema is grounded in docs/spec/contracts/inspection/finding_contract.yaml and docs/spec/contracts/finding_lifecycle/states.yaml.",
+  "type": "object",
+  "required": [
+    "finding_id",
+    "inspection_id",
+    "control_id",
+    "lineage_id",
+    "fsm_state",
+    "disposition",
+    "severity",
+    "location",
+    "evidence",
+    "reasoning",
+    "paired_policy_ref",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "finding_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique finding identifier (UUID). Assigned at creation by the inspection pipeline."
+    },
+    "inspection_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Reference to the inspection that produced this finding."
+    },
+    "control_id": {
+      "type": "string",
+      "description": "Execution ID of the source directive (CG-IR node directive_id).",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+      "examples": ["SC101", "TRAF-001-A"]
+    },
+    "lineage_id": {
+      "type": "string",
+      "description": "Immutable lineage root of the source directive. Never changes across revisions.",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "examples": ["SC101", "TRAF-001"]
+    },
+    "fsm_state": {
+      "type": "string",
+      "description": "Current FSM state per finding_lifecycle.states contract. 10 states defined; Created and Closed are terminal.",
+      "enum": [
+        "Created",
+        "Open",
+        "Acknowledged",
+        "Evidence Submitted",
+        "Pending Verification",
+        "Verified",
+        "Rejected",
+        "Dismissed",
+        "Waived",
+        "Closed"
+      ]
+    },
+    "disposition": {
+      "type": "string",
+      "description": "Resolution status of the finding.",
+      "enum": ["valid", "invalid", "waived", "superseded"]
+    },
+    "severity": {
+      "type": "string",
+      "description": "Finding severity computed from detection outcome and deontic modality. Permission Fail findings are always informational.",
+      "enum": ["critical", "high", "medium", "low", "informational"]
+    },
+    "outcome": {
+      "type": "string",
+      "description": "Raw detection outcome from the inspection evaluation.",
+      "enum": ["Pass", "Fail", "Partial", "NeedsReview"]
+    },
+    "confidence": {
+      "type": "number",
+      "format": "float",
+      "description": "Evaluator confidence score. Below threshold (default 0.5) caps severity at informational.",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "location": {
+      "type": "object",
+      "description": "Location within the target where the finding was detected.",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "File path within the target."
+        },
+        "line_start": {
+          "type": "integer",
+          "description": "Starting line number (1-indexed).",
+          "minimum": 1
+        },
+        "line_end": {
+          "type": "integer",
+          "description": "Ending line number (1-indexed, inclusive).",
+          "minimum": 1
+        },
+        "column_start": {
+          "type": "integer",
+          "description": "Starting column number (1-indexed).",
+          "minimum": 1
+        },
+        "column_end": {
+          "type": "integer",
+          "description": "Ending column number (1-indexed, exclusive).",
+          "minimum": 1
+        },
+        "function": {
+          "type": "string",
+          "description": "Enclosing function or method name."
+        },
+        "class": {
+          "type": "string",
+          "description": "Enclosing class name."
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Evaluator evidence supporting the finding. Structure depends on detection strategy.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable evidence description."
+        },
+        "matched_pattern": {
+          "type": "string",
+          "description": "Pattern or rule that triggered the finding."
+        },
+        "context_lines": {
+          "type": "array",
+          "description": "Surrounding code lines for context.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "line_number": { "type": "integer" },
+              "content": { "type": "string" }
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Quantitative evidence (e.g. complexity scores, line counts).",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Evaluator reasoning chain explaining why this finding was produced."
+    },
+    "paired_policy_ref": {
+      "type": "string",
+      "description": "Reference to the paired policy doctrine entry. Used for guidance_only resolution (never for evaluation or FSM transitions per gate AA-02).",
+      "pattern": "^[a-z][a-z0-9_]+$",
+      "examples": ["sc101_parameterized_queries"]
+    },
+    "actor": {
+      "type": "string",
+      "description": "Actor ID of the last state transition."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Finding creation timestamp (ISO 8601, UTC). Equal to updated_at on creation."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of most recent FSM transition (ISO 8601, UTC)."
+    },
+    "_links": {
+      "type": "object",
+      "description": "HATEOAS navigation links.",
+      "properties": {
+        "self": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "inspection": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "events": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "guidance": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "directive": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
+      "inspection_id": "ins-9876-fedc-ba98-7654-3210fedcba98",
+      "control_id": "SC101",
+      "lineage_id": "SC101",
+      "fsm_state": "Open",
+      "disposition": "valid",
+      "severity": "high",
+      "outcome": "Fail",
+      "confidence": 0.95,
+      "location": {
+        "file": "src/auth/login.py",
+        "line_start": 12,
+        "line_end": 12,
+        "function": "login"
+      },
+      "evidence": {
+        "description": "String interpolation detected in SQL query construction",
+        "matched_pattern": "f\"SELECT.*FROM.*WHERE.*{'",
+        "context_lines": [
+          { "line_number": 11, "content": "def login(username, password):" },
+          { "line_number": 12, "content": "    query = f\"SELECT * FROM users WHERE name='{username}'\"" }
+        ]
+      },
+      "reasoning": "The login function constructs a SQL query using f-string interpolation with the username parameter. This creates a SQL injection vector because user input is directly embedded in the query string without sanitization or parameterization.",
+      "paired_policy_ref": "sc101_parameterized_queries",
+      "actor": "system",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z",
+      "_links": {
+        "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
+        "inspection": { "href": "/inspections/ins-9876-fedc-ba98-7654-3210fedcba98" },
+        "events": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/events" },
+        "guidance": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
+        "directive": { "href": "/directives/SC101" }
+      }
+    }
+  ]
+}

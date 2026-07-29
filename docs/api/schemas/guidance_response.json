@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://selma.dev/schemas/guidance_response.json",
+  "title": "GuidanceResponse",
+  "description": "Resolved guidance for a finding. Derived from the paired policy reference (policy_doctrine.yaml) via the guidance_only resolution path. Per gate AA-02, guidance is never used for evaluation or FSM transitions — only for remediation advisory.",
+  "type": "object",
+  "required": ["finding_id", "paired_policy_ref", "reasoning", "remediation_strategy"],
+  "properties": {
+    "finding_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The finding this guidance resolves."
+    },
+    "paired_policy_ref": {
+      "type": "string",
+      "description": "Reference to the policy doctrine entry that provides guidance context. Format: policy_doctrine section key (e.g. 'sc101_parameterized_queries').",
+      "pattern": "^[a-z][a-z0-9_]+$",
+      "examples": ["sc101_parameterized_queries", "sc042_no_silent_failures"]
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Chain of reasoning explaining why this guidance applies to the finding. Derived from the policy's rationale field."
+    },
+    "remediation_strategy": {
+      "type": "string",
+      "description": "High-level strategy for remediation.",
+      "examples": ["Replace string interpolation with parameterized query", "Add structured error handling with specific exception types"]
+    },
+    "remediation_steps": {
+      "type": "array",
+      "description": "Ordered list of concrete steps to remediate the finding.",
+      "items": {
+        "type": "string"
+      },
+      "examples": [
+        ["Import the database parameterized query API", "Replace f-string query construction with parameter placeholders", "Bind parameters via the driver's parameter binding mechanism", "Add integration test verifying no SQL injection vector"]
+      ]
+    },
+    "domain_examples": {
+      "type": "array",
+      "description": "Illustrative examples from the policy doctrine showing compliant and non-compliant patterns.",
+      "items": {
+        "type": "object",
+        "required": ["label", "snippet"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Descriptive label for the example.",
+            "enum": ["compliant", "non_compliant"]
+          },
+          "snippet": {
+            "type": "string",
+            "description": "Code or content snippet illustrating the pattern."
+          },
+          "language": {
+            "type": "string",
+            "description": "Programming language or content format of the snippet."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "vocabulary": {
+      "type": "array",
+      "description": "Definitions of domain-specific terms used in the guidance.",
+      "items": {
+        "type": "object",
+        "required": ["term", "definition"],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "The term being defined."
+          },
+          "definition": {
+            "type": "string",
+            "description": "Clear definition of the term in context."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "_links": {
+      "$ref": "#/$defs/links"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "links": {
+      "type": "object",
+      "description": "HATEOAS navigation links.",
+      "properties": {
+        "self": {
+          "type": "object",
+          "properties": {
+            "href": { "type": "string" }
+          }
+        },
+        "finding": {
+          "type": "object",
+          "properties": {
+            "href": { "type": "string" }
+          }
+        },
+        "policy_doctrine": {
+          "type": "object",
+          "properties": {
+            "href": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
+      "paired_policy_ref": "sc101_parameterized_queries",
+      "reasoning": "The finding detected string interpolation in a SQL query construction, which creates a SQL injection vector. The paired policy mandates parameterized queries for all database interactions.",
+      "remediation_strategy": "Replace string interpolation with parameterized query",
+      "remediation_steps": [
+        "Import the database parameterized query API",
+        "Replace f-string query construction with parameter placeholders",
+        "Bind parameters via the driver's parameter binding mechanism",
+        "Add integration test verifying no SQL injection vector"
+      ],
+      "domain_examples": [
+        {
+          "label": "non_compliant",
+          "snippet": "query = f\"SELECT * FROM users WHERE name='{username}'\"",
+          "language": "python"
+        },
+        {
+          "label": "compliant",
+          "snippet": "query = \"SELECT * FROM users WHERE name=?\"\ndb.execute(query, (username,))",
+          "language": "python"
+        }
+      ],
+      "vocabulary": [
+        {
+          "term": "parameterized query",
+          "definition": "A database query where user-supplied values are passed as separate parameters rather than interpolated into the query string, preventing SQL injection."
+        }
+      ],
+      "_links": {
+        "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
+        "finding": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
+        "policy_doctrine": { "href": "/policies/sc101_parameterized_queries" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://selma.dev/schemas/directive_view.json",
+  "title": "DirectiveView",
+  "description": "Representation of a directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml and docs/spec/contracts/directive/identity.yaml. Directives are the human-authored source-of-truth that compile into CG-IR snapshots.",
+  "type": "object",
+  "required": [
+    "lineage_id",
+    "execution_id",
+    "status",
+    "revision",
+    "content",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "lineage_id": {
+      "type": "string",
+      "description": "Immutable lineage root identifier. Never changes across revisions, forks, merges, or splits. Assigned once at creation from Machine ID.",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "examples": ["SC101", "TRAF-001", "AUTH-001"]
+    },
+    "execution_id": {
+      "type": "string",
+      "description": "Active node identity for CG-IR compilation and runtime evaluation. Changes on fork, merge, or split. On first creation equals lineage_id.",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
+      "examples": ["SC101", "TRAF-001-A", "AUTH-001-M3A7F2B1C4D5E6F7"]
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle state of the directive. Per directive/lifecycle.yaml: draft → active → deprecated|superseded.",
+      "enum": ["draft", "active", "deprecated", "superseded"]
+    },
+    "revision": {
+      "type": "integer",
+      "description": "Monotonically increasing revision counter. Incremented on each content modification.",
+      "minimum": 1
+    },
+    "content": {
+      "type": "object",
+      "description": "The directive document content. Must conform to the rule schema (docs/schema/rule_schema.json).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Rule execution ID (same as execution_id at root creation)."
+        },
+        "lineage_id": {
+          "type": "string",
+          "description": "Lineage ID reference."
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable rule name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Rule description and rationale."
+        },
+        "type": {
+          "type": "string",
+          "description": "Deontic modality type.",
+          "enum": ["obligation", "prohibition", "permission"]
+        },
+        "severity_default": {
+          "type": "string",
+          "description": "Default severity for Fail outcomes.",
+          "enum": ["critical", "high", "medium", "low", "informational"]
+        },
+        "detection": {
+          "type": "object",
+          "description": "Detection strategy and adapter configuration.",
+          "additionalProperties": true
+        },
+        "scope": {
+          "type": "object",
+          "description": "Applicability scope for control selection.",
+          "properties": {
+            "target_type": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "domain": { "type": "array", "items": { "type": "string" } },
+            "jurisdiction": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "conflicts_with": {
+          "type": "array",
+          "description": "Declared conflict pairs (compile-time only).",
+          "items": { "type": "string" }
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "Execution IDs of directives this directive depends on.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Directive metadata including lifecycle operation provenance.",
+      "properties": {
+        "created_by": {
+          "type": "string",
+          "description": "Actor ID of the directive author."
+        },
+        "migration": {
+          "type": "object",
+          "description": "Migration metadata for superseded or merged directives.",
+          "properties": {
+            "superseded_by": {
+              "type": "string",
+              "description": "Execution ID of the successor directive (for superseded status)."
+            },
+            "merge_provenance": {
+              "type": "array",
+              "description": "Source lineage IDs for merge operations.",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "parent_lineage_ids": {
+          "type": "array",
+          "description": "Parent lineage IDs from fork/merge/split operations.",
+          "items": { "type": "string" }
+        },
+        "parent_execution_ids": {
+          "type": "array",
+          "description": "Parent execution IDs from fork/merge/split operations.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Directive creation timestamp (ISO 8601, UTC). Frozen into CG-IR node_body for conflict resolution determinism."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of most recent modification (ISO 8601, UTC)."
+    },
+    "_links": {
+      "type": "object",
+      "description": "HATEOAS navigation links.",
+      "properties": {
+        "self": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "revisions": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "compilations": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "latest_revision": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "lineage_id": "SC101",
+      "execution_id": "SC101",
+      "status": "active",
+      "revision": 3,
+      "content": {
+        "id": "SC101",
+        "lineage_id": "SC101",
+        "name": "Parameterized Queries",
+        "description": "All database queries MUST use parameterized query mechanisms. String interpolation in SQL construction is prohibited.",
+        "type": "obligation",
+        "severity_default": "high",
+        "detection": {
+          "strategy": "pattern",
+          "pattern_spec": {
+            "language": "python",
+            "patterns": ["f\".*SELECT.*", "f\".*INSERT.*", "f\".*UPDATE.*", "f\".*DELETE.*"]
+          }
+        },
+        "scope": {
+          "target_type": ["text"],
+          "domain": ["security"],
+          "jurisdiction": ["any"]
+        }
+      },
+      "metadata": {
+        "created_by": "user:alice"
+      },
+      "created_at": "2024-06-01T00:00:00Z",
+      "updated_at": "2025-01-10T14:30:00Z",
+      "_links": {
+        "self": { "href": "/directives/SC101" },
+        "revisions": { "href": "/directives/SC101/revisions" },
+        "compilations": { "href": "/directives/SC101/compilations" },
+        "latest_revision": { "href": "/directives/SC101/revisions/3" }
+      }
+    }
+  ]
+}

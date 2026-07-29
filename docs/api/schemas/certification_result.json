@@ -1,0 +1,240 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://selma.dev/schemas/certification_result.json",
+  "title": "CertificationResult",
+  "description": "Result of an architectural audit certification run. All 7 gates (AA-01 through AA-07) must pass for production-grade certification. Schema is grounded in docs/spec/contracts/certification/gates.yaml.",
+  "type": "object",
+  "required": [
+    "certification_id",
+    "run_id",
+    "status",
+    "gates",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "certification_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique certification run identifier."
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Reference to the underlying system run or CI pipeline that triggered certification.",
+      "examples": ["run-20250115-001", "ci-pipeline-12345"]
+    },
+    "status": {
+      "type": "string",
+      "description": "Overall certification status. Pass requires all 7 gates to pass.",
+      "enum": ["pass", "fail", "in_progress", "error"]
+    },
+    "gates": {
+      "type": "array",
+      "description": "Results for each of the 7 architectural audit gates.",
+      "items": {
+        "$ref": "#/$defs/gate_result"
+      },
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Certification run start timestamp (ISO 8601, UTC)."
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Certification run completion timestamp (ISO 8601, UTC). Null if in_progress."
+    },
+    "summary": {
+      "type": "object",
+      "description": "Aggregate summary of gate results.",
+      "properties": {
+        "total_gates": {
+          "type": "integer",
+          "description": "Total number of gates evaluated."
+        },
+        "passed": {
+          "type": "integer",
+          "description": "Number of gates that passed."
+        },
+        "failed": {
+          "type": "integer",
+          "description": "Number of gates that failed."
+        },
+        "blocking_failures": {
+          "type": "array",
+          "description": "Gate IDs that failed and block certification.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "_links": {
+      "type": "object",
+      "description": "HATEOAS navigation links.",
+      "properties": {
+        "self": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        },
+        "run": {
+          "type": "object",
+          "properties": { "href": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "gate_result": {
+      "type": "object",
+      "description": "Result for a single architectural audit gate.",
+      "required": ["gate_id", "pass_fail"],
+      "properties": {
+        "gate_id": {
+          "type": "string",
+          "description": "Architectural audit gate identifier.",
+          "enum": ["AA-01", "AA-02", "AA-03", "AA-04", "AA-05", "AA-06", "AA-07"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable gate name.",
+          "enum": [
+            "Mediated Feedback",
+            "Declarative Governance",
+            "Detection Evaluator Purity",
+            "Segregation of Duties",
+            "Conflict Resolution Determinism",
+            "Discriminator Completeness",
+            "Portable Serialization"
+          ]
+        },
+        "pass_fail": {
+          "type": "string",
+          "description": "Gate outcome.",
+          "enum": ["pass", "fail", "skip", "error"]
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Evidence supporting the gate result. Structure varies by gate.",
+          "properties": {
+            "validation_method": {
+              "type": "string",
+              "description": "How the gate was validated."
+            },
+            "test_results": {
+              "type": "array",
+              "description": "Individual test case results.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "criterion": { "type": "string" },
+                  "passed": { "type": "boolean" },
+                  "details": { "type": "string" }
+                }
+              }
+            },
+            "artifacts": {
+              "type": "array",
+              "description": "Evidence artifacts (logs, reports, hashes).",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": true
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Gate validation duration in milliseconds.",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "certification_id": "cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "run_id": "run-20250115-001",
+      "status": "pass",
+      "gates": [
+        {
+          "gate_id": "AA-01",
+          "name": "Mediated Feedback",
+          "pass_fail": "pass",
+          "evidence": {
+            "validation_method": "Integration test proving finding events cannot trigger compilation",
+            "test_results": [
+              { "criterion": "Analytics engine cannot write to CG-IR store", "passed": true, "details": "Verified via integration test" },
+              { "criterion": "Analytics engine cannot modify finding FSM state", "passed": true, "details": "Verified via integration test" },
+              { "criterion": "Finding events cannot trigger compilation", "passed": true, "details": "Verified via integration test" }
+            ]
+          },
+          "duration_ms": 1250
+        },
+        {
+          "gate_id": "AA-02",
+          "name": "Declarative Governance",
+          "pass_fail": "pass",
+          "evidence": {
+            "validation_method": "Static analysis + architectural audit of guidance_only edges",
+            "test_results": [
+              { "criterion": "Rule Inspector does not read policy_doctrine.yaml for evaluation", "passed": true },
+              { "criterion": "Finding FSM does not use policy doctrine for transitions", "passed": true }
+            ]
+          },
+          "duration_ms": 3400
+        },
+        {
+          "gate_id": "AA-03",
+          "name": "Detection Evaluator Purity",
+          "pass_fail": "pass",
+          "evidence": { "validation_method": "AST analysis" },
+          "duration_ms": 890
+        },
+        {
+          "gate_id": "AA-04",
+          "name": "Segregation of Duties",
+          "pass_fail": "pass",
+          "evidence": { "validation_method": "Integration test" },
+          "duration_ms": 2100
+        },
+        {
+          "gate_id": "AA-05",
+          "name": "Conflict Resolution Determinism",
+          "pass_fail": "pass",
+          "evidence": { "validation_method": "Replay test" },
+          "duration_ms": 1500
+        },
+        {
+          "gate_id": "AA-06",
+          "name": "Discriminator Completeness",
+          "pass_fail": "pass",
+          "evidence": { "validation_method": "Corpus of invalid pairings must be rejected" },
+          "duration_ms": 670
+        },
+        {
+          "gate_id": "AA-07",
+          "name": "Portable Serialization",
+          "pass_fail": "pass",
+          "evidence": { "validation_method": "RE2 canary test vectors + UTC/NaN rejection tests" },
+          "duration_ms": 420
+        }
+      ],
+      "started_at": "2025-01-15T10:00:00Z",
+      "completed_at": "2025-01-15T10:00:10Z",
+      "summary": {
+        "total_gates": 7,
+        "passed": 7,
+        "failed": 0,
+        "blocking_failures": []
+      },
+      "_links": {
+        "self": { "href": "/certifications/cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
+        "run": { "href": "/runs/run-20250115-001" }
+      }
+    }
+  ]
+}
