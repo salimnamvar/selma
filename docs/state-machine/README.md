@@ -26,7 +26,7 @@ Read with [SPECIFICATION.md](../spec/SPECIFICATION.md) for the full behavioral c
 ## Design Principles
 
 - **Specification dominance** — diagrams are proposals; §3.1 Finding FSM is non-negotiable
-- **Compile-time / runtime separation** — governance contracts never load at runtime
+- **Compile-time / runtime separation** — executable rules compiled to CG-IR; policy doctrines read at runtime for guidance only, never for finding FSM transitions
 - **Capability + SoD before mutation** — every human edge is capability-gated
 - **No silent failures** — typed findings, denial audits, or explicit abort states
 - **Humans never close findings** — only System after Verified or Waived

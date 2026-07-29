@@ -40,7 +40,7 @@
 ' Layers: Context, Container, Component
 ' ------------------------------------------------------------
 !$NAME_governance_contracts = "Governance Contracts"
-!$DESC_governance_contracts = "Authoring artifacts that define the rules: the normative specification, structural schema, governance policy, and behavioral contracts. Consumed exclusively at compile time — never accessed at runtime."
+!$DESC_governance_contracts = "Authoring artifacts that define directives. Two document types with distinct runtime roles: (1) Executable rules (JSON) consumed at compile time only, produce CG-IR for runtime evaluation. (2) Policy doctrines (YAML) read at runtime after evaluation to provide guidance, reasoning, and remediation examples to humans and AI agents. Never used for evaluation or finding FSM transitions."
 
 !$NAME_cicd = "CI/CD Pipeline"
 !$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime."
@@ -64,7 +64,7 @@
 
 !$NAME_selma_app = "Selma Application"
 !$TECH_selma_app = "REST API / Python / RE2 / JSON Schema / SHA-256"
-!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, and the read-only analytics layer. Reads governance contracts only at compile time — never at runtime."
+!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, the guidance resolution layer, and the read-only analytics layer. Reads executable rules at compile time only; reads policy doctrines at runtime for guidance."
 
 ' ------------------------------------------------------------
 ' Data stores (ID = directive_store | cgir_store |
@@ -106,7 +106,7 @@
 
 !$NAME_rule_inspector = "Rule Inspector"
 !$TECH_rule_inspector = "Python / RE2 Regex / SHA-256"
-!$DESC_rule_inspector = "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings and immutable inspection snapshots."
+!$DESC_rule_inspector = "Executes compiled rules against submitted targets through a six-stage pipeline: normalize, classify, select controls, evaluate, aggregate, and report. Produces findings containing paired_policy_ref for guidance resolution, and immutable inspection snapshots. Never reads policy doctrines — only executable compiled rules."
 
 !$NAME_conflict_resolver = "Conflict Resolver"
 !$TECH_conflict_resolver = "Python / Pydantic"
@@ -118,7 +118,7 @@
 
 !$NAME_finding_analyzer = "Finding Analyzer"
 !$TECH_finding_analyzer = "Python / Pydantic"
-!$DESC_finding_analyzer = "Read-only aggregates, trend analysis, finding views, and causal explanations. Zero write path to any store — all feedback mediated through human-initiated directive changes."
+!$DESC_finding_analyzer = "Read-only component for finding aggregates, trend analysis, causal explanations, and guidance resolution. Resolves paired policy doctrines after evaluation to populate finding guidance for humans and AI agents. Zero write path to any store — all feedback mediated through human-initiated directive changes."
 
 !$NAME_architectural_auditor = "Architectural Auditor"
 !$TECH_architectural_auditor = "Python"

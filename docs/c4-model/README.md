@@ -19,7 +19,7 @@ Three-level C4 architecture model for the Selma rule regularity platform.
 | **Rule Inspector** | Core | Runtime evaluation: executes compiled rules against submitted targets |
 | **Conflict Resolver** | Core | Deterministic conflict resolution: priority, specificity, recency precedence |
 | **Lifecycle Finder** | Core | Finding FSM: 10-state lifecycle with SoD enforcement |
-| **Finding Analyzer** | Read | Read-only aggregates, trends, and causal explanations |
+| **Finding Analyzer** | Read | Read-only aggregates, trends, causal explanations, and guidance resolution from policy doctrines |
 | **Architectural Auditor** | Read | Seven-gate certification on CI/CD trigger |
 | **Directives Adapter** | Persistence | Directive CRUD and lineage identity resolution |
 | **Compiled Rules Adapter** | Persistence | Content-addressed storage of CG-IR snapshots |
@@ -54,7 +54,8 @@ Ownership of each machine maps to the component inventory above (e.g. Hermetic C
 
 ## Design Principles
 
-- **Compile-time/runtime separation**: Governance contracts never accessed at runtime
+- **Compile-time/runtime separation**: Executable rules compiled to CG-IR at compile time; policy doctrines read at runtime for guidance only, never for evaluation
+- **Dual-document directives**: Every directive has a paired executable rule (JSON) for evaluation and a policy doctrine (YAML) for reasoning/guidance
 - **Immutable storage**: CG-IR, events, snapshots are append-only
 - **Capability-based access control**: Permissions enforced at component boundaries
 - **Segregation of duties**: Directive creator ≠ Finding waiver

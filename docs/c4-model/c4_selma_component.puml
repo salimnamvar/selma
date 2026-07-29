@@ -141,6 +141,7 @@ Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution perm
 
 Rel(finding_analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal", $tags="validation_only")
 Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal", $tags="validation_only")
+Rel(finding_analyzer, directives_adapter, "reads policy doctrines for guidance resolution after evaluation", "Internal", $tags="guidance_only")
 
 
 ' ============================================================

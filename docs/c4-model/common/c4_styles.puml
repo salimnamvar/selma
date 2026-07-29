@@ -33,6 +33,7 @@
 '   validation_only        dashed teal    read/inspect only
 '   immutable_async        dotted green   append-only + async
 '   mediated_async         dotted purple  mediated + async
+'   guidance_only          dotted blue    policy read for reasoning, not evaluation
 '
 ' Multi-tag edges MUST use a single combined tag (not a+b), so
 ' PlantUML applies one consistent line color:
@@ -164,5 +165,8 @@ AddRelTag("validation_only", $textColor="#0E6655", $lineColor="#16A085", $lineSt
 ' Combined tags (single stereo => one reliable color in PlantUML)
 AddRelTag("immutable_async", $textColor="#0B5E3C", $lineColor="#1B8A5A", $lineStyle="dotted", $lineThickness="2", $legendText="append-only + async\nnever mutated, eventual delivery")
 AddRelTag("mediated_async", $textColor="#5B2C6F", $lineColor="#8E44AD", $lineStyle="dotted", $lineThickness="2", $legendText="mediated + async\nno external mutation, eventual")
+
+' Guidance-only read — policy doctrine for reasoning, never for evaluation
+AddRelTag("guidance_only", $textColor="#1A5276", $lineColor="#2E86C1", $lineStyle="dotted", $lineThickness="1", $legendText="guidance only\nread for reasoning, not evaluation")
 
 !endif
