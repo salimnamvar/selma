@@ -32,7 +32,7 @@
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
-    "policy_runtime_prohibition": "policy_doctrine.yaml MUST NOT be read at inspection, evaluation, or FSM runtime",
+    "policy_runtime_role": "policy_doctrine.yaml is read AFTER evaluation for guidance/reasoning. It is NOT used for evaluation, inspection, or FSM transitions. The finding analyzer reads the paired policy doctrine to populate guidance fields for humans and AI agents.",
     "runtime_executable_source": "SPECIFICATION.md resolve_conflict over schema/CG-IR fields only",
     "rule": "SPECIFICATION.md is the normative source. Schema is a structural projection of spec invariants. Policy describes governance intent only.",
     "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
@@ -354,6 +354,10 @@
       ],
       "description": "Universal category of exclusion - applies across all languages and domains"
     },
+    "paired_policy_ref": {
+      "type": "string",
+      "description": "Reference to the paired policy doctrine document that provides guidance, reasoning, and examples for this rule. Used AFTER evaluation to generate human/AI-facing guidance."
+    },
     "detection_spec": {
       "type": "object",
       "required": ["strategy"],
@@ -607,7 +611,7 @@
     },
     "rule": {
       "type": "object",
-      "required": ["lineage_id", "schema_version", "version", "deontic", "subject", "predicate", "detection", "status", "created_at", "metadata"],
+      "required": ["lineage_id", "schema_version", "version", "deontic", "subject", "predicate", "detection", "paired_policy_ref", "status", "created_at", "metadata"],
       "properties": {
         "schema_version": {
           "type": "string",
@@ -645,6 +649,9 @@
         },
         "detection": {
           "$ref": "#/$defs/detection_spec"
+        },
+        "paired_policy_ref": {
+          "$ref": "#/$defs/paired_policy_ref"
         },
         "applicability": {
           "$ref": "#/$defs/applicability"

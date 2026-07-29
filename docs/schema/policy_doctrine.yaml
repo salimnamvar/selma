@@ -17,9 +17,23 @@ doctrine:
   name: universal-policy-doctrine
   version: "1.0.0"
   description: >
-    Defines how to structure and write a rule document.
-    Describes governance intent, not executable logic.
-    Uses universal vocabulary for domain-agnostic policy expression.
+    Policy doctrine schema for the paired guidance document of each directive.
+
+    RUNTIME ROLE:
+    - READ for guidance AFTER a finding is created by the executable rule
+    - READ by humans to understand why a violation matters
+    - READ by AI agents to generate remediation suggestions
+    - READ by compliance reviewers for governance context
+
+    NOT USED FOR:
+    - Determining whether an artifact violates a rule (that's the JSON rule's job)
+    - Evaluation, inspection, or finding FSM transitions
+
+    STRUCTURE:
+    - vocabulary: Maps abstract concepts to domain-specific terms (enables AI
+      agents to understand the policy regardless of the target language/domain)
+    - directive: The normative statement (deontic + subject + predicate)
+    - guidance: Reasoning, remediation steps, and multi-domain examples
   spec_version: "1.0.0"
   schema_version: "1.0.0"
   schema_id: "universal-rule-schema"
@@ -39,12 +53,14 @@ cross_layer_binding:
     schema_layer: "Optional conflict_resolution field is structural override data only."
     spec_layer: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
-  runtime_prohibition: >
-    This file MUST NOT be read during inspection, evaluation, finding FSM
-    transitions, or conflict resolution at runtime. Policy influences execution
-    only indirectly: authors use it when writing directives, and compile-time
-    validators check schema field legality against spec — never by interpreting
-    policy prose as executable logic.
+  runtime_role: >
+    This file IS read at runtime, but ONLY AFTER evaluation produces a finding.
+    It is NOT used for evaluation, inspection, or FSM transitions. The finding
+    analyzer reads this document via paired_policy_ref to populate guidance
+    fields for humans and AI agents. Policy influences execution only
+    indirectly for evaluation: authors use it when writing directives, and
+    compile-time validators check schema field legality against spec — never
+    by interpreting policy prose as executable logic.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
@@ -300,16 +316,236 @@ vocabulary:
           local_term: "prompt template"
           local_notes: "A template or configuration for AI model interactions"
 
+# ─── DIRECTIVE (NORMATIVE STATEMENT) ────────────────────────────
+# The normative statement — mirrors the executable rule in human-readable form.
+# This is the core governance claim that humans and AI agents reason about.
+# Each directive in this doctrine MUST use canonical vocabulary terms.
+directive:
+  description: >
+    The normative statement — mirrors the executable rule but in human-readable form.
+    This is the core governance claim that humans and AI agents reason about.
+    Each directive MUST use canonical vocabulary terms, not domain-specific terms.
+  structure:
+    deontic:
+      type: string
+      enum: [obligation, prohibition, permission, recommendation]
+      description: "Must match the paired executable rule's deontic field exactly"
+    subject:
+      type: string
+      description: >
+        What the rule governs — MUST use a canonical vocabulary term,
+        not a domain-specific term. For example: use 'operation', not 'function'.
+    predicate:
+      type: string
+      description: >
+        What must/must not be true — the normative claim. Uses canonical vocabulary.
+    context_conditions:
+      type: string
+      description: >
+        Conditions under which the directive applies. MUST use canonical vocabulary
+        terms and universal pattern categories, not project-specific lists.
+    exclusions:
+      description: "Universal exclusions using pattern categories"
+      structure:
+        pattern_category:
+          type: string
+          enum:
+            - protocol-implementation
+            - entry-point
+            - generated-code
+            - test-infrastructure
+            - interoperability-bridge
+            - language-pragma
+            - framework-convention
+        description: "What this exclusion covers in universal terms"
+        rationale: "Why this exclusion exists — important for AI agents to avoid suggesting fixes for excluded code"
+
+# ─── GUIDANCE (RUNTIME VALUE) ────────────────────────────────────
+# This section is the PRIMARY reason policy doctrine is read at runtime.
+# It provides the intelligence that turns a raw finding into actionable guidance.
+guidance:
+  description: >
+    This section is the PRIMARY reason policy doctrine is read at runtime.
+    It provides the intelligence that turns a raw finding into actionable guidance.
+
+    Consumers:
+    - CLI/TUI: Renders reasoning + remediation + relevant examples for the user
+    - AI Agents: Uses reasoning + domain_examples to generate automated fixes
+    - Compliance UI: Shows reasoning + principles for audit documentation
+  structure:
+    reasoning:
+      type: string
+      description: >
+        WHY this directive exists and WHY violations matter. This is the
+        governance rationale that helps humans and AI agents understand the
+        importance of compliance. Should reference universal principles.
+
+    remediation_strategy:
+      type: string
+      description: >
+        HOW to fix violations in abstract terms. Uses canonical vocabulary.
+        AI agents combine this with domain_examples to generate concrete fixes.
+
+    remediation_steps:
+      description: >
+        Ordered steps for remediation. AI agents can execute these step-by-step.
+      structure:
+        step_number:
+          type: integer
+        action:
+          type: string
+          description: "What to do — uses canonical vocabulary"
+        rationale:
+          type: string
+          description: "Why this step is necessary"
+        verification:
+          type: string
+          description: "How to verify this step was done correctly"
+
+    universal_description:
+      type: string
+      description: >
+        Language/domain-agnostic description of what compliant artifacts look like.
+        AI agents use this as the target state when generating fixes.
+
+    domain_examples:
+      description: >
+        Examples mapped to specific domains/languages. AI agents select the
+        relevant examples based on the target artifact's language/domain.
+        This is how one universal policy provides accurate guidance for 10+ languages.
+      structure:
+        domain:
+          type: string
+          description: "Target domain (coding, security, infrastructure, etc.)"
+        language:
+          type: string
+          description: "Specific language if domain is coding (e.g., python, rust)"
+        compliant_behavior:
+          type: string
+          description: >
+            What compliant artifacts look like in this domain/language.
+            Uses domain_mappings from vocabulary to translate canonical concepts.
+        non_compliant_behavior:
+          type: string
+          description: >
+            What non-compliant artifacts look like in this domain/language.
+            AI agents use this to recognize the violation pattern.
+        notes:
+          type: string
+          description: "Domain-specific nuances for AI agents"
+        compliant_example:
+          type: string
+          description: "Actual code/config example — for human reading and AI few-shot learning"
+        non_compliant_example:
+          type: string
+          description: "Actual code/config example — for human reading and AI few-shot learning"
+
+    common_mistakes:
+      description: >
+        Mistakes humans and AI agents commonly make when trying to fix this violation.
+        Helps AI agents avoid generating bad fixes.
+      structure:
+        mistake:
+          type: string
+          description: "Description of the common mistake"
+        why_wrong:
+          type: string
+          description: "Why this approach is incorrect"
+        correct_approach:
+          type: string
+          description: "What to do instead"
+
+    related_lineage_ids:
+      type: array
+      items:
+        type: string
+      description: >
+        Related directives for context. When showing guidance, Selma can suggest
+        these as additional reading. Helps humans and AI agents understand the
+        broader governance landscape.
+
+# ─── PRINCIPLES ──────────────────────────────────────────────────
+# Universal principles this directive operationalizes.
+principles:
+  description: >
+    Universal principles this directive operationalizes. Used to explain
+    WHY the directive exists at a governance level.
+  structure:
+    primary_principle:
+      type: string
+      description: "The main principle this directive enforces"
+    supporting_principles:
+      type: array
+      items:
+        type: string
+      description: "Additional principles that relate to this directive"
+    principle_explanations:
+      type: object
+      description: "Map principle names to explanations of how this directive enforces them"
+
+# ─── RUNTIME USAGE ───────────────────────────────────────────────
+# Documents how Selma's components consume this policy doctrine at runtime.
+# This is meta-documentation, not executable logic.
+runtime_usage:
+  description: >
+    Documents how Selma's components use this policy doctrine at runtime.
+    This is meta-documentation, not executable logic.
+  guidance_resolution: >
+    After Rule Inspector creates a finding, it uses the paired_policy_ref
+    from the executable rule to locate this document. The Finding Analyzer
+    then reads the guidance section to populate the finding's guidance field.
+  ai_agent_consumption: >
+    AI agents receive the full guidance section via the query API. They use:
+    1. vocabulary to understand canonical terms
+    2. reasoning to explain why the violation matters
+    3. remediation_strategy + remediation_steps to generate fixes
+    4. domain_examples[language == target_language] for few-shot examples
+    5. common_mistakes to avoid generating bad fixes
+  human_consumption: >
+    Humans see guidance in CLI/TUI output. The renderer selects:
+    1. reasoning (always shown)
+    2. domain_examples matching the file's language (if available)
+    3. remediation_steps (shown when --guide flag is used)
+    4. related_lineage_ids as 'see also' suggestions
+  query_api_endpoints:
+    - endpoint: "GET /api/v1/rules/{lineage_id}/guidance"
+      purpose: "Retrieve full guidance for a specific rule"
+      sections_read: [reasoning, remediation_strategy, remediation_steps, domain_examples, common_mistakes]
+    - endpoint: "GET /api/v1/findings/{finding_id}/guidance"
+      purpose: "Retrieve guidance for a specific finding (includes paired policy)"
+      sections_read: [reasoning, remediation_strategy, remediation_steps, domain_examples]
+    - endpoint: "GET /api/v1/rules/{lineage_id}/vocabulary"
+      purpose: "Retrieve vocabulary mappings for AI agent comprehension"
+      sections_read: [vocabulary]
+
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
-# This document MUST NOT contain machine-executable logic.
-# PROHIBITED: parameters, conditions, evaluator_hint, evaluator_type,
-# evaluator_config, weight, depends_on, conflicts_with, status,
-# created_at, expires_at, remediation, target, lineage.
-# ALLOWED: Machine ID columns (cross-reference labels only).
+# This document MUST NOT contain machine-executable evaluation logic.
+# It IS read at runtime for GUIDANCE after evaluation produces a finding.
 contamination_guard:
-  # NOTE: If adding new schema fields, evaluate contamination risk before
-  # allowing them in policy. The fields below are machine-executable and
-  # MUST NOT appear in governance prose.
+  note: >
+    This document MUST NOT contain machine-executable evaluation logic.
+
+    PROHIBITED (these belong in the executable JSON rule, not here):
+    - evaluator_type, evaluator_config, evaluator_hint
+    - adapter_id, adapter_config
+    - detection strategy, structural_spec, pattern_spec
+    - weight, depends_on, conflicts_with (machine conflict resolution)
+    - status, created_at, expires_at (lifecycle fields)
+
+    PROHIBITED (these must use vocabulary, not be hardcoded):
+    - Domain-specific terms used outside vocabulary.domain_mappings
+      (e.g., writing "function" in policy text instead of "operation")
+    - Language-specific code patterns in reasoning/remediation
+      (those go in domain_examples, not in the abstract guidance)
+    - Project-specific file paths, function names, or exclusions
+      (those go in adapter_config overrides, not here)
+
+    ALLOWED:
+    - Machine ID cross-reference to rule.lineage_id
+    - References to universal principles
+    - Abstract reasoning using canonical vocabulary
+    - Domain examples using domain_mappings terms
+    - Guidance, remediation, and reasoning for human/AI consumption
   prohibited_fields:
     - parameters
     - conditions
@@ -319,17 +555,27 @@ contamination_guard:
     - detection_spec
     - detection
     - adapters
+    - adapter_id
+    - adapter_config
     - weight
     - depends_on
     - conflicts_with
     - status
     - created_at
     - expires_at
-    - remediation
     - target
     - lineage
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
+    - "lineage_id cross-reference to rule.lineage_id"
+  allowed_guidance_content:
+    - "reasoning (WHY violations matter)"
+    - "remediation_strategy (HOW to fix in abstract terms)"
+    - "remediation_steps (ordered steps for AI agent execution)"
+    - "domain_examples (language-specific examples for few-shot learning)"
+    - "common_mistakes (helps AI agents avoid generating bad fixes)"
+    - "principles (governance context)"
+    - "vocabulary (canonical-to-domain term mappings)"
   metadata_constraints: >
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
