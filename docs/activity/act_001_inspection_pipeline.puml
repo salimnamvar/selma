@@ -13,7 +13,7 @@
 
 title ACT-001: Inspection Pipeline\n<size:12><i>Receive → Normalize → Classify → Select → Evaluate → Aggregate → Report</i></size>
 
-!include ../common/act_styles.puml
+!include common/act_styles.puml
 
 |#E8F4F8|Submission Layer|
 start

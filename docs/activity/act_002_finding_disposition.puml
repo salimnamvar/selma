@@ -12,7 +12,7 @@
 
 title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Validated | Waived | Dismissed | EvidenceSubmitted] → Terminal</i></size>
 
-!include ../common/act_styles.puml
+!include common/act_styles.puml
 
 |#E8F4F8|System Auto-Transition|
 start
@@ -84,7 +84,6 @@ else (no)
     disposition state until
     next authorized action.
   end note
-  backward :Next Actor Action;
   stop
 endif
 

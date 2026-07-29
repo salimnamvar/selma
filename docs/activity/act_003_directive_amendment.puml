@@ -12,7 +12,7 @@
 
 title ACT-003: Directive Amendment\n<size:12><i>Amend → Validate → Persist → Compile → Publish or Rollback</i></size>
 
-!include ../common/act_styles.puml
+!include common/act_styles.puml
 
 |#E8F4F8|Ingress|
 start
