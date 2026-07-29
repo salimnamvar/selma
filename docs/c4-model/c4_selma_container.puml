@@ -4,8 +4,8 @@
 ' Purpose:   White-box view: Selma Interface, Selma Application,
 '            and four data stores, carrying forward actors and
 '            external systems from the Context Diagram.
-' Contract:  8.2.4
-' Diagram:   8.2.4
+' Contract:  1.0.0
+' Diagram:   1.0.0
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram

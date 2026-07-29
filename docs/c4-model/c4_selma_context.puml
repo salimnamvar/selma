@@ -4,8 +4,8 @@
 ' Purpose:   Black-box view of the two governance actors and the
 '            five external systems Selma compiles against, certifies,
 '            and streams findings and security audit records into.
-' Contract:  8.2.4
-' Diagram:   8.2.4 (Phase B AIP alignment)
+' Contract:  1.0.0
+' Diagram:   1.0.0 (Phase B AIP alignment)
 ' ============================================================
 @startuml c4_selma_context
 title Selma -- Context Diagram

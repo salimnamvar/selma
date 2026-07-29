@@ -4,7 +4,7 @@
 ' Purpose:   Internal components of selma_app. Selma Interface,
 '            data stores, and external systems from the Container
 '            Diagram appear as external. No modules — components only.
-' Contract:  8.2.4
+' Contract:  1.0.0
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram
