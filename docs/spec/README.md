@@ -62,6 +62,8 @@ stories:                                # Acceptance criteria live HERE
 - **C4 Architecture** — [`../c4-model/`](../c4-model/) (structural context)
 - **State Machines** — [`../state-machine/`](../state-machine/) (behavioral FSMs)
 - **Schemas** — [`../schema/`](../schema/) (data structure contracts)
+- **Design Freeze** — [`../design/`](../design/README.md) (DDD, ports, packages, use cases)
+- **Use Case Catalog** — [`../usecase/`](../usecase/README.md) (human index; stories remain in contracts)
 
 ## Migration Status
 

@@ -59,3 +59,9 @@ Ownership of each machine maps to the component inventory above (e.g. Hermetic C
 - **Immutable storage**: CG-IR, events, snapshots are append-only
 - **Capability-based access control**: Permissions enforced at component boundaries
 - **Segregation of duties**: Directive creator ≠ Finding waiver
+
+## Design Freeze
+
+Application architecture (DDD, ports & adapters, packages, use cases) is frozen in
+[`../design/`](../design/README.md). C4 remains the structural view; design docs own
+package and port surfaces for Implementation.

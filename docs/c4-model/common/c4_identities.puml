@@ -3,7 +3,7 @@
 ' Purpose:   Single source of truth for entity IDs, Names, Tech,
 '            and Descriptions across Context, Container, and
 '            Component diagrams. Include after c4_styles.puml.
-' Contract:  8.2.4
+' Contract:  1.0.0 (docs/spec/contracts/)
 '
 ' Rules:
 '   1. PlantUML alias (ID) is the bare token in Person/System/...
@@ -102,7 +102,7 @@
 
 !$NAME_hermetic_compiler = "Hermetic Compiler"
 !$TECH_hermetic_compiler = "Python / JSON Schema / SHA-256"
-!$DESC_hermetic_compiler = "Reads directives and governance contracts under a hermetic boundary. Validates schema, evaluator correctness, lineage integrity, and cross-runtime portability. Publishes immutable compiled rule snapshots. Asserts governance policy is absent from runtime paths at startup."
+!$DESC_hermetic_compiler = "Reads executable rule datasets under a hermetic boundary. Validates schema, detection.strategy discriminators, lineage integrity, and cross-runtime portability. Publishes immutable CG-IR snapshots. Does not evaluate policy doctrines; policy YAML is guidance_only at runtime via Finding Analyzer."
 
 !$NAME_rule_inspector = "Rule Inspector"
 !$TECH_rule_inspector = "Python / RE2 Regex / SHA-256"
@@ -122,7 +122,7 @@
 
 !$NAME_architectural_auditor = "Architectural Auditor"
 !$TECH_architectural_auditor = "Python"
-!$DESC_architectural_auditor = "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, policy prohibition, evaluator purity, segregation of duties, conflict determinism, discriminator completeness, and portability. Writes only certification artifacts."
+!$DESC_architectural_auditor = "Runs seven-gate architectural certification on CI trigger. Validates mediated feedback, declarative governance (evaluation vs guidance_only policy), detection evaluator purity, segregation of duties, conflict determinism, detection discriminator completeness, and portability. Writes only certification artifacts."
 
 !$NAME_directives_adapter = "Directives Adapter"
 !$TECH_directives_adapter = "Python / SQLAlchemy / PostgreSQL"

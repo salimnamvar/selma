@@ -7,20 +7,34 @@ Development phases and artifact inventory for the Selma rule governance platform
 | Phase | Artifacts | Status |
 | :--- | :--- | :--- |
 | **Vision** | Project goals, domain scope | Complete |
-| **Specification** | Contract tree (docs/spec/contracts/), rule_schema.json, policy_doctrine.yaml | Complete |
-| **Semantic Design** | State machines, business workflows, data/api contracts, ERDs, interaction models, sequence diagrams, business rules, identity & versioning models | Complete |
-| **Design Freeze** | DDD model, application architecture, ports & adapters, packages, classes, repositories | READY TO START |
+| **Specification** | Contract tree (`docs/spec/contracts/`), `rule_schema.json`, `policy_doctrine.yaml` | Complete |
+| **Semantic Design** | State machines, workflows, data/API contracts, identity & versioning | Complete |
+| **Design Freeze** | DDD model, ports & adapters, packages, use cases, class design | **Complete** |
 | **Implementation** | Runtime code, tests, deployment | Not Started |
 
-## Design Freeze entry criteria
+## Design Freeze deliverables
 
-All of the following are satisfied:
+| Area | Location |
+| :--- | :--- |
+| Design index | [`../design/README.md`](../design/README.md) |
+| DDD model | [`../design/02-ddd-model.md`](../design/02-ddd-model.md) |
+| Ports & adapters | [`../design/03-ports-and-adapters.md`](../design/03-ports-and-adapters.md) |
+| Package architecture | [`../design/04-package-architecture.md`](../design/04-package-architecture.md) |
+| Application use cases | [`../design/05-application-use-cases.md`](../design/05-application-use-cases.md) |
+| Use-case catalog (human index) | [`../usecase/README.md`](../usecase/README.md) |
+| Scaffold gap map | [`../design/08-implementation-gap-map.md`](../design/08-implementation-gap-map.md) |
 
-- Normative behavioral source is `docs/spec/contracts/` (archives under `docs/spec/ARCHIVE_*`)
-- Universal schemas: `docs/schema/rule_schema.json`, `docs/schema/policy_doctrine.yaml` (v1.0.0)
-- State machines catalog linked to contracts (`docs/state-machine/`)
-- Dual-document directives (executable rule + guidance_only policy) reflected in C4 and contracts
+## Entry criteria (satisfied)
+
+- Normative behavioral source: `docs/spec/contracts/`
+- Archives: `docs/spec/ARCHIVE_*` (2026-07-29)
+- Schemas v1.0.0 universal (detection / guidance split)
+- C4 dual-document + guidance_only edges
+- State machines linked to contracts
 
 ## Next major task
 
-DDD model + ports & adapters (Design Freeze phase).
+**Implementation** — follow Design Freeze package layout and ports; close gaps in
+[`../design/08-implementation-gap-map.md`](../design/08-implementation-gap-map.md).
+No redesign of bounded contexts without contract + design change control
+([`../design/01-design-freeze.md`](../design/01-design-freeze.md)).
