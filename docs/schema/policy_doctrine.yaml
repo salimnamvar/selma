@@ -5,17 +5,23 @@
 # executable algorithms. The machine implementation lives in the
 # Compilation Engine, not here.
 #
-# NORMATIVE SOURCE: SPECIFICATION.md 8.2.4
+# NORMATIVE SOURCE: SPECIFICATION.md 1.0.0
 # This file is a governance intent layer, not a structural or behavioral source.
+#
+# BREAKING CHANGE: Version 1.0.0 introduces universal vocabulary abstraction.
+# All policy text MUST use canonical vocabulary terms, never domain-specific terms.
+# Migration required from 8.2.4: domain-specific terms must be moved to
+# vocabulary.domain_mappings.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "8.2.4"
+  version: "1.0.0"
   description: >
     Defines how to structure and write a rule document.
     Describes governance intent, not executable logic.
-  spec_version: "8.2.4"
-  schema_version: "8.2.4"
+    Uses universal vocabulary for domain-agnostic policy expression.
+  spec_version: "1.0.0"
+  schema_version: "1.0.0"
   schema_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
@@ -72,7 +78,17 @@ identity_resolution:
       on stable identity references. Implementation mapping to
       rule.lineage_id and compile-time binding details are defined in
       SPECIFICATION.md §2.3.
-  uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
+  uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z]{2,5}-\\d{3}[A-Z]?$"
+  taxonomy_prefixes:
+    GOV: "Cross-cutting governance"
+    COD: "Coding rules"
+    SEC: "Security rules"
+    INF: "Infrastructure rules"
+    AIG: "AI governance rules"
+    PROC: "Process rules"
+    DAT: "Data governance rules"
+    ACC: "Access control rules"
+    DOC: "Documentation rules"
   lifecycle_reference: >
     Identity lifecycle operations (fork, merge, split) are defined in
     SPECIFICATION.md Section 2.2 and encoded in rule_schema.json lineage field.
@@ -82,7 +98,7 @@ identity_resolution:
 # Describes WHEN to use each lifecycle operation. Implementation details
 # are in SPECIFICATION.md and rule_schema.json.
 lifecycle_definition:
-  revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
+  revision: "Use when changing description, parameters, scope, or detection within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
   merge: >
     Use when two directives combine into one with unified semantic intent.
@@ -103,6 +119,187 @@ lifecycle_definition:
     depth (>64 operations) are prohibited. Implementation invariants are
     defined in SPECIFICATION.md §2.2.3.
 
+# ─── VOCABULARY ─────────────────────────────────────────────────
+# Domain vocabulary makes this policy applicable across languages and domains.
+# Each term has a canonical (abstract) name and optional domain-specific mappings.
+# Policy text MUST use canonical names, never domain-specific terms directly.
+vocabulary:
+  description: >
+    Domain vocabulary makes this policy applicable across languages and domains.
+    Each term has a canonical (abstract) name and optional domain-specific mappings.
+    Policy text MUST use canonical names, never domain-specific terms directly.
+  terms:
+    - canonical_name: "operation"
+      definition: "A discrete unit of executable behavior that transforms inputs to outputs or produces side effects"
+      domain_mappings:
+        - domain: python
+          local_term: "function"
+          local_notes: "Also includes methods, coroutines, and generators"
+        - domain: javascript
+          local_term: "function"
+          local_notes: "Includes arrow functions, async functions, and methods"
+        - domain: typescript
+          local_term: "function"
+          local_notes: "Includes arrow functions, async functions, methods, and typed overloads"
+        - domain: rust
+          local_term: "fn"
+          local_notes: "Includes associated functions and closures"
+        - domain: go
+          local_term: "func"
+          local_notes: "Includes methods with receiver parameters"
+        - domain: java
+          local_term: "method"
+          local_notes: "Includes constructors and static methods"
+        - domain: csharp
+          local_term: "method"
+          local_notes: "Includes constructors, extension methods, and local functions"
+        - domain: terraform
+          local_term: "resource block"
+          local_notes: "Also includes data sources and module calls"
+        - domain: kubernetes
+          local_term: "controller reconciliation"
+          local_notes: "The control loop operation that reconciles desired state"
+        - domain: workflow
+          local_term: "step"
+          local_notes: "A discrete step in a workflow or pipeline"
+
+    - canonical_name: "component"
+      definition: "A cohesive assembly of operations and state that provides a defined capability"
+      domain_mappings:
+        - domain: python
+          local_term: "module"
+          local_notes: "A .py file or package containing related operations"
+        - domain: javascript
+          local_term: "module"
+          local_notes: "An ES module or CommonJS module"
+        - domain: rust
+          local_term: "crate"
+          local_notes: "A compilation unit containing modules"
+        - domain: go
+          local_term: "package"
+          local_notes: "A Go package providing related functionality"
+        - domain: java
+          local_term: "class"
+          local_notes: "A class or interface providing cohesive behavior"
+        - domain: kubernetes
+          local_term: "controller"
+          local_notes: "A controller or operator that manages resources"
+        - domain: terraform
+          local_term: "module"
+          local_notes: "A Terraform module encapsulating resources"
+
+    - canonical_name: "failure-signal"
+      definition: "An indication that an operation could not complete its intended purpose"
+      domain_mappings:
+        - domain: python
+          local_term: "exception"
+          local_notes: "Raised via 'raise' statement; includes Exception hierarchy"
+        - domain: javascript
+          local_term: "Error"
+          local_notes: "Thrown via 'throw' statement; includes Error hierarchy"
+        - domain: rust
+          local_term: "Result::Err"
+          local_notes: "Returned via Result type; also panic! for unrecoverable errors"
+        - domain: go
+          local_term: "error"
+          local_notes: "Returned as second value from operations; also panic/recover"
+        - domain: java
+          local_term: "Exception"
+          local_notes: "Thrown via 'throw'; includes checked and unchecked exceptions"
+        - domain: csharp
+          local_term: "Exception"
+          local_notes: "Thrown via 'throw'; includes structured exception handling"
+
+    - canonical_name: "structured-output"
+      definition: "A deterministic, machine-parseable result that encodes success or failure with optional data"
+      domain_mappings:
+        - domain: python
+          local_term: "Result"
+          local_notes: "Custom Result type or dataclass encoding success/failure"
+        - domain: rust
+          local_term: "Result<T, E>"
+          local_notes: "Standard library Result type for error handling"
+        - domain: go
+          local_term: "error interface"
+          local_notes: "The error interface combined with return values"
+
+    - canonical_name: "resource-handle"
+      definition: "A reference to an external resource that requires explicit lifecycle management"
+      domain_mappings:
+        - domain: python
+          local_term: "context manager"
+          local_notes: "Objects implementing __enter__/__exit__ protocol"
+        - domain: rust
+          local_term: "RAII guard"
+          local_notes: "Types implementing Drop trait for automatic cleanup"
+        - domain: java
+          local_term: "AutoCloseable"
+          local_notes: "Types implementing AutoCloseable for try-with-resources"
+        - domain: go
+          local_term: "io.Closer"
+          local_notes: "Types implementing Closer interface for defer-based cleanup"
+
+    - canonical_name: "configuration-artifact"
+      definition: "A file or structure that defines system behavior without containing executable logic"
+      domain_mappings:
+        - domain: terraform
+          local_term: "HCL configuration"
+          local_notes: "Terraform .tf files defining infrastructure"
+        - domain: kubernetes
+          local_term: "manifest"
+          local_notes: "YAML/JSON resource definitions"
+        - domain: yaml-config
+          local_term: "YAML configuration"
+          local_notes: "YAML files defining application or infrastructure settings"
+        - domain: json-config
+          local_term: "JSON configuration"
+          local_notes: "JSON files defining application settings"
+
+    - canonical_name: "control-flow-exit"
+      definition: "A point where execution leaves the normal sequential flow of an operation"
+      domain_mappings:
+        - domain: python
+          local_term: "return statement"
+          local_notes: "Also includes yield, raise, and sys.exit()"
+        - domain: javascript
+          local_term: "return statement"
+          local_notes: "Also includes throw, break, continue"
+        - domain: rust
+          local_term: "return expression"
+          local_notes: "Also includes ?, break, continue, panic!"
+        - domain: go
+          local_term: "return statement"
+          local_notes: "Also includes panic, os.Exit"
+
+    - canonical_name: "state-mutation"
+      definition: "A change to the observable state of a component, resource, or data structure"
+      domain_mappings:
+        - domain: python
+          local_term: "assignment"
+          local_notes: "Variable assignment, attribute mutation, collection modification"
+        - domain: rust
+          local_term: "mutable borrow"
+          local_notes: "Requires &mut reference; enforced at compile time"
+        - domain: functional
+          local_term: "side effect"
+          local_notes: "Discouraged in pure functional contexts; use monadic patterns"
+
+    - canonical_name: "artifact"
+      definition: "A discrete unit of work product that can be inspected, validated, or governed"
+      domain_mappings:
+        - domain: coding
+          local_term: "source file"
+          local_notes: "A file containing source code"
+        - domain: infrastructure
+          local_term: "infrastructure definition"
+          local_notes: "Files defining infrastructure (Terraform, CloudFormation, etc.)"
+        - domain: documentation
+          local_term: "document"
+          local_notes: "A file containing documentation, specifications, or policies"
+        - domain: ai-governance
+          local_term: "prompt template"
+          local_notes: "A template or configuration for AI model interactions"
+
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
 # This document MUST NOT contain machine-executable logic.
 # PROHIBITED: parameters, conditions, evaluator_hint, evaluator_type,
@@ -119,6 +316,9 @@ contamination_guard:
     - evaluator_hint
     - evaluator_type
     - evaluator_config
+    - detection_spec
+    - detection
+    - adapters
     - weight
     - depends_on
     - conflicts_with
@@ -134,6 +334,12 @@ contamination_guard:
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
     declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
+  vocabulary_enforcement: >
+    Prohibited also: any domain-specific term used outside of vocabulary.domain_mappings
+    (e.g., using "function" in policy text instead of "operation"; using "raise" instead
+    of "failure-signal"). All policy prose MUST use canonical vocabulary terms.
+    Domain-specific terms are permitted ONLY within vocabulary.terms[].domain_mappings[]
+    entries, never in directive text, guidance, or definitions.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:
@@ -152,6 +358,12 @@ writing_principles:
   - id: WP-005
     title: "Hierarchy of Authority"
     description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
+  - id: WP-006
+    title: "Vocabulary Discipline"
+    description: "Use canonical vocabulary terms from the vocabulary section. Never use domain-specific terms in policy prose. Map domain concepts to canonical names via vocabulary.domain_mappings."
+  - id: WP-007
+    title: "Universal Exclusions"
+    description: "Use pattern_category enums for exclusions, not project-specific lists. Exclusions must be expressible across all target domains."
 
 # ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
 # This is a DESCRIPTION of governance intent, not an executable algorithm.
@@ -236,7 +448,7 @@ sections:
     title: "Preamble"
     required: true
     content_type: prose
-    guidance: "Explain the existential need for these rules."
+    guidance: "Explain the existential need for these rules. Use canonical vocabulary terms only."
 
   - id: governance
     title: "Governance & Amendment"
@@ -249,7 +461,7 @@ sections:
     required: true
     content_type: table
     columns: ["Term", "Definition (What it IS)", "Exclusion (What it IS NOT)"]
-    guidance: "All terms used in the document must be defined here."
+    guidance: "All terms used in the document must be defined here. Use canonical vocabulary terms from the vocabulary section."
 
   - id: principles
     title: "Foundational Principles"
@@ -261,20 +473,38 @@ sections:
     title: "Directives (Rules & Standards)"
     required: true
     content_type: mixed
-    guidance: "List all specific obligations, prohibitions, permissions, and flexible guidelines."
+    guidance: >
+      List all specific obligations, prohibitions, permissions, and flexible guidelines.
+      All directive text MUST use canonical vocabulary terms. Exclusions MUST use
+      pattern_category enums, not project-specific lists.
     children:
       - id: specific_directives
         title: "Specific Directives"
         content_type: table
         columns: ["Type (Obligation/Prohibition/Permission)", "Description", "Machine ID", "Context / Conditions"]
+        exclusions:
+          description: "Universal exclusions using pattern categories, not project-specific lists"
+          structure:
+            pattern_category:
+              type: string
+              enum:
+                - protocol-implementation
+                - entry-point
+                - generated-code
+                - test-infrastructure
+                - interoperability-bridge
+                - language-pragma
+                - framework-convention
+            description: "What this exclusion covers in universal terms"
+            rationale: "Why this exclusion exists"
       - id: flexible_standards
         title: "Flexible Standards"
         content_type: table
         columns: ["Description", "Machine ID", "Factors to Consider", "Examples"]
         schema_encoding: >
           Flexible standards have no dedicated schema type. Encode in rule_schema.json
-          as type=obligation with weight=informational and priority=advisory.
-          Evaluator Fail produces an informational finding only — advisory, not a
+          as deontic=obligation with weight=informational and priority=advisory.
+          Detection failure produces an informational finding only — advisory, not a
           violation. This preserves deontic clarity (obligation/prohibition/permission)
           while giving policy authors a legitimate home for soft goals.
 
