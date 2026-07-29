@@ -71,7 +71,9 @@ class AstWalkEvaluator(EvaluatorBase):
         threshold_op = str(count_config.get("operator", "gt") or "gt")
         scope_filters = self._as_str_dict(a_config.get("scope_filters", {}))
         # Also accept scope filters nested under walk_config (legacy).
-        for key, value in self._as_str_dict(walk_config.get("scope_filters", {})).items():
+        for key, value in self._as_str_dict(
+            walk_config.get("scope_filters", {})
+        ).items():
             if key not in scope_filters:
                 scope_filters[key] = value
         for node in ast.walk(a_tree):

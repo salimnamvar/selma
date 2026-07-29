@@ -514,9 +514,7 @@ def _has_mutable_defaults(a_node: ast.AST, a_types: set[str]) -> bool:
     return result
 
 
-def _params_missing_prefix(
-    a_node: ast.AST, a_cfg: dict[str, Any], a_tree: ast.AST | None = None
-) -> bool:
+def _params_missing_prefix(a_node: ast.AST, a_cfg: dict[str, Any]) -> bool:
     """True when application parameters lack the configured prefix.
 
     Language receivers (self/cls) and *args/**kwargs may be listed in skip_names
