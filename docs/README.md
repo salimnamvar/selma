@@ -8,6 +8,7 @@
 | **State machines** | [`state-machine/`](state-machine/README.md) | FSMs and pipelines |
 | **Design Freeze** | [`design/`](design/README.md) | DDD, ports, packages, use cases |
 | **Use case catalog** | [`usecase/`](usecase/README.md) | Human-facing UC index |
+| **Deployment** | [`deployment/`](deployment/README.md) | Infrastructure topology & deployment specs |
 | **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
 
 ## Authority

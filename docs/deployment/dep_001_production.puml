@@ -1,0 +1,270 @@
+' ============================================================
+' Title:     Selma -- Production Deployment Diagram
+' Boundary:  Production Environment
+' Purpose:   Infrastructure view: network zones, containers,
+'            data stores, external systems, and monitoring stack
+'            showing how Selma is deployed and connected.
+' Contract:  1.0.0
+' Diagram:   1.0.0
+' ============================================================
+@startuml dep_001_production
+title **DEP-001 — Production Deployment**\nSelma · Rule Regularity Platform\n
+
+!theme plain
+
+skinparam linetype polyline
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam defaultTextAlignment center
+skinparam shadowing false
+skinparam roundCorner 8
+
+skinparam backgroundColor #FAFBFC
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #1A2332
+
+skinparam nodeBackgroundColor #E3F2FD
+skinparam nodeBorderColor #1565C0
+skinparam nodeFontColor #0D2137
+
+skinparam databaseBackgroundColor #E8F5E9
+skinparam databaseBorderColor #2E7D32
+skinparam databaseFontColor #1B5E20
+
+skinparam cloudBackgroundColor #FFF3E0
+skinparam cloudBorderColor #E65100
+skinparam cloudFontColor #BF360C
+
+skinparam artifactBackgroundColor #EDE7F6
+skinparam artifactBorderColor #4527A0
+skinparam artifactFontColor #311B92
+
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageBorderColor #424242
+skinparam packageFontStyle bold
+skinparam packageFontSize 12
+
+skinparam rectangleBorderColor #616161
+
+skinparam legendBackgroundColor #FFFFFF
+skinparam legendBorderColor #D0D7DE
+skinparam legendFontSize 9
+
+skinparam arrowThickness 1.5
+skinparam arrowFontSize 9
+
+' ============================================================
+'  NETWORK ZONES (packages)
+' ============================================================
+
+package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
+
+    node "Load Balancer\n(Nginx / Traefik)" as LOAD_BALANCER <<reverse proxy>> {
+        artifact "TLS Terminator" as TLS_TERM
+        artifact "Routing Rules" as ROUTING_RULES
+    }
+
+    node "Selma Interface Container" as SELMA_INTERFACE <<docker container>> {
+        artifact "WebApp / CLI / DesktopApp / MobileApp" as INTERFACE_APP
+        artifact "Auth Module" as AUTH_MODULE
+        artifact "UI Renderer" as UI_RENDERER
+        artifact "REST API Client" as REST_CLIENT
+    }
+
+}
+
+package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {
+
+    node "Selma Application Container\n(Python 3.11+ / Docker)" as SELMA_APP <<docker container>> {
+
+        artifact "FastAPI REST API" as FASTAPI
+
+        rectangle "Application Service\n(entry point)" as APP_SERVICE
+
+        rectangle "Hermetic Compiler\n(no network during compile)" as HERMETIC_COMPILER <<hermetic boundary>>
+
+        artifact "Rule Inspector" as RULE_INSPECTOR
+        artifact "Conflict Resolver" as CONFLICT_RESOLVER
+        artifact "Lifecycle Finder" as LIFECYCLE_FINDER
+        artifact "Finding Analyzer" as FINDING_ANALYZER
+        artifact "Architectural Auditor" as ARCH_AUDITOR
+
+    }
+
+}
+
+package "Data Zone" as DATA_ZONE #FFF3E0/FFE0B2 {
+
+    database "Directive Store\n(PostgreSQL)" as DIRECTIVE_STORE <<managed or self-hosted>> {
+        storage "Mutable, Versioned Directives\nRead/Write Locking" as DIR_DATA
+    }
+
+    node "CGIR Store\n(Content-Addressed Storage)" as CGIR_STORE <<filesystem or S3>> {
+        database "Immutable Compiled Rule Snapshots\nDeduplication by Content Hash" as CGIR_DATA
+    }
+
+    database "Event Store\n(Append-Only Log)" as EVENT_STORE <<PostgreSQL or Kafka>> {
+        storage "Finding Lifecycle Events\nHLC Ordering" as EVT_DATA
+    }
+
+    node "Artifact Store\n(Object Store)" as ARTIFACT_STORE <<S3-compatible or local FS>> {
+        storage "Inspection Snapshots, Traces,\nConflict Artifacts\nWrite-Once" as ART_DATA
+    }
+
+}
+
+package "External Zone" as EXT_ZONE #FCE4EC/F8BBD0 {
+
+    cloud "Governance Contracts\n(Git Repository)" as GOVERNANCE_CONTRACTS {
+        artifact "Rule Definitions (JSON)" as RULE_DEFS
+        artifact "Policy Doctrines (YAML)" as POLICY_DOCS
+    }
+
+    cloud "CI/CD Pipeline\n(GitHub Actions / GitLab CI / Jenkins)" as CICD {
+        artifact "Certification Trigger" as CERT_TRIGGER
+    }
+
+    cloud "Target & Regulated\nEntity Systems" as TARGET_SYSTEMS {
+        artifact "External APIs & Services" as TARGET_APIS
+    }
+
+    cloud "Audit & Observability\nPlatform" as AUDIT_PLATFORM {
+        artifact "Long-Term Compliance Store" as AUDIT_STORE
+    }
+
+    cloud "Remediation & Case\nManagement" as REMEDIATION {
+        artifact "Ticketing / RPA Platforms" as REMEDIATION_APPS
+    }
+
+}
+
+package "Monitoring & Observability" as MONITORING_ZONE #E8EAF6/C5CAE9 {
+
+    node "Prometheus / Grafana" as PROMETHEUS <<metrics>>
+    node "ELK / Loki" as ELK <<logging>>
+    node "Jaeger" as JAEGER <<tracing>>
+
+}
+
+
+' ============================================================
+'  CONNECTIONS -- Public Zone → Application Zone
+' ============================================================
+
+LOAD_BALANCER --> SELMA_INTERFACE : HTTPS\n(static files or proxy)
+LOAD_BALANCER --> SELMA_APP : HTTPS\n(API routing)
+SELMA_INTERFACE --> FASTAPI : REST / HTTPS\n(API calls)
+
+
+' ============================================================
+'  CONNECTIONS -- Application Zone → Data Zone
+' ============================================================
+
+FASTAPI --> DIRECTIVE_STORE : SQL (psycopg2 / asyncpg)\nRead/Write
+FASTAPI --> CGIR_STORE : Content-Addressed Read/Write\n(hash-keyed)
+FASTAPI --> EVENT_STORE : Append-Only Write\n(HLC-ordered)
+FASTAPI --> ARTIFACT_STORE : Object Write\n(write-once)
+
+
+' ============================================================
+'  CONNECTIONS -- Application Zone → External Zone
+' ============================================================
+
+HERMETIC_COMPILER --> GOVERNANCE_CONTRACTS : Compile-Time Only\n(Git clone / read)
+FASTAPI --> TARGET_SYSTEMS : HTTPS / API\n(inspection queries)
+FASTAPI --> REMEDIATION : Mediated / Webhook\n(finding events)
+FASTAPI --> AUDIT_PLATFORM : Append-Only / Async\n(event & artifact replication)
+CICD --> FASTAPI : CI/CD\n(certification trigger)
+
+
+' ============================================================
+'  CONNECTIONS -- Monitoring
+' ============================================================
+
+SELMA_APP ..> PROMETHEUS : Metrics scrape\n(Prometheus exporter)
+SELMA_APP ..> ELK : Structured logs\n(OTLP / stdout)
+SELMA_APP ..> JAEGER : Distributed traces\n(OTLP / Jaeger agent)
+
+
+' ============================================================
+'  DEPLOYMENT NOTES
+' ============================================================
+
+note right of LOAD_BALANCER
+  **Deployment:**
+  - Nginx or Traefik as reverse proxy
+  - Terminates TLS (cert from ACME / vault)
+  - Routes `/api/**` → Selma Application
+  - Routes `/**` → Selma Interface
+  - Health check endpoint: `/health`
+end note
+
+note right of SELMA_INTERFACE
+  **Deployment Options:**
+  - Docker container (Nginx serving static SPA)
+  - Static files on CDN
+  - Native desktop/mobile app
+  - Authenticates via JWT / OAuth2
+end note
+
+note right of SELMA_APP
+  **Deployment:**
+  - Docker image: Python 3.11+
+  - Hermetic compile = no network access
+    during rule compilation phase
+  - Resource limits: CPU 2-4 cores, 4-8 GB RAM
+  - Horizontal scaling via replicas
+end note
+
+note bottom of DIRECTIVE_STORE
+  **Deployment:**
+  - Managed PostgreSQL (RDS / Cloud SQL)
+    or self-hosted with replication
+  - Connection pooling (PgBouncer)
+  - Automated backups with PITR
+end note
+
+note bottom of CGIR_STORE
+  **Deployment:**
+  - Local filesystem (dev/staging)
+  - S3-compatible object store (prod)
+  - Content-addressed = immutable, dedup by hash
+  - No backup needed (reconstructable)
+end note
+
+note bottom of EVENT_STORE
+  **Deployment:**
+  - PostgreSQL with append-only semantics
+    or Apache Kafka topic
+  - HLC (Hybrid Logical Clock) ordering
+  - Retention policy per compliance requirements
+end note
+
+note bottom of ARTIFACT_STORE
+  **Deployment:**
+  - S3-compatible (MinIO / AWS S3)
+    or local filesystem (dev)
+  - Write-once semantics (WORM)
+  - Lifecycle policies for retention
+end note
+
+
+' ============================================================
+'  LEGEND
+' ============================================================
+
+legend bottom
+  |= Symbol |= Meaning |
+  | <back:#E3F2FD>   </back> | **Node** — server, container, or runtime unit |
+  | <back:#E8F5E9>   </back> | **Database** — persistent data store |
+  | <back:#FFF3E0>   </back> | **Cloud** — external system or service |
+  | <back:#EDE7F6>   </back> | **Artifact** — application, module, or component |
+  | <back:#FCE4EC>   </back> | **External Zone** — systems outside Selma boundary |
+  | <back:#E8EAF6>   </back> | **Monitoring Zone** — observability infrastructure |
+  | - | Dashed lines indicate async / non-blocking connections |
+endlegend
+
+footer DEP-001 · Production Deployment · Selma · Rule Regularity Platform
+
+@enduml
