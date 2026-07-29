@@ -1,0 +1,46 @@
+@startuml erd_styles
+' ── Selma ERD Global Styles ──
+
+skinparam linetype ortho
+
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 11
+
+' Entity styling
+skinparam entity {
+  BackgroundColor #F7F9FC
+  BorderColor #4A6FA5
+  FontColor #1E293B
+  ArrowColor #4A6FA5
+  StereotypeFontSize 10
+  AttributeFontSize 10
+}
+
+' Package (store boundary) styling
+skinparam package {
+  BackgroundColor #EDF2F7
+  BorderColor #4A6FA5
+  FontColor #1E293B
+  Style rectangle
+}
+
+' Note styling
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #D97706
+  FontColor #78350F
+  FontSize 10
+}
+
+' Legend styling
+skinparam legend {
+  BackgroundColor #F1F5F9
+  BorderColor #94A3B8
+}
+
+' Title styling
+skinparam titleFontColor #1E293B
+skinparam titleFontSize 14
+
+@enduml

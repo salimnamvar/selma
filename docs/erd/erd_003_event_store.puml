@@ -1,0 +1,33 @@
+@startuml erd_003_event_store
+!include common/erd_styles.puml
+
+title Event Store (Append-Only Log) — Immutable
+
+package "Event Store" {
+  entity "Events" as Events {
+    * event_id : UUID <<PK>>
+    --
+    finding_id : UUID <<indexed>>
+    event_type : ENUM(FindingCreated, DispositionChanged, FindingClosed)
+    timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
+    logical_clock_physical : BIGINT
+    logical_clock_logical : INTEGER
+    logical_clock_node_id : TEXT
+    actor : TEXT
+    payload : JSONB
+    event_hash : CHAR(64) <<SHA-256>>
+  }
+}
+
+note bottom of Events
+  **Hybrid Logical Clock (HLC)**
+  Total ordering: physical_time → logical_counter → node_id → event_id
+
+  **Invariants**
+  • Events are immutable once written
+  • No duplicate event_ids
+  • HLC is monotonically non-decreasing
+  • event_hash = SHA-256(event_id ‖ payload)
+end note
+
+@enduml

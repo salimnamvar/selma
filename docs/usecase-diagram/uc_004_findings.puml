@@ -1,0 +1,71 @@
+@startuml uc_004_findings
+!include common/uc_styles.puml
+
+title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle)
+
+left to right direction
+
+actor "Regulatory\nOfficial" as RO #E3F2FD
+actor "Compliance\nRepresentative" as CR #E8EAF6
+
+rectangle "Selma Application" as SYS {
+  rectangle "Finding Lifecycle\n(lifecycle_finder)" as BOUNDED {
+
+    usecase "Create Finding\n(auto from inspection)" as UC1
+    usecase "Open Finding"              as UC2
+    usecase "Submit Evidence"           as UC3
+    usecase "Validate Finding"          as UC4
+    usecase "Remediate Finding"         as UC5
+    usecase "Verify Finding"            as UC6
+    usecase "Waive Finding"             as UC7
+    usecase "Dismiss Finding"           as UC8
+    usecase "Close Finding"             as UC9
+    usecase "View Finding Details"      as UC10
+  }
+}
+
+rectangle "External Systems" as EXT {
+  usecase "Remediation Systems"  as EXT1
+  usecase "Audit Platform"       as EXT2
+}
+
+' ---- Regulatory Official associations ----
+RO --> UC4
+RO --> UC7
+RO --> UC8
+RO --> UC10
+
+' ---- Compliance Representative associations ----
+CR --> UC3
+CR --> UC5
+CR --> UC6
+CR --> UC10
+
+' ---- includes / extends ----
+UC1 ..> UC2 : <<include>>
+UC2 ..> EXT2 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC5 ..> EXT1 : <<include>>
+UC6 ..> UC9 : <<include>>
+UC7 ..> UC9 : <<include>>
+UC8 ..> UC9 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** Inspection completed with non-conformances
+  **Post:** Finding created in "open" state
+end note
+
+note right of UC7
+  **Pre:** Finding in open/validated state,
+  Regulatory Official has waive capability
+  **Post:** Finding state → waived → closed
+end note
+
+note bottom of UC9
+  **Pre:** Finding in terminal-ready state
+  **Post:** Finding state → closed;
+  Audit entry recorded
+end note
+
+@enduml

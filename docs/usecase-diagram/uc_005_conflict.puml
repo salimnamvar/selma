@@ -1,0 +1,47 @@
+@startuml uc_005_conflict
+!include common/uc_styles.puml
+
+title **UC-005 — Conflict Resolution**\n(Bounded Context: Conflict)
+
+left to right direction
+
+actor "Regulatory\nOfficial" as RO #E3F2FD
+
+rectangle "Selma Application" as SYS {
+  rectangle "Conflict Resolution\n(conflict_resolver)" as BOUNDED {
+
+    usecase "Detect Conflict"                as UC1
+    usecase "Resolve Conflict\n(deterministic)" as UC2
+    usecase "Escalate to\nHuman Review"      as UC3
+    usecase "Review Conflict\nArtifact"      as UC4
+  }
+}
+
+' ---- associations ----
+RO --> UC4
+
+UC1 ..> UC2 : <<include>>
+UC2 ..> UC3 : <<extend>>
+UC3 ..> UC4 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** Multiple directives or rules overlap
+  on the same target scope
+  **Post:** Conflict artifact created
+end note
+
+note right of UC2
+  **Pre:** Conflict detected, strategy available
+  **Post:** Conflict resolved via deterministic
+  precedence rules; resolution recorded
+end note
+
+note bottom of UC3
+  **Pre:** Deterministic resolution not possible
+  or confidence below threshold
+  **Post:** Conflict escalated; Regulatory
+  Official notified for manual review
+end note
+
+@enduml

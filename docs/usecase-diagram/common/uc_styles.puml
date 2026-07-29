@@ -1,0 +1,69 @@
+' ============================================================
+' Selma — Use Case Diagram Style Sheet
+' ============================================================
+' Shared skinparam definitions for all UC-00x diagrams.
+' Include at the top of every use case diagram:
+'   !include common/uc_styles.puml
+' ============================================================
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam roundCorner 8
+
+' ---- default font ----
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+' ---- actor ----
+skinparam actor {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #0D47A1
+  FontSize 13
+  Style awesome
+}
+
+' ---- use case (oval) ----
+skinparam usecase {
+  BackgroundColor #FFF8E1
+  BorderColor #F9A825
+  FontColor #3E2723
+  FontSize 11
+  ArrowColor #546E7A
+  ArrowThickness 1
+}
+
+' ---- rectangle / system boundary ----
+skinparam rectangle {
+  BackgroundColor #F5F5F5
+  BorderColor #78909C
+  BorderStyle dashed
+  FontColor #263238
+  FontSize 14
+  FontStyle bold
+}
+
+' ---- package ----
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor #90A4AE
+}
+
+' ---- note ----
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #FFB300
+  FontSize 10
+  FontColor #4E342E
+}
+
+' ---- arrow (association / dependency) ----
+skinparam ArrowColor #546E7A
+skinparam ArrowThickness 1
+
+' ---- legend ----
+skinparam legend {
+  BackgroundColor #FAFAFA
+  BorderColor #B0BEC5
+  FontSize 10
+}

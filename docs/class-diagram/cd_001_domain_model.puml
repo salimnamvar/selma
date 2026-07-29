@@ -1,0 +1,640 @@
+@startuml cd_001_domain_model
+' ─────────────────────────────────────────────────────────────
+' CLS-001 · Domain Model — Selma Rule Regularity Platform
+' PlantUML class diagram
+' ─────────────────────────────────────────────────────────────
+
+!includeurl ../common/cd_styles.puml
+
+title **CLS-001 — Domain Model**\nSelma · Rule Regularity Platform\n
+
+' ═══════════════════════════════════════════════════════════
+'  CLEAN ARCHITECTURE LAYERS (outer → inner)
+' ═══════════════════════════════════════════════════════════
+
+package "<<application>>\nApplication Layer" as APP #F5F5F5/DDDDDD {
+  class "**LineageService**" as LineageService <<Domain Service>> #E8F5E9/2E7D32 {
+    + fork(lineage: LineageId): LineageId
+    + merge(left: LineageId, right: LineageId): LineageId
+    + split(lineage: LineageId): List~LineageId~
+  }
+
+  class "**DetectionDiscriminator**" as DetectionDiscriminator <<Domain Service>> #E8F5E9/2E7D32 {
+    + resolve(spec: DetectionSpec, active: Directive): Strategy
+  }
+
+  class "**ResolveConflict**" as ResolveConflict <<Domain Service>> #E8F5E9/2E7D32 {
+    + resolve(a: Directive, b: Directive): ConflictArtifact
+  }
+
+  class "**FindingFsm**" as FindingFsm <<Domain Service>> #E8F5E9/2E7D32 {
+    + transition(finding: Finding, target: FsmState): boolean
+    + allowedTransitions(current: FsmState): Set~FsmState~
+  }
+
+  class "**ScopeMatcher**" as ScopeMatcher <<Domain Service>> #E8F5E9/2E7D32 {
+    + match(applicability: Applicability, target: Target): Score
+  }
+
+  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #E8F5E9/2E7D32 {
+    + load(ref: PairedPolicyRef): GuidancePayload
+  }
+
+  class "**CapabilityGate**" as CapabilityGate <<Domain Service>> #E8F5E9/2E7D32 {
+    + check(capability: CapabilityId, actor: Actor): boolean
+    + deny(capability: CapabilityId, actor: Actor): CapabilityDenied
+  }
+}
+
+package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Governance Authoring
+  ' ──────────────────────────────────────────────────────────
+  package "Governance Authoring" as BC_GOVERNANCE #F0F4F8/5B7BA5 {
+
+    class "**Directive**" as Directive <<Aggregate Root>> #E0F2F1/00897B {
+      __identity__
+      + lineage_id: LineageId
+      + execution_id: ExecutionId
+      __state__
+      + status: DirectiveStatus {active|deprecated|draft}
+      + revision: int
+      + metadata: Map~String,Object~
+      --
+      <<invariant>>
+      . lineage_id matches ^[A-Z]{2,5}-\d{3}[A-Z]?$
+      . revision > 0
+      . status transition: draft→active→deprecated
+    }
+
+    class "**DirectiveRevision**" as DirectiveRevision <<Entity>> #ECEFF1/546E7A {
+      + revision: int
+      + changed_at: HlcTimestamp
+      + changed_by: String
+      + snapshot: Directive
+    }
+
+    note bottom of Directive
+      **Aggregate Root**
+      Holds identity via LineageId;
+      ExecutionId rotates on re-activation.
+    end note
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Compilation
+  ' ──────────────────────────────────────────────────────────
+  package "Compilation" as BC_COMPILATION #F0F4F8/5B7BA5 {
+
+    class "**CgIrSnapshot**" as CgIrSnapshot <<Aggregate Root>> #E0F2F1/00897B {
+      + cg_ir_snapshot_hash: String {SHA-256}
+      + frozen_env_hash: String
+      + engine_version: String
+      + compiled_at: DateTime
+      --
+      <<invariant>>
+      . hash == SHA-256(controls ∥ edges ∥ env)
+      . engine_version non-empty
+    }
+
+    class "**ControlNode**" as ControlNode <<Entity>> #ECEFF1/546E7A {
+      + node_id: String
+      + node_hash: NodeHash
+      + kind: NodeKind
+      + payload: Map
+    }
+
+    class "**DependencyEdge**" as DependencyEdge <<Entity>> #ECEFF1/546E7A {
+      + edge_hash: EdgeHash
+      + source_id: String
+      + target_id: String
+      + kind: EdgeKind
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Inspection
+  ' ──────────────────────────────────────────────────────────
+  package "Inspection" as BC_INSPECTION #F0F4F8/5B7BA5 {
+
+    class "**InspectionSnapshot**" as InspectionSnapshot <<Aggregate Root>> #E0F2F1/00897B {
+      + inspection_id: UUID
+      + target_id: String
+      + target_hash: String {SHA-256}
+      + cg_ir_snapshot_hash: String {SHA-256}
+      + frozen_env_hash: String
+      + engine_version: String
+      + inspector: String
+      + started_at: DateTime
+      + completed_at: DateTime
+      + status: InspectionStatus {completed|partial|failed}
+      + finding_count: int
+      + skipped_nodes: List~SkippedNode~
+      + pipeline_trace: List~PipelineTraceEntry~
+      + system_state_hash: String {SHA-256}
+      --
+      <<invariant>>
+      . completed_at >= started_at
+      . finding_count >= 0
+      . status=completed ⇒ completed_at != null
+    }
+
+    class "**Target**" as Target <<Value Object>> #E8EAF6/3F51B5 {
+      + target_id: String
+      + target_hash: TargetHash
+      + kind: String
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Finding Lifecycle
+  ' ──────────────────────────────────────────────────────────
+  package "Finding Lifecycle" as BC_FINDING #F0F4F8/5B7BA5 {
+
+    class "**Finding**" as Finding <<Aggregate Root>> #E0F2F1/00897B {
+      + finding_id: FindingId
+      + fsm_state: FsmState
+      + disposition: Disposition
+      + severity: Severity
+      + evidence_ref: EvidenceRef
+      + guidance_payload: GuidancePayload
+      --
+      <<invariant>>
+      . fsm_state ∈ FindingFsm transition table
+      . disposition requires terminal state
+      . SoD: reviewer ≠ finder
+    }
+
+    abstract "**FsmState**" as FsmState <<enum>> #FFF8E1/F9A825 {
+      Created
+      Open
+      UnderReview
+      EvidenceSubmitted
+      Validated
+      Remediated
+      Verified
+      Waived
+      Dismissed
+      Closed
+    }
+
+    abstract "**Disposition**" as Disposition <<enum>> #FFF8E1/F9A825 {
+      valid
+      invalid
+      waived
+      dismissed
+    }
+
+    abstract "**Severity**" as SeverityVO <<enum>> #FFF8E1/F9A825 {
+      critical
+      high
+      medium
+      low
+      informational
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Conflict
+  ' ──────────────────────────────────────────────────────────
+  package "Conflict" as BC_CONFLICT #F0F4F8/5B7BA5 {
+
+    class "**ConflictArtifact**" as ConflictArtifact <<Aggregate Root>> #E0F2F1/00897B {
+      + conflict_kind: ConflictKind
+      + binding_status: BindingStatus
+      + resolution_trace: ResolutionTrace
+      --
+      <<invariant>>
+      . binding_status implies resolution_trace non-empty
+    }
+
+    abstract "**ConflictKind**" as ConflictKind <<enum>> #FFF8E1/F9A825 {
+      within_lineage
+      cross_lineage_advisory
+    }
+
+    abstract "**BindingStatus**" as BindingStatus <<enum>> #FFF8E1/F9A825 {
+      unresolved
+      advisory
+      bound
+      superseded
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Authorization
+  ' ──────────────────────────────────────────────────────────
+  package "Authorization" as BC_AUTHZ #F0F4F8/5B7BA5 {
+
+    class "**ActorCapabilityGrant**" as ActorCapabilityGrant <<Entity>> #ECEFF1/546E7A {
+      + actor_id: String
+      + capability_id: CapabilityId
+      + granted_at: HlcTimestamp
+      + expires_at: HlcTimestamp
+      + constraints: Map
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Certification
+  ' ──────────────────────────────────────────────────────────
+  package "Certification" as BC_CERT #F0F4F8/5B7BA5 {
+
+    class "**CertificationRun**" as CertificationRun <<Aggregate Root>> #E0F2F1/00897B {
+      + run_id: UUID
+      + started_at: DateTime
+      + completed_at: DateTime
+      + overall_status: PassFail
+    }
+
+    class "**GateResult**" as GateResult <<Entity>> #ECEFF1/546E7A {
+      + gate_id: String {AA-01..AA-07}
+      + passed: boolean
+      + evidence_ref: String
+      + checked_at: DateTime
+    }
+  }
+
+  ' ──────────────────────────────────────────────────────────
+  '  BOUNDED CONTEXT: Guidance & Analytics (read models)
+  ' ──────────────────────────────────────────────────────────
+  package "Guidance & Analytics" as BC_GUIDANCE #F0F4F8/5B7BA5 {
+
+    class "**GuidanceView**" as GuidanceView <<Read Model>> #E8EAF6/3F51B5 {
+      + directive_id: LineageId
+      + doctrine_text: String
+      + paired_policy_ref: PairedPolicyRef
+    }
+
+    class "**AggregateReport**" as AggregateReport <<Read Model>> #E8EAF6/3F51B5 {
+      + scope: String
+      + period: DateRange
+      + finding_counts: Map~Severity,int~
+      + directive_coverage: double
+    }
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  SHARED VALUE OBJECTS
+' ═══════════════════════════════════════════════════════════
+package "<<domain>>\nShared Value Objects" as VO_PKG #F7F9FB/95A5B6 {
+
+  class "**LineageId**" as LineageId <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String
+    --
+    <<invariant>>
+    . matches ^[A-Z]{2,5}-\d{3}[A-Z]?$
+  }
+
+  class "**ExecutionId**" as ExecutionId <<Value Object>> #E8EAF6/3F51B5 {
+    + value: UUID
+  }
+
+  class "**SnapshotHash**" as SnapshotHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**NodeHash**" as NodeHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**EdgeHash**" as EdgeHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**FrozenEnvHash**" as FrozenEnvHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**EventId**" as EventId <<Value Object>> #E8EAF6/3F51B5 {
+    + value: UUID
+  }
+
+  class "**FindingId**" as FindingId <<Value Object>> #E8EAF6/3F51B5 {
+    + value: UUID
+  }
+
+  class "**HlcTimestamp**" as HlcTimestamp <<Value Object>> #E8EAF6/3F51B5 {
+    + wall_time: DateTime
+    + logical: int
+  }
+
+  class "**CapabilityId**" as CapabilityId <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String
+    + scope: String
+  }
+
+  class "**PairedPolicyRef**" as PairedPolicyRef <<Value Object>> #E8EAF6/3F51B5 {
+    + policy_id: String
+    + version: String
+    + uri: URI
+  }
+
+  class "**DetectionStrategy**" as DetectionStrategy <<Value Object>> #E8EAF6/3F51B5 {
+    + strategy_id: String
+    + adapter_key: String
+    + parameters: Map
+  }
+
+  class "**DeonticModality**" as DeonticModality <<Value Object>> #E8EAF6/3F51B5 {
+    + modality: ModalityKind {must|may|should|shall}
+    + strength: int
+  }
+
+  class "**Applicability**" as Applicability <<Value Object>> #E8EAF6/3F51B5 {
+    + scope: String
+    + specificity: int
+    + constraints: Map
+  }
+
+  class "**Priority**" as Priority <<Value Object>> #E8EAF6/3F51B5 {
+    + value: int
+    + tier: String
+  }
+
+  class "**Subject**" as Subject <<Value Object>> #E8EAF6/3F51B5 {
+    + subject_type: String
+    + identifier: String
+  }
+
+  class "**Predicate**" as Predicate <<Value Object>> #E8EAF6/3F51B5 {
+    + verb: String
+    + object_ref: String
+    + constraints: Map
+  }
+
+  class "**DetectionSpec**" as DetectionSpec <<Value Object>> #E8EAF6/3F51B5 {
+    + strategy_ref: String
+    + parameters: Map
+    + adapter_hint: String
+  }
+
+  class "**EvidenceRef**" as EvidenceRef <<Value Object>> #E8EAF6/3F51B5 {
+    + artifact_uri: URI
+    + hash: String {SHA-256}
+    + collected_at: HlcTimestamp
+  }
+
+  class "**GuidancePayload**" as GuidancePayload <<Value Object>> #E8EAF6/3F51B5 {
+    + doctrine_text: String
+    + remediation_steps: List~String~
+    + references: List~URI~
+  }
+
+  class "**ResolutionTrace**" as ResolutionTrace <<Value Object>> #E8EAF6/3F51B5 {
+    + steps: List~ResolutionStep~
+    + winner: LineageId
+    + reason: String
+  }
+
+  class "**PipelineTraceEntry**" as PipelineTraceEntry <<Value Object>> #E8EAF6/3F51B5 {
+    + stage: String
+    + started_at: DateTime
+    + completed_at: DateTime
+    + status: String
+  }
+
+  class "**SkippedNode**" as SkippedNode <<Value Object>> #E8EAF6/3F51B5 {
+    + node_id: String
+    + reason: String
+  }
+
+  class "**SystemStateHash**" as SystemStateHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**TargetHash**" as TargetHash <<Value Object>> #E8EAF6/3F51B5 {
+    + value: String {SHA-256}
+  }
+
+  class "**Provenance**" as Provenance <<Value Object>> #E8EAF6/3F51B5 {
+    + source_ref: String
+    + author: String
+    + created_at: HlcTimestamp
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  DOMAIN EVENTS
+' ═══════════════════════════════════════════════════════════
+package "<<domain>>\nDomain Events" as EVT_PKG #FFFDE7/E0C96F {
+
+  class "**FindingCreated**" as FindingCreated <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + finding_id: FindingId
+    + severity: Severity
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**DispositionChanged**" as DispositionChanged <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + finding_id: FindingId
+    + old_disposition: Disposition
+    + new_disposition: Disposition
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**FindingClosed**" as FindingClosed <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + finding_id: FindingId
+    + final_disposition: Disposition
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**CapabilityDenied**" as CapabilityDenied <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + capability_id: CapabilityId
+    + actor_id: String
+    + reason: String
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**CgIrPublished**" as CgIrPublished <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + cg_ir_snapshot_hash: String
+    + engine_version: String
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**InspectionCompleted**" as InspectionCompleted <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + inspection_id: UUID
+    + finding_count: int
+    + status: InspectionStatus
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**ConflictEscalated**" as ConflictEscalated <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + conflict_kind: ConflictKind
+    + directive_a: LineageId
+    + directive_b: LineageId
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**CertificationCompleted**" as CertificationCompleted <<Domain Event>> #FFF8E1/FF8F00 {
+    + event_id: EventId
+    + run_id: UUID
+    + overall_status: PassFail
+    + occurred_at: HlcTimestamp
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  REPOSITORY PORTS (interfaces)
+' ═══════════════════════════════════════════════════════════
+package "<<ports>>\nRepository Interfaces" as PORT_PKG #FCE4EC/C62828 {
+
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>> #FCE4EC/C62828 {
+    + findById(id: LineageId): Directive
+    + save(directive: Directive): void
+    + findByStatus(status: DirectiveStatus): List~Directive~
+    + nextExecutionId(): ExecutionId
+  }
+
+  interface "**CgIrRepository**" as CgIrRepository <<Port>> #FCE4EC/C62828 {
+    + findByHash(hash: String): CgIrSnapshot
+    + save(snapshot: CgIrSnapshot): void
+    + latest(): CgIrSnapshot
+  }
+
+  interface "**EventStore**" as EventStore <<Port>> #FCE4EC/C62828 {
+    + append(event: DomainEvent): void
+    + stream(aggregate_id: String): List~DomainEvent~
+    + stream(from: HlcTimestamp): List~DomainEvent~
+  }
+
+  interface "**ArtifactRepository**" as ArtifactRepository <<Port>> #FCE4EC/C62828 {
+    + saveInspection(snapshot: InspectionSnapshot): void
+    + findInspection(id: UUID): InspectionSnapshot
+    + saveFinding(finding: Finding): void
+    + findFinding(id: FindingId): Finding
+    + saveConflict(artifact: ConflictArtifact): void
+  }
+
+  interface "**TargetGateway**" as TargetGateway <<Port>> #FCE4EC/C62828 {
+    + fetchTarget(target_id: String): Target
+    + hashTarget(target: Target): TargetHash
+  }
+
+  interface "**PolicyDoctrineReader**" as PolicyDoctrineReader <<Port>> #FCE4EC/C62828 {
+    + read(ref: PairedPolicyRef): GuidancePayload
+    + listAvailable(): List~PairedPolicyRef~
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  RELATIONSHIPS
+' ═══════════════════════════════════════════════════════════
+
+' ── Directive aggregate internals ─────────────────────────
+Directive *-right- "0..*" DirectiveRevision : contains >
+Directive --> LineageId : lineage_id
+Directive --> ExecutionId : execution_id
+Directive --> DeonticModality : modality
+Directive --> Subject : subject
+Directive --> Predicate : predicate
+Directive --> DetectionSpec : detection_spec
+Directive --> PairedPolicyRef : paired_policy_ref
+Directive --> Applicability : applicability
+Directive --> Priority : priority
+
+' ── CgIrSnapshot aggregate internals ─────────────────────
+CgIrSnapshot *-right- "0..*" ControlNode : controls >
+CgIrSnapshot *-right- "0..*" DependencyEdge : edges >
+ControlNode --> NodeHash : hash
+DependencyEdge --> EdgeHash : hash
+CgIrSnapshot --> FrozenEnvHash : frozen_env
+CgIrSnapshot --> Provenance : provenance
+
+' ── InspectionSnapshot aggregate internals ───────────────
+InspectionSnapshot --> Target : target
+InspectionSnapshot --> TargetHash : target_hash
+InspectionSnapshot --> "0..*" SkippedNode : skipped_nodes
+InspectionSnapshot --> "0..*" PipelineTraceEntry : pipeline_trace
+InspectionSnapshot --> SystemStateHash : system_state
+
+' ── Finding aggregate internals ──────────────────────────
+Finding --> FindingId : finding_id
+Finding --> FsmState : fsm_state
+Finding --> Disposition : disposition
+Finding --> SeverityVO : severity
+Finding --> EvidenceRef : evidence
+Finding --> GuidancePayload : guidance
+
+' ── ConflictArtifact internals ───────────────────────────
+ConflictArtifact --> ConflictKind : kind
+ConflictArtifact --> BindingStatus : status
+ConflictArtifact --> ResolutionTrace : trace
+
+' ── CertificationRun internals ───────────────────────────
+CertificationRun *-right- "1..7" GateResult : gates >
+
+' ── Cross-aggregate references (dotted) ──────────────────
+Finding ..> InspectionSnapshot : inspected by >
+InspectionSnapshot ..> CgIrSnapshot : compiled from >
+ConflictArtifact ..> Directive : conflicts between >
+CertificationRun ..> InspectionSnapshot : certifies >
+CertificationRun ..> Finding : validates >
+
+' ── Domain services → aggregates (dependency) ────────────
+LineageService ..> Directive : operates on >
+DetectionDiscriminator ..> Directive : reads >
+DetectionDiscriminator ..> DetectionStrategy : produces >
+ResolveConflict ..> Directive : compares >
+ResolveConflict ..> ConflictArtifact : produces >
+FindingFsm ..> Finding : governs >
+FindingFsm ..> FsmState : enforces >
+ScopeMatcher ..> Applicability : scores >
+ScopeMatcher ..> Target : matches against >
+GuidanceResolver ..> PairedPolicyRef : resolves >
+GuidanceResolver ..> GuidancePayload : produces >
+CapabilityGate ..> CapabilityId : checks >
+CapabilityGate ..> ActorCapabilityGrant : reads >
+
+' ── Domain events → aggregates (raised by) ───────────────
+Finding ..> FindingCreated : raises >
+Finding ..> DispositionChanged : raises >
+Finding ..> FindingClosed : raises >
+CapabilityGate ..> CapabilityDenied : raises >
+CgIrSnapshot ..> CgIrPublished : raises >
+InspectionSnapshot ..> InspectionCompleted : raises >
+ResolveConflict ..> ConflictEscalated : raises >
+CertificationRun ..> CertificationCompleted : raises >
+
+' ── Repository ports → aggregates (persists) ─────────────
+DirectiveRepository ..> Directive : persists >
+CgIrRepository ..> CgIrSnapshot : persists >
+EventStore ..> FindingCreated : stores >
+ArtifactRepository ..> InspectionSnapshot : persists >
+ArtifactRepository ..> Finding : persists >
+ArtifactRepository ..> ConflictArtifact : persists >
+TargetGateway ..> Target : fetches >
+PolicyDoctrineReader ..> GuidancePayload : reads >
+
+' ── Read models ──────────────────────────────────────────
+GuidanceView ..> PairedPolicyRef : references >
+GuidanceView ..> Directive : derived from >
+AggregateReport ..> Finding : aggregates >
+
+' ═══════════════════════════════════════════════════════════
+'  LEGEND
+' ═══════════════════════════════════════════════════════════
+legend bottom
+  |= Symbol |= Meaning |
+  | <back:#E0F2F1>   </back> | **Aggregate Root** — consistency boundary |
+  | <back:#E8EAF6>   </back> | **Value Object** — immutable, identity-less |
+  | <back:#FFF8E1>   </back> | **Domain Event** / **Enum** |
+  | <back:#E8F5E9>   </back> | **Domain Service** — stateless operation |
+  | <back:#FCE4EC>   </back> | **Port** — repository / gateway interface |
+  | <back:#ECEFF1>   </back> | **Entity** — identity within aggregate |
+  | ──▷ | composition (owns) |
+  | ..▷ | dependency / reference |
+  | **──▷** | association |
+endlegend
+
+footer CLS-001 · Domain Model · Selma · Clean Architecture
+
+@enduml

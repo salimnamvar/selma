@@ -1,0 +1,78 @@
+@startuml erd_004_artifact_store
+!include common/erd_styles.puml
+
+title Artifact Store (Object Store) — Write-Once
+
+package "Artifact Store" {
+  entity "InspectionSnapshots" as InspectionSnapshots {
+    * inspection_id : UUID <<PK>>
+    --
+    target_id : UUID
+    target_hash : CHAR(64) <<SHA-256>>
+    cg_ir_snapshot_hash : CHAR(64)
+    frozen_env_hash : CHAR(64)
+    engine_version : TEXT
+    inspector : TEXT
+    started_at : TIMESTAMPTZ
+    completed_at : TIMESTAMPTZ
+    status : ENUM(completed, partial, failed)
+    finding_count : INTEGER
+    system_state_hash : CHAR(64) <<SHA-256>>
+  }
+
+  entity "PipelineTraces" as PipelineTraces {
+    * trace_id : UUID <<PK>>
+    --
+    o inspection_id : UUID <<FK>>
+    stage : ENUM(normalize, classify, select_controls, evaluate, aggregate, report)
+    node_id : UUID <<optional>>
+    started_at : TIMESTAMPTZ
+    completed_at : TIMESTAMPTZ
+    status : ENUM(success, skipped, failed)
+    error : TEXT <<optional>>
+    duration_ms : INTEGER
+  }
+
+  entity "ConflictArtifacts" as ConflictArtifacts {
+    * artifact_id : UUID <<PK>>
+    --
+    conflict_kind : TEXT
+    binding_status : TEXT
+    resolution_trace : JSONB
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "CertificationArtifacts" as CertificationArtifacts {
+    * cert_id : UUID <<PK>>
+    --
+    run_id : UUID
+    gate_id : TEXT <<AA-01 .. AA-07>>
+    pass_fail : BOOLEAN
+    evidence_ref : TEXT
+    created_at : TIMESTAMPTZ
+  }
+}
+
+InspectionSnapshots ||--o{ PipelineTraces : "inspection_id"
+
+note bottom of InspectionSnapshots
+  **Invariants**
+  • Immutable once status = completed
+  • system_state_hash captures full inspection state
+  • target_hash is SHA-256 of the inspected target
+end note
+
+note bottom of PipelineTraces
+  **Invariants**
+  • Preserves chronological order per inspection
+  • stage ordering: normalize → classify → select_controls → evaluate → aggregate → report
+  • duration_ms = completed_at − started_at (millis)
+end note
+
+note bottom of CertificationArtifacts
+  **Gate IDs**: AA-01 through AA-07
+  • pass_fail = true → gate satisfied
+  • evidence_ref points to supporting artifact
+end note
+
+@enduml

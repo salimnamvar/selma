@@ -1,0 +1,58 @@
+@startuml erd_002_cgir_store
+!include common/erd_styles.puml
+
+title CGIR Store (Content-Addressed) — Immutable
+
+package "CGIR Store" {
+  entity "Snapshots" as Snapshots {
+    * cg_ir_snapshot_hash : CHAR(64) <<PK, SHA-256>>
+    --
+    frozen_env_hash : CHAR(64)
+    engine_version : TEXT
+    directive_graph_version : TEXT
+    compiled_at : TIMESTAMPTZ
+    manifest_ref : TEXT
+  }
+
+  entity "Nodes" as Nodes {
+    * node_hash : CHAR(64) <<PK, SHA-256>>
+    --
+    node_body : JSONB
+    semantic_hash : CHAR(64)
+    presentation_hash : CHAR(64)
+    creator_provenance : TEXT
+  }
+
+  entity "Edges" as Edges {
+    * edge_hash : CHAR(64) <<PK, SHA-256>>
+    --
+    o source_node_hash : CHAR(64) <<FK>>
+    o target_node_hash : CHAR(64) <<FK>>
+  }
+
+  entity "SnapshotNodes" as SnapshotNodes {
+    o snapshot_hash : CHAR(64) <<FK>>
+    --
+    o node_hash : CHAR(64) <<FK>>
+  }
+}
+
+Snapshots ||--o{ SnapshotNodes : "cg_ir_snapshot_hash"
+Nodes ||--o{ SnapshotNodes : "node_hash"
+Nodes ||--o{ Edges : "source_node_hash"
+Nodes ||--o{ Edges : "target_node_hash"
+
+note bottom of Nodes
+  **Deduplication**
+  • Identical node_body → identical node_hash
+  • Hash is deterministic (SHA-256 of canonical JSON)
+end note
+
+note bottom of Snapshots
+  **Invariants**
+  • Immutable after publish
+  • cg_ir_snapshot_hash is deterministic
+  • frozen_env_hash captures the build environment
+end note
+
+@enduml

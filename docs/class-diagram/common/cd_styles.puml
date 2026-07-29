@@ -1,0 +1,107 @@
+' ─────────────────────────────────────────────────────────────
+' cd_styles.puml — Shared skinparam & style constants for Selma
+' Class Diagrams (PlantUML)
+'
+' Include at the top of every diagram:
+'   !includeurl common/cd_styles.puml
+' ─────────────────────────────────────────────────────────────
+
+' ── Global appearance ───────────────────────────────────────
+skinparam backgroundColor #FAFBFC
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam defaultFontName "Inter,Segoe UI,Helvetica,Arial,sans-serif"
+skinparam defaultFontSize 12
+skinparam defaultFontColor #2C3E50
+
+' ── Package (Bounded Context) ──────────────────────────────
+skinparam package {
+  BackgroundColor #F0F4F8
+  BorderColor #5B7BA5
+  BorderStyle solid
+  FontSize 14
+  FontStyle bold
+  FontColor #2C3E50
+  StereotypeFontSize 11
+  StereotypeFontColor #5B7BA5
+}
+
+' ── Class ──────────────────────────────────────────────────
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #7F8C9A
+  FontSize 12
+  FontStyle bold
+  HeaderBackgroundColor #E8EDF2
+  AttributeFontSize 11
+  StereotypeFontSize 10
+  StereotypeFontColor #5B7BA5
+}
+
+' ── Abstract class ─────────────────────────────────────────
+skinparam abstract {
+  BackgroundColor #F7F9FB
+  BorderColor #95A5B6
+  FontStyle italic
+}
+
+' ── Enum ───────────────────────────────────────────────────
+skinparam enum {
+  BackgroundColor #FFF8E7
+  BorderColor #D4A843
+  StereotypeFontColor #B8860B
+}
+
+' ── Interface ──────────────────────────────────────────────
+skinparam interface {
+  BackgroundColor #EAF7F0
+  BorderColor #3DAA6D
+  StereotypeFontColor #2E8B57
+}
+
+' ── Arrow defaults ─────────────────────────────────────────
+skinparam ArrowColor #5B7BA5
+skinparam ArrowThickness 1
+skinparam Linetype ortho
+
+' ── Note ───────────────────────────────────────────────────
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #E0C96F
+  FontSize 10
+  FontColor #5D4E37
+}
+
+' ── Legend ──────────────────────────────────────────────────
+skinparam legend {
+  BackgroundColor #F5F7FA
+  BorderColor #B0BEC5
+  FontSize 10
+}
+
+' ── Stereotype colours per archetype ───────────────────────
+'  <<Aggregate Root>>  → teal
+'  <<Value Object>>    → slate-blue
+'  <<Domain Event>>    → amber
+'  <<Domain Service>>  → forest-green
+'  <<Port>>            → crimson
+'  <<Entity>>          → neutral-grey
+'
+' These are applied inline via stereotype {bgColor} in the main
+' diagram so they survive skinparam inheritance quirks.
+
+' ── Colour palette ─────────────────────────────────────────
+!define AGGREGATE_BG    #E0F2F1
+!define AGGREGATE_BD    #00897B
+!define VO_BG           #E8EAF6
+!define VO_BD           #3F51B5
+!define EVENT_BG        #FFF8E1
+!define EVENT_BD        #FF8F00
+!define SERVICE_BG      #E8F5E9
+!define SERVICE_BD      #2E7D32
+!define PORT_BG         #FCE4EC
+!define PORT_BD         #C62828
+!define ENTITY_BG       #ECEFF1
+!define ENTITY_BD       #546E7A
+!define ENUM_BG         #FFF8E1
+!define ENUM_BD         #F9A825

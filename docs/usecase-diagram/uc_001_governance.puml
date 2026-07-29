@@ -1,0 +1,55 @@
+@startuml uc_001_governance
+!include common/uc_styles.puml
+
+title **UC-001 — Governance Authoring**\n(Bounded Context: Governance Authoring)
+
+left to right direction
+
+actor "Regulatory\nOfficial" as RO #E3F2FD
+
+rectangle "Selma Application" as SYS {
+  rectangle "Governance Authoring\n(directives_adapter, application_service)" as BOUNDED {
+
+    usecase "Create Directive"          as UC1
+    usecase "Modify Directive"          as UC2
+    usecase "Retire Directive"          as UC3
+    usecase "Fork Directive"            as UC4
+    usecase "Merge Directive"           as UC5
+    usecase "Split Directive"           as UC6
+    usecase "Restore Directive"         as UC7
+    usecase "View Directive History"    as UC8
+  }
+}
+
+' ---- associations ----
+RO --> UC1
+RO --> UC2
+RO --> UC3
+RO --> UC4
+RO --> UC5
+RO --> UC6
+RO --> UC7
+RO --> UC8
+
+' ---- includes / extends ----
+UC5 ..> UC4 : <<include>>
+UC6 ..> UC2 : <<include>>
+UC7 ..> UC8 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** Regulatory Official authenticated
+  **Post:** New directive persisted in draft state
+end note
+
+note right of UC3
+  **Pre:** Directive in active state
+  **Post:** Directive state → retired
+end note
+
+note bottom of UC8
+  **Pre:** Directive exists
+  **Post:** Full version chain displayed
+end note
+
+@enduml

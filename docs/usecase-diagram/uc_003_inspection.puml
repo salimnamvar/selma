@@ -1,0 +1,58 @@
+@startuml uc_003_inspection
+!include common/uc_styles.puml
+
+title **UC-003 — Inspection**\n(Bounded Context: Inspection)
+
+left to right direction
+
+actor "Compliance\nRepresentative" as CR #E8EAF6
+
+rectangle "Selma Application" as SYS {
+  rectangle "Inspection\n(rule_inspector)" as BOUNDED {
+
+    usecase "Submit Target\nfor Inspection"  as UC1
+    usecase "Normalize Target"               as UC2
+    usecase "Classify Target"                as UC3
+    usecase "Select Controls"                as UC4
+    usecase "Evaluate Rules"                 as UC5
+    usecase "Aggregate Results"              as UC6
+    usecase "Generate Report"                as UC7
+  }
+}
+
+rectangle "External Systems" as EXT {
+  usecase "Target Systems"  as EXT1
+}
+
+' ---- associations ----
+CR --> UC1
+CR --> UC7
+
+UC1 ..> UC2 : <<include>>
+UC2 ..> UC3 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC4 ..> UC5 : <<include>>
+UC5 ..> UC6 : <<include>>
+UC6 ..> UC7 : <<include>>
+
+UC1 ..> EXT1 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** Compliance Representative authenticated,
+  target system reachable
+  **Post:** Target queued for normalization
+end note
+
+note right of UC5
+  **Pre:** Controls selected, CG-IR snapshot available
+  **Post:** Per-rule evaluation results produced
+end note
+
+note bottom of UC7
+  **Pre:** Results aggregated
+  **Post:** Inspection report generated;
+  Findings created for non-conformances
+end note
+
+@enduml

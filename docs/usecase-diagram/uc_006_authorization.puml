@@ -1,0 +1,54 @@
+@startuml uc_006_authorization
+!include common/uc_styles.puml
+
+title **UC-006 — Authorization**\n(Bounded Context: Authorization)
+
+left to right direction
+
+actor "Regulatory\nOfficial" as RO #E3F2FD
+actor "Compliance\nRepresentative" as CR #E8EAF6
+
+rectangle "Selma Application" as SYS {
+  rectangle "Authorization\n(application_service)" as BOUNDED {
+
+    usecase "Authenticate User"             as UC1
+    usecase "Check Capability"              as UC2
+    usecase "Deny Capability\n(audit)"      as UC3
+    usecase "Enforce Segregation\nof Duties" as UC4
+  }
+}
+
+rectangle "External Systems" as EXT {
+  usecase "Audit Platform"  as EXT1
+}
+
+' ---- associations ----
+RO --> UC1
+CR --> UC1
+RO --> UC2
+CR --> UC2
+
+UC1 ..> UC2 : <<include>>
+UC2 ..> UC3 : <<extend>>
+UC2 ..> UC4 : <<include>>
+UC3 ..> EXT1 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** User presents credentials or token
+  **Post:** Identity established; session created
+end note
+
+note right of UC4
+  **Pre:** Capability check against role bindings
+  **Post:** SoD invariant enforced; conflicting
+  role combinations denied
+end note
+
+note bottom of UC3
+  **Pre:** Capability not granted for requested action
+  **Post:** Denial logged to Audit Platform;
+  403 returned to caller
+end note
+
+@enduml

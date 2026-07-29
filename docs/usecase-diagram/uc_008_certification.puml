@@ -1,0 +1,60 @@
+@startuml uc_008_certification
+!include common/uc_styles.puml
+
+title **UC-008 — Architectural Certification**\n(Bounded Context: Certification)
+
+left to right direction
+
+actor "CI/CD\nPipeline" as CICD #E8F5E9
+
+rectangle "Selma Application" as SYS {
+  rectangle "Certification\n(architectural_auditor)" as BOUNDED {
+
+    usecase "Run Architectural\nCertification"          as UC0
+    usecase "Validate Mediated\nFeedback"               as UC1
+    usecase "Validate Declarative\nGovernance"          as UC2
+    usecase "Validate Evaluator\nPurity"                as UC3
+    usecase "Validate Segregation\nof Duties"           as UC4
+    usecase "Validate Conflict\nDeterminism"            as UC5
+    usecase "Validate Discriminator\nCompleteness"      as UC6
+    usecase "Validate Portability"                      as UC7
+  }
+}
+
+rectangle "External Systems" as EXT {
+  usecase "Audit Platform"  as EXT1
+}
+
+' ---- associations ----
+CICD --> UC0
+
+UC0 ..> UC1 : <<include>>
+UC0 ..> UC2 : <<include>>
+UC0 ..> UC3 : <<include>>
+UC0 ..> UC4 : <<include>>
+UC0 ..> UC5 : <<include>>
+UC0 ..> UC6 : <<include>>
+UC0 ..> UC7 : <<include>>
+
+UC0 ..> EXT1 : <<include>>
+
+' ---- notes ----
+note right of UC0
+  **Pre:** Compilation snapshot available,
+  CI/CD pipeline triggered
+  **Post:** Certification report produced;
+  pass/fail per validation gate
+end note
+
+note right of UC3
+  Validates that all rule evaluators are
+  pure functions — no side effects, no
+  external state reads during evaluation
+end note
+
+note bottom of UC7
+  Validates that CG-IR is platform-independent
+  and can be consumed by any conforming evaluator
+end note
+
+@enduml

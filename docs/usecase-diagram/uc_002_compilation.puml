@@ -1,0 +1,62 @@
+@startuml uc_002_compilation
+!include common/uc_styles.puml
+
+title **UC-002 — Compilation**\n(Bounded Context: Compilation)
+
+left to right direction
+
+actor "CI/CD\nPipeline" as CICD #E8F5E9
+actor "Regulatory\nOfficial" as RO #E3F2FD
+
+rectangle "Selma Application" as SYS {
+  rectangle "Compilation\n(hermetic_compiler)" as BOUNDED {
+
+    usecase "Trigger Compilation"             as UC1
+    usecase "Validate Rule Schema"            as UC2
+    usecase "Detect Strategy Discriminator"   as UC3
+    usecase "Validate Complexity"             as UC4
+    usecase "Validate Portability"            as UC5
+    usecase "Materialize CG-IR"              as UC6
+    usecase "Publish Snapshot"                as UC7
+    usecase "Reuse Incremental"              as UC8
+  }
+}
+
+rectangle "External Systems" as EXT {
+  usecase "Governance Contracts"  as EXT1
+}
+
+' ---- associations ----
+CICD --> UC1
+RO --> UC1 : <<indirect>>\n(via directive change)
+
+UC1 ..> UC2 : <<include>>
+UC1 ..> UC3 : <<include>>
+UC1 ..> UC4 : <<include>>
+UC1 ..> UC5 : <<include>>
+UC2 ..> UC6 : <<include>>
+UC3 ..> UC6 : <<include>>
+UC4 ..> UC6 : <<include>>
+UC5 ..> UC6 : <<include>>
+UC6 ..> UC7 : <<include>>
+
+UC8 ..> UC6 : <<extend>>
+UC7 ..> EXT1 : <<include>>
+
+' ---- notes ----
+note right of UC1
+  **Pre:** Directive source available, CI trigger fired
+  **Post:** Compilation pipeline initiated
+end note
+
+note right of UC6
+  **Pre:** All validations pass
+  **Post:** CG-IR artifact produced
+end note
+
+note bottom of UC7
+  **Pre:** CG-IR materialized
+  **Post:** Snapshot published to Governance Contracts
+end note
+
+@enduml
