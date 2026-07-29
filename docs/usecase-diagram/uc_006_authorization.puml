@@ -37,18 +37,21 @@ UC3 ..> EXT1 : <<include>>
 note right of UC1
   **Pre:** User presents credentials or token
   **Post:** Identity established; session created
+  **Contract:** authorization/capabilities.yaml
 end note
 
 note right of UC4
   **Pre:** Capability check against role bindings
   **Post:** SoD invariant enforced; conflicting
   role combinations denied
+  **Contract:** authorization/role_matrix.yaml, sod_contract.yaml
 end note
 
 note bottom of UC3
   **Pre:** Capability not granted for requested action
   **Post:** Denial logged to Audit Platform;
   403 returned to caller
+  **Contract:** authorization/capabilities.yaml (failure_semantics)
 end note
 
 @enduml

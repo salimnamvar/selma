@@ -44,17 +44,19 @@ note right of UC0
   CI/CD pipeline triggered
   **Post:** Certification report produced;
   pass/fail per validation gate
+  **Contract:** certification/gates.yaml
 end note
 
 note right of UC3
-  Validates that all rule evaluators are
-  pure functions — no side effects, no
-  external state reads during evaluation
+  **Pre:** CG-IR snapshot available
+  **Post:** Purity validated
+  **Contract:** certification/gates.yaml (AA-03)
 end note
 
 note bottom of UC7
-  Validates that CG-IR is platform-independent
-  and can be consumed by any conforming evaluator
+  **Pre:** CG-IR snapshot available
+  **Post:** Portability validated
+  **Contract:** certification/gates.yaml (AA-07)
 end note
 
 @enduml

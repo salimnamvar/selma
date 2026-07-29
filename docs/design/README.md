@@ -17,12 +17,12 @@ normative contracts. Structure and behavior sources remain authoritative:
 | # | Document | Purpose |
 | :--- | :--- | :--- |
 | 01 | [Design Freeze status](01-design-freeze.md) | Entry/exit criteria, freeze scope, open decisions |
-| 02 | [DDD model](02-ddd-model.md) | Bounded contexts, aggregates, entities, VOs, domain events |
-| 03 | [Ports & adapters](03-ports-and-adapters.md) | Hexagonal ports, adapters, dependency rules |
+| 02 | [DDD model](02-ddd-model.md) | Bounded contexts, aggregate index, domain events, rationale |
+| 03 | [Ports & adapters](03-ports-and-adapters.md) | Hexagonal ports index, adapters, dependency rules |
 | 04 | [Package architecture](04-package-architecture.md) | Target package layout, ownership, forbidden deps |
 | 05 | [Application use cases](05-application-use-cases.md) | Application services mapped to contracts + capabilities |
 | 06 | [Domain events & stores](06-domain-events-and-stores.md) | Event types, store roles, immutability rules |
-| 07 | [Component class design](07-component-class-design.md) | Core classes/interfaces per C4 component (design-level) |
+| 07 | [Component class design](07-component-class-design.md) | Component → class diagram mapping, constraints |
 | 08 | [Implementation gap map](08-implementation-gap-map.md) | Current scaffold vs Design Freeze target (docs only) |
 
 ## Non-goals (this phase)

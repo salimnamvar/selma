@@ -29,12 +29,14 @@ note right of UC1
   **Pre:** Multiple directives or rules overlap
   on the same target scope
   **Post:** Conflict artifact created
+  **Contract:** conflict/detection.yaml (CD-001, CD-002)
 end note
 
 note right of UC2
   **Pre:** Conflict detected, strategy available
   **Post:** Conflict resolved via deterministic
   precedence rules; resolution recorded
+  **Contract:** conflict/precedence.yaml
 end note
 
 note bottom of UC3
@@ -42,6 +44,7 @@ note bottom of UC3
   or confidence below threshold
   **Post:** Conflict escalated; Regulatory
   Official notified for manual review
+  **Contract:** conflict/precedence.yaml (step 3)
 end note
 
 @enduml

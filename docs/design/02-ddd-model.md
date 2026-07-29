@@ -60,58 +60,18 @@ Contexts communicate via **application orchestration** and **immutable store con
 
 ## Aggregates
 
-### Directive (Governance Authoring)
+See: [`../class-diagram/`](../class-diagram/) for aggregate structure, value objects, entities, and invariants.
 
-- **Root:** `Directive` (execution identity)
-- **Invariants:** lineage immutable; status transitions per `directive/lifecycle`; metadata non-executable
-- **Value objects:** `LineageId`, `ExecutionId`, `DeonticModality`, `Subject`, `Predicate`, `DetectionSpec`, `PairedPolicyRef`, `Applicability`, `Priority`
-- **Entities:** `DirectiveRevision` (history), optional `LineageOperation` record (fork/merge/split)
-- **Repository:** `DirectiveRepository` (port) → directives adapter
-- **Contract:** `directive/identity`, `lifecycle`, `amendment`
+| Aggregate | Bounded Context | Contract |
+| :--- | :--- | :--- |
+| Directive | Governance Authoring | `directive/identity`, `lifecycle`, `amendment` |
+| CgIrSnapshot | Compilation | `compilation/pipeline`, `hermetic_boundary`, `data_stores/cgir_store` |
+| InspectionSnapshot | Inspection | `inspection/pipeline`, `finding_contract`, `data_stores/artifact_store` |
+| Finding | Finding Lifecycle | `finding_lifecycle/*`, `data_stores/event_store` |
+| ConflictArtifact | Conflict | `conflict/detection`, `precedence` |
+| CertificationRun | Certification | `certification/gates.yaml` |
 
-**Dual document:** The aggregate **references** policy doctrine by `paired_policy_ref` but does **not** embed executable evaluation logic from YAML.
-
-### CgIrSnapshot (Compilation)
-
-- **Root:** `CgIrSnapshot` identified by `cg_ir_snapshot_hash`
-- **Entities:** `ControlNode`, `DependencyEdge`
-- **Value objects:** `NodeHash` (semantic + presentation), `EdgeHash`, `FrozenEnvHash`, `Provenance`
-- **Invariants:** immutability after publish; deterministic hash; no policy doctrine load at compile
-- **Repository:** `CgIrRepository` → compiled rules adapter
-- **Contract:** `compilation/pipeline`, `hermetic_boundary`, `data_stores/cgir_store`
-
-### InspectionSnapshot (Inspection)
-
-- **Root:** `InspectionSnapshot`
-- **Value objects:** `Target`, `TargetHash`, `PipelineTrace`, `SkippedNode`, `SystemStateHash`
-- **Entities:** born `Finding` drafts (or finding IDs) handed to lifecycle context
-- **Invariants:** point-in-time consistency; pure detection evaluators
-- **Repository:** `ArtifactRepository` (snapshots) → snapshots adapter
-- **Contract:** `inspection/pipeline`, `finding_contract`, `data_stores/artifact_store`
-
-### Finding (Finding Lifecycle)
-
-- **Root:** `Finding`
-- **State:** exactly one of 10 FSM states
-- **Value objects:** `FindingId`, `Disposition`, `Severity`, `EvidenceRef`, `GuidancePayload` (populated post-hoc)
-- **Invariants:** legal transitions only; capability + SoD; system-only close from Verified/Waived
-- **Domain events:** `FindingCreated`, `DispositionChanged`, `FindingClosed` (+ denial audit events)
-- **Repository:** state reconstructed from **event store** (event-sourced) or projection + append
-- **Contract:** `finding_lifecycle/*`, `data_stores/event_store`
-
-### ConflictArtifact (Conflict)
-
-- **Root:** `ConflictArtifact`
-- **Value objects:** `ConflictKind` (within-lineage vs cross-lineage advisory), `BindingStatus`, `ResolutionTrace`
-- **Invariants:** deterministic resolution for frozen CG-IR; human path for unresolvable
-- **Contract:** `conflict/detection`, `precedence`
-
-### CertificationRun (Certification)
-
-- **Root:** `CertificationRun`
-- **Entities:** `GateResult` (AA-01…AA-07)
-- **Invariants:** all gates pass for production-grade certification; gate-ID traceability
-- **Contract:** `certification/gates.yaml`
+**Dual document:** The Directive aggregate **references** policy doctrine by `paired_policy_ref` but does **not** embed executable evaluation logic from YAML.
 
 ## Domain services (stateless rules)
 

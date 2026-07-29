@@ -54,18 +54,21 @@ UC8 ..> UC9 : <<include>>
 note right of UC1
   **Pre:** Inspection completed with non-conformances
   **Post:** Finding created in "open" state
+  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-001)
 end note
 
 note right of UC7
   **Pre:** Finding in open/validated state,
   Regulatory Official has waive capability
   **Post:** Finding state → waived → closed
+  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-004)
 end note
 
 note bottom of UC9
   **Pre:** Finding in terminal-ready state
   **Post:** Finding state → closed;
   Audit entry recorded
+  **Contract:** finding_lifecycle/transitions.yaml
 end note
 
 @enduml

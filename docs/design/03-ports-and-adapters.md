@@ -47,67 +47,28 @@ infrastructure (adapters, evaluators, parsers, DBs)
 | `HashService` | SHA-256 (or versioned algo) | — | node/snapshot/event hashes |
 | `CapabilitySource` | authn/authz provider | claims / RBAC map | `authorization/*` |
 
-## Port catalog (design signatures)
+## Port catalog
 
-Names are design-level; languages may map to protocols/ABCs.
+See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
 
-### DirectiveRepository
+| Port | Owner | Contract |
+| :--- | :--- | :--- |
+| `DirectiveRepository` | `directives_adapter` | `data_stores/directive_store` |
+| `CgIrRepository` | `compiled_rules_adapter` | `data_stores/cgir_store` |
+| `EventStore` | `findings_audit_adapter` | `data_stores/event_store` |
+| `ArtifactRepository` | `snapshots_adapter` | `data_stores/artifact_store` |
+| `TargetGateway` | `target_adapter` | inspection target schema |
+| `PolicyDoctrineReader` | `finding_analyzer` | `policy_doctrine.yaml` (**guidance_only**) |
+| `RuleDatasetReader` | file/object reader | `rule_schema.json` |
+| `DetectionEngine` | adapter registry | compilation + inspection |
+| `AuditReplicator` | `event_adapter` | replication only |
+| `RemediationNotifier` | optional notifier | notify only, no remote mutate |
+| `Clock` / `HlcClock` | system clock + HLC | event ordering |
+| `HashService` | SHA-256 (or versioned algo) | node/snapshot/event hashes |
+| `CapabilitySource` | authn/authz provider | `authorization/*` |
 
-```
-load(execution_id) -> Directive
-load_by_lineage(lineage_id) -> list[DirectiveRevision]
-save(directive, expected_version) -> void  # optimistic or lock-aware
-acquire_write_lock(scope) / release_write_lock
-list_active() -> list[DirectiveSummary]
-```
-
-### CgIrRepository
-
-```
-publish(snapshot) -> cg_ir_snapshot_hash  # content-addressed; idempotent
-get(snapshot_hash) -> CgIrSnapshot
-get_latest_for_graph(graph_version) -> CgIrSnapshot | None
-find_node_by_hash(node_hash) -> ControlNode | None  # incremental reuse
-```
-
-### EventStore
-
-```
-append(event) -> void  # fail if hash/HLC invariant broken
-read_stream(finding_id) -> list[Event]
-read_since(hlc) -> list[Event]
-```
-
-### ArtifactRepository
-
-```
-put_inspection(snapshot) -> inspection_id
-get_inspection(inspection_id) -> InspectionSnapshot
-put_conflict(artifact) -> id
-put_certification(run) -> id
-```
-
-### TargetGateway
-
-```
-fetch(target_ref) -> TargetPayload  # schema-validated
-```
-
-### PolicyDoctrineReader (**guidance_only**)
-
-```
-get(paired_policy_ref) -> PolicyDoctrine
-```
-
-**Consumers:** `finding_analyzer` only for guidance resolution after findings exist.  
+**`PolicyDoctrineReader` consumers:** `finding_analyzer` only for guidance resolution after findings exist.
 **Forbidden consumers:** `rule_inspector` evaluation path, `lifecycle_finder` transition logic, `hermetic_compiler` evaluation (compile may validate structure of rules only).
-
-### DetectionEngine
-
-```
-validate(rule.detection) -> ValidationResult   # compile-time
-evaluate(node, target, context) -> DetectionOutcome  # pure, no I/O
-```
 
 ## Relationship styles (C4 alignment)
 
