@@ -334,7 +334,7 @@ directive:
       type: string
       description: >
         What the rule governs — MUST use a canonical vocabulary term,
-        not a domain-specific term. For example: use 'operation', not 'function'.
+        not a domain-specific term. For example: use 'operation', not an implementation-specific term.
     predicate:
       type: string
       description: >
@@ -534,10 +534,10 @@ contamination_guard:
 
     PROHIBITED (these must use vocabulary, not be hardcoded):
     - Domain-specific terms used outside vocabulary.domain_mappings
-      (e.g., writing "function" in policy text instead of "operation")
+      (e.g., using an implementation-specific term in policy text instead of the canonical vocabulary term)
     - Language-specific code patterns in reasoning/remediation
       (those go in domain_examples, not in the abstract guidance)
-    - Project-specific file paths, function names, or exclusions
+    - Project-specific file paths, executable identifiers, or exclusions
       (those go in adapter_config overrides, not here)
 
     ALLOWED:
@@ -582,8 +582,7 @@ contamination_guard:
     declared namespaces (audit, vendor, author, migration) per docs/spec/contracts/directive/amendment.yaml.
   vocabulary_enforcement: >
     Prohibited also: any domain-specific term used outside of vocabulary.domain_mappings
-    (e.g., using "function" in policy text instead of "operation"; using "raise" instead
-    of "failure-signal"). All policy prose MUST use canonical vocabulary terms.
+    (e.g., using an implementation-specific term in policy text instead of the canonical vocabulary term; using a direct imperative-action term instead of the failure-signal canonical term). All policy prose MUST use canonical vocabulary terms.
     Domain-specific terms are permitted ONLY within vocabulary.terms[].domain_mappings[]
     entries, never in directive text, guidance, or definitions.
 
