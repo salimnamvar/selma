@@ -25,7 +25,7 @@ event_schema:
       description: "Reference to the finding"
     - field: "event_type"
       type: "enum"
-      values: ["FindingCreated", "DispositionChanged", "FindingClosed"]
+      values: ["FindingCreated", "DispositionChanged", "FindingClosed", "CapabilityDenied", "SoDDenied", "ConflictResolved", "ResolutionDecided"]
     - field: "timestamp"
       type: "datetime (ISO 8601, UTC)"
       description: "Event time"
@@ -75,6 +75,39 @@ event_payloads:
       - "final_disposition"
       - "final_fsm_state"
       - "closure_reason (optional)"
+
+  - event_type: "CapabilityDenied"
+    required_fields:
+      - "actor"
+      - "capability"
+      - "action"
+      - "reason"
+      - "denial_code"
+    optional_fields:
+      - "finding_id"
+
+  - event_type: "SoDDenied"
+    required_fields:
+      - "actor"
+      - "finding_id"
+      - "capability"
+      - "sod_rule"
+      - "reason"
+
+  - event_type: "ConflictResolved"
+    required_fields:
+      - "conflict_id"
+      - "resolution_type"
+      - "actor"
+    optional_fields:
+      - "artifact_ref"
+
+  - event_type: "ResolutionDecided"
+    required_fields:
+      - "conflict_id"
+      - "artifact_ref"
+      - "actor"
+      - "decision"
 
 hlc:
   description: "Hybrid Logical Clock for distributed event ordering"
