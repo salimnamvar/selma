@@ -60,7 +60,7 @@ Resource-oriented C4 IDs are canonical. Legacy contract aliases map as follows:
 | `artifacts_repository` | `artifacts_repository`, `artifact_adapter` | Artifacts store port |
 | `target_sources_gateway` | `target_sources_gateway` | Optional Target Sources gateway |
 
-**Not C4 components** (domain service / tool): `ResolveConflict` (legacy `conflict_resolver`); AA certification suite (legacy `architectural_auditor`, run as offline/CI tool).
+**Not C4 components** (domain service / tool): `ResolveConflict` (legacy `conflict_resolver`, implementation owned by `compilation`/`inspection`/`findings`); AA certification suite (legacy `architectural_auditor`, run as offline/CI tool; results accessed via `api`).
 
 | C4 store ID | Contract path (filename unchanged) |
 | :--- | :--- |
