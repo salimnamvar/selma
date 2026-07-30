@@ -94,6 +94,13 @@ sod_constraints:
     enforcement: "findings"
     story_refs: ["US-SD-002"]
 
+  - constraint_id: "SOD-003"
+    name: "Creator Cannot Supersede Own Findings"
+    capability: "finding.supersede"
+    check: "actor NOT IN creator_provenance(finding.control_id)"
+    enforcement: "findings"
+    story_refs: ["US-SD-003"]
+
 invariants:
   - id: "INV-RM-001"
     statement: "Capabilities bind directly to authenticated actor identity (no delegation)"
