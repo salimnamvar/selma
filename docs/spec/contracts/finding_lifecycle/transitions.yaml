@@ -165,6 +165,8 @@ event_schema:
     - "FindingCreated"
     - "DispositionChanged"
     - "FindingClosed"
+    - "CapabilityDenied"
+    - "SoDDenied"
   required_fields:
     - "event_id (UUID)"
     - "finding_id"
