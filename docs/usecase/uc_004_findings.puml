@@ -21,19 +21,21 @@ rectangle "Selma Application" as SYS {
     usecase "Dismiss Finding"           as UC8
     usecase "Close Finding"             as UC9
     usecase "View Finding Details"      as UC10
+    usecase "Supersede Finding"         as UC11
   }
 }
 
 ' ---- Regulatory Official associations ----
 RO --> UC4
+RO --> UC6
 RO --> UC7
 RO --> UC8
 RO --> UC10
+RO --> UC11
 
 ' ---- Compliance Representative associations ----
 CR --> UC3
 CR --> UC5
-CR --> UC6
 CR --> UC10
 
 ' ---- includes / extends ----
@@ -42,6 +44,7 @@ UC3 ..> UC4 : <<include>>
 UC6 ..> UC9 : <<include>>
 UC7 ..> UC9 : <<include>>
 UC8 ..> UC9 : <<include>>
+UC11 ..> UC9 : <<include>>
 
 ' ---- notes ----
 note right of UC1
@@ -51,11 +54,28 @@ note right of UC1
   **C4:** inspection → findings → finding_events_repository
 end note
 
+note right of UC6
+  **Pre:** Finding in Pending Verification state,
+  Regulatory Official has approve_remediation capability
+  **Post:** Finding state → verified → closed
+  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-007)
+  **SoD:** SOD-002 — submitter cannot approve own remediation
+end note
+
 note right of UC7
   **Pre:** Finding in open/validated state,
   Regulatory Official has waive capability
   **Post:** Finding state → waived → closed
   **Contract:** finding_lifecycle/transitions.yaml (TR-FL-004)
+  **SoD:** SOD-001 — creator cannot waive own findings
+end note
+
+note right of UC11
+  **Pre:** Finding in Open state,
+  Regulatory Official has supersede capability
+  **Post:** Finding state → superseded (terminal)
+  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-012)
+  **SoD:** SOD-003 — creator cannot supersede own findings
 end note
 
 note bottom of UC9
