@@ -2,7 +2,7 @@
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma
 ' Purpose:   Clients (driving), Application, four resource stores.
-' Contract:  1.0.0
+' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram
@@ -19,9 +19,9 @@ Person(compliance_representative, $NAME_compliance_representative, $DESC_complia
 
 System_Ext(target_sources, $NAME_target_sources, $DESC_target_sources)
 
-System_Boundary(selma, $NAME_selma) {
+Container_Ext(clients, $NAME_clients, $TECH_clients, $DESC_clients)
 
-    Container(clients, $NAME_clients, $TECH_clients, $DESC_clients)
+System_Boundary(selma, $NAME_selma) {
 
     Container(application, $NAME_application, $TECH_application, $DESC_application)
 

@@ -16,6 +16,7 @@
 | **API** | [`api/`](api/README.md) | OpenAPI + resource schemas |
 | **Deployment** | [`deployment/`](deployment/README.md) | Topology aligned with C4 containers |
 | **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
+| **Architecture audits** | [`audit/`](audit/c4-reconciliation.md) | Audit reconciliation and ADRs |
 
 ## Authority
 
@@ -34,6 +35,21 @@ Diagrams and design prose use C4 resource-oriented IDs from
 export, remediation ticketing. Conflict resolution and guidance are domain /
 findings concerns, not freestanding engines. Certification (AA-01…AA-07) is an
 offline/CI tool suite.
+
+## Architecture Decision Records
+
+Significant architectural decisions are documented in [`adr/`](adr/):
+
+| ADR | Title | Status |
+|:----|:------|:-------|
+| ADR-001 | Resource Store Separation | Accepted |
+| ADR-002 | Hermetic Compilation Boundary | Accepted |
+| ADR-003 | Modular Monolith Architecture | Accepted |
+| ADR-004 | Domain Service Visibility in C4 | Accepted |
+| ADR-005 | Package Structure Alignment with C4 | Accepted |
+| ADR-006 | System Boundary Definition for Clients | Accepted |
+| ADR-007 | Deployment Abstraction Level | Accepted |
+| ADR-008 | Finding Events Technology Selection | Accepted |
 
 ## Implementation
 

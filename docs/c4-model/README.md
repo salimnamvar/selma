@@ -2,6 +2,8 @@
 
 Three-level C4 model using **Clean Architecture** layering and **resource-oriented** entity IDs/names.
 
+**Contract version:** 1.1.0 (aligned across all diagrams)
+
 ## Diagrams
 
 | Level | File | Scope |
@@ -46,6 +48,8 @@ Three-level C4 model using **Clean Architecture** layering and **resource-orient
 | Remediation ticketing | Optional notify after finding transitions (not a product peer) |
 | Governance Contracts Git corpus | Removed; instances only in Directives |
 
+**Note:** Domain services (e.g., `ResolveConflict`) are intentionally omitted from C4 component level. They are represented in class/package diagrams. C4 Component level shows deployable/component responsibilities, not every class.
+
 ## Clean Architecture mapping
 
 | CA ring | C4 entities |
@@ -74,10 +78,22 @@ Three-level C4 model using **Clean Architecture** layering and **resource-orient
 - **Four stores by mutability**: mutable directives · immutable CG-IR · append-only events · write-once artifacts
 - **Primary target path is inline**; Target Sources is optional pull
 
+**Finding vs Finding Events:**
+- `Finding` — Current resource projection (read model)
+- `Finding Events` — Immutable history stream (append-only event log)
+- Finding state is loaded from the event stream for lifecycle enforcement
+
+**Finding Events Technology:**
+- Technology: PostgreSQL (append-only table)
+- Rationale: Consistent with Directives store, lower operational complexity
+- Migration path: Can migrate to Kafka if throughput demands it
+
 ## Canonical registry
 
-IDs, names, tech, and descriptions: `common/c4_identities.puml`.
-Styles: `common/c4_styles.puml`.
+IDs, names, tech, and descriptions: `common/c4_identities.puml` (Contract: 1.1.0).
+Styles: `common/c4_styles.puml` (Contract: 1.1.0).
+
+All C4 diagrams are aligned to Contract version 1.1.0.
 
 ## Rendering
 

@@ -41,6 +41,10 @@
 
 ' ------------------------------------------------------------
 ' Containers (deployable / process boundaries)
+' NOTE: 'clients' represents the logical set of driving adapters.
+' For deployment topology, Web UI is served via CDN/Public zone,
+' while CLI/Desktop are local executables.
+' Selma is an API-first platform.
 ' ------------------------------------------------------------
 !$NAME_clients = "Clients"
 !$TECH_clients = "CLI / Web / Desktop / Mobile"
@@ -48,7 +52,7 @@
 
 !$NAME_application = "Application"
 !$TECH_application = "REST API / Python / RE2 / JSON Schema / SHA-256"
-!$DESC_application = "Application + domain process: resource API gate, compilation, inspection, finding lifecycle, and driven repositories. Dual-document directives in Directives; evaluation uses Compiled Rules only; guidance loads doctrines from Directives after findings exist."
+!$DESC_application = "Application runtime containing API adapters, use cases, domain execution, and infrastructure adapters. Domain logic remains isolated inside domain packages. Dual-document directives in Directives; evaluation uses Compiled Rules only; guidance loads doctrines from Directives after findings exist."
 
 ' ------------------------------------------------------------
 ' Data stores (resource collections — ContainerDb)
@@ -63,7 +67,7 @@
 !$DESC_compiled_rules = "Resource collection of immutable CG-IR snapshots (compiled executable rules only), keyed by content hash. Evaluation source at inspection time; never rewritten."
 
 !$NAME_finding_events = "Finding Events"
-!$TECH_finding_events = "Append-Only Log"
+!$TECH_finding_events = "PostgreSQL (append-only table)"
 !$DESC_finding_events = "Resource collection of append-only finding lifecycle events and capability denials. System of record for finding state, disposition history, and in-product audit trail."
 
 !$NAME_artifacts = "Artifacts"

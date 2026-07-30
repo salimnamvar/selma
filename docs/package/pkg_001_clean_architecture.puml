@@ -39,11 +39,6 @@ package "<<infrastructure>>\n*_infrastructure" as INFRASTRUCTURE #FFF3E0/E65100 
   package "inspections_infrastructure" as INFRA_INS #FFE0B2/F57C00 {
     [HttpTargetSourcesGateway] as TGT_GW
   }
-  package "detections_infrastructure" as INFRA_DET #FFE0B2/F57C00 {
-    [DetectionEngine] as DET
-  }
-  package "authorization_infrastructure" as INFRA_AUTH #FFE0B2/F57C00
-  package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00
 }
 
 package "<<application>>\n*_application" as APPLICATION #E8F5E9/2E7D32 {
@@ -62,9 +57,6 @@ package "<<application>>\n*_application" as APPLICATION #E8F5E9/2E7D32 {
     [GetFinding / ListFindings / GetFindingGuidance / …] as UC_FIND
     interface FindingEventRepository
   }
-  package "conflicts_application" as APP_CON #C8E6C9/388E3C
-  package "certifications_application" as APP_CERT #C8E6C9/388E3C
-  package "authorization_application" as APP_AUTHZ #C8E6C9/388E3C
 }
 
 package "<<domain>>\n*_domain" as DOMAIN #FFFFFF/78909C {
@@ -76,8 +68,6 @@ package "<<domain>>\n*_domain" as DOMAIN #FFFFFF/78909C {
   package "conflicts_domain" as DOM_CON {
     [ResolveConflict] as RESOLVE
   }
-  package "authorization_domain" as DOM_AUTHZ
-  package "certifications_domain" as DOM_CERT
 }
 
 INTERFACES .down.> APPLICATION : <<uses>>
@@ -97,8 +87,6 @@ APP_DIR .down.> DOM_DIR : <<depends>>
 APP_CR .down.> DOM_CR : <<depends>>
 APP_INS .down.> DOM_INS : <<depends>>
 APP_FIND .down.> DOM_FIND : <<depends>>
-APP_CON .down.> DOM_CON : <<depends>>
-APP_CERT .down.> DOM_CERT : <<depends>>
 
 DOM_DIR .down.> DOM_SHARED
 DOM_CR .down.> DOM_SHARED
@@ -120,6 +108,10 @@ note right of INFRASTRUCTURE
   finding_events_repository
   artifacts_repository
   target_sources_gateway
+
+  **Alignment with C4:**
+  Each infrastructure package implements
+  a C4 repository component.
 end note
 
 legend bottom
@@ -128,6 +120,14 @@ legend bottom
   | {resource}_application | findings_application |
   | {resource}_infrastructure | directives_infrastructure |
   | {channel}_interface | rest_interface |
+
+  **Alignment with C4:**
+  Packages map to C4 components:
+  - directives_* → directives_repository
+  - compiled_rules_* → compiled_rules_repository
+  - inspections_* → inspection component
+  - findings_* → findings component
+  - conflicts_domain → Domain service (not C4 component)
 endlegend
 
 footer PKG-001 · {resource}_{layer} · Selma

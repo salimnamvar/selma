@@ -3,7 +3,7 @@
 ' Purpose:   ONE visual language for Context, Container, and
 '            Component diagrams. Colors, line styles, labels,
 '            and legend entries are defined only here.
-' Contract:  1.0.0
+' Contract:  1.1.0
 '
 ' Include AFTER C4_Context / C4_Container / C4_Component.
 ' Then include ./common/c4_identities.puml (canonical IDs + Names).

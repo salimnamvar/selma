@@ -8,15 +8,20 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 |:---|:------|:-----|:------------|
 | **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Topology aligned with C4 containers and resource stores |
 
+**Note:** Clients are external to Selma. They are not part of the Selma deployment. The network flow is: Clients → Load Balancer → Application.
+
 ## Network Zones
 
 | Zone | Purpose | Components |
 |:-----|:--------|:-----------|
-| **Public** | User-facing entry | Load balancer, Clients |
+| **External User** | Client applications | Clients (CLI / Web / Desktop / Mobile) |
+| **Public** | User-facing entry | Load balancer |
 | **Application** | Core process | Application (`api`, compilation, inspection, findings) |
 | **Data** | Resource stores | Directives, Compiled Rules, Finding Events, Artifacts |
 | **External** | Optional only | Target Sources (pull by reference) |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
+
+**Note:** Clients are external to Selma. They are not part of the Selma deployment. The network flow is: Clients → Load Balancer → Application.
 
 CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers.
 
@@ -45,8 +50,14 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 |:---------|:-------------|:--------|
 | Directives | PostgreSQL | Vertical + read replicas |
 | Compiled Rules | Filesystem or S3 CAS | Horizontal object store |
-| Finding Events | PostgreSQL append-only or Kafka | Partition by time |
+| Finding Events | PostgreSQL (append-only table) | Partition by time |
 | Artifacts | S3-compatible object store | Horizontal |
+
+**Note:** Finding Events uses PostgreSQL with append-only semantics. This provides:
+- Consistent technology stack with Directives
+- Lower operational complexity
+- Query flexibility for finding lookups
+- Migration path to Kafka if throughput demands it
 
 ## Deployment Notes
 

@@ -14,25 +14,22 @@ skinparam shadowing false
 skinparam roundCorner 8
 skinparam backgroundColor #FAFBFC
 
-package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
-    node "Load Balancer\n(Nginx / Traefik)" as LOAD_BALANCER
+package "External User Zone" as USER_ZONE #F3E5F5/E1BEE7 {
     node "Clients\n(CLI / Web / Desktop / Mobile)" as CLIENTS <<docker or native>>
 }
 
+package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
+    node "Load Balancer\n(Nginx / Traefik)" as LOAD_BALANCER
+}
+
 package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {
-    node "Application container\n(Python 3.11+ / Docker)" as APP <<docker container>> {
-        rectangle "api\n(resource gate)" as API
-        rectangle "compilation\n(hermetic)" as COMPILATION
-        rectangle "inspection" as INSPECTION
-        rectangle "findings" as FINDINGS
-        rectangle "repositories\n+ optional target_sources_gateway" as REPOS
-    }
+    node "Application container\n(Python 3.11+ / Docker)" as APP <<docker container>>
 }
 
 package "Data Zone" as DATA_ZONE #FFF3E0/FFE0B2 {
     database "directives\n(PostgreSQL)" as DIRECTIVES
     node "compiled_rules\n(CAS FS or S3)" as COMPILED
-    database "finding_events\n(Append-Only)" as EVENTS
+    database "finding_events\n(PostgreSQL append-only)" as EVENTS
     node "artifacts\n(Object Store)" as ARTIFACTS
 }
 
@@ -46,23 +43,14 @@ package "Monitoring" as MON #E8EAF6/C5CAE9 {
     node "Jaeger" as JAEGER
 }
 
-LOAD_BALANCER --> CLIENTS : HTTPS
+CLIENTS --> LOAD_BALANCER : HTTPS
 LOAD_BALANCER --> APP : HTTPS API
-CLIENTS --> API : REST / HTTPS
 
-API --> COMPILATION
-API --> INSPECTION
-API --> FINDINGS
-API --> REPOS
-COMPILATION --> REPOS
-INSPECTION --> REPOS
-FINDINGS --> REPOS
-
-REPOS --> DIRECTIVES : SQL
-REPOS --> COMPILED : CAS
-REPOS --> EVENTS : Append-Only
-REPOS --> ARTIFACTS : Object Write
-REPOS --> TARGETS : optional HTTPS
+APP --> DIRECTIVES : SQL
+APP --> COMPILED : CAS
+APP --> EVENTS : Append-Only
+APP --> ARTIFACTS : Object Write
+APP --> TARGETS : optional HTTPS
 
 APP ..> PROM
 APP ..> ELK
@@ -70,8 +58,8 @@ APP ..> JAEGER
 
 legend bottom
   |= C4 ID |= Deploy role |
-  | clients | Public driving adapters |
-  | application / api / compilation / inspection / findings | Application process |
+  | clients | External driving adapters (not part of Selma deployment) |
+  | application | Application process (api, compilation, inspection, findings, repositories) |
   | directives · compiled_rules · finding_events · artifacts | Data zone stores |
   | target_sources | Optional external pull only |
   | CI/CD · audit export · remediation | Not required deploy peers |

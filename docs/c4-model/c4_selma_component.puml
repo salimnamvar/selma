@@ -5,7 +5,7 @@
 '            API (driving) → use-case clusters → repositories
 '            (driven). Domain services (e.g. ResolveConflict)
 '            are not peer components.
-' Contract:  1.0.0
+' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram
@@ -53,19 +53,20 @@ Rel(api, findings, "finding transitions, evidence, guidance reads", "Internal", 
 Rel(api, finding_events_repository, "appends capability denial events", "Append-Only", $tags="immutable")
 
 ' Compilation
-Rel(compilation, directives_repository, "reads executable documents under read-lock", "Internal", $tags="compile_only")
-Rel(compilation, compiled_rules_repository, "publishes compiled rule snapshots", "Internal", $tags="compile_only")
+Rel(compilation, directives_repository, "reads executable documents under read-lock", "Read-Only", $tags="compile_only")
+Rel(compilation, compiled_rules_repository, "publishes compiled rule snapshots", "Write-Only", $tags="compile_only")
 
 ' Inspection
 Rel(inspection, target_sources_gateway, "fetches remote targets when referenced", "Internal", $tags="mediated")
-Rel(inspection, compiled_rules_repository, "loads frozen compiled rules", "Internal", $tags="validation_only")
-Rel(inspection, findings, "opens findings after evaluation", "Internal", $tags="immutable")
-Rel(inspection, artifacts_repository, "writes inspection snapshots and traces", "Internal", $tags="immutable")
+Rel(inspection, compiled_rules_repository, "loads frozen compiled rules", "Read-Only", $tags="validation_only")
+Rel(inspection, findings, "opens findings after evaluation", "Write-Only", $tags="immutable")
+Rel(inspection, artifacts_repository, "writes inspection snapshots and traces", "Write-Only", $tags="immutable")
 
 ' Findings
-Rel(findings, finding_events_repository, "appends lifecycle and SoD events", "Internal", $tags="immutable")
-Rel(findings, compiled_rules_repository, "reads creator provenance for SoD", "Internal", $tags="validation_only")
-Rel(findings, directives_repository, "reads policy doctrine for guidance", "Internal", $tags="guidance_only")
+Rel(findings, finding_events_repository, "appends lifecycle and SoD events", "Append-Only", $tags="immutable")
+Rel(findings, finding_events_repository, "loads event stream for state hydration", "Read-Only", $tags="validation_only")
+Rel(findings, compiled_rules_repository, "reads creator provenance for SoD", "Read-Only", $tags="validation_only")
+Rel(findings, directives_repository, "reads policy doctrine for guidance", "Read-Only", $tags="guidance_only")
 Rel(findings, artifacts_repository, "reads and writes conflict and evidence artifacts", "Internal", $tags="immutable")
 
 ' Optional external
