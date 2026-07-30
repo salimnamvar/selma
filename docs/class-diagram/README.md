@@ -33,8 +33,8 @@ plantuml -tsvg docs/class-diagram/*.puml
 | Diagram | Clean Architecture Layer | Key Elements |
 |---------|------------------------|--------------|
 | CLS-001 | Domain | Aggregates (Directive, CgIrSnapshot, Finding, etc.), Value Objects, Domain Services, Events, Repository Ports |
-| CLS-002 | Application | Use cases across bounded contexts, ports (incl. dual-document DirectiveRepository), DTOs, pipeline chains |
-| CLS-003 | Infrastructure | Adapters: SqlDirectiveRepository (executable + doctrine), CG-IR, events, artifacts, detection, target gateway, bootstrap |
+| CLS-002 | Application | ROD use cases (`CreateDirective`, `GetFindingGuidance`, …) + ports with Verb+Resource methods |
+| CLS-003 | Infrastructure | `{resource}_infrastructure` adapters implementing ROD-named ports |
 
 ## Shared Styles
 

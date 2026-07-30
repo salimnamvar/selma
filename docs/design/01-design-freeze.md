@@ -79,6 +79,8 @@ Resource-oriented C4 IDs are canonical. Legacy contract aliases map as follows:
 6. **Four resource stores by mutability** — `directives` · `compiled_rules` · `finding_events` · `artifacts`.
 7. **Domain-agnostic core** — language-specific detail only in `detection.adapters[]`.
 8. **Slim C4** — optional Target Sources only as external system; CI/audit/remediation are not context peers.
+9. **Two distinct roles** — `regulatory_official` and `compliance_representative` are not merged (SoD + authority split); see `authorization/role_matrix.yaml`.
+10. **Module names `{resource}_{layer}`** and **ROD method names** (Verb+Resource) — see packages and ports design docs.
 
 ## Open decisions (implementation may choose; design stays stable)
 

@@ -47,10 +47,10 @@
 
 | Bounded context | Primary aggregates | C4 owners | Contracts |
 | :--- | :--- | :--- | :--- |
-| **Governance Authoring** | DirectiveGraph, Directive | `api`, `directives_repository` | `directive/*` |
-| **Compilation** | CompilationJob, CgIrSnapshot | `compilation` | `compilation/*` |
-| **Inspection** | InspectionSnapshot, Target | `inspection` | `inspection/*` |
-| **Finding Lifecycle** | Finding | `findings` | `finding_lifecycle/*` |
+| **Governance Authoring** | DirectiveGraph, Directive | `api`, `directives_repository` · modules `directives_domain` / `directives_application` | `directive/*` |
+| **Compilation** | CompilationJob, CgIrSnapshot | `compilation` · `compiled_rules_*` modules | `compilation/*` |
+| **Inspection** | InspectionSnapshot, Target | `inspection` · `inspections_*` modules | `inspection/*` |
+| **Finding Lifecycle** | Finding | `findings` · `findings_*` modules | `finding_lifecycle/*` |
 | **Conflict** | ConflictArtifact | domain service `ResolveConflict` (used by `compilation` / `inspection` / `findings`) | `conflict/*` |
 | **Authorization** | ActorCapabilityGrant (or session claims) | `api` | `authorization/*` |
 | **Guidance & Analytics** | GuidanceView, AggregateReport | `findings` (read models) | policy schema + finding guidance |

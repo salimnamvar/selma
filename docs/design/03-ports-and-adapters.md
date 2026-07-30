@@ -3,85 +3,111 @@
 ## Dependency rule
 
 ```
-clients (CLI / Web / Desktop / Mobile)
+*_interface  (rest / cli / tui)
         │
         ▼
-api (resource-oriented ingress)
+*_application  (use cases + port interfaces)
         │
         ▼
-application use cases (compilation, inspection, findings, directives)
-        │
-        ▼
-domain (aggregates, VOs, domain services)
+*_domain  (aggregates, pure domain services)
         ▲
         │ implements ports
-infrastructure (*_repository, *_gateway)
+*_infrastructure  (repositories, gateways, engines)
 ```
 
-- **Domain** depends on nothing inside the app.
-- **Application** depends on domain + port interfaces only.
-- **Infrastructure** implements ports; may use frameworks.
-- **Clients** call the API; never domain repositories directly.
+Modules follow **`{resource}_{layer}`** (see [04-package-architecture.md](04-package-architecture.md)).
 
-## Driving adapters (primary / inbound)
+## Port interfaces (ROD method names)
 
-| Adapter | C4 | Protocol | Use cases |
-| :--- | :--- | :--- | :--- |
-| REST / channel clients | `clients` → `api` | HTTPS / resource JSON | All mutating + query families |
-| CLI / TUI | `clients` | argv / interactive | inspect, findings, certify subset |
+Ports live in the **application** module of the owning resource (or `shared` application ports package if split). Method names are **Verb + Resource** (explicit; no ambiguous `find` / `save` / `execute`).
 
-## Driven adapters (secondary / outbound)
+### `DirectiveRepository` — `directives_application` port
 
-| Port (application) | Adapter (infrastructure) | C4 store / system | Contract |
-| :--- | :--- | :--- | :--- |
-| `DirectiveRepository` | Directives Repository | `directives` | `data_stores/directive_store` |
-| `CgIrRepository` | Compiled Rules Repository | `compiled_rules` | `data_stores/cgir_store` |
-| `EventStore` | Finding Events Repository | `finding_events` | `data_stores/event_store` |
-| `ArtifactRepository` | Artifacts Repository | `artifacts` | `data_stores/artifact_store` |
-| `TargetGateway` | Target Sources Gateway (optional) | `target_sources` | inspection target schema |
-| `DetectionEngine` | adapter registry + pure evaluators | in-process | compilation + inspection |
-| `Clock` / `HlcClock` | system clock + HLC | — | event ordering |
-| `HashService` | SHA-256 (or versioned algo) | — | node/snapshot/event hashes |
-| `CapabilitySource` | authn/authz provider | claims / RBAC map | `authorization/*` |
+| Method | Intent |
+| :--- | :--- |
+| `GetDirective(lineage_id) → Directive` | Instance read |
+| `ListDirectives(filter) → List[Directive]` | Collection read |
+| `SaveDirective(directive) → void` | Persist current dual-document revision |
+| `AllocateExecutionId() → ExecutionId` | Identity allocation |
+| `GetDirectiveExecutableDocument(id) → ExecutableRuleDoc` | Compile path only |
+| `GetDirectivePolicyDoctrine(ref) → GuidancePayload` | Guidance path only (`guidance_only`) |
+| `ListDirectivePolicyRefs(filter) → List[PairedPolicyRef]` | Guidance catalog |
 
-## Port catalog
+**Consumers of `GetDirectivePolicyDoctrine`:** `findings_application` only after a finding exists.  
+**Forbidden:** `inspections_application` evaluation path; finding FSM transitions.
 
-| Port | C4 owner | Contract |
+### `CompiledRulesRepository` — `compiled_rules_application` port
+
+| Method | Intent |
+| :--- | :--- |
+| `GetCompiledRules(snapshot_hash) → CgIrSnapshot` | Load frozen snapshot |
+| `GetLatestCompiledRules() → CgIrSnapshot` | Active ruleset |
+| `PublishCompiledRules(snapshot) → void` | Immutable CAS publish |
+
+### `FindingEventRepository` — `findings_application` port  
+(formerly generic `EventStore`)
+
+| Method | Intent |
+| :--- | :--- |
+| `AppendFindingEvent(event) → void` | Append lifecycle or denial event |
+| `ListFindingEvents(finding_id) → List[DomainEvent]` | Stream by finding |
+| `ListFindingEventsSince(hlc) → List[DomainEvent]` | Catch-up / projections |
+
+### `ArtifactRepository` — shared artifacts port (`artifacts_infrastructure`)
+
+| Method | Intent |
+| :--- | :--- |
+| `SaveInspectionArtifact(snapshot) → void` | Write-once inspection evidence |
+| `GetInspectionArtifact(id) → InspectionSnapshot` | Read inspection |
+| `SaveConflictArtifact(artifact) → void` | Conflict pack |
+| `GetConflictArtifact(id) → ConflictArtifact` | Read conflict |
+| `SaveCertificationArtifact(run) → void` | Cert report |
+
+### `TargetSourcesGateway` — optional (`inspections_infrastructure`)
+
+| Method | Intent |
+| :--- | :--- |
+| `GetTarget(target_ref) → Target` | Remote fetch by reference |
+| `HashTarget(target) → TargetHash` | Content hash |
+
+### Supporting ports
+
+| Port | Methods (ROD-style) | Module |
 | :--- | :--- | :--- |
-| `DirectiveRepository` | `directives_repository` | dual-document `directives` |
-| `CgIrRepository` | `compiled_rules_repository` | `compiled_rules` |
-| `EventStore` | `finding_events_repository` | `finding_events` |
-| `ArtifactRepository` | `artifacts_repository` | `artifacts` |
-| `TargetGateway` | `target_sources_gateway` | optional remote targets |
-| `DetectionEngine` | infrastructure.detection | compilation + inspection |
+| `DetectionEngine` | `ValidateDetectionSpec`, `EvaluateControls` | `detections_infrastructure` |
+| `CapabilitySource` | `ListActorCapabilities`, `HasCapability` | `authorization_infrastructure` |
+| `HashService` | `ComputeSha256`, `ComposeHashes` | `platform_infrastructure` |
+| `HlcClock` | `Now`, `Advance` | `platform_infrastructure` |
 
-**Dual-document `DirectiveRepository`:** `readExecutable` (compile path) and `readPolicyDoctrine` (guidance path via `paired_policy_ref`).
+## Driving adapters
 
-**`readPolicyDoctrine` consumers:** `findings` guidance reads only after findings exist (`guidance_only`).  
-**Forbidden:** `inspection` evaluate path, finding FSM transition logic. `compilation` uses `readExecutable` only (may check pairing/version).
+| Adapter module | C4 | Calls |
+| :--- | :--- | :--- |
+| `rest_interface` | `clients` → `api` | `*_application` use cases |
+| `cli_interface` / `tui_interface` | `clients` | subset of same use cases |
 
-## Explicit non-ports / non-components
+## Driven adapters
 
-- Separate `PolicyDoctrineReader` or filesystem doctrine adapter
-- Peer C4 components for Conflict Resolver, Finding Analyzer, Architectural Auditor
-- External Governance Contracts / CI/CD / audit platform / remediation as required runtime peers
-- Direct SQL from use cases
-- Finding FSM helpers that accept policy prose
+| Port | Implementation class | Module | C4 store |
+| :--- | :--- | :--- | :--- |
+| `DirectiveRepository` | `SqlDirectiveRepository` | `directives_infrastructure` | `directives` |
+| `CompiledRulesRepository` | `ContentAddressedCompiledRulesRepository` | `compiled_rules_infrastructure` | `compiled_rules` |
+| `FindingEventRepository` | `AppendOnlyFindingEventRepository` | `findings_infrastructure` | `finding_events` |
+| `ArtifactRepository` | `ObjectArtifactRepository` | `artifacts_infrastructure` | `artifacts` |
+| `TargetSourcesGateway` | `HttpTargetSourcesGateway` | `inspections_infrastructure` | `target_sources` |
 
-## Relationship styles (C4 alignment)
+## Explicit non-ports
 
-| Edge | Style |
+- `PolicyDoctrineReader` (use `GetDirectivePolicyDoctrine`)
+- Peer components for conflict analyzer / architectural auditor
+- External Governance Contracts corpus
+- Generic `execute()` as the only public method name on use cases
+
+## Testing
+
+| Level | Doubles |
 | :--- | :--- |
-| `api` → use-case components | command / query dispatch |
-| Use cases → repositories | port calls |
-| `findings` → `directives_repository.readPolicyDoctrine` | **guidance_only** |
-| Repositories → stores | persistence |
-
-## Testing ports
-
-| Test type | Doubles |
-| :--- | :--- |
-| Domain unit | pure aggregates/services |
-| Application | in-memory fakes for driven ports |
-| Adapter contract | testcontainers / CAS fixtures |
-| Certification | AA gate suite as offline tool against fixtures |
+| Domain | pure aggregates; no ports |
+| Application | in-memory fakes implementing ROD port methods |
+| Infrastructure | testcontainers / CAS fixtures |
+| Certification | offline tool against fixtures |

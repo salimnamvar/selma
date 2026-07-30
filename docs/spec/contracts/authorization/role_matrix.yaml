@@ -9,10 +9,25 @@ description: >
   Defines the three roles and their capability assignments.
   Roles bind to authenticated actor identity (human or AI agent).
 
+  DESIGN DECISION — two governance roles (not merged):
+  regulatory_official and compliance_representative stay DISTINCT.
+  Merging them would allow rule authors to waive findings on their own
+  rules and regulated parties to change the rulebook — breaking SoD
+  (SOD-001/SOD-002) and agent-safe governance. One natural person may
+  hold different roles in different tenants; capability sets must not
+  collapse into a single super-role.
+
+  Coding-governance profile aliases (same role_id, product language):
+  - regulatory_official ≈ "Governor" / rule-pack author (human or agent)
+  - compliance_representative ≈ "Project party" / inspected team or coding agent
+
 roles:
   - role_id: "regulatory_official"
     name: "Regulatory Official"
-    description: "Rule author and governance owner (Human or AI Agent)"
+    description: >
+      Rule author and governance owner (Human or AI Agent).
+      Coding profile: governor / rule-pack author — may author directives
+      and dispose findings under SoD; not the default submitter of project code.
     actor_type: "Human or AI Agent"
     acts_on_behalf_of: "Regulatory Authority"
     capabilities:
@@ -34,7 +49,11 @@ roles:
 
   - role_id: "compliance_representative"
     name: "Compliance Representative"
-    description: "Compliance seeker and remediation owner (Human or System)"
+    description: >
+      Compliance seeker and remediation owner (Human or System).
+      Coding profile: project team or coding agent under inspection —
+      submits targets/inspections and evidence; cannot author directives
+      or waive findings.
     actor_type: "Human or System"
     acts_on_behalf_of: "Regulated Entity"
     capabilities:
@@ -65,14 +84,14 @@ sod_constraints:
     name: "Creator Cannot Waive Own Findings"
     capability: "finding.waive"
     check: "actor NOT IN creator_provenance(finding.control_id)"
-    enforcement: "finding_fsm_engine"
+    enforcement: "findings"
     story_refs: ["US-SD-001"]
 
   - constraint_id: "SOD-002"
     name: "Evidence Submitter Cannot Approve Own Remediation"
     capability: "finding.approve_remediation"
     check: "actor != evidence_submitter(finding_id)"
-    enforcement: "finding_fsm_engine"
+    enforcement: "findings"
     story_refs: ["US-SD-002"]
 
 invariants:

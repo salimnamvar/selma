@@ -1,94 +1,129 @@
 # 05 — Application Use Cases
 
-Each use case is an application-layer command or query. Capabilities and
-contracts are normative; this catalog is the Design Freeze surface for
-orchestration.
+Each use case is an application-layer **resource operation**. Naming follows
+**Resource-Oriented Design**: **Verb + Resource** (+ sub-resource when needed).
+Modules live in `{resource}_application`.
 
 ## Conventions
 
-- **Pre:** authenticate → load capabilities → validate input DTO  
-- **Post:** map domain errors to interface errors (`403`, `404`, `409`, `400`)  
-- **Idempotency:** noted where CAS/event append requires it  
+- **Pre:** authenticate → `HasCapability` → validate request DTO  
+- **Post:** map domain errors to `403` / `404` / `409` / `400`  
+- **Primary method:** ROD name (not bare `execute`); e.g. `CreateDirective(req) → Directive`  
+- **Idempotency:** noted where CAS / event append requires it  
 
-## Governance authoring
+## Roles (who may call what)
 
-| Use case | Capability | Ports | Contract / stories |
+Selma keeps **two distinct governance roles** (plus system). They are **not** merged:
+
+| Role ID | Acts for | Typical coding-governance mapping |
+| :--- | :--- | :--- |
+| `regulatory_official` | Rule authority | Platform / org rule authors (human or agent) |
+| `compliance_representative` | Regulated project | Project teams / coding agents under inspection |
+| `system` | Automation | Pipelines submitting inspections |
+
+**Why not one role:** SoD requires that directive authors cannot waive findings from their own rules, and regulated parties cannot author or waive rules. Merging roles collapses that control. One *person* may hold different roles in different tenants; one *capability set* must not.
+
+See `authorization/role_matrix.yaml`.
+
+---
+
+## Directives — `directives_application`
+
+| Operation (ROD) | Capability | Ports | Contract |
 | :--- | :--- | :--- | :--- |
-| `CreateDirective` | `directive.create` | DirectiveRepository, (trigger CompileDirectives) | US-CP-001, directive/* |
-| `ModifyDirective` | `directive.modify` | DirectiveRepository + write lock, CompileDirectives | US-CP-003 |
-| `RetireDirective` | `directive.retire` | DirectiveRepository, CompileDirectives | US-DL-001 |
-| `ForkDirective` | `directive.fork` | DirectiveRepository, LineageService, CompileDirectives | US-ID-001 |
+| `CreateDirective` | `directive.create` | `SaveDirective`, then `CompileDirectives` | US-CP-001 |
+| `UpdateDirective` | `directive.modify` | `GetDirective`, `SaveDirective`, write lock, compile | US-CP-003 |
+| `RetireDirective` | `directive.retire` | `SaveDirective`, compile | US-DL-001 |
+| `ForkDirective` | `directive.fork` | LineageService, `SaveDirective`, compile | US-ID-001 |
 | `MergeDirectives` | `directive.merge` | same | US-ID-001 |
-| `SplitDirective` | `directive.fork` (gate) | same | US-ID-001 |
-| `RestoreDirectiveRevision` | `directive.restore` | DirectiveRepository, CompileDirectives | US-DL-001 |
-| `GetDirective` / `ListActiveDirectives` | (read) | DirectiveRepository | US-DS-001 |
+| `SplitDirective` | `directive.fork` | same | US-ID-001 |
+| `RestoreDirective` | `directive.restore` | `SaveDirective`, compile | US-DL-001 |
+| `GetDirective` | (read) | `GetDirective` | US-DS-001 |
+| `ListDirectives` | (read) | `ListDirectives` | US-DS-001 |
+| `GetDirectiveExecutableDocument` | system / compile | `GetDirectiveExecutableDocument` | compile path |
+| `GetDirectivePolicyDoctrine` | `finding.view` (via guidance) | `GetDirectivePolicyDoctrine` | guidance_only |
 
-## Compilation
+---
 
-| Use case | Capability | Ports | Contract / stories |
+## Compiled rules — `compiled_rules_application`
+
+| Operation (ROD) | Capability | Ports | Notes |
 | :--- | :--- | :--- | :--- |
-| `CompileDirectives` | system / on mutation | DirectiveRepository.readExecutable (read lock), CgIrRepository, DetectionEngine.validate, HashService | compilation/pipeline US-CP-* |
-| `ValidateDirectiveDocuments` | system / official | DirectiveRepository, DetectionEngine.validate | US-CP-002 |
+| `CompileDirectives` | system / on mutation | `GetDirectiveExecutableDocument` (read lock), `PublishCompiledRules`, `ValidateDetectionSpec` | no doctrine evaluation |
+| `ValidateDirectiveDocuments` | system / official | `GetDirective`, `ValidateDetectionSpec` | schema + pairing |
+| `GetCompiledRules` | system / inspection | `GetCompiledRules` / `GetLatestCompiledRules` | frozen snapshot |
 
-**Invariant:** must not load policy doctrine for evaluation. Compiler may validate doctrine pairing/version only via repository; evaluation uses executable documents only.
+---
 
-## Inspection
+## Inspections — `inspections_application`
 
-| Use case | Capability | Ports | Contract / stories |
+| Operation (ROD) | Capability | Ports | Notes |
 | :--- | :--- | :--- | :--- |
-| `SubmitInspection` | `inspection.submit` | TargetGateway or body, CgIrRepository, DetectionEngine.evaluate, ArtifactRepository, EventStore (FindingCreated) | US-IP-001 |
-| `ReinspectTarget` | `inspection.reinspect` | same | US-IP-001 |
-| `GetInspection` | (read) | ArtifactRepository | — |
-| `ExplainFinding` | `finding.view` | EventStore, CgIrRepository, DirectiveRepository.readPolicyDoctrine (guidance) | US-IP-002 |
+| `CreateInspection` | `inspection.submit` | target body or `GetTarget`, `GetLatestCompiledRules`, `EvaluateControls`, `SaveInspectionArtifact`, opens findings | primary: inline target |
+| `CreateInspectionReinspection` | `inspection.reinspect` | same | — |
+| `GetInspection` | (read) | `GetInspectionArtifact` | — |
 
-**Invariant:** Inspection evaluation path (`inspection` component) does **not** call `DirectiveRepository.readPolicyDoctrine`.
+**Invariant:** inspection evaluation **must not** call `GetDirectivePolicyDoctrine`.
 
-## Finding lifecycle
+Pipeline steps (internal, not separate public resources): `NormalizeTarget` → `ClassifyTarget` → `SelectControls` → `EvaluateControls` → `AggregateDetectionOutcomes` → `SaveInspectionArtifact`.
 
-| Use case | Capability | Ports | SoD | Stories |
-| :--- | :--- | :--- | :--- | :--- |
-| `AcknowledgeFinding` | `finding.acknowledge` | EventStore | — | US-FL-010 |
-| `SubmitEvidence` | `evidence.submit` | EventStore | record submitter | US-FL-010 |
-| `ApproveRemediation` | `finding.approve_remediation` | EventStore | submitter ≠ actor | US-SD-002 |
-| `RejectRemediation` | `finding.reject_remediation` | EventStore | — | US-FL-010 |
-| `ReopenFinding` | `finding.reject_remediation` | EventStore | comments required | US-FL-010 |
-| `DismissFinding` | `finding.dismiss` | EventStore | — | US-FL-001 |
-| `WaiveFinding` | `finding.waive` | EventStore, CgIrRepository (creator_provenance) | actor ∉ creator_provenance | US-SD-001 |
-| `ListFindings` / `GetFinding` | `finding.view` | EventStore / projection | — | US-FC-001 |
+---
 
-System automatic transitions (Created→Open, Evidence→Pending, Verified/Waived→Closed) run **inside** the FSM domain service when appending events—not as separate human use cases.
+## Findings — `findings_application`
 
-## Conflict
-
-| Use case | Capability | Ports | Stories |
+| Operation (ROD) | Capability | SoD | Ports |
 | :--- | :--- | :--- | :--- |
-| `ReviewConflicts` | regulatory inspect capability set | CgIrRepository, ArtifactRepository | US-CD-001, US-PR-001 |
-| `ResolveConflictManually` | official | ArtifactRepository, possibly directive change path | US-CD-001 |
+| `CreateFinding` | system | — | `AppendFindingEvent` |
+| `AcknowledgeFinding` | `finding.acknowledge` | — | `AppendFindingEvent` |
+| `SubmitFindingEvidence` | `evidence.submit` | record submitter | `SaveInspectionArtifact` / evidence ref + event |
+| `ApproveFindingRemediation` | `finding.approve_remediation` | submitter ≠ actor | `AppendFindingEvent` |
+| `RejectFindingRemediation` | `finding.reject_remediation` | — | `AppendFindingEvent` |
+| `DismissFinding` | `finding.dismiss` | official only | `AppendFindingEvent` |
+| `WaiveFinding` | `finding.waive` | actor ∉ creator_provenance | `AppendFindingEvent`, compiled rules provenance |
+| `GetFinding` | `finding.view` | — | event projection |
+| `ListFindings` | `finding.view` | — | event projection |
+| `GetFindingGuidance` | `finding.view` | — | `GetDirectivePolicyDoctrine` (**guidance_only**) |
+| `GetFindingExplanation` | `finding.view` | — | events + compiled rules |
+| `ListFindingAggregates` | `analytics.view` | no CG-IR write | events |
 
-## Guidance & analytics
+System transitions (Created→Open, …) run inside `FindingFsm` when appending events.
 
-| Use case | Capability | Ports | Notes |
-| :--- | :--- | :--- | :--- |
-| `ResolveGuidance` | `finding.view` | DirectiveRepository.readPolicyDoctrine, rule metadata | guidance_only |
-| `FindingAggregates` | analytics-oriented | EventStore read | no CG-IR write (AA-01) |
-| `ProposeDirectiveFromAnalytics` | human | returns proposal; mutation via ModifyDirective | mediated feedback |
+---
 
-## Certification
+## Conflicts — `conflicts_application`
 
-| Use case | Capability | Ports | Stories |
-| :--- | :--- | :--- | :--- |
-| `RunArchitecturalCertification` | offline / CI tool (not in-process C4 peer) | fixtures + ArtifactRepository | US-GA-001, AA-01…AA-07 |
+| Operation (ROD) | Capability | Ports |
+| :--- | :--- | :--- |
+| `DetectDirectiveConflict` | system | directives + `ResolveConflict` domain service |
+| `ListConflictArtifacts` | official set | `GetConflictArtifact` / list |
+| `ReviewConflictArtifact` | official | `SaveConflictArtifact` |
+| `ResolveConflictManually` | official | artifacts; may lead to `UpdateDirective` |
 
-## Interface mapping (REST families)
+`ResolveConflict` algorithm remains a **domain service** in `conflicts_domain`, not a C4 peer component.
 
-See `contracts/interfaces/rest_api.yaml`:
+---
 
-| Family | Use cases |
+## Certifications — `certifications_application` (offline / CI tool)
+
+| Operation (ROD) | Capability | Ports |
+| :--- | :--- | :--- |
+| `CreateCertificationRun` | CI / tool | fixtures + `SaveCertificationArtifact` |
+| `GetCertificationRun` | read | artifacts |
+
+Not an in-process C4 peer of inspection/findings.
+
+---
+
+## REST resource mapping (ROD URLs)
+
+| Collection | Operations |
 | :--- | :--- |
-| `directives` | Create/Modify/Get/lifecycle ops |
-| `inspections` | Submit/Get/Reinspect |
-| `findings` | List/Get/FSM transitions |
-| `guidance` | ResolveGuidance (see also policy runtime_usage endpoints) |
-| `certification` | RunArchitecturalCertification |
+| `/directives` | Create, List, Get, Update, Retire, Fork, Merge, Split, Restore |
+| `/compiled-rules` | Get (or side-effect of compile) |
+| `/inspections` | Create, Get, reinspect |
+| `/findings` | List, Get, lifecycle verbs as custom methods or sub-resources |
+| `/findings/{id}/guidance` | `GetFindingGuidance` |
+| `/artifacts` | Get inspection/conflict/cert packs |
+| `/certifications` | Create/Get (tool) |
 
-CLI/TUI expose a **subset** with identical application use cases (no parallel domain logic).
+CLI/TUI call the **same** application operations (no parallel domain logic).

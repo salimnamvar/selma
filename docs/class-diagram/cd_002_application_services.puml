@@ -14,38 +14,38 @@ title **CLS-002 — Application Services**\nSelma · Rule Regularity Platform\n
 package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62828 {
 
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>> {
-    + findById(id: LineageId): Directive
-    + save(directive: Directive): void
-    + findByStatus(status: DirectiveStatus): List~Directive~
-    + nextExecutionId(): ExecutionId
-    + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
-    + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
-    + listPolicyRefs(filter: Map): List~PairedPolicyRef~
+    + GetDirective(lineage_id: LineageId): Directive
+    + ListDirectives(filter: Map): List~Directive~
+    + SaveDirective(directive: Directive): void
+    + AllocateExecutionId(): ExecutionId
+    + GetDirectiveExecutableDocument(id: LineageId | ExecutionId): ExecutableRuleDoc
+    + GetDirectivePolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    + ListDirectivePolicyRefs(filter: Map): List~PairedPolicyRef~
   }
 
-  interface "**CgIrRepository**" as CgIrRepository <<Port>> {
-    + findByHash(hash: String): CgIrSnapshot
-    + save(snapshot: CgIrSnapshot): void
-    + latest(): CgIrSnapshot
+  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> {
+    + GetCompiledRules(snapshot_hash: String): CgIrSnapshot
+    + GetLatestCompiledRules(): CgIrSnapshot
+    + PublishCompiledRules(snapshot: CgIrSnapshot): void
   }
 
-  interface "**EventStore**" as EventStore <<Port>> {
-    + append(event: DomainEvent): void
-    + stream(aggregate_id: String): List~DomainEvent~
-    + stream(from: HlcTimestamp): List~DomainEvent~
+  interface "**FindingEventRepository**" as FindingEventRepository <<Port>> {
+    + AppendFindingEvent(event: DomainEvent): void
+    + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
+    + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
   }
 
   interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {
-    + saveInspection(snapshot: InspectionSnapshot): void
-    + findInspection(id: UUID): InspectionSnapshot
-    + saveFinding(finding: Finding): void
-    + findFinding(id: FindingId): Finding
-    + saveConflict(artifact: ConflictArtifact): void
+    + SaveInspectionArtifact(snapshot: InspectionSnapshot): void
+    + GetInspectionArtifact(id: UUID): InspectionSnapshot
+    + SaveConflictArtifact(artifact: ConflictArtifact): void
+    + GetConflictArtifact(id: UUID): ConflictArtifact
+    + SaveCertificationArtifact(run: CertificationRun): void
   }
 
-  interface "**TargetGateway**" as TargetGateway <<Port>> {
-    + fetchTarget(target_id: String): Target
-    + hashTarget(target: Target): TargetHash
+  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>> {
+    + GetTarget(target_ref: String): Target
+    + HashTarget(target: Target): TargetHash
   }
 
 }
@@ -94,54 +94,75 @@ package "<<use_cases.governance>>\nGovernance" as UC_GOVERNANCE #E8F5E9/2E7D32 {
   abstract class "**CreateDirective**" as CreateDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
     - lineageService: LineageService
-    + execute(req: DirectiveCreateRequest): Directive
+    + CreateDirective(req: DirectiveCreateRequest): Directive
     --
-    <<requires>> directive.lineage.create
+    <<requires>> directive.create
+    <<module>> directives_application
   }
 
-  abstract class "**ModifyDirective**" as ModifyDirective <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**UpdateDirective**" as UpdateDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
-    + execute(id: LineageId, changes: Map): Directive
+    + UpdateDirective(id: LineageId, changes: Map): Directive
     --
-    <<requires>> directive.lineage.modify
+    <<requires>> directive.modify
+    <<module>> directives_application
   }
 
   abstract class "**RetireDirective**" as RetireDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
-    + execute(id: LineageId): Directive
+    + RetireDirective(id: LineageId): Directive
     --
-    <<requires>> directive.lineage.retire
+    <<requires>> directive.retire
+    <<module>> directives_application
   }
 
   abstract class "**ForkDirective**" as ForkDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
     - lineageService: LineageService
-    + execute(source: LineageId): Directive
+    + ForkDirective(source: LineageId): Directive
     --
-    <<requires>> directive.lineage.fork
+    <<requires>> directive.fork
+    <<module>> directives_application
   }
 
-  abstract class "**MergeDirective**" as MergeDirective <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**MergeDirectives**" as MergeDirectives <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
     - lineageService: LineageService
-    + execute(left: LineageId, right: LineageId): Directive
+    + MergeDirectives(left: LineageId, right: LineageId): Directive
     --
-    <<requires>> directive.lineage.merge
+    <<requires>> directive.merge
+    <<module>> directives_application
   }
 
   abstract class "**SplitDirective**" as SplitDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
     - lineageService: LineageService
-    + execute(source: LineageId): List~Directive~
+    + SplitDirective(source: LineageId): List~Directive~
     --
-    <<requires>> directive.lineage.split
+    <<requires>> directive.fork
+    <<module>> directives_application
   }
 
   abstract class "**RestoreDirective**" as RestoreDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
-    + execute(id: LineageId, revision: int): Directive
+    + RestoreDirective(id: LineageId, revision: int): Directive
     --
-    <<requires>> directive.lineage.restore
+    <<requires>> directive.restore
+    <<module>> directives_application
+  }
+
+  abstract class "**GetDirective**" as GetDirective <<Use Case>> #E8F5E9/2E7D32 {
+    - directiveRepo: DirectiveRepository
+    + GetDirective(id: LineageId): Directive
+    --
+    <<module>> directives_application
+  }
+
+  abstract class "**ListDirectives**" as ListDirectives <<Use Case>> #E8F5E9/2E7D32 {
+    - directiveRepo: DirectiveRepository
+    + ListDirectives(filter: Map): List~Directive~
+    --
+    <<module>> directives_application
   }
 }
 
@@ -150,30 +171,25 @@ package "<<use_cases.governance>>\nGovernance" as UC_GOVERNANCE #E8F5E9/2E7D32 {
 ' ═══════════════════════════════════════════════════════════
 package "<<use_cases.compilation>>\nCompilation" as UC_COMPILATION #E8F5E9/2E7D32 {
 
-  abstract class "**TriggerCompilation**" as TriggerCompilation <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**CompileDirectives**" as CompileDirectives <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
-    - cgIrRepo: CgIrRepository
-    + execute(lineageIds: List~LineageId~): CgIrSnapshot
+    - compiledRulesRepo: CompiledRulesRepository
+    + CompileDirectives(lineageIds: List~LineageId~): CgIrSnapshot
+    --
+    <<module>> compiled_rules_application
   }
 
-  abstract class "**ValidateSchema**" as ValidateSchema <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(directive: Directive): ValidationResult
+  abstract class "**ValidateDirectiveDocuments**" as ValidateDirectiveDocuments <<Use Case>> #E8F5E9/2E7D32 {
+    + ValidateDirectiveDocuments(directive: Directive): ValidationResult
+    --
+    <<module>> compiled_rules_application
   }
 
-  abstract class "**DetectStrategy**" as DetectStrategy <<Use Case>> #E8F5E9/2E7D32 {
-    - discriminator: DetectionDiscriminator
-    + execute(spec: DetectionSpec, active: Directive): DetectionStrategy
-  }
-
-  abstract class "**MaterializeCgIr**" as MaterializeCgIr <<Use Case>> #E8F5E9/2E7D32 {
-    - cgIrRepo: CgIrRepository
-    + execute(controls: List~ControlNode~, edges: List~DependencyEdge~): CgIrSnapshot
-  }
-
-  abstract class "**PublishSnapshot**" as PublishSnapshot <<Use Case>> #E8F5E9/2E7D32 {
-    - cgIrRepo: CgIrRepository
-    - eventStore: EventStore
-    + execute(snapshot: CgIrSnapshot): void
+  abstract class "**PublishCompiledRules**" as PublishCompiledRules <<Use Case>> #E8F5E9/2E7D32 {
+    - compiledRulesRepo: CompiledRulesRepository
+    + PublishCompiledRules(snapshot: CgIrSnapshot): void
+    --
+    <<module>> compiled_rules_application
   }
 }
 
@@ -182,37 +198,21 @@ package "<<use_cases.compilation>>\nCompilation" as UC_COMPILATION #E8F5E9/2E7D3
 ' ═══════════════════════════════════════════════════════════
 package "<<use_cases.inspection>>\nInspection" as UC_INSPECTION #E8F5E9/2E7D32 {
 
-  abstract class "**SubmitInspection**" as SubmitInspection <<Use Case>> #E8F5E9/2E7D32 {
-    - targetGateway: TargetGateway
-    - cgIrRepo: CgIrRepository
+  abstract class "**CreateInspection**" as CreateInspection <<Use Case>> #E8F5E9/2E7D32 {
+    - targetGateway: TargetSourcesGateway
+    - compiledRulesRepo: CompiledRulesRepository
     - artifactRepo: ArtifactRepository
-    + execute(req: InspectRequest): InspectResponse
+    + CreateInspection(req: InspectRequest): InspectResponse
+    --
+    <<module>> inspections_application
+    <<requires>> inspection.submit
   }
 
-  abstract class "**NormalizeTarget**" as NormalizeTarget <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(raw: Map): Target
-  }
-
-  abstract class "**ClassifyTarget**" as ClassifyTarget <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(target: Target): TargetClassification
-  }
-
-  abstract class "**SelectControls**" as SelectControls <<Use Case>> #E8F5E9/2E7D32 {
-    - cgIrRepo: CgIrRepository
-    + execute(target: Target, snapshot: CgIrSnapshot): List~ControlNode~
-  }
-
-  abstract class "**EvaluateRules**" as EvaluateRules <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(target: Target, controls: List~ControlNode~): List~DetectionOutcome~
-  }
-
-  abstract class "**AggregateResults**" as AggregateResults <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(outcomes: List~DetectionOutcome~): List~Finding~
-  }
-
-  abstract class "**GenerateReport**" as GenerateReport <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**GetInspection**" as GetInspection <<Use Case>> #E8F5E9/2E7D32 {
     - artifactRepo: ArtifactRepository
-    + execute(inspection: InspectionSnapshot, findings: List~Finding~): InspectResponse
+    + GetInspection(id: UUID): InspectionSnapshot
+    --
+    <<module>> inspections_application
   }
 }
 
@@ -223,74 +223,71 @@ package "<<use_cases.finding>>\nFinding Lifecycle" as UC_FINDING #E8F5E9/2E7D32 
 
   abstract class "**CreateFinding**" as CreateFinding <<Use Case>> #E8F5E9/2E7D32 {
     - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(inspection_id: UUID, outcome: DetectionOutcome): Finding
+    - events: FindingEventRepository
+    + CreateFinding(inspection_id: UUID, outcome: DetectionOutcome): Finding
     --
-    <<requires>> finding.lifecycle.create
+    <<module>> findings_application
   }
 
-  abstract class "**OpenFinding**" as OpenFinding <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**AcknowledgeFinding**" as AcknowledgeFinding <<Use Case>> #E8F5E9/2E7D32 {
     - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId): Finding
+    - events: FindingEventRepository
+    + AcknowledgeFinding(finding_id: FindingId): Finding
     --
-    <<requires>> finding.lifecycle.open
+    <<requires>> finding.acknowledge
+    <<module>> findings_application
   }
 
-  abstract class "**SubmitEvidence**" as SubmitEvidence <<Use Case>> #E8F5E9/2E7D32 {
+  abstract class "**SubmitFindingEvidence**" as SubmitFindingEvidence <<Use Case>> #E8F5E9/2E7D32 {
     - artifactRepo: ArtifactRepository
-    - eventStore: EventStore
-    + execute(finding_id: FindingId, evidence: EvidenceRef): Finding
-  }
-
-  abstract class "**ValidateFinding**" as ValidateFinding <<Use Case>> #E8F5E9/2E7D32 {
-    - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId, disposition: Disposition): Finding
+    - events: FindingEventRepository
+    + SubmitFindingEvidence(finding_id: FindingId, evidence: EvidenceRef): Finding
     --
-    <<requires>> finding.lifecycle.validate
-  }
-
-  abstract class "**RemediateFinding**" as RemediateFinding <<Use Case>> #E8F5E9/2E7D32 {
-    - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId): Finding
-    --
-    <<requires>> finding.lifecycle.remediate
-  }
-
-  abstract class "**VerifyFinding**" as VerifyFinding <<Use Case>> #E8F5E9/2E7D32 {
-    - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId): Finding
-    --
-    <<requires>> finding.lifecycle.verify
-    <<SoD>> verifier ≠ finder
+    <<requires>> evidence.submit
+    <<module>> findings_application
   }
 
   abstract class "**WaiveFinding**" as WaiveFinding <<Use Case>> #E8F5E9/2E7D32 {
     - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId, reason: String): Finding
+    - events: FindingEventRepository
+    + WaiveFinding(finding_id: FindingId, reason: String): Finding
     --
-    <<requires>> finding.lifecycle.waive
-    <<SoD>> waivor ≠ finder
+    <<requires>> finding.waive
+    <<SoD>> actor ∉ creator_provenance
+    <<module>> findings_application
   }
 
   abstract class "**DismissFinding**" as DismissFinding <<Use Case>> #E8F5E9/2E7D32 {
     - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId, reason: String): Finding
+    - events: FindingEventRepository
+    + DismissFinding(finding_id: FindingId, reason: String): Finding
     --
-    <<requires>> finding.lifecycle.dismiss
+    <<requires>> finding.dismiss
+    <<module>> findings_application
   }
 
-  abstract class "**CloseFinding**" as CloseFinding <<Use Case>> #E8F5E9/2E7D32 {
-    - findingFsm: FindingFsm
-    - eventStore: EventStore
-    + execute(finding_id: FindingId): Finding
+  abstract class "**GetFinding**" as GetFinding <<Use Case>> #E8F5E9/2E7D32 {
+    - events: FindingEventRepository
+    + GetFinding(finding_id: FindingId): Finding
     --
-    <<requires>> finding.lifecycle.close
+    <<requires>> finding.view
+    <<module>> findings_application
+  }
+
+  abstract class "**ListFindings**" as ListFindings <<Use Case>> #E8F5E9/2E7D32 {
+    - events: FindingEventRepository
+    + ListFindings(filter: Map): List~Finding~
+    --
+    <<requires>> finding.view
+    <<module>> findings_application
+  }
+
+  abstract class "**GetFindingGuidance**" as GetFindingGuidance <<Use Case>> #E8F5E9/2E7D32 {
+    - directiveRepo: DirectiveRepository
+    + GetFindingGuidance(finding_id: FindingId): GuidancePayload
+    --
+    <<guidance_only>> GetDirectivePolicyDoctrine
+    <<module>> findings_application
   }
 }
 
@@ -383,78 +380,61 @@ package "<<use_cases.certification>>\nCertification" as UC_CERT #E8F5E9/2E7D32 {
 '  RELATIONSHIPS
 ' ═══════════════════════════════════════════════════════════
 
-' ── Governance use cases → ports ──────────────────────────
+' ── Directives ────────────────────────────────────────────
 CreateDirective ..> DirectiveRepository : uses >
-ModifyDirective ..> DirectiveRepository : uses >
+UpdateDirective ..> DirectiveRepository : uses >
 RetireDirective ..> DirectiveRepository : uses >
 ForkDirective ..> DirectiveRepository : uses >
 ForkDirective ..> LineageService : uses >
-MergeDirective ..> DirectiveRepository : uses >
-MergeDirective ..> LineageService : uses >
+MergeDirectives ..> DirectiveRepository : uses >
+MergeDirectives ..> LineageService : uses >
 SplitDirective ..> DirectiveRepository : uses >
 SplitDirective ..> LineageService : uses >
 RestoreDirective ..> DirectiveRepository : uses >
+GetDirective ..> DirectiveRepository : uses >
+ListDirectives ..> DirectiveRepository : uses >
 
-' ── Compilation use cases → ports ─────────────────────────
-TriggerCompilation ..> DirectiveRepository : uses >
-TriggerCompilation ..> CgIrRepository : uses >
-MaterializeCgIr ..> CgIrRepository : uses >
-PublishSnapshot ..> CgIrRepository : uses >
-PublishSnapshot ..> EventStore : uses >
+' ── Compiled rules ────────────────────────────────────────
+CompileDirectives ..> DirectiveRepository : uses >
+CompileDirectives ..> CompiledRulesRepository : uses >
+PublishCompiledRules ..> CompiledRulesRepository : uses >
 
-' ── Inspection use cases → ports ──────────────────────────
-SubmitInspection ..> TargetGateway : uses >
-SubmitInspection ..> CgIrRepository : uses >
-SubmitInspection ..> ArtifactRepository : uses >
-SelectControls ..> CgIrRepository : uses >
-GenerateReport ..> ArtifactRepository : uses >
+' ── Inspections ───────────────────────────────────────────
+CreateInspection ..> TargetSourcesGateway : uses >
+CreateInspection ..> CompiledRulesRepository : uses >
+CreateInspection ..> ArtifactRepository : uses >
+GetInspection ..> ArtifactRepository : uses >
 
-' ── Finding use cases → ports ─────────────────────────────
-CreateFinding ..> EventStore : uses >
-OpenFinding ..> EventStore : uses >
-SubmitEvidence ..> ArtifactRepository : uses >
-SubmitEvidence ..> EventStore : uses >
-ValidateFinding ..> EventStore : uses >
-RemediateFinding ..> EventStore : uses >
-VerifyFinding ..> EventStore : uses >
-WaiveFinding ..> EventStore : uses >
-DismissFinding ..> EventStore : uses >
-CloseFinding ..> EventStore : uses >
+' ── Findings ──────────────────────────────────────────────
+CreateFinding ..> FindingEventRepository : uses >
+AcknowledgeFinding ..> FindingEventRepository : uses >
+SubmitFindingEvidence ..> ArtifactRepository : uses >
+SubmitFindingEvidence ..> FindingEventRepository : uses >
+WaiveFinding ..> FindingEventRepository : uses >
+DismissFinding ..> FindingEventRepository : uses >
+GetFinding ..> FindingEventRepository : uses >
+ListFindings ..> FindingEventRepository : uses >
+GetFindingGuidance ..> DirectiveRepository : uses >
 
 ' ── Conflict use cases → ports ────────────────────────────
 DetectConflict ..> DirectiveRepository : uses >
 ResolveConflictUC ..> ArtifactRepository : uses >
 EscalateToHuman ..> ArtifactRepository : uses >
-EscalateToHuman ..> EventStore : uses >
+EscalateToHuman ..> FindingEventRepository : uses >
 ReviewArtifact ..> ArtifactRepository : uses >
-ReviewArtifact ..> EventStore : uses >
+ReviewArtifact ..> FindingEventRepository : uses >
 
-' ── Guidance use cases → ports ────────────────────────────
+' ── Guidance / analytics (legacy package; prefer findings) ─
 ResolveGuidance ..> DirectiveRepository : uses >
-ViewAggregates ..> EventStore : uses >
-ViewTrends ..> EventStore : uses >
-ViewDashboard ..> EventStore : uses >
+ViewAggregates ..> FindingEventRepository : uses >
+ViewTrends ..> FindingEventRepository : uses >
+ViewDashboard ..> FindingEventRepository : uses >
 ViewDashboard ..> DirectiveRepository : uses >
-ExplainCausally ..> EventStore : uses >
-ExplainCausally ..> CgIrRepository : uses >
+ExplainCausally ..> FindingEventRepository : uses >
+ExplainCausally ..> CompiledRulesRepository : uses >
 
-' ── Certification use cases → ports ───────────────────────
+' ── Certification ─────────────────────────────────────────
 RunCertification ..> ArtifactRepository : uses >
-
-' ── Use case chains (pipeline dependencies) ──────────────
-SubmitInspection ..> NormalizeTarget : chains >
-SubmitInspection ..> ClassifyTarget : chains >
-SubmitInspection ..> SelectControls : chains >
-SubmitInspection ..> EvaluateRules : chains >
-SubmitInspection ..> AggregateResults : chains >
-SubmitInspection ..> GenerateReport : chains >
-
-TriggerCompilation ..> ValidateSchema : chains >
-TriggerCompilation ..> DetectStrategy : chains >
-TriggerCompilation ..> MaterializeCgIr : chains >
-TriggerCompilation ..> PublishSnapshot : chains >
-
-RunCertification ..> ValidateGate : iterates >
 
 ' ── DTO usage ────────────────────────────────────────────
 CreateDirective ..> DirectiveCreateRequest : accepts >

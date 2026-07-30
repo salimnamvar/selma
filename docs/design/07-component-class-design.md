@@ -2,42 +2,45 @@
 
 See: [`../class-diagram/`](../class-diagram/) for structure, methods, and fields.
 
-## C4 component → design mapping
+Modules use **`{resource}_{layer}`**. Methods use **ROD Verb+Resource** names
+(see [03](03-ports-and-adapters.md), [04](04-package-architecture.md), [05](05-application-use-cases.md)).
 
-| C4 ID | Class / package focus | Contracts |
+## C4 → modules
+
+| C4 ID | Modules | Contracts |
 | :--- | :--- | :--- |
-| `api` | REST routers, capability gate, DTO mapping | `interfaces/*`, `authorization/*` |
-| `compilation` | CompileDirectives, MaterializeCgIr, PublishSnapshot | `compilation/*` |
-| `inspection` | SubmitInspection, pipeline stages | `inspection/*` |
-| `findings` | Finding FSM use cases, ResolveGuidance, read models | `finding_lifecycle/*`, guidance |
-| `directives_repository` | SqlDirectiveRepository | `data_stores/directives` |
-| `compiled_rules_repository` | ContentAddressedCgIrStore | `data_stores/compiled_rules` |
-| `finding_events_repository` | AppendOnlyEventLog | `data_stores/finding_events` |
-| `artifacts_repository` | ObjectArtifactStore | `data_stores/artifacts` |
-| `target_sources_gateway` | HttpTargetGateway (optional) | target schema |
+| `api` | `rest_interface`, `authorization_application` | `interfaces/*`, `authorization/*` |
+| `compilation` | `compiled_rules_application` | `compilation/*` |
+| `inspection` | `inspections_application` | `inspection/*` |
+| `findings` | `findings_application` | `finding_lifecycle/*` |
+| `directives_repository` | `directives_infrastructure` | `data_stores/directive_store` |
+| `compiled_rules_repository` | `compiled_rules_infrastructure` | `data_stores/cgir_store` |
+| `finding_events_repository` | `findings_infrastructure` | `data_stores/event_store` |
+| `artifacts_repository` | `artifacts_infrastructure` | `data_stores/artifact_store` |
+| `target_sources_gateway` | `inspections_infrastructure` | target schema |
 
 ## Domain services (not C4 components)
 
-| Service | Used by | Contract |
+| Service | Module | Used by |
 | :--- | :--- | :--- |
-| `ResolveConflict` | `compilation`, `inspection`, `findings` | `conflict/*` |
-| `LineageService` | directive use cases via `api` | `directive/identity` |
-| `FindingFsm` | `findings` | `finding_lifecycle/*` |
-| `GuidanceResolver` | `findings` | policy doctrine schema |
+| `ResolveConflict` | `conflicts_domain` | compilation, inspection, findings apps |
+| `LineageService` | `directives_domain` | directives_application |
+| `FindingFsm` | `findings_domain` | findings_application |
+| `GuidanceResolver` | `findings_domain` / application | `GetFindingGuidance` |
 
-## Adapter → port mapping
+## Adapter classes (ROD-aligned)
 
-| Adapter class | Port | C4 store / system |
+| Class | Port | Module |
 | :--- | :--- | :--- |
-| `SqlDirectiveRepository` | `DirectiveRepository` | `directives` |
-| `ContentAddressedCgIrStore` | `CgIrRepository` | `compiled_rules` |
-| `AppendOnlyEventLog` | `EventStore` | `finding_events` |
-| `ObjectArtifactStore` | `ArtifactRepository` | `artifacts` |
-| `HttpTargetGateway` | `TargetGateway` | `target_sources` (optional) |
+| `SqlDirectiveRepository` | `DirectiveRepository` | `directives_infrastructure` |
+| `ContentAddressedCompiledRulesRepository` | `CompiledRulesRepository` | `compiled_rules_infrastructure` |
+| `AppendOnlyFindingEventRepository` | `FindingEventRepository` | `findings_infrastructure` |
+| `ObjectArtifactRepository` | `ArtifactRepository` | `artifacts_infrastructure` |
+| `HttpTargetSourcesGateway` | `TargetSourcesGateway` | `inspections_infrastructure` |
 
 **Constraints:**
 
-- No separate doctrine reader; doctrine only via `DirectiveRepository.readPolicyDoctrine`.
-- `findings` must not write `compiled_rules` or mutate directives from analytics.
-- `inspection` must not call `readPolicyDoctrine` on evaluate path.
-- Certification (AA-01…AA-07) is an offline/CI tool, not an in-process C4 peer.
+- No separate doctrine reader; use `GetDirectivePolicyDoctrine`.
+- `inspections_application` must not call doctrine getters on evaluate path.
+- `findings_application` must not write compiled rules or mutate directives from analytics.
+- Certification is offline/CI (`certifications_application`), not an in-process C4 peer.

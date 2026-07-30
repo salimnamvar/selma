@@ -509,38 +509,38 @@ package "<<domain>>\nDomain Events" as EVT_PKG #FFFDE7/E0C96F {
 package "<<ports>>\nRepository Interfaces" as PORT_PKG #FCE4EC/C62828 {
 
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>> #FCE4EC/C62828 {
-    + findById(id: LineageId): Directive
-    + save(directive: Directive): void
-    + findByStatus(status: DirectiveStatus): List~Directive~
-    + nextExecutionId(): ExecutionId
-    + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
-    + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
-    + listPolicyRefs(filter: Map): List~PairedPolicyRef~
+    + GetDirective(lineage_id: LineageId): Directive
+    + ListDirectives(filter: Map): List~Directive~
+    + SaveDirective(directive: Directive): void
+    + AllocateExecutionId(): ExecutionId
+    + GetDirectiveExecutableDocument(id: LineageId | ExecutionId): ExecutableRuleDoc
+    + GetDirectivePolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    + ListDirectivePolicyRefs(filter: Map): List~PairedPolicyRef~
   }
 
-  interface "**CgIrRepository**" as CgIrRepository <<Port>> #FCE4EC/C62828 {
-    + findByHash(hash: String): CgIrSnapshot
-    + save(snapshot: CgIrSnapshot): void
-    + latest(): CgIrSnapshot
+  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> #FCE4EC/C62828 {
+    + GetCompiledRules(snapshot_hash: String): CgIrSnapshot
+    + GetLatestCompiledRules(): CgIrSnapshot
+    + PublishCompiledRules(snapshot: CgIrSnapshot): void
   }
 
-  interface "**EventStore**" as EventStore <<Port>> #FCE4EC/C62828 {
-    + append(event: DomainEvent): void
-    + stream(aggregate_id: String): List~DomainEvent~
-    + stream(from: HlcTimestamp): List~DomainEvent~
+  interface "**FindingEventRepository**" as FindingEventRepository <<Port>> #FCE4EC/C62828 {
+    + AppendFindingEvent(event: DomainEvent): void
+    + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
+    + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
   }
 
   interface "**ArtifactRepository**" as ArtifactRepository <<Port>> #FCE4EC/C62828 {
-    + saveInspection(snapshot: InspectionSnapshot): void
-    + findInspection(id: UUID): InspectionSnapshot
-    + saveFinding(finding: Finding): void
-    + findFinding(id: FindingId): Finding
-    + saveConflict(artifact: ConflictArtifact): void
+    + SaveInspectionArtifact(snapshot: InspectionSnapshot): void
+    + GetInspectionArtifact(id: UUID): InspectionSnapshot
+    + SaveConflictArtifact(artifact: ConflictArtifact): void
+    + GetConflictArtifact(id: UUID): ConflictArtifact
+    + SaveCertificationArtifact(run: CertificationRun): void
   }
 
-  interface "**TargetGateway**" as TargetGateway <<Port>> #FCE4EC/C62828 {
-    + fetchTarget(target_id: String): Target
-    + hashTarget(target: Target): TargetHash
+  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>> #FCE4EC/C62828 {
+    + GetTarget(target_ref: String): Target
+    + HashTarget(target: Target): TargetHash
   }
 
 }
@@ -630,14 +630,13 @@ CertificationRun ..> CertificationCompleted : raises >
 
 ' ── Repository ports → aggregates (persists) ─────────────
 DirectiveRepository ..> Directive : persists >
-DirectiveRepository ..> ExecutableRuleDoc : readExecutable >
-DirectiveRepository ..> GuidancePayload : readPolicyDoctrine >
-CgIrRepository ..> CgIrSnapshot : persists >
-EventStore ..> FindingCreated : stores >
+DirectiveRepository ..> ExecutableRuleDoc : GetDirectiveExecutableDocument >
+DirectiveRepository ..> GuidancePayload : GetDirectivePolicyDoctrine >
+CompiledRulesRepository ..> CgIrSnapshot : persists >
+FindingEventRepository ..> FindingCreated : stores >
 ArtifactRepository ..> InspectionSnapshot : persists >
-ArtifactRepository ..> Finding : persists >
 ArtifactRepository ..> ConflictArtifact : persists >
-TargetGateway ..> Target : fetches >
+TargetSourcesGateway ..> Target : GetTarget >
 
 ' ── Read models ──────────────────────────────────────────
 GuidanceView ..> PairedPolicyRef : references >
