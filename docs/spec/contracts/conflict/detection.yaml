@@ -4,12 +4,13 @@
 
 contract_id: "conflict.detection"
 schema_version: "1.0.0"
-owner_component: "ResolveConflict"
+owner_component: "compilation"
 state_machine_ref: "../../state/selma_conflict_resolution.puml"
 description: >
   Defines when conflicts exist between rules. Conflicts are identified
   through two mechanisms: declared conflicts (compile-time) and outcome
   contradictions (evaluation-time).
+  Note: ResolveConflict domain service implements this contract.
 
 detection_mechanisms:
   - mechanism_id: "CD-001"

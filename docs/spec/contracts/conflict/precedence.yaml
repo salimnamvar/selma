@@ -4,12 +4,13 @@
 
 contract_id: "conflict.precedence"
 schema_version: "1.0.0"
-owner_component: "ResolveConflict"
+owner_component: "compilation"
 state_machine_ref: "../../state/selma_conflict_resolution.puml"
 description: >
   Defines the unified conflict resolution function and precedence chain.
   Override > priority > specificity > recency. Explicit override takes
   precedence over all computed factors.
+  Note: ResolveConflict domain service implements this contract.
 
 resolution_algorithm:
   description: "resolve_conflict(rule_a, rule_b) → winning_rule | Conflict Artifact"
