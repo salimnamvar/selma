@@ -4,12 +4,14 @@
 
 contract_id: "certification.gates"
 schema_version: "1.0.0"
-owner_component: "certification_tool"
+owner_component: "api"
 description: >
   Defines the 7 architectural audit gates required for production-grade
   reference implementation certification. Gates are non-blocking for spec
   conformance of the document suite but MUST be satisfied for implementation
   certification.
+  Note: certification_tool (offline/CI) is the external implementation of these gates.
+  API provides read access to certification results stored as artifacts.
 
 gates:
   - gate_id: "AA-01"
