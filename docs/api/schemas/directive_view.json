@@ -25,8 +25,8 @@
     "execution_id": {
       "type": "string",
       "description": "Active node identity for CG-IR compilation and runtime evaluation. Changes on fork, merge, or split. On first creation equals lineage_id.",
-      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
-      "examples": ["SC101", "TRAF-001-A", "AUTH-001-M3A7F2B1C4D5E6F7"]
+      "pattern": "^[A-Z][A-Z0-9]+(-[0-9]+(-[A-Z0-9]+)*)?$",
+      "examples": ["SC101", "SC101-1", "TRAF-001-A", "AUTH-001-M3A7F2B1C4D5E6F7"]
     },
     "status": {
       "type": "string",
