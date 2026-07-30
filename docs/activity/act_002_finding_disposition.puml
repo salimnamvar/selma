@@ -19,8 +19,8 @@ start
 :Finding Created\n(system auto-transition to Open);
 
 |#ECEFF4|Actor Routing|
-if (Who is Acting?) then (Regulatory Official)
-  :Authenticate\n<b>Regulatory Official</b>;
+if (Who is Acting?) then (Compliance Representative)
+  :Authenticate\n<b>Compliance Representative</b>;
   if (What Action?) then (Acknowledge)
     :Check Capability\n<color:#1B7A6E><b>finding.acknowledge</b></color>;
     note right
@@ -29,7 +29,27 @@ if (Who is Acting?) then (Regulatory Official)
     end note
     :Transition: Open → Acknowledged;
     :Append DispositionChanged Event;
-  elseif (Waive) then
+  elseif (Submit Evidence) then
+    :Check Capability\n<color:#1B7A6E><b>evidence.submit</b></color>;
+    note right
+      No SoD check per TR-FL-005.
+      SoD-002 is enforced at approval
+      time (TR-FL-007), not submission.
+    end note
+    :Transition: Acknowledged → Evidence Submitted;
+    :Auto-transition: Evidence Submitted → Pending Verification;
+    :Append DispositionChanged Events;
+  elseif (Request Reinspection) then
+    :Check Capability\n<color:#1B7A6E><b>inspection.reinspect</b></color>;
+    :Trigger New Inspection;
+    note right
+      Creates a new inspection
+      with reference to this finding.
+    end note
+  endif
+elseif (Regulatory Official) then
+  :Authenticate\n<b>Regulatory Official</b>;
+  if (What Action?) then (Waive)
     :Check Capability\n<color:#1B7A6E><b>finding.waive</b></color>;
     :Check SoD\n(SOD-001: not the creator);
     note right
@@ -75,26 +95,6 @@ if (Who is Acting?) then (Regulatory Official)
     end note
     :Transition: Pending Verification → Rejected;
     :Append DispositionChanged Event;
-  endif
-elseif (Compliance Rep) then
-  :Authenticate\n<b>Compliance Representative</b>;
-  if (What Action?) then (Submit Evidence)
-    :Check Capability\n<color:#1B7A6E><b>evidence.submit</b></color>;
-    note right
-      No SoD check per TR-FL-005.
-      SoD-002 is enforced at approval
-      time (TR-FL-007), not submission.
-    end note
-    :Transition: Acknowledged → Evidence Submitted;
-    :Auto-transition: Evidence Submitted → Pending Verification;
-    :Append DispositionChanged Events;
-  elseif (Request Reinspection) then
-    :Check Capability\n<color:#1B7A6E><b>finding.request_reinspection</b></color>;
-    :Trigger New Inspection;
-    note right
-      Creates a new inspection
-      with reference to this finding.
-    end note
   endif
 endif
 
