@@ -191,6 +191,12 @@
       "type": "string",
       "description": "Actor ID of the last state transition."
     },
+    "comments": {
+      "type": "string",
+      "description": "Mandatory for Rejected→Open (TR-FL-009) and Open→Superseded (TR-FL-012) transitions. Captures the rationale for reopening or superseding a finding.",
+      "minLength": 1,
+      "maxLength": 2000
+    },
     "created_at": {
       "type": "string",
       "format": "date-time",
