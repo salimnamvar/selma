@@ -10,7 +10,7 @@
 ' and Compliance Representatives with capability + SoD gates.
 ' ============================================================
 
-title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Acknowledged | Waived | Dismissed] → EvidenceSubmitted → PendingVerification → [Verified | Rejected] → Terminal</i></size>
+title ACT-002: Finding Disposition\n<size:12><i>Created → Open → [Acknowledged | Waived | Dismissed | Superseded] → EvidenceSubmitted → PendingVerification → [Verified | Rejected] → Terminal</i></size>
 
 !include common/act_styles.puml
 
@@ -23,18 +23,17 @@ if (Who is Acting?) then (Regulatory Official)
   :Authenticate\n<b>Regulatory Official</b>;
   if (What Action?) then (Acknowledge)
     :Check Capability\n<color:#1B7A6E><b>finding.acknowledge</b></color>;
-    :Check SoD\n(not the creator);
     note right
-      Separation of Duties:
-      creator ≠ actor for acknowledgement.
+      No SoD check per TR-FL-002.
+      Capability gate only.
     end note
     :Transition: Open → Acknowledged;
     :Append DispositionChanged Event;
   elseif (Waive) then
     :Check Capability\n<color:#1B7A6E><b>finding.waive</b></color>;
-    :Check SoD\n(not the creator);
+    :Check SoD\n(SOD-001: not the creator);
     note right
-      Separation of Duties:
+      Segregation of Duties (SOD-001):
       creator ≠ waiving official.
     end note
     :Transition: Open → Waived;
@@ -42,29 +41,37 @@ if (Who is Acting?) then (Regulatory Official)
     :Append DispositionChanged\n+ FindingClosed Events;
   elseif (Dismiss) then
     :Check Capability\n<color:#1B7A6E><b>finding.dismiss</b></color>;
-    :Check SoD\n(not the creator);
     note right
-      Separation of Duties:
-      creator ≠ dismissing official.
+      No SoD check per TR-FL-003.
+      Capability gate only.
     end note
     :Transition: Open → Dismissed;
     :Append DispositionChanged Event;
-  elseif (Verify Evidence) then
-    :Check Capability\n<color:#1B7A6E><b>finding.verify</b></color>;
-    :Check SoD\n(not the creator);
+  elseif (Supersede) then
+    :Check Capability\n<color:#1B7A6E><b>finding.supersede</b></color>;
+    :Check SoD\n(SOD-003: not the creator);
     note right
-      Separation of Duties:
-      creator ≠ verifying official.
+      Segregation of Duties (SOD-003):
+      creator ≠ superseding official.
+      Actor MUST NOT be in creator_provenance.
+    end note
+    :Transition: Open → Superseded;
+    :Append DispositionChanged Event;
+  elseif (Verify Evidence) then
+    :Check Capability\n<color:#1B7A6E><b>finding.approve_remediation</b></color>;
+    :Check SoD\n(SOD-002: not the evidence submitter);
+    note right
+      Segregation of Duties (SOD-002):
+      actor ≠ evidence_submitter.
     end note
     :Transition: Pending Verification → Verified;
     :Auto-transition: Verified → Closed;
     :Append DispositionChanged\n+ FindingClosed Events;
   elseif (Reject Evidence) then
     :Check Capability\n<color:#1B7A6E><b>finding.reject_remediation</b></color>;
-    :Check SoD\n(not the creator);
     note right
-      Separation of Duties:
-      creator ≠ rejecting official.
+      No SoD check per TR-FL-008.
+      Capability gate only.
     end note
     :Transition: Pending Verification → Rejected;
     :Append DispositionChanged Event;
@@ -72,11 +79,11 @@ if (Who is Acting?) then (Regulatory Official)
 elseif (Compliance Rep) then
   :Authenticate\n<b>Compliance Representative</b>;
   if (What Action?) then (Submit Evidence)
-    :Check Capability\n<color:#1B7A6E><b>finding.submit_evidence</b></color>;
-    :Check SoD\n(not the creator);
+    :Check Capability\n<color:#1B7A6E><b>evidence.submit</b></color>;
     note right
-      Separation of Duties:
-      creator ≠ evidence submitter.
+      No SoD check per TR-FL-005.
+      SoD-002 is enforced at approval
+      time (TR-FL-007), not submission.
     end note
     :Transition: Acknowledged → Evidence Submitted;
     :Auto-transition: Evidence Submitted → Pending Verification;
@@ -92,7 +99,7 @@ elseif (Compliance Rep) then
 endif
 
 |#E8F4F8|Terminal Check|
-if (Is Terminal State?\nClosed / Dismissed) then (yes)
+if (Is Terminal State?\nClosed / Dismissed / Superseded) then (yes)
   #4A4A4A:Final State Reached;
   stop
 else (no)
