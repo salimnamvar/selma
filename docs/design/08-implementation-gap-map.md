@@ -15,7 +15,7 @@ as a baseline checklist.
 | Application ports | Four stores + detection; dual-document DirectiveRepository (no separate doctrine port) | Rule/directive/parser/evaluator/reporter ports | High |
 | Use cases | Governance, compile, inspect, FSM, certify | `inspect_source`, `query_directive` | High |
 | Infrastructure | Four stores + pure detection registry | Config validators, AST evaluators, JSON rule repo | High |
-| Interfaces | REST Application Service + CLI/TUI | CLI/TUI shells | Medium |
+| Interfaces | REST api + CLI/TUI clients | CLI/TUI shells | Medium |
 | Docs contracts | Complete | Complete (docs) | — |
 
 ## Package mapping (scaffold → target)
@@ -60,7 +60,7 @@ as a baseline checklist.
 ## Recommended Implementation order (docs guidance only)
 
 1. Domain VOs: LineageId, ExecutionId, FsmState, DetectionSpec models  
-2. EventStore port + Finding FSM domain service  
+2. FindingEventRepository port + FindingFsm domain service under `findings`
 3. CgIrRepository + compilation validate/publish (even if filesystem CAS)  
 4. Inspection pipeline producing FindingCreated  
 5. Capability gate middleware  

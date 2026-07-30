@@ -3,7 +3,7 @@
 ' Selma — Finding Lifecycle State Machine (NORMATIVE)
 ' Source:  docs/spec/contracts/finding_lifecycle/
 '          (states.yaml, transitions.yaml, sod_contract.yaml)
-' C4:      Lifecycle Finder → Findings & Audit Trail Adapter → finding_events
+' C4:      findings → finding_events_repository → finding_events
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -11,7 +11,7 @@ title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · hierarc
 
 !include ./common/sm_styles.puml
 
-[*] --> Created : <b>FindingCreated</b>\nactor: System (Rule Inspector)\ncommand: evaluation Fail | Partial | NeedsReview\nstream: FindingCreated
+[*] --> Created : <b>FindingCreated</b>\nactor: System (inspection)\ncommand: evaluation Fail | Partial | NeedsReview\nstream: FindingCreated
 
 state "Created" as Created #3B7DD8 : **entry** born from inspection Report\n**allowed** system auto-open only\n**forbidden** human mutation · dismiss · waive
 state "Open" as Open #3B7DD8 : **entry** disposition=valid decision hub\n**allowed** acknowledge | dismiss | waive\n**forbidden** close · approve · submit evidence\n**mutex** first action is exclusive

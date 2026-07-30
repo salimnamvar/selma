@@ -57,7 +57,7 @@ cross_layer_binding:
     Instance documents conforming to this schema are stored in directives
     alongside the paired executable rule document (dual-document Directive).
     They ARE read at runtime ONLY AFTER evaluation produces a finding, via
-    Directives Adapter (DirectiveRepository.readPolicyDoctrine) and
+    directives_repository (DirectiveRepository.readPolicyDoctrine) and
     paired_policy_ref. They are NOT used for evaluation, inspection, or FSM
     transitions. No separate filesystem PolicyDoctrineReader. Policy influences
     evaluation only indirectly: authors use it when writing directives, and
@@ -497,11 +497,11 @@ runtime_usage:
     This is meta-documentation, not executable logic. Instance documents
     are stored in directives with the paired executable rule.
   storage: >
-    System of record: directives via Directives Adapter. No separate
+    System of record: directives via directives_repository. No separate
     filesystem doctrine path or PolicyDoctrineReader component.
   guidance_resolution: >
-    After Rule Inspector creates a finding, paired_policy_ref on the finding
-    is resolved by Finding Analyzer through Directives Adapter
+    After inspection creates a finding, paired_policy_ref on the finding
+    is resolved by findings through directives_repository
     (DirectiveRepository.readPolicyDoctrine). The doctrine document is loaded
     from directives only for guidance fields.
   ai_agent_consumption: >

@@ -18,7 +18,7 @@ autonumber
 user -> SI: submit target for inspection
 activate SI
 
-SI -> AS: POST /inspections (target_ref)
+SI -> AS: POST /inspections (inline target body or optional target_ref)
 activate AS
 
 group Authorization Gate

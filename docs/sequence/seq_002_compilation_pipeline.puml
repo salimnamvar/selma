@@ -11,7 +11,7 @@ database "compiled_rules\n(Content-Addressed Storage)" as CS #4C566A
 
 autonumber
 
-trigger -> HC: compile request (directives or CI/CD trigger)
+trigger -> HC: compile request (directive change or explicit compile)
 activate HC
 
 group Ingestion Phase

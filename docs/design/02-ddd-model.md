@@ -35,13 +35,15 @@
            ▼
 ┌─────────────────────┐     ┌──────────────────────┐
 │ Finding Lifecycle   │────▶│ Authorization        │
-│ (FSM, SoD, events)  │     │ (capabilities, roles)│
+│ (FSM, SoD, events,  │     │ (capabilities, roles)│
+│  guidance reads)    │     │  C4: api             │
 └──────────┬──────────┘     └──────────────────────┘
-           │ guidance_only
+           │ guidance_only → directives_repository
            ▼
 ┌─────────────────────┐     ┌──────────────────────┐
-│ Guidance & Analytics│     │ Certification        │
-│ (analyzer, doctrine)│     │ (AA-01…AA-07)        │
+│ Guidance read model │     │ Certification        │
+│ (findings + doctrine│     │ (AA-01…AA-07)        │
+│  — not a C4 peer)   │     │ offline/CI tool only │
 └─────────────────────┘     └──────────────────────┘
 ```
 
@@ -51,10 +53,10 @@
 | **Compilation** | CompilationJob, CgIrSnapshot | `compilation` · `compiled_rules_*` modules | `compilation/*` |
 | **Inspection** | InspectionSnapshot, Target | `inspection` · `inspections_*` modules | `inspection/*` |
 | **Finding Lifecycle** | Finding | `findings` · `findings_*` modules | `finding_lifecycle/*` |
-| **Conflict** | ConflictArtifact | domain service `ResolveConflict` (used by `compilation` / `inspection` / `findings`) | `conflict/*` |
+| **Conflict** | ConflictArtifact | domain service `ResolveConflict` (used by `compilation` / `inspection` / `findings`; **not** a C4 component) | `conflict/*` |
 | **Authorization** | ActorCapabilityGrant (or session claims) | `api` | `authorization/*` |
-| **Guidance & Analytics** | GuidanceView, AggregateReport | `findings` (read models) | policy schema + finding guidance |
-| **Certification** | CertificationRun | offline/CI tool (writes `artifacts`) | `certification/gates.yaml` |
+| **Guidance** | GuidanceView (read model) | `findings` + `directives_repository` (`guidance_only`); not a freestanding engine | policy schema + finding guidance |
+| **Certification** | CertificationRun | offline/CI `certification_tool` (writes `artifacts`; **not** an in-process C4 peer) | `certification/gates.yaml` |
 
 Contexts communicate via **application orchestration** and **immutable store contracts**, not by sharing mutable entities across package boundaries.
 

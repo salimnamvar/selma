@@ -3,8 +3,8 @@
 ' Selma — Inspection Execution Pipeline
 ' Source:  docs/spec/contracts/inspection/pipeline.yaml
 '          docs/spec/contracts/inspection/finding_contract.yaml
-' C4:      Rule Inspector → Snapshots Adapter → artifacts
-'          Rule Inspector → Lifecycle Finder (finding birth)
+' C4:      inspection → artifacts_repository → artifacts
+'          inspection → findings (finding birth)
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -50,12 +50,12 @@ state "Completed" as Completed #2C6E49 : **entry** status=completed **terminal**
 state "Partial" as Partial #B9770E : **entry** status=partial · skipped_nodes\n**allowed** read-only · reinspect new id\n**forbidden** backfill skipped into same id
 state "Failed" as Failed #A93226 : **entry** status=failed · fatal CG-IR\n**allowed** audit · reinspect new id\n**forbidden** partial publish as completed
 
-Submitted --> IngressGranted : <b>InspectionIngressGranted</b>\nactor: System (Application Service)\n[capabilityEnforcedAtIngress]
+Submitted --> IngressGranted : <b>InspectionIngressGranted</b>\nactor: System (api)\n[capabilityEnforcedAtIngress]
 Submitted --> RejectedIngress : <b>InspectionIngressDenied</b>\nactor: System\n/ status403OrSchemaErrorNoSnapshot()
 
 RejectedIngress --> [*] : <b>Finalized</b>\nactor: System
 
-IngressGranted --> PureStages : <b>InspectionPinned</b>\nactor: System (Rule Inspector)\ncommand: pin target_hash + cg_ir + frozen_env + engine\n/ fixSystemStateHashInputs()\n/ excludeEventStreamFromHash()
+IngressGranted --> PureStages : <b>InspectionPinned</b>\nactor: System (inspection)\ncommand: pin target_hash + cg_ir + frozen_env + engine\n/ fixSystemStateHashInputs()\n/ excludeEventStreamFromHash()
 
 ' Outcomes after Report completes the composite
 PureStages --> Completed : <b>InspectionCompleted</b>\nactor: System\ncommand: write snapshot + birth findings\n[noSkippedNodesAndNoFatalCorruption]\n/ birthFindingsForFailPartialNeedsReview()

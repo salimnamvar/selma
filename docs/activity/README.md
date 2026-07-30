@@ -8,9 +8,9 @@ Read with [`contracts/`](../spec/contracts/) for the full behavioral contracts.
 
 | File | Activity | Spec authority | Key participants |
 | :--- | :--- | :--- | :--- |
-| `act_001_inspection_pipeline.puml` | Inspection Pipeline (6-stage) | [`inspection/pipeline.yaml`](../spec/contracts/inspection/pipeline.yaml) | Submission Layer, Evaluation, Reporting |
-| `act_002_finding_disposition.puml` | Finding Disposition | [`finding_lifecycle/`](../spec/contracts/finding_lifecycle/) | Regulatory Official, Compliance Rep, System |
-| `act_003_directive_amendment.puml` | Directive Amendment | [`directive/lifecycle.yaml`](../spec/contracts/directive/lifecycle.yaml) | Authoring Service, Compilation Pipeline |
+| `act_001_inspection_pipeline.puml` | Inspection Pipeline (6-stage) | [`inspection/pipeline.yaml`](../spec/contracts/inspection/pipeline.yaml) | `api`, `inspection`, `findings`, `artifacts_repository` |
+| `act_002_finding_disposition.puml` | Finding Disposition | [`finding_lifecycle/`](../spec/contracts/finding_lifecycle/) | Regulatory Official, Compliance Rep, `findings` |
+| `act_003_directive_amendment.puml` | Directive Amendment | [`directive/lifecycle.yaml`](../spec/contracts/directive/lifecycle.yaml) | `api`, `directives_repository`, `compilation` |
 | `common/act_styles.puml` | Shared theme | — | — |
 
 ## Design Principles

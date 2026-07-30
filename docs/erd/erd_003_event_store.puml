@@ -1,9 +1,9 @@
 @startuml erd_003_finding_events
 !include common/erd_styles.puml
 
-title Event Store (Append-Only Log) — Immutable
+title Finding Events (Append-Only Log) — C4 store: finding_events · Immutable
 
-package "Event Store" {
+package "Finding Events" {
   entity "Events" as Events {
     * event_id : UUID <<PK>>
     --

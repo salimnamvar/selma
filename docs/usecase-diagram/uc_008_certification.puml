@@ -1,32 +1,26 @@
 @startuml uc_008_certification
 !include common/uc_styles.puml
 
-title **UC-008 — Architectural Certification**\n(Bounded Context: Certification)
+title **UC-008 — Architectural Certification**\n(Offline/CI tool · not an in-process C4 peer)
 
 left to right direction
 
-actor "CI/CD\nPipeline" as CICD #E8F5E9
+actor "Optional\nCI Client" as CICLIENT #E8F5E9
 
-rectangle "Selma Application" as SYS {
-  rectangle "Certification\n(certification_tool)" as BOUNDED {
+rectangle "Certification Tool Suite\n(certification_tool · offline/CI)" as TOOL {
 
-    usecase "Run Architectural\nCertification"          as UC0
-    usecase "Validate Mediated\nFeedback"               as UC1
-    usecase "Validate Declarative\nGovernance"          as UC2
-    usecase "Validate Evaluator\nPurity"                as UC3
-    usecase "Validate Segregation\nof Duties"           as UC4
-    usecase "Validate Conflict\nDeterminism"            as UC5
-    usecase "Validate Discriminator\nCompleteness"      as UC6
-    usecase "Validate Portability"                      as UC7
-  }
-}
-
-rectangle "External Systems" as EXT {
-  usecase "Audit Platform"  as EXT1
+  usecase "Run Architectural\nCertification"          as UC0
+  usecase "Validate Mediated\nFeedback"               as UC1
+  usecase "Validate Declarative\nGovernance"          as UC2
+  usecase "Validate Evaluator\nPurity"                as UC3
+  usecase "Validate Segregation\nof Duties"           as UC4
+  usecase "Validate Conflict\nDeterminism"            as UC5
+  usecase "Validate Discriminator\nCompleteness"      as UC6
+  usecase "Validate Portability"                      as UC7
 }
 
 ' ---- associations ----
-CICD --> UC0
+CICLIENT --> UC0
 
 UC0 ..> UC1 : <<include>>
 UC0 ..> UC2 : <<include>>
@@ -36,15 +30,15 @@ UC0 ..> UC5 : <<include>>
 UC0 ..> UC6 : <<include>>
 UC0 ..> UC7 : <<include>>
 
-UC0 ..> EXT1 : <<include>>
-
 ' ---- notes ----
 note right of UC0
-  **Pre:** Compilation snapshot available,
-  CI/CD pipeline triggered
+  **Pre:** Compiled Rules samples available;
+  optional CI or local tool invocation
   **Post:** Certification report produced;
-  pass/fail per validation gate
+  pass/fail per gate; may write Artifacts
   **Contract:** certification/gates.yaml
+  **C4:** not a context/container peer —
+  optional client of API / certify tool
 end note
 
 note right of UC3

@@ -1,7 +1,7 @@
 @startuml uc_006_authorization
 !include common/uc_styles.puml
 
-title **UC-006 — Authorization**\n(Bounded Context: Authorization)
+title **UC-006 — Authorization**\n(Bounded Context: Authorization · C4: api)
 
 left to right direction
 
@@ -18,10 +18,6 @@ rectangle "Selma Application" as SYS {
   }
 }
 
-rectangle "External Systems" as EXT {
-  usecase "Audit Platform"  as EXT1
-}
-
 ' ---- associations ----
 RO --> UC1
 CR --> UC1
@@ -31,7 +27,6 @@ CR --> UC2
 UC1 ..> UC2 : <<include>>
 UC2 ..> UC3 : <<extend>>
 UC2 ..> UC4 : <<include>>
-UC3 ..> EXT1 : <<include>>
 
 ' ---- notes ----
 note right of UC1
@@ -49,8 +44,10 @@ end note
 
 note bottom of UC3
   **Pre:** Capability not granted for requested action
-  **Post:** Denial logged to Audit Platform;
-  403 returned to caller
+  **Post:** CapabilityDenied appended via
+  finding_events_repository → finding_events;
+  403 returned to caller (no partial mutation)
+  **C4:** long-term audit export is ops only, not a peer
   **Contract:** authorization/capabilities.yaml (failure_semantics)
 end note
 

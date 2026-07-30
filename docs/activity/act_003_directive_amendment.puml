@@ -3,7 +3,7 @@
 ' Selma — ACT-003: Directive Amendment (Activity Diagram)
 ' Source:  docs/spec/contracts/directive/lifecycle.yaml
 '          docs/spec/contracts/compilation/pipeline.yaml
-' C4:      Directive Store ← Authoring Service → Compilation Pipeline
+' C4:      Directives ← api → compilation
 ' Contract: 1.0.0
 '
 ' Modify directive content/status, then trigger hermetic
@@ -68,16 +68,16 @@ if (Amendment Valid?) then (no)
 else (yes)
 endif
 
-:Persist to Directive Store;
+:Persist to Directives store;
 
 :Release Write Lock;
 
 |#E8F4F8|Compilation|
-:Trigger Hermetic Compilation;
+:Trigger compilation;
 
 fork
   :Acquire Read Lock;
-  :Run Compilation Pipeline;
+  :Run compilation;
   :Publish CG-IR Snapshot;
   :Release Read Lock;
 end fork

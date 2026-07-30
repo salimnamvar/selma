@@ -1,7 +1,7 @@
 @startuml uc_003_inspection
 !include common/uc_styles.puml
 
-title **UC-003 — Inspection**\n(Bounded Context: Inspection)
+title **UC-003 — Inspection**\n(Bounded Context: Inspection · C4: inspection)
 
 left to right direction
 
@@ -17,11 +17,13 @@ rectangle "Selma Application" as SYS {
     usecase "Evaluate Rules"                 as UC5
     usecase "Aggregate Results"              as UC6
     usecase "Generate Report"                as UC7
+    usecase "Fetch Remote Target\n(optional)" as UC_REF
   }
 }
 
-rectangle "External Systems" as EXT {
-  usecase "Target Systems"  as EXT1
+' Optional external — not a required product peer
+rectangle "Optional External" as EXT {
+  usecase "Target Sources"  as EXT1
 }
 
 ' ---- associations ----
@@ -35,24 +37,23 @@ UC4 ..> UC5 : <<include>>
 UC5 ..> UC6 : <<include>>
 UC6 ..> UC7 : <<include>>
 
-UC1 ..> EXT1 : <<include>>
+UC1 ..> UC_REF : <<extend>>\nwhen target_ref
+UC_REF ..> EXT1 : <<include>>\ntarget_sources_gateway
 
 ' ---- notes ----
 note right of UC1
-  **Pre:** Compliance Representative authenticated,
-  target system reachable
-  **Post:** Target queued for normalization
-end note
-
-note right of UC5
-  **Pre:** Controls selected, CG-IR snapshot available
-  **Post:** Per-rule evaluation results produced
+  **Pre:** Compliance Representative authenticated;
+  target body **or** optional target_ref
+  **Post:** Inspection created; pipeline runs against
+  frozen Compiled Rules only
+  **C4:** primary path is inline target payload;
+  Target Sources is optional pull via gateway
 end note
 
 note bottom of UC7
-  **Pre:** Results aggregated
-  **Post:** Inspection report generated;
-  Findings created for non-conformances
+  **Pre:** Evaluation complete
+  **Post:** Report + artifacts written;
+  findings opened via findings use case
 end note
 
 @enduml

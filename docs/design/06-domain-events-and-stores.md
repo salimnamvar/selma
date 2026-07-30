@@ -76,7 +76,7 @@ Stored in `artifacts`; never silently dropped.
 
 ## Guidance payload (not an event source of truth)
 
-Guidance resolved by Finding Analyzer is a **read model** field on query responses:
+Guidance resolved by the `findings` use-case cluster is a **read model** field on query responses:
 
 - `reasoning`, `remediation_strategy`, `remediation_steps`, domain examples  
 - Source: policy doctrine in `directives` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`  

@@ -114,17 +114,17 @@ enforcement_gates:
     failure: "Reject before target validation"
 
   - gate: "finding_fsm_transitions"
-    location: "Finding FSM Engine"
+    location: "findings"
     description: "Per-transition capability + SoD checks"
     failure: "Reject transition; FSM state unchanged; no event appended"
 
   - gate: "conflict_resolution"
-    location: "Conflict Resolution Engine"
+    location: "ResolveConflict (domain service)"
     description: "conflict.resolve checked"
     failure: "Reject; Conflict Artifact remains open"
 
   - gate: "analytics"
-    location: "Analytics Engine"
+    location: "findings (guidance read model)"
     description: "analytics.view checked"
     failure: "Reject; no aggregate data returned"
 

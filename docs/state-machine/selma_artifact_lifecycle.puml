@@ -3,8 +3,8 @@
 ' Selma — Artifact Lifecycle State Machine
 ' Source:  docs/spec/contracts/data_stores/
 ' C4:      artifacts_repository → artifacts
-'          Compiled Rules Adapter → compiled_rules (CG-IR snapshots)
-'          Findings & Audit Trail Adapter → finding_events (events)
+'          compiled_rules_repository → compiled_rules (CG-IR snapshots)
+'          finding_events_repository → finding_events (events)
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -12,7 +12,7 @@ title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthog
 
 !include ./common/sm_styles.puml
 
-[*] --> Building : <b>ArtifactBuildStarted</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: Hermetic Compiler | Rule Inspector |\nConflict Resolver | Architectural Auditor | Lifecycle Finder
+[*] --> Building : <b>ArtifactBuildStarted</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: compilation | inspection |\nResolveConflict | certification_tool | findings
 
 state "Building" as Building #B9770E : **entry** transient workspace\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
 state "Validated" as Validated #1B7A6E : **entry** integrity checks OK\nhashes computed\n**allowed** CAS put / write-once\n**forbidden** skip integrity

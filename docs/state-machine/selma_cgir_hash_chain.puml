@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — CG-IR Hash Composition & Incremental Reuse
 ' Source:  docs/spec/contracts/compilation/pipeline.yaml
-' C4:      Hermetic Compiler → Compiled Rules Adapter → compiled_rules
+' C4:      compilation → compiled_rules_repository → compiled_rules
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -10,7 +10,7 @@ title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Orthogonal dua
 
 !include ./common/sm_styles.puml
 
-[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (Hermetic Compiler)\ncommand: load semantic_body + presentation_body
+[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (compilation)\ncommand: load semantic_body + presentation_body
 
 state "Node Body\nLoaded" as NodeBodyLoaded #B9770E : **entry** semantic_body + presentation_body\n**allowed** enter DualHash\n**forbidden** neighbor embedding
 

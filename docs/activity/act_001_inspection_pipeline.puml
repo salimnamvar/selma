@@ -3,8 +3,8 @@
 ' Selma — ACT-001: Inspection Pipeline (Activity Diagram)
 ' Source:  docs/spec/contracts/inspection/pipeline.yaml
 '          docs/spec/contracts/inspection/finding_contract.yaml
-' C4:      Rule Inspector → Snapshots Adapter → artifacts
-'          Rule Inspector → Lifecycle Finder (finding birth)
+' C4:      inspection → artifacts_repository → artifacts
+'          inspection → findings (finding birth)
 ' Contract: 1.0.0
 '
 ' Six-stage pure evaluation pipeline with parallel node execution,

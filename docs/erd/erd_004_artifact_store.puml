@@ -1,9 +1,9 @@
 @startuml erd_004_artifacts
 !include common/erd_styles.puml
 
-title Artifact Store (Object Store) — Write-Once
+title Artifacts (Object Store) — C4 store: artifacts · Write-Once
 
-package "Artifact Store" {
+package "Artifacts" {
   entity "InspectionSnapshots" as InspectionSnapshots {
     * inspection_id : UUID <<PK>>
     --

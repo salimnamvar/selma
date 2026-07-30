@@ -56,8 +56,8 @@ concern_split:
     authoritative_sources:
       - "schema_contracts/policy_doctrine.yaml"
     consumed_by:
-      - "specification_contracts/inspection (via Finding Analyzer)"
-    rationale: "Policy doctrine is the authoritative source for remediation"
+      - "specification_contracts/finding_lifecycle (via findings guidance_only reads)"
+    rationale: "Policy doctrine is the authoritative source for remediation guidance after findings exist"
 
   lifecycle_authority:
     description: "Determines valid finding state transitions"

@@ -14,7 +14,7 @@ description: >
 gates:
   - gate_id: "AA-01"
     name: "Mediated Feedback"
-    invariant: "Analytics engine has no write path to CG-IR or Finding FSM"
+    invariant: "findings guidance/analytics read models have no write path to compiled_rules or the finding FSM"
     validation_method: "Integration test proving finding events cannot trigger compilation"
     story_refs: ["US-GA-001"]
     criteria:
@@ -29,8 +29,8 @@ gates:
     validation_method: "Static analysis + architectural audit of guidance_only edges"
     story_refs: ["US-CD-001"]
     criteria:
-      - "Rule Inspector and Finding FSM MUST NOT read policy doctrine documents for evaluation or state transitions"
-      - "Finding Analyzer MAY read policy doctrine documents from directives via directives_repository and paired_policy_ref for guidance_only resolution"
+      - "inspection and findings MUST NOT read policy doctrine documents for evaluation or state transitions"
+      - "findings MAY read policy doctrine documents from directives via directives_repository and paired_policy_ref for guidance_only resolution"
       - "There MUST NOT be a separate PolicyDoctrineReader or filesystem doctrine path used at runtime"
       - "CI static analysis scans evaluation/FSM paths for doctrine access used as executable logic"
       - "Conflict resolution uses contract algorithm over schema/CG-IR fields only"

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://selma.dev/schemas/guidance_response.json",
   "title": "GuidanceResponse",
-  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directives via paired_policy_ref and Directives Adapter (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 — never used for evaluation or FSM transitions.",
+  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directives via paired_policy_ref and directives_repository (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 — never used for evaluation or FSM transitions.",
   "type": "object",
   "required": ["finding_id", "paired_policy_ref", "reasoning", "remediation_strategy"],
   "properties": {

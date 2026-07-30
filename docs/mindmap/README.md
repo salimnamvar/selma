@@ -21,7 +21,7 @@ Development phases and artifact inventory for the Selma rule governance platform
 | Ports & adapters | [`../design/03-ports-and-adapters.md`](../design/03-ports-and-adapters.md) |
 | Package architecture | [`../design/04-package-architecture.md`](../design/04-package-architecture.md) |
 | Application use cases | [`../design/05-application-use-cases.md`](../design/05-application-use-cases.md) |
-| Use-case catalog (human index) | [`../usecase/README.md`](../usecase/README.md) |
+| Use-case diagrams (human index) | [`../usecase-diagram/README.md`](../usecase-diagram/README.md) |
 | Scaffold gap map | [`../design/08-implementation-gap-map.md`](../design/08-implementation-gap-map.md) |
 
 ## Entry criteria (satisfied)

@@ -99,7 +99,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       Both documents stored in directives
       under one lineage/execution identity.
       Compiler uses executable only;
-      Finding Analyzer uses doctrine only.
+      findings uses doctrine only (guidance_only).
     end note
   }
 

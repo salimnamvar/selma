@@ -2,16 +2,16 @@
 ' ============================================================
 ' Selma — Architectural Certification State Machine
 ' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-07)
-' C4:      Architectural Auditor → Snapshots Adapter → artifacts
-'          trigger: CI/CD → Application Service
+' C4:      certification_tool → artifacts_repository → artifacts
+'          trigger: CI/CD → api
 ' Contract: 1.0.0
 ' ============================================================
 
-title Selma — Architectural Certification FSM\n<size:12><i>CI/CD seven-gate audit · hierarchical AA composite · no runtime policy contamination</i></size>
+title Selma — Architectural Certification FSM\n<size:12><i>offline/CI seven-gate audit (not C4 peer) · hierarchical AA composite · no runtime policy contamination</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Triggered : <b>CertificationTriggered</b>\nactor: System (CI/CD)\ncommand: start certification run\n/ routeCicdToAuditor()
+[*] --> Triggered : <b>CertificationTriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: start certification run\n/ startCertification()
 
 state "Triggered" as Triggered #B9770E : **entry** certification run_id assigned\n**allowed** collect evidence\n**forbidden** skip gates
 state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-IR samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory\n**forbidden** mutate domain FSMs
@@ -43,7 +43,7 @@ state "Certified" as Certified #2C6E49 : **entry** certification artifact sealed
 state "Remediation\nRequired" as RemediationRequired #B9770E : **entry** engineering fixes needed\n**allowed** new commit / rebuild\n**forbidden** mutate CG-IR · Finding FSM · Directive Graph
 state "Archived" as Archived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** rewrite
 
-Triggered --> CollectingEvidence : <b>CertificationEvidenceCollecting</b>\nactor: System (Architectural Auditor)
+Triggered --> CollectingEvidence : <b>CertificationEvidenceCollecting</b>\nactor: System (certification_tool)
 CollectingEvidence --> ValidatingGates : <b>CertificationEvidenceReady</b>\nactor: System
 CollectingEvidence --> Rejected : <b>CertificationRejected</b>\nactor: System\n/ incompleteCorpus()
 
@@ -64,7 +64,7 @@ Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncomm
 Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nactor: System
 
 Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async optional long-term export
-RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (CI/CD)\ncommand: new certification run_id
+RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: new certification run_id
 Archived --> [*] : <b>Finalized</b>\nactor: System
 
 @enduml

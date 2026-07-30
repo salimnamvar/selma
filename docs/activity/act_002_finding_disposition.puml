@@ -3,7 +3,7 @@
 ' Selma — ACT-002: Finding Disposition (Activity Diagram)
 ' Source:  docs/spec/contracts/finding_lifecycle/states.yaml
 '          docs/spec/contracts/finding_lifecycle/transitions.yaml
-' C4:      Lifecycle Finder → Event Store
+' C4:      findings → Finding Events
 ' Contract: 1.0.0
 '
 ' Finding lifecycle transitions driven by Regulatory Officials

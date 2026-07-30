@@ -66,17 +66,17 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 | # | Artifact | Status | File |
 |---|----------|--------|------|
 | 26 | CLS-001 Domain Model | COMPLETE | `docs/class-diagram/cd_001_domain_model.puml` |
-| 27 | CLS-002 Application Services | COMPLETE | `docs/class-diagram/cd_002_apis.puml` |
+| 27 | CLS-002 Application Services | COMPLETE | `docs/class-diagram/cd_002_application_services.puml` |
 | 28 | CLS-003 Infrastructure Adapters | COMPLETE | `docs/class-diagram/cd_003_infrastructure_adapters.puml` |
 
 ### Entity-Relationship Diagrams (4 diagrams)
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 29 | ERD-001 Directive Store | COMPLETE | `docs/erd/erd_001_directives.puml` |
-| 30 | ERD-002 CG-IR Store | COMPLETE | `docs/erd/erd_002_compiled_rules.puml` |
-| 31 | ERD-003 Event Store | COMPLETE | `docs/erd/erd_003_finding_events.puml` |
-| 32 | ERD-004 Artifact Store | COMPLETE | `docs/erd/erd_004_artifacts.puml` |
+| 29 | ERD-001 Directives (directives) | COMPLETE | `docs/erd/erd_001_directive_store.puml` |
+| 30 | ERD-002 Compiled Rules (compiled_rules) | COMPLETE | `docs/erd/erd_002_cgir_store.puml` |
+| 31 | ERD-003 Finding Events (finding_events) | COMPLETE | `docs/erd/erd_003_event_store.puml` |
+| 32 | ERD-004 Artifacts (artifacts) | COMPLETE | `docs/erd/erd_004_artifact_store.puml` |
 
 ### Use Case Diagrams (8 diagrams)
 
@@ -88,7 +88,7 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 | 36 | UC-004 Finding Lifecycle | COMPLETE | `docs/usecase-diagram/uc_004_findings.puml` |
 | 37 | UC-005 Conflict | COMPLETE | `docs/usecase-diagram/uc_005_conflict.puml` |
 | 38 | UC-006 Authorization | COMPLETE | `docs/usecase-diagram/uc_006_authorization.puml` |
-| 39 | UC-007 Guidance & Analytics | COMPLETE | `docs/usecase-diagram/uc_007_guidance.puml` |
+| 39 | UC-007 Guidance (findings reads) | COMPLETE | `docs/usecase-diagram/uc_007_guidance.puml` |
 | 40 | UC-008 Certification | COMPLETE | `docs/usecase-diagram/uc_008_certification.puml` |
 
 ### Package & Deployment Diagrams (2 diagrams)

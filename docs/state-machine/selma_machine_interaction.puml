@@ -18,7 +18,7 @@ state "Inspection Execution" as Insp #1B7A6E : six pure stages\npin · evaluate 
 state "Finding Lifecycle" as Find #3B7DD8 : **normative §3.1**\n10 states · SoD · system close
 state "HLC Detail" as Hlc #3B7DD8 : (pt, lc) advance\n(detail of event envelope)
 state "Conflict Resolution" as Conf #1B7A6E : cascade · artifact\nbinding vs advisory
-state "Architectural Certification" as Cert #B9770E : AA-01..AA-07\nCI/CD only
+state "Architectural Certification" as Cert #B9770E : AA-01..AA-07\noffline/CI tool
 state "Artifact Lifecycle" as Art #4A4A4A : write-once · CAS\nreplicate · archive
 
 [*] --> Authz : <b>MutatingRequestReceived</b>

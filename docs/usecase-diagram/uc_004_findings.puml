@@ -1,7 +1,7 @@
 @startuml uc_004_findings
 !include common/uc_styles.puml
 
-title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle)
+title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle · C4: findings)
 
 left to right direction
 
@@ -24,11 +24,6 @@ rectangle "Selma Application" as SYS {
   }
 }
 
-rectangle "External Systems" as EXT {
-  usecase "Remediation Systems"  as EXT1
-  usecase "Audit Platform"       as EXT2
-}
-
 ' ---- Regulatory Official associations ----
 RO --> UC4
 RO --> UC7
@@ -43,9 +38,7 @@ CR --> UC10
 
 ' ---- includes / extends ----
 UC1 ..> UC2 : <<include>>
-UC2 ..> EXT2 : <<include>>
 UC3 ..> UC4 : <<include>>
-UC5 ..> EXT1 : <<include>>
 UC6 ..> UC9 : <<include>>
 UC7 ..> UC9 : <<include>>
 UC8 ..> UC9 : <<include>>
@@ -53,8 +46,9 @@ UC8 ..> UC9 : <<include>>
 ' ---- notes ----
 note right of UC1
   **Pre:** Inspection completed with non-conformances
-  **Post:** Finding created in "open" state
+  **Post:** Finding created; event appended to finding_events
   **Contract:** finding_lifecycle/transitions.yaml (TR-FL-001)
+  **C4:** inspection → findings → finding_events_repository
 end note
 
 note right of UC7
@@ -67,8 +61,10 @@ end note
 note bottom of UC9
   **Pre:** Finding in terminal-ready state
   **Post:** Finding state → closed;
-  Audit entry recorded
+  audit entry in finding_events
   **Contract:** finding_lifecycle/transitions.yaml
+  **Note:** Remediation ticketing / long-term audit export
+  are optional ops integrations, not product peers
 end note
 
 @enduml

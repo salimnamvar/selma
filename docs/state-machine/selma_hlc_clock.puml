@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — Hybrid Logical Clock (HLC) State Machine
 ' Source:  docs/spec/contracts/data_stores/event_store.yaml
-' C4:      Lifecycle Finder / Findings & Audit Trail Adapter
+' C4:      findings / finding_events_repository
 ' Contract: 1.0.0
 ' ============================================================
 

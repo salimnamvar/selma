@@ -1,7 +1,8 @@
 # Selma API Contract Specifications
 
-Normative API contracts for the Selma governance system. These specifications
-define the HTTP interface between clients and the Selma application service.
+Normative API contracts for the HTTP interface between **Clients** and the
+**Application** (`api` gate). Structure aligns with
+[`../c4-model/README.md`](../c4-model/README.md) resource-oriented surface.
 
 ## Structure
 
@@ -20,24 +21,24 @@ docs/api/
 
 ## Resource-Oriented Design
 
-The API follows ROD principles. Each resource maps to a domain entity with
-standard HTTP methods and sub-resource navigation via HATEOAS links.
+Primary collections match C4 stores / use-case clusters:
 
-| Resource Family     | Path Pattern                                       | Methods                    |
-|---------------------|----------------------------------------------------|----------------------------|
-| Directives          | `/directives/{lineage_id}`                         | GET, PUT, DELETE           |
-| Directive Revisions | `/directives/{lineage_id}/revisions/{revision}`    | GET                        |
-| Compilations        | `/directives/{lineage_id}/compilations`            | POST, GET                  |
-| Inspections         | `/inspections`                                     | POST, GET                  |
-| Inspection          | `/inspections/{inspection_id}`                     | GET                        |
-| Inspection Findings | `/inspections/{inspection_id}/findings`            | GET                        |
-| Findings            | `/findings/{finding_id}`                           | GET, PATCH                 |
-| Finding Events      | `/findings/{finding_id}/events`                    | GET                        |
-| Finding Guidance    | `/findings/{finding_id}/guidance`                  | GET                        |
-| Conflicts           | `/conflicts`                                       | GET                        |
-| Conflict Resolutions| `/conflicts/{conflict_id}/resolutions`             | POST                       |
-| Certifications      | `/certifications`                                  | POST, GET                  |
-| Certification       | `/certifications/{certification_id}`               | GET                        |
+| Resource Family     | Path Pattern                                       | Methods                    | C4 owner |
+|---------------------|----------------------------------------------------|----------------------------|----------|
+| Directives          | `/directives/{lineage_id}`                         | GET, PUT, DELETE           | `directives` + `directives_repository` |
+| Directive Revisions | `/directives/{lineage_id}/revisions/{revision}`    | GET                        | same |
+| Compilations        | `/directives/{lineage_id}/compilations`            | POST, GET                  | `compilation` → `compiled_rules` |
+| Inspections         | `/inspections`                                     | POST, GET                  | `inspection` + `artifacts` |
+| Inspection          | `/inspections/{inspection_id}`                     | GET                        | same |
+| Inspection Findings | `/inspections/{inspection_id}/findings`            | GET                        | `findings` |
+| Findings            | `/findings/{finding_id}`                           | GET, PATCH                 | `findings` + `finding_events` |
+| Finding Events      | `/findings/{finding_id}/events`                    | GET                        | `finding_events` |
+| Finding Guidance    | `/findings/{finding_id}/guidance`                  | GET                        | `findings` + doctrine via `directives_repository` |
+| Artifacts           | `/artifacts` (as exposed)                          | GET                        | `artifacts` |
+| Conflicts           | `/conflicts`                                       | GET                        | domain `ResolveConflict` (not a C4 peer) |
+| Conflict Resolutions| `/conflicts/{conflict_id}/resolutions`             | POST                       | same |
+| Certifications      | `/certifications`                                  | POST, GET                  | offline/CI `certification_tool` (optional; not in-process C4 peer) |
+| Certification       | `/certifications/{certification_id}`               | GET                        | same |
 
 ## Authentication
 

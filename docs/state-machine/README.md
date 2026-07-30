@@ -1,6 +1,10 @@
 # Selma — State Machine Diagrams
 
-Canonical state machines describing how state evolves inside Selma's components. C4 describes structure; this directory describes behavior.
+Canonical state machines describing how state evolves inside Selma's components.
+**C4** ([`../c4-model/`](../c4-model/README.md)) is the structural source of truth;
+this directory describes behavior only. Component names in diagram headers match
+C4 IDs (`api`, `compilation`, `inspection`, `findings`, `*_repository`,
+`ResolveConflict` domain service, `certification_tool` offline/CI).
 
 Read with [`contracts/`](../spec/contracts/) for the full behavioral contracts.
 The normative finding FSM contract is [`finding_lifecycle/`](../spec/contracts/finding_lifecycle/).

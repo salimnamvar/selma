@@ -1,7 +1,7 @@
 @startuml uc_007_guidance
 !include common/uc_styles.puml
 
-title **UC-007 — Guidance & Analytics**\n(Bounded Context: Guidance & Analytics)
+title **UC-007 — Guidance**\n(Findings resource reads · C4: findings + directives_repository)
 
 left to right direction
 
@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Guidance & Analytics\n(findings)" as BOUNDED {
+  rectangle "Findings guidance reads\n(findings · guidance_only)" as BOUNDED {
 
     usecase "Resolve Guidance"              as UC1
     usecase "View Finding Aggregates"       as UC2
@@ -36,9 +36,10 @@ UC5 ..> UC2 : <<include>>
 
 ' ---- notes ----
 note right of UC1
-  **Pre:** Finding context available
-  **Post:** Applicable guidance rule resolved;
-  recommendation surfaced to actor
+  **Pre:** Finding exists with paired_policy_ref
+  **Post:** Doctrine loaded via directives_repository
+  (guidance_only); never used for evaluation or FSM
+  **C4:** not a freestanding analytics engine
 end note
 
 note right of UC5

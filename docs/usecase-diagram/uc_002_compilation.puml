@@ -1,12 +1,12 @@
 @startuml uc_002_compilation
 !include common/uc_styles.puml
 
-title **UC-002 — Compilation**\n(Bounded Context: Compilation)
+title **UC-002 — Compilation**\n(Bounded Context: Compilation · C4: compilation)
 
 left to right direction
 
-actor "CI/CD\nPipeline" as CICD #E8F5E9
 actor "Regulatory\nOfficial" as RO #E3F2FD
+actor "Optional\nCompile Client" as OPT #E8F5E9
 
 rectangle "Selma Application" as SYS {
   rectangle "Compilation\n(compilation)" as BOUNDED {
@@ -23,8 +23,8 @@ rectangle "Selma Application" as SYS {
 }
 
 ' ---- associations ----
-CICD --> UC1
-RO --> UC1 : <<indirect>>\n(via directive change)
+RO --> UC1 : via directive change\n(api → compilation)
+OPT --> UC1 : optional client\n(not a C4 peer)
 
 UC1 ..> UC2 : <<include>>
 UC1 ..> UC3 : <<include>>
@@ -40,13 +40,16 @@ UC8 ..> UC6 : <<extend>>
 
 ' ---- notes ----
 note right of UC1
-  **Pre:** Executable documents in directives; CI or directive change trigger
+  **Pre:** Executable documents in Directives;
+  directive change or explicit compile request
   **Post:** Compilation pipeline initiated
+  **C4:** compilation reads via directives_repository;
+  publishes via compiled_rules_repository
 end note
 
 note right of UC6
   **Pre:** All validations pass
-  **Post:** CG-IR artifact produced
+  **Post:** CG-IR snapshot produced
 end note
 
 note bottom of UC7
