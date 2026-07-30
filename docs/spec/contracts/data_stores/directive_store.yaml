@@ -56,7 +56,7 @@ operations:
     produces: "merged directive (lexicographic min lineage_id) + new CG-IR snapshot"
 
   - name: "split"
-    capability: "directive.split"
+    capability: "directive.fork"
     description: "Split directive into multiple independent directives"
     locking: "write_lock"
     produces: "multiple new execution_ids (shared lineage_id) + new CG-IR snapshot"
