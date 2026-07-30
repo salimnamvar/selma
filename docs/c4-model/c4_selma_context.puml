@@ -4,7 +4,7 @@
 ' Purpose:   Actors and optional external Target Sources.
 '            Tier-C integrations (CI/CD, audit export, remediation)
 '            are not first-class context peers.
-' Contract:  1.1.0
+' Contract:  1.0.0
 ' ============================================================
 @startuml c4_selma_context
 title Selma -- Context Diagram

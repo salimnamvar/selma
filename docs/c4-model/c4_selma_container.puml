@@ -2,7 +2,7 @@
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma
 ' Purpose:   Clients (driving), Application, four resource stores.
-' Contract:  1.1.0
+' Contract:  1.0.0
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram
