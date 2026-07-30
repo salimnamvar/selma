@@ -1,7 +1,7 @@
 @startuml seq_004_finding_lifecycle
 !include common/seq_styles.puml
 
-title SEQ-004 Finding Lifecycle\n10-State FSM Finding State Transitions
+title SEQ-004 Finding Lifecycle\n11-State FSM Finding State Transitions
 
 actor "User" as user
 participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
@@ -37,21 +37,12 @@ activate AS
 AS -> LF: route transition(finding_id, evidence)
 activate LF
 
-group SoD Policy Check
-    LF -> LF: SodPolicy.evaluate(actor, finding)
-    note right of LF
-        Segregation of Duties:
-        creator cannot approve
-        their own finding evidence.
-    end note
-    alt SoD violation
-        LF --> AS: SoD violation error
-        AS --> SI: 403 Forbidden
-        SI --> user: error response
-    end
-end
-
-LF -> LF: FindingFsm: Open -> EvidenceSubmitted
+LF -> LF: FindingFsm: Acknowledged -> EvidenceSubmitted
+note right of LF
+  No SoD check per TR-FL-005.
+  SoD-002 is enforced at approval
+  time (TR-FL-007), not submission.
+end note
 LF -> FAA: append DispositionChanged event
 activate FAA
 FAA -> ES: write record
@@ -100,7 +91,7 @@ group Authorization Gate
     end
 end
 
-group SoD Policy Check
+group SoD Policy Check (SOD-001)
     LF -> LF: SodPolicy.creator_cannot_waive(actor, finding)
     alt SoD violation
         LF --> AS: SoD violation error
@@ -130,10 +121,11 @@ SI --> user: confirmation
 deactivate SI
 
 note right of LF
-    Finding FSM States (10):
+    Finding FSM States (11):
     Created → Open → Acknowledged →
     EvidenceSubmitted → PendingVerification →
-    Verified → Closed | Waived | Dismissed | Rejected
+    Verified → Closed | Waived | Dismissed |
+    Rejected | Superseded
 end note
 
 footer SEQ-004 | Selma Project | Finding Lifecycle
