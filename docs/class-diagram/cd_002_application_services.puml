@@ -18,6 +18,9 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
     + save(directive: Directive): void
     + findByStatus(status: DirectiveStatus): List~Directive~
     + nextExecutionId(): ExecutionId
+    + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
+    + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    + listPolicyRefs(filter: Map): List~PairedPolicyRef~
   }
 
   interface "**CgIrRepository**" as CgIrRepository <<Port>> {
@@ -45,10 +48,6 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
     + hashTarget(target: Target): TargetHash
   }
 
-  interface "**PolicyDoctrineReader**" as PolicyDoctrineReader <<Port>> {
-    + read(ref: PairedPolicyRef): GuidancePayload
-    + listAvailable(): List~PairedPolicyRef~
-  }
 }
 
 ' ═══════════════════════════════════════════════════════════
@@ -334,8 +333,10 @@ package "<<use_cases.conflict>>\nConflict Resolution" as UC_CONFLICT #E8F5E9/2E7
 package "<<use_cases.guidance>>\nGuidance & Analytics" as UC_GUIDANCE #E8F5E9/2E7D32 {
 
   abstract class "**ResolveGuidance**" as ResolveGuidance <<Use Case>> #E8F5E9/2E7D32 {
-    - policyReader: PolicyDoctrineReader
+    - directiveRepo: DirectiveRepository
     + execute(ref: PairedPolicyRef): GuidancePayload
+    --
+    <<guidance_only>> doctrine via DirectiveRepository
   }
 
   abstract class "**ViewAggregates**" as ViewAggregates <<Use Case>> #E8F5E9/2E7D32 {
@@ -429,7 +430,7 @@ ReviewArtifact ..> ArtifactRepository : uses >
 ReviewArtifact ..> EventStore : uses >
 
 ' ── Guidance use cases → ports ────────────────────────────
-ResolveGuidance ..> PolicyDoctrineReader : uses >
+ResolveGuidance ..> DirectiveRepository : uses >
 ViewAggregates ..> EventStore : uses >
 ViewTrends ..> EventStore : uses >
 ViewDashboard ..> EventStore : uses >

@@ -50,6 +50,12 @@ package "<<infrastructure>>\nInfrastructure Layer" as INFRASTRUCTURE #FFF3E0/E65
 
   package "infrastructure.persistence.directives" as INFRA_DIR #FFE0B2/F57C00 {
     [SqlDirectiveRepository] as SQL_DIR_REPO <<implements DirectiveRepository>>
+    note right of SQL_DIR_REPO
+      Dual-document store:
+      executable rule + policy doctrine
+      per revision; guidance via
+      paired_policy_ref
+    end note
   }
 
   package "infrastructure.persistence.cgir" as INFRA_CGIR #FFE0B2/F57C00 {
@@ -69,10 +75,6 @@ package "<<infrastructure>>\nInfrastructure Layer" as INFRASTRUCTURE #FFF3E0/E65
     [PatternEvaluator] as PAT_EVAL
     [StructuralEvaluator] as STR_EVAL
     [CompositeEvaluator] as COMP_EVAL
-  }
-
-  package "infrastructure.policy" as INFRA_POL #FFE0B2/F57C00 {
-    [FilesystemPolicyDoctrineReader] as FS_POL <<implements PolicyDoctrineReader>>
   }
 
   package "infrastructure.targets" as INFRA_TGT #FFE0B2/F57C00 {
@@ -104,7 +106,6 @@ package "<<application>>\nApplication Layer" as APPLICATION #E8F5E9/2E7D32 {
     interface EventStore <<Port>>
     interface ArtifactRepository <<Port>>
     interface TargetGateway <<Port>>
-    interface PolicyDoctrineReader <<Port>>
   }
 
   package "application.use_cases.governance" as UC_GOVERNANCE #C8E6C9/388E3C {
@@ -277,7 +278,6 @@ INFRA_CGIR ..> APP_PORTS : <<implements>>
 INFRA_EVT ..> APP_PORTS : <<implements>>
 INFRA_ART ..> APP_PORTS : <<implements>>
 INFRA_TGT ..> APP_PORTS : <<implements>>
-INFRA_POL ..> APP_PORTS : <<implements>>
 
 ' Application → Domain (depends on)
 UC_GOVERNANCE .down.> DOM_GOVERNANCE : <<depends>>
@@ -295,7 +295,6 @@ INFRA_CGIR .down.> DOM_COMPILATION : <<accesses>>
 INFRA_EVT .down.> DOM_FINDING : <<accesses>>
 INFRA_ART .down.> DOM_INSPECTION : <<accesses>>
 INFRA_DET .down.> DOM_INSPECTION : <<accesses>>
-INFRA_POL .down.> DOM_FINDING : <<accesses>>
 INFRA_AUTH .down.> DOM_AUTHZ : <<accesses>>
 
 ' Domain internal (shared is depended on by all bounded contexts)

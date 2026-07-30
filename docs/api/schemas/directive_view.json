@@ -2,14 +2,16 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://selma.dev/schemas/directive_view.json",
   "title": "DirectiveView",
-  "description": "Representation of a directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml and docs/spec/contracts/directive/identity.yaml. Directives are the human-authored source-of-truth that compile into CG-IR snapshots.",
+  "description": "Representation of a dual-document directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml, identity.yaml, and data_stores/directive_store.yaml. Each directive stores an executable rule document (rule_schema) and a linked policy doctrine document (policy_doctrine) in directive_store. Only the executable document compiles into CG-IR; doctrine is guidance_only.",
   "type": "object",
   "required": [
     "lineage_id",
     "execution_id",
     "status",
     "revision",
-    "content",
+    "executable_document",
+    "policy_doctrine_document",
+    "paired_policy_ref",
     "created_at",
     "updated_at"
   ],
@@ -36,9 +38,9 @@
       "description": "Monotonically increasing revision counter. Incremented on each content modification.",
       "minimum": 1
     },
-    "content": {
+    "executable_document": {
       "type": "object",
-      "description": "The directive document content. Must conform to the rule schema (docs/schema/rule_schema.json).",
+      "description": "Executable rule document. Conforms to rule_schema.json. Compile-time evaluation source only.",
       "properties": {
         "id": {
           "type": "string",
@@ -96,6 +98,17 @@
         }
       },
       "additionalProperties": true
+    },
+    "policy_doctrine_document": {
+      "type": "object",
+      "description": "Paired policy doctrine document. Conforms to policy_doctrine.yaml structure. Stored in directive_store with the executable document; guidance_only after findings (never evaluation/FSM).",
+      "additionalProperties": true
+    },
+    "paired_policy_ref": {
+      "type": "string",
+      "description": "Stable link from the executable rule to its policy doctrine document within directive_store.",
+      "pattern": "^[a-z][a-z0-9_]+$",
+      "examples": ["sc101_parameterized_queries"]
     },
     "metadata": {
       "type": "object",
@@ -173,7 +186,7 @@
       "execution_id": "SC101",
       "status": "active",
       "revision": 3,
-      "content": {
+      "executable_document": {
         "id": "SC101",
         "lineage_id": "SC101",
         "name": "Parameterized Queries",
@@ -191,8 +204,20 @@
           "target_type": ["text"],
           "domain": ["security"],
           "jurisdiction": ["any"]
+        },
+        "paired_policy_ref": "sc101_parameterized_queries"
+      },
+      "policy_doctrine_document": {
+        "doctrine": {
+          "name": "sc101-parameterized-queries",
+          "version": "1.0.0"
+        },
+        "guidance": {
+          "reasoning": "String interpolation in SQL enables injection attacks.",
+          "remediation_strategy": "Use parameterized queries for all database interactions"
         }
       },
+      "paired_policy_ref": "sc101_parameterized_queries",
       "metadata": {
         "created_by": "user:alice"
       },

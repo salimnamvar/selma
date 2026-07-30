@@ -21,7 +21,9 @@ package "Directive Store" {
     o lineage_id : UUID <<FK>>
     execution_id : UUID
     revision_number : INTEGER
-    content : JSONB
+    executable_document : JSONB
+    policy_doctrine_document : JSONB
+    paired_policy_ref : TEXT
     created_by : TEXT
     created_at : TIMESTAMPTZ
   }
@@ -51,6 +53,10 @@ note bottom of DirectiveRevisions
   • lineage_id is immutable once set
   • Every modification creates a new revision
   • revision_number is monotonically increasing
+  • Dual document: executable_document (rule_schema)
+    + policy_doctrine_document (policy_doctrine)
+  • paired_policy_ref links guidance to this revision
+  • Compiler reads executable only; guidance reads doctrine only
 end note
 
 note bottom of LineageOperations

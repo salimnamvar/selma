@@ -19,9 +19,9 @@ Three-level C4 architecture model for the Selma rule regularity platform.
 | **Rule Inspector** | Core | Runtime evaluation: executes compiled rules against submitted targets |
 | **Conflict Resolver** | Core | Deterministic conflict resolution: priority, specificity, recency precedence |
 | **Lifecycle Finder** | Core | Finding FSM: 10-state lifecycle with SoD enforcement |
-| **Finding Analyzer** | Read | Read-only aggregates, trends, causal explanations, and guidance resolution from policy doctrines |
+| **Finding Analyzer** | Read | Read-only aggregates, trends, causal explanations, and guidance from policy doctrines via Directives Adapter |
 | **Architectural Auditor** | Read | Seven-gate certification on CI/CD trigger |
-| **Directives Adapter** | Persistence | Directive CRUD and lineage identity resolution |
+| **Directives Adapter** | Persistence | Dual-document directive CRUD (executable rule + policy doctrine), lineage, and guidance loads via `paired_policy_ref` |
 | **Compiled Rules Adapter** | Persistence | Content-addressed storage of CG-IR snapshots |
 | **Findings Audit Adapter** | Persistence | Append-only event streams and audit replication |
 | **Inspection Snapshots Adapter** | Persistence | Immutable snapshots and certification artifacts |
@@ -54,8 +54,9 @@ Ownership of each machine maps to the component inventory above (e.g. Hermetic C
 
 ## Design Principles
 
-- **Compile-time/runtime separation**: Executable rules compiled to CG-IR at compile time; policy doctrines read at runtime for guidance only, never for evaluation
-- **Dual-document directives**: Every directive has a paired executable rule (JSON) for evaluation and a policy doctrine (YAML) for reasoning/guidance
+- **Compile-time/runtime separation**: Executable rule documents compile to CG-IR; policy doctrine documents are read only for guidance after findings, never for evaluation
+- **Dual-document directives in one store**: Every directive revision holds a linked executable rule (JSON) and policy doctrine (YAML) in `directive_store`; `directives_adapter` is the sole adapter for both documents
+- **No separate policy-doctrine adapter**: Guidance resolves doctrines through `directives_adapter` + `paired_policy_ref`, not a filesystem/Git reader
 - **Immutable storage**: CG-IR, events, snapshots are append-only
 - **Capability-based access control**: Permissions enforced at component boundaries
 - **Segregation of duties**: Directive creator ≠ Finding waiver

@@ -66,12 +66,13 @@ Use this map everywhere:
 
 ## Frozen principles (non-negotiable)
 
-1. **Compile-time / runtime separation** — executable rules → CG-IR at compile time; never re-interpret prose policy for evaluation.
-2. **Guidance only after findings** — `policy_doctrine.yaml` via `paired_policy_ref` for humans/AI; never for FSM transitions.
-3. **One normative FSM** — Finding 10-state machine; other diagrams are extracted pipelines.
-4. **Capability + SoD before mutation** — human edges gated; denials audit with no partial mutation.
-5. **Immutable compiled/event/snapshot stores** — append-only or content-addressed.
-6. **Domain-agnostic core** — language-specific detail only in `detection.adapters[]`.
+1. **Compile-time / runtime separation** — executable rule documents → CG-IR at compile time; never re-interpret prose policy for evaluation.
+2. **Guidance only after findings** — policy doctrine documents in `directive_store` via `paired_policy_ref` / `DirectiveRepository.readPolicyDoctrine` for humans/AI; never for FSM transitions.
+3. **Dual-document single store** — executable rule + policy doctrine co-versioned under one Directive; `directives_adapter` owns both; no separate policy-doctrine adapter.
+4. **One normative FSM** — Finding 10-state machine; other diagrams are extracted pipelines.
+5. **Capability + SoD before mutation** — human edges gated; denials audit with no partial mutation.
+6. **Immutable compiled/event/snapshot stores** — append-only or content-addressed.
+7. **Domain-agnostic core** — language-specific detail only in `detection.adapters[]`.
 
 ## Open decisions (implementation may choose; design stays stable)
 

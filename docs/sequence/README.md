@@ -43,24 +43,23 @@ Common styling definitions are in [`common/seq_styles.puml`](common/seq_styles.p
 |-----------|-----------|------|
 | selma_interface | CLI/WebApp/DesktopApp/MobileApp | User-facing interface |
 | application_service | FastAPI/Pydantic | API gateway and orchestration |
-| directives_adapter | Python/SQLAlchemy/PostgreSQL | Directive persistence |
+| directives_adapter | Python/SQLAlchemy/PostgreSQL | Dual-document directive persistence (executable + doctrine) |
 | hermetic_compiler | Python/JSON Schema/SHA-256 | Deterministic CG-IR compilation |
 | compiled_rules_adapter | Python/SHA-256/CAS | Compiled rule storage (CAS) |
 | rule_inspector | Python/RE2/SHA-256 | 6-stage inspection engine |
 | lifecycle_finder | Python/Pydantic | Finding FSM lifecycle management |
 | conflict_resolver | Python/Pydantic | Conflict detection and resolution |
-| finding_analyzer | Python/Pydantic | Guidance and policy analysis |
+| finding_analyzer | Python/Pydantic | Guidance via directives_adapter; analytics |
 | architectural_auditor | Python | 7-gate certification auditor |
 | snapshots_adapter | Python/Object Store | Inspection snapshot persistence |
 | findings_audit_adapter | Python/SHA-256/Append-Only | Finding audit trail (append-only) |
 | target_adapter | Python/HTTP Client | Target data retrieval |
-| policy_doctrine | YAML files, read-only | Governance policy definitions |
 
 ## Data Stores
 
 | Store | Type | Purpose |
 |-------|------|---------|
-| directive_store | PostgreSQL | Directive records with versioned revisions |
+| directive_store | PostgreSQL | Dual-document directives (executable rule + policy doctrine), versioned revisions |
 | cgir_store | Content-Addressed Storage | CG-IR nodes, edges, and snapshots |
 | event_store | Append-Only Log | Finding events and audit trail |
 | artifact_store | Object Store | Inspection snapshots and certification artifacts |

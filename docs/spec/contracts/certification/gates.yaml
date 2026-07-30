@@ -29,9 +29,10 @@ gates:
     validation_method: "Static analysis + architectural audit of guidance_only edges"
     story_refs: ["US-CD-001"]
     criteria:
-      - "Rule Inspector and Finding FSM MUST NOT read policy_doctrine.yaml for evaluation or state transitions"
-      - "Finding Analyzer MAY read policy_doctrine.yaml via paired_policy_ref for guidance_only resolution"
-      - "CI static analysis scans evaluation/FSM paths for policy imports used as executable logic"
+      - "Rule Inspector and Finding FSM MUST NOT read policy doctrine documents for evaluation or state transitions"
+      - "Finding Analyzer MAY read policy doctrine documents from directive_store via directives_adapter and paired_policy_ref for guidance_only resolution"
+      - "There MUST NOT be a separate PolicyDoctrineReader or filesystem doctrine path used at runtime"
+      - "CI static analysis scans evaluation/FSM paths for doctrine access used as executable logic"
       - "Conflict resolution uses contract algorithm over schema/CG-IR fields only"
 
   - gate_id: "AA-03"

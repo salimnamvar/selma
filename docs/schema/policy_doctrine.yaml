@@ -54,13 +54,18 @@ cross_layer_binding:
     spec_layer: "Normative resolve_conflict algorithm defined in docs/spec/contracts/conflict/"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_role: >
-    This file IS read at runtime, but ONLY AFTER evaluation produces a finding.
-    It is NOT used for evaluation, inspection, or FSM transitions. The finding
-    analyzer reads this document via paired_policy_ref to populate guidance
-    fields for humans and AI agents. Policy influences execution only
-    indirectly for evaluation: authors use it when writing directives, and
-    compile-time validators check schema field legality against spec — never
-    by interpreting policy prose as executable logic.
+    Instance documents conforming to this schema are stored in directive_store
+    alongside the paired executable rule document (dual-document Directive).
+    They ARE read at runtime ONLY AFTER evaluation produces a finding, via
+    Directives Adapter (DirectiveRepository.readPolicyDoctrine) and
+    paired_policy_ref. They are NOT used for evaluation, inspection, or FSM
+    transitions. No separate filesystem PolicyDoctrineReader. Policy influences
+    evaluation only indirectly: authors use it when writing directives, and
+    compile-time validators check pairing/version legality — never by
+    interpreting policy prose as executable logic.
+  storage: >
+    System of record: directive_store (PostgreSQL), co-versioned with
+    executable_document under the same lineage/execution revision.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
@@ -489,11 +494,16 @@ principles:
 runtime_usage:
   description: >
     Documents how Selma's components use this policy doctrine at runtime.
-    This is meta-documentation, not executable logic.
+    This is meta-documentation, not executable logic. Instance documents
+    are stored in directive_store with the paired executable rule.
+  storage: >
+    System of record: directive_store via Directives Adapter. No separate
+    filesystem doctrine path or PolicyDoctrineReader component.
   guidance_resolution: >
-    After Rule Inspector creates a finding, it uses the paired_policy_ref
-    from the executable rule to locate this document. The Finding Analyzer
-    then reads the guidance section to populate the finding's guidance field.
+    After Rule Inspector creates a finding, paired_policy_ref on the finding
+    is resolved by Finding Analyzer through Directives Adapter
+    (DirectiveRepository.readPolicyDoctrine). The doctrine document is loaded
+    from directive_store only for guidance fields.
   ai_agent_consumption: >
     AI agents receive the full guidance section via the query API. They use:
     1. vocabulary to understand canonical terms

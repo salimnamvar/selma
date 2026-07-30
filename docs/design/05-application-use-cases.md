@@ -27,10 +27,10 @@ orchestration.
 
 | Use case | Capability | Ports | Contract / stories |
 | :--- | :--- | :--- | :--- |
-| `CompileDirectives` | system / on mutation | DirectiveRepository (read lock), CgIrRepository, DetectionEngine.validate, HashService | compilation/pipeline US-CP-* |
-| `ValidateRuleDataset` | system / official | RuleDatasetReader, DetectionEngine.validate | US-CP-002 |
+| `CompileDirectives` | system / on mutation | DirectiveRepository.readExecutable (read lock), CgIrRepository, DetectionEngine.validate, HashService | compilation/pipeline US-CP-* |
+| `ValidateDirectiveDocuments` | system / official | DirectiveRepository, DetectionEngine.validate | US-CP-002 |
 
-**Invariant:** must not load policy doctrine for evaluation. Authors may validate schema only.
+**Invariant:** must not load policy doctrine for evaluation. Compiler may validate doctrine pairing/version only via repository; evaluation uses executable documents only.
 
 ## Inspection
 
@@ -39,9 +39,9 @@ orchestration.
 | `SubmitInspection` | `inspection.submit` | TargetGateway or body, CgIrRepository, DetectionEngine.evaluate, ArtifactRepository, EventStore (FindingCreated) | US-IP-001 |
 | `ReinspectTarget` | `inspection.reinspect` | same | US-IP-001 |
 | `GetInspection` | (read) | ArtifactRepository | — |
-| `ExplainFinding` | `finding.view` | EventStore, CgIrRepository, PolicyDoctrineReader (guidance) | US-IP-002 |
+| `ExplainFinding` | `finding.view` | EventStore, CgIrRepository, DirectiveRepository.readPolicyDoctrine (guidance) | US-IP-002 |
 
-**Invariant:** Rule Inspector evaluation path does **not** call `PolicyDoctrineReader`.
+**Invariant:** Rule Inspector evaluation path does **not** call `DirectiveRepository.readPolicyDoctrine`.
 
 ## Finding lifecycle
 
@@ -69,7 +69,7 @@ System automatic transitions (Created→Open, Evidence→Pending, Verified/Waive
 
 | Use case | Capability | Ports | Notes |
 | :--- | :--- | :--- | :--- |
-| `ResolveGuidance` | `finding.view` | PolicyDoctrineReader, rule metadata | guidance_only |
+| `ResolveGuidance` | `finding.view` | DirectiveRepository.readPolicyDoctrine, rule metadata | guidance_only |
 | `FindingAggregates` | analytics-oriented | EventStore read | no CG-IR write (AA-01) |
 | `ProposeDirectiveFromAnalytics` | human | returns proposal; mutation via ModifyDirective | mediated feedback |
 

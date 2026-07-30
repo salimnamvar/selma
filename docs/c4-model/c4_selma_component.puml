@@ -62,7 +62,6 @@ Container_Boundary(selma_app, $NAME_selma_app) {
     Component(findings_audit_adapter, $NAME_findings_audit_adapter, $TECH_findings_audit_adapter, $DESC_findings_audit_adapter)
     Component(snapshots_adapter, $NAME_snapshots_adapter, $TECH_snapshots_adapter, $DESC_snapshots_adapter)
     Component(target_adapter, $NAME_target_adapter, $TECH_target_adapter, $DESC_target_adapter)
-    Component(policy_doctrine_reader, $NAME_policy_doctrine_reader, $TECH_policy_doctrine_reader, $DESC_policy_doctrine_reader)
 
 }
 
@@ -80,8 +79,7 @@ Rel(selma_interface, application_service, "forwards user requests as REST API ca
 
 Rel(target_adapter, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, application_service, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
-Rel(hermetic_compiler, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
-Rel(policy_doctrine_reader, governance_contracts, "reads policy doctrine YAML files at runtime for guidance only", "Git / Read-Only", $tags="guidance_only")
+Rel(application_service, governance_contracts, "optional import/export of dual-document directive packages", "HTTPS / Package", $tags="mediated")
 Rel(lifecycle_finder, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 
@@ -103,7 +101,7 @@ Rel(application_service, findings_audit_adapter, "appends denied-request records
 '  RELATIONSHIPS -- Hermetic Compiler
 ' ============================================================
 
-Rel(hermetic_compiler, directive_store, "reads directive revisions and lineage state under read-lock", "SQL", $tags="compile_only")
+Rel(hermetic_compiler, directives_adapter, "reads executable rule documents and lineage under read-lock (not policy doctrines)", "Internal", $tags="compile_only")
 Rel(hermetic_compiler, compiled_rules_adapter, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
 Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
 
@@ -143,7 +141,7 @@ Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution perm
 
 Rel(finding_analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal", $tags="validation_only")
 Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal", $tags="validation_only")
-Rel(finding_analyzer, policy_doctrine_reader, "reads policy doctrines for guidance resolution after evaluation", "Internal", $tags="guidance_only")
+Rel(finding_analyzer, directives_adapter, "reads paired policy doctrine documents for guidance resolution after evaluation", "Internal", $tags="guidance_only")
 
 
 ' ============================================================
@@ -160,7 +158,7 @@ Rel(architectural_auditor, snapshots_adapter, "writes certification artifacts wi
 '  RELATIONSHIPS -- Adapter -> Data Store
 ' ============================================================
 
-Rel(directives_adapter, directive_store, "reads and writes directives, lineage state, and revision history", "SQL", $tags="capability_enforced")
+Rel(directives_adapter, directive_store, "reads and writes dual-document directives (executable rule + policy doctrine), lineage, and revisions", "SQL", $tags="capability_enforced")
 Rel(compiled_rules_adapter, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS", $tags="immutable")
 Rel(findings_audit_adapter, event_store, "appends finding events and security denial records", "Append-Only", $tags="immutable")
 Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write", $tags="immutable")

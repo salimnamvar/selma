@@ -33,13 +33,11 @@ infrastructure (adapters, evaluators, parsers, DBs)
 
 | Port (application) | Adapter (infrastructure) | Store / system | Contract |
 | :--- | :--- | :--- | :--- |
-| `DirectiveRepository` | Directives Adapter | `directive_store` | `data_stores/directive_store` |
+| `DirectiveRepository` | Directives Adapter (`SqlDirectiveRepository`) | `directive_store` (executable + policy doctrine dual documents) | `data_stores/directive_store`, `rule_schema.json`, `policy_doctrine.yaml` |
 | `CgIrRepository` | Compiled Rules Adapter | `cgir_store` | `data_stores/cgir_store` |
 | `EventStore` | Findings & Audit Trail Adapter | `event_store` | `data_stores/event_store` |
 | `ArtifactRepository` | Inspection Snapshots Adapter | `artifact_store` | `data_stores/artifact_store` |
 | `TargetGateway` | Target Adapter | `regulated_systems` | inspection target schema |
-| `PolicyDoctrineReader` | file/object reader (read-only) | governance policy YAML | `policy_doctrine.yaml` |
-| `RuleDatasetReader` | rule JSON loader | governance rule JSON | `rule_schema.json` |
 | `DetectionEngine` | adapter registry + pure evaluators | in-process | compilation + inspection |
 | `AuditReplicator` | Findings/Snapshots adapters | `audit_platform` | replication only |
 | `RemediationNotifier` | optional notifier | `remediation_systems` | notify only, no remote mutate |
@@ -53,13 +51,11 @@ See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
 
 | Port | Owner | Contract |
 | :--- | :--- | :--- |
-| `DirectiveRepository` | `directives_adapter` | `data_stores/directive_store` |
+| `DirectiveRepository` | `directives_adapter` | `data_stores/directive_store` (dual documents) |
 | `CgIrRepository` | `compiled_rules_adapter` | `data_stores/cgir_store` |
 | `EventStore` | `findings_audit_adapter` | `data_stores/event_store` |
 | `ArtifactRepository` | `snapshots_adapter` | `data_stores/artifact_store` |
 | `TargetGateway` | `target_adapter` | inspection target schema |
-| `PolicyDoctrineReader` | `finding_analyzer` | `policy_doctrine.yaml` (**guidance_only**) |
-| `RuleDatasetReader` | file/object reader | `rule_schema.json` |
 | `DetectionEngine` | adapter registry | compilation + inspection |
 | `AuditReplicator` | `event_adapter` | replication only |
 | `RemediationNotifier` | optional notifier | notify only, no remote mutate |
@@ -67,8 +63,10 @@ See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
 | `HashService` | SHA-256 (or versioned algo) | node/snapshot/event hashes |
 | `CapabilitySource` | authn/authz provider | `authorization/*` |
 
-**`PolicyDoctrineReader` consumers:** `finding_analyzer` only for guidance resolution after findings exist.
-**Forbidden consumers:** `rule_inspector` evaluation path, `lifecycle_finder` transition logic, `hermetic_compiler` evaluation (compile may validate structure of rules only).
+**Dual-document `DirectiveRepository`:** persists and loads both the executable rule document and the policy doctrine document for each directive revision. Methods include `readExecutable` (compile path) and `readPolicyDoctrine` (guidance path via `paired_policy_ref`).
+
+**`readPolicyDoctrine` consumers:** `finding_analyzer` / `ResolveGuidance` only after findings exist (**guidance_only**).
+**Forbidden consumers of doctrine:** `rule_inspector` evaluation path, `lifecycle_finder` transition logic. Hermetic compiler uses `readExecutable` only (may validate pairing/version consistency, never evaluate doctrine prose).
 
 ## Relationship styles (C4 alignment)
 
@@ -76,7 +74,7 @@ See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
 | :--- | :--- |
 | Application → core components | command / query dispatch |
 | Core → adapters | port calls |
-| `finding_analyzer` → doctrine reader | **guidance_only** |
+| `finding_analyzer` → `directives_adapter.readPolicyDoctrine` | **guidance_only** |
 | Adapters → external audit | replicate |
 | Analytics → CG-IR / FSM | **forbidden write** (AA-01) |
 
@@ -94,5 +92,6 @@ See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
 Do **not** expose:
 
 - Direct SQL/session from application use cases
+- A separate `PolicyDoctrineReader` or filesystem doctrine adapter (doctrine lives in `directive_store` via `DirectiveRepository`)
 - Global mutable “current policy” used by evaluators
 - Finding FSM transition helpers that accept policy prose

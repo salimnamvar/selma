@@ -4,7 +4,7 @@
 
 | Store | Mutability | Writer components | Reader components |
 | :--- | :--- | :--- | :--- |
-| `directive_store` | Mutable versioned | `directives_adapter` via governance use cases | compiler (read lock), queries |
+| `directive_store` | Mutable versioned dual documents (executable + doctrine) | `directives_adapter` via governance use cases | compiler `readExecutable` (read lock), analyzer `readPolicyDoctrine` (guidance_only), queries |
 | `cgir_store` | Immutable CAS | `compiled_rules_adapter` via compiler publish | inspector, conflict, lifecycle (provenance) |
 | `event_store` | Append-only | `findings_audit_adapter` via FSM + authz denials | analyzer, queries, audit replicate |
 | `artifact_store` | Write-once objects | snapshots + conflict + certification adapters | queries, audit replicate |
@@ -79,7 +79,7 @@ Stored in `artifact_store`; never silently dropped.
 Guidance resolved by Finding Analyzer is a **read model** field on query responses:
 
 - `reasoning`, `remediation_strategy`, `remediation_steps`, domain examples  
-- Source: policy doctrine via `paired_policy_ref`  
+- Source: policy doctrine document in `directive_store` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`  
 - Must not be required for FSM transition validity  
 
 ## Replication

@@ -30,12 +30,11 @@ src/selma/
     dto/                    # Request/response models at app boundary
   infrastructure/
     persistence/
-      directives/           # Directives Adapter
+      directives/           # Directives Adapter (executable + policy doctrine)
       cgir/                 # Compiled Rules Adapter
       events/               # Findings & Audit Trail Adapter
       artifacts/            # Snapshots Adapter
     detection/              # DetectionEngine impl, adapter registry
-    policy/                 # PolicyDoctrineReader (read-only)
     targets/                # TargetGateway
     auth/                   # CapabilitySource
     hashing/
@@ -59,9 +58,9 @@ src/selma/
 | `domain.conflict` | conflict_resolver models | `conflict/*` |
 | `domain.authorization` | capability VOs | `authorization/*` |
 | `application.use_cases.*` | application_service orchestration | `interfaces/*` + domain contracts |
-| `infrastructure.persistence.*` | `*_adapter` | `data_stores/*` |
+| `infrastructure.persistence.directives` | `directives_adapter` | dual-document `directive_store` |
+| `infrastructure.persistence.*` | other `*_adapter` | `data_stores/*` |
 | `infrastructure.detection` | supports compiler + inspector | schema detection_spec |
-| `infrastructure.policy` | finding_analyzer guidance | policy_doctrine |
 | `interfaces.*` | selma_interface + app ingress | `interfaces/*` |
 
 ## Dependency rules (enforceable in Implementation)

@@ -7,7 +7,8 @@ actor "User" as user
 participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
 participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
 participant "finding_analyzer\n(Python/Pydantic)" as FA #A3BE8C
-participant "policy_doctrine\n(YAML files, read-only)" as PD #B48EAD
+participant "directives_adapter\n(SQLAlchemy/PostgreSQL)" as DA #D08770
+database "directive_store\n(dual documents)" as DS #5E81AC
 
 autonumber
 
@@ -28,11 +29,15 @@ group Load Finding Projection
     end note
 end
 
-group Load Policy Doctrine
-    FA -> PD: read doctrine by ref (paired_policy_ref)
-    activate PD
-    PD --> FA: doctrine content (YAML)
-    deactivate PD
+group Load Policy Doctrine (guidance_only)
+    FA -> DA: readPolicyDoctrine(paired_policy_ref)
+    activate DA
+    DA -> DS: SELECT policy_doctrine_document\nWHERE paired_policy_ref = ?
+    activate DS
+    DS --> DA: doctrine document
+    deactivate DS
+    DA --> FA: GuidancePayload
+    deactivate DA
 end
 
 group Map Guidance Components
@@ -52,11 +57,12 @@ deactivate AS
 SI --> user: guidance view
 deactivate SI
 
-note right of PD
-    Policy doctrine is read-only
-    and version-controlled.
-    Changes require governance
-    approval workflow.
+note right of DA
+    Directives Adapter is the sole
+    reader of policy doctrines.
+    Doctrines live with executable
+    rules in directive_store — no
+    filesystem PolicyDoctrineReader.
 end note
 
 note right of FA
@@ -65,6 +71,7 @@ note right of FA
     - remediation steps
     - domain examples
     - severity context
+    Never used for evaluation/FSM.
 end note
 
 footer SEQ-006 | Selma Project | Guidance Resolution

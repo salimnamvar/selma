@@ -18,16 +18,16 @@ See: [`../class-diagram/`](../class-diagram/) for component class structure, met
 
 | Adapter class | Port | Store / system |
 | :--- | :--- | :--- |
-| `SqlDirectiveRepository` | `DirectiveRepository` | `directive_store` |
+| `SqlDirectiveRepository` | `DirectiveRepository` | `directive_store` (executable rule + policy doctrine dual documents) |
 | `ContentAddressedCgIrStore` | `CgIrRepository` | `cgir_store` |
 | `AppendOnlyEventLog` | `EventStore` | `event_store` |
 | `ObjectArtifactStore` | `ArtifactRepository` | `artifact_store` |
 | `HttpTargetGateway` | `TargetGateway` | `regulated_systems` |
-| `FilesystemPolicyDoctrineReader` | `PolicyDoctrineReader` | governance policy YAML |
 
 **Constraints:**
-- `finding_analyzer` must not write CG-IR, directives, or FSM state.
-- `rule_inspector` must not call `PolicyDoctrineReader` on evaluate path.
+- There is **no** separate `PolicyDoctrineReader` / filesystem doctrine adapter.
+- `finding_analyzer` must not write CG-IR, directives, or FSM state; guidance uses `DirectiveRepository.readPolicyDoctrine` only.
+- `rule_inspector` must not call `readPolicyDoctrine` on the evaluate path.
 - Language-specific code (e.g. Python AST) lives only behind adapters referenced from `detection.adapters[]`, not in domain.
 
 Gate definitions: `certification/gates.yaml` (including AA-02 guidance_only interpretation).

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://selma.dev/schemas/guidance_response.json",
   "title": "GuidanceResponse",
-  "description": "Resolved guidance for a finding. Derived from the paired policy reference (policy_doctrine.yaml) via the guidance_only resolution path. Per gate AA-02, guidance is never used for evaluation or FSM transitions — only for remediation advisory.",
+  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directive_store via paired_policy_ref and Directives Adapter (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 — never used for evaluation or FSM transitions.",
   "type": "object",
   "required": ["finding_id", "paired_policy_ref", "reasoning", "remediation_strategy"],
   "properties": {
@@ -13,7 +13,7 @@
     },
     "paired_policy_ref": {
       "type": "string",
-      "description": "Reference to the policy doctrine entry that provides guidance context. Format: policy_doctrine section key (e.g. 'sc101_parameterized_queries').",
+      "description": "Reference resolving to the policy doctrine document in directive_store (e.g. 'sc101_parameterized_queries').",
       "pattern": "^[a-z][a-z0-9_]+$",
       "examples": ["sc101_parameterized_queries", "sc042_no_silent_failures"]
     },
@@ -143,7 +143,7 @@
       "_links": {
         "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
         "finding": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
-        "policy_doctrine": { "href": "/policies/sc101_parameterized_queries" }
+        "policy_doctrine": { "href": "/directives/SC101/doctrine" }
       }
     }
   ]

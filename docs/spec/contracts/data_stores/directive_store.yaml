@@ -10,10 +10,17 @@ description: >
   Supports versioned, mutable directives with read/write locking.
 
 storage_model:
-  format: "Structured document (YAML/JSON with prose sections)"
-  versioning: "Semantic versioning (MAJOR.MINOR.PATCH)"
+  format: "Dual-document structured store (executable JSON + policy doctrine YAML/JSON)"
+  versioning: "Semantic versioning (MAJOR.MINOR.PATCH) co-versioned per revision"
   mutability: "Mutable (new revisions created on change)"
-  content: "Directives, scope, priority, prose sections, metadata"
+  content: >
+    Each directive revision stores: (1) executable_document conforming to
+    rule_schema.json — compile-time evaluation source only; (2) policy_doctrine_document
+    conforming to policy_doctrine.yaml — guidance_only after findings; (3) paired_policy_ref
+    linking the two; plus scope, priority, lineage, and metadata.
+  system_of_record: >
+    directive_store is authoritative for both documents. No separate filesystem
+    policy-doctrine store or PolicyDoctrineReader adapter.
 
 operations:
   - name: "create"
@@ -61,9 +68,24 @@ operations:
 
   - name: "read"
     capability: null
-    description: "Read directive by lineage_id or execution_id"
+    description: "Read full dual-document directive by lineage_id or execution_id"
     locking: "read_lock"
-    produces: "directive document"
+    produces: "directive with executable_document + policy_doctrine_document"
+
+  - name: "read_executable"
+    capability: null
+    description: "Read executable rule document only (compile path)"
+    locking: "read_lock"
+    produces: "executable_document (rule_schema)"
+    consumers: ["hermetic_compiler"]
+
+  - name: "read_policy_doctrine"
+    capability: null
+    description: "Read policy doctrine document by paired_policy_ref (guidance path only)"
+    locking: "read_lock"
+    produces: "policy_doctrine_document / GuidancePayload"
+    consumers: ["finding_analyzer"]
+    forbidden_consumers: ["rule_inspector", "lifecycle_finder"]
 
 concurrency_model:
   description: "Locking semantics for directive store"
@@ -96,6 +118,14 @@ invariants:
   - id: "INV-DS-004"
     statement: "Each modification MUST create a new revision (append-only history)"
     enforcement: "store_engine"
+
+  - id: "INV-DS-005"
+    statement: "Each revision MUST store both executable_document and policy_doctrine_document linked by paired_policy_ref"
+    enforcement: "directives_adapter"
+
+  - id: "INV-DS-006"
+    statement: "read_policy_doctrine MUST NOT be used for evaluation, inspection, or finding FSM transitions"
+    enforcement: "architectural_auditor (AA-02)"
 
 stories:
   - story_id: "US-DS-001"

@@ -40,7 +40,7 @@
 ' Layers: Context, Container, Component
 ' ------------------------------------------------------------
 !$NAME_governance_contracts = "Governance Contracts"
-!$DESC_governance_contracts = "Authoring artifacts that define directives. Two document types with distinct runtime roles: (1) Executable rules (JSON) consumed at compile time only, produce CG-IR for runtime evaluation. (2) Policy doctrines (YAML) read at runtime after evaluation to provide guidance, reasoning, and remediation examples to humans and AI agents. Never used for evaluation or finding FSM transitions."
+!$DESC_governance_contracts = "Optional external packages for import/export and schema packaging (rule_schema, policy_doctrine shapes). Not the system of record. Authoritative dual-document directives (executable rule + policy doctrine) live in the Directives store after authoring or import. Packages never drive evaluation or finding FSM transitions."
 
 !$NAME_cicd = "CI/CD Pipeline"
 !$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime."
@@ -64,7 +64,7 @@
 
 !$NAME_selma_app = "Selma Application"
 !$TECH_selma_app = "REST API / Python / RE2 / JSON Schema / SHA-256"
-!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, the guidance resolution layer, and the read-only analytics layer. Reads executable rules at compile time only; reads policy doctrines at runtime for guidance."
+!$DESC_selma_app = "REST API entry point for the Selma platform. Authenticates requests, enforces capability-based access control, and dispatches all ingress to the appropriate component. Hosts the hermetic compilation boundary, the rule evaluation pipeline, the finding FSM, the guidance resolution layer, and the read-only analytics layer. Dual-document directives (executable rule + policy doctrine) are stored in the Directives store; compilation reads the executable document only; guidance reads the paired policy doctrine only."
 
 ' ------------------------------------------------------------
 ' Data stores (ID = directive_store | cgir_store |
@@ -74,7 +74,7 @@
 ' ------------------------------------------------------------
 !$NAME_directive_store = "Directives"
 !$TECH_directive_store = "PostgreSQL"
-!$DESC_directive_store = "Mutable, versioned rules authored by regulatory officials. Tracks dual identity (immutable lineage ID and active execution ID), full revision history, and fork/merge/split provenance."
+!$DESC_directive_store = "Mutable, versioned dual-document directives: each revision stores a linked executable rule document (JSON, rule_schema) and a policy doctrine document (YAML, policy_doctrine). Tracks dual identity (immutable lineage ID and active execution ID), paired_policy_ref, full revision history, and fork/merge/split provenance. System of record for both evaluation source and guidance prose."
 
 !$NAME_cgir_store = "Compiled Rules"
 !$TECH_cgir_store = "Content-Addressed Storage"
@@ -102,7 +102,7 @@
 
 !$NAME_hermetic_compiler = "Hermetic Compiler"
 !$TECH_hermetic_compiler = "Python / JSON Schema / SHA-256"
-!$DESC_hermetic_compiler = "Reads executable rule datasets under a hermetic boundary. Validates schema, detection.strategy discriminators, lineage integrity, and cross-runtime portability. Publishes immutable CG-IR snapshots. Does not evaluate policy doctrines; policy YAML is guidance_only at runtime via Finding Analyzer."
+!$DESC_hermetic_compiler = "Reads executable rule documents from the Directives store under a hermetic boundary (via Directives Adapter). Validates schema, detection.strategy discriminators, lineage integrity, and cross-runtime portability. Publishes immutable CG-IR snapshots. Does not read or evaluate policy doctrine documents; doctrines remain guidance_only via Finding Analyzer."
 
 !$NAME_rule_inspector = "Rule Inspector"
 !$TECH_rule_inspector = "Python / RE2 Regex / SHA-256"
@@ -118,7 +118,7 @@
 
 !$NAME_finding_analyzer = "Finding Analyzer"
 !$TECH_finding_analyzer = "Python / Pydantic"
-!$DESC_finding_analyzer = "Read-only component for finding aggregates, trend analysis, causal explanations, and guidance resolution. Resolves paired policy doctrines after evaluation to populate finding guidance for humans and AI agents. Zero write path to any store — all feedback mediated through human-initiated directive changes."
+!$DESC_finding_analyzer = "Read-only component for finding aggregates, trend analysis, causal explanations, and guidance resolution. Resolves paired policy doctrine documents from the Directives store (via Directives Adapter and paired_policy_ref) after evaluation to populate guidance for humans and AI agents. Zero write path to any store — all feedback mediated through human-initiated directive changes."
 
 !$NAME_architectural_auditor = "Architectural Auditor"
 !$TECH_architectural_auditor = "Python"
@@ -126,7 +126,7 @@
 
 !$NAME_directives_adapter = "Directives Adapter"
 !$TECH_directives_adapter = "Python / SQLAlchemy / PostgreSQL"
-!$DESC_directives_adapter = "Manages directive CRUD and lifecycle operations. Coordinates lock acquisition and lineage identity resolution."
+!$DESC_directives_adapter = "Single persistence adapter for dual-document directives. Manages CRUD and lifecycle (create, revise, publish, retire, fork, merge, split, restore), stores and loads both the executable rule document and the linked policy doctrine document per revision, resolves paired_policy_ref for guidance, and coordinates lock acquisition and lineage identity resolution. No separate policy-doctrine adapter."
 
 !$NAME_compiled_rules_adapter = "Compiled Rules Adapter"
 !$TECH_compiled_rules_adapter = "Python / SHA-256 / Content-Addressed Storage"
@@ -144,6 +144,3 @@
 !$TECH_target_adapter = "Python / HTTP Client / Schema Validation"
 !$DESC_target_adapter = "Mediates all outbound communication with external target and regulated entity systems. Handles authentication, transport, retries, schema validation, and response normalization."
 
-!$NAME_policy_doctrine_reader = "Policy Doctrine Reader"
-!$TECH_policy_doctrine_reader = "Python / YAML / Read-Only"
-!$DESC_policy_doctrine_reader = "Read-only adapter for policy doctrine YAML files from governance contracts. Provides guidance resolution after evaluation — never used for rule evaluation or FSM transitions. Reads from governance_contracts (Git) at runtime."

@@ -18,6 +18,9 @@ package "<<application.ports>>\nPort Interfaces" as PORTS #FCE4EC/C62828 {
     + save(directive: Directive): void
     + findByStatus(status: DirectiveStatus): List~Directive~
     + nextExecutionId(): ExecutionId
+    + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
+    + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    + listPolicyRefs(filter: Map): List~PairedPolicyRef~
   }
 
   interface "**CgIrRepository**" as CgIrRepository <<Port>> {
@@ -45,10 +48,6 @@ package "<<application.ports>>\nPort Interfaces" as PORTS #FCE4EC/C62828 {
     + hashTarget(target: Target): TargetHash
   }
 
-  interface "**PolicyDoctrineReader**" as PolicyDoctrineReader <<Port>> {
-    + read(ref: PairedPolicyRef): GuidancePayload
-    + listAvailable(): List~PairedPolicyRef~
-  }
 }
 
 ' ═══════════════════════════════════════════════════════════
@@ -65,8 +64,12 @@ package "<<infrastructure.persistence>>\nPersistence Adapters" as PERSISTENCE #F
       + save(directive: Directive): void
       + findByStatus(status: DirectiveStatus): List~Directive~
       + nextExecutionId(): ExecutionId
+      + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
+      + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+      + listPolicyRefs(filter: Map): List~PairedPolicyRef~
       --
-      _Uses: SQLAlchemy ORM_
+      _Uses: SQLAlchemy ORM; dual-document rows_
+      _No separate PolicyDoctrineReader_
     }
   }
 
@@ -155,21 +158,6 @@ package "<<infrastructure.detection>>\nDetection Infrastructure" as DETECTION #F
 }
 
 ' ═══════════════════════════════════════════════════════════
-'  POLICY DOCTRINE READER
-' ═══════════════════════════════════════════════════════════
-package "<<infrastructure.policy>>\nPolicy Doctrine" as POLICY #FFE0B2/F57C00 {
-
-  class "**FilesystemPolicyDoctrineReader**" as FilesystemPolicyDoctrineReader <<Adapter>> #FFE0B2/F57C00 {
-    - doctrine_root: Path
-    --
-    + read(ref: PairedPolicyRef): GuidancePayload
-    + listAvailable(): List~PairedPolicyRef~
-    --
-    _Uses: YAML files, filesystem_
-  }
-}
-
-' ═══════════════════════════════════════════════════════════
 '  TARGET GATEWAY
 ' ═══════════════════════════════════════════════════════════
 package "<<infrastructure.targets>>\nTarget Gateway" as TARGETS #FFE0B2/F57C00 {
@@ -248,10 +236,6 @@ package "<<external>>\nExternal Dependencies" as EXTERNAL #ECEFF1/546E7A {
     AsyncClient
   }
 
-  class "**PyYAML**" as PyYAML <<Library>> #ECEFF1/546E7A {
-    safe_load, safe_dump
-  }
-
   class "**RE2**" as RE2 <<Library>> #ECEFF1/546E7A {
     Regex engine
   }
@@ -269,7 +253,7 @@ package "<<external>>\nExternal Dependencies" as EXTERNAL #ECEFF1/546E7A {
   }
 
   class "**Filesystem**" as Filesystem <<Storage>> #ECEFF1/546E7A {
-    cgir_store (CAS), policy doctrines
+    cgir_store (CAS)
   }
 }
 
@@ -283,7 +267,6 @@ CgIrRepository <|.. ContentAddressedCgIrStore : implements >
 EventStore <|.. AppendOnlyEventLog : implements >
 ArtifactRepository <|.. ObjectArtifactStore : implements >
 TargetGateway <|.. HttpTargetGateway : implements >
-PolicyDoctrineReader <|.. FilesystemPolicyDoctrineReader : implements >
 
 ' ── Evaluator hierarchy ──────────────────────────────────
 Evaluator <|.. PatternEvaluator : implements >
@@ -302,8 +285,6 @@ ContentAddressedCgIrStore ..> Hasher : uses >
 ObjectArtifactStore ..> boto3 : uses >
 ObjectArtifactStore ..> ObjectStore : connects >
 HttpTargetGateway ..> httpx : uses >
-FilesystemPolicyDoctrineReader ..> PyYAML : parses >
-FilesystemPolicyDoctrineReader ..> Filesystem : reads >
 PatternEvaluator ..> RE2 : uses >
 
 ' ── Bootstrap wiring ────────────────────────────────────
@@ -312,7 +293,6 @@ Lifespan ..> ContentAddressedCgIrStore : initializes >
 Lifespan ..> AppendOnlyEventLog : initializes >
 Lifespan ..> ObjectArtifactStore : initializes >
 Lifespan ..> HttpTargetGateway : initializes >
-Lifespan ..> FilesystemPolicyDoctrineReader : initializes >
 Lifespan ..> CapabilitySource : initializes >
 Lifespan ..> AdapterRegistry : initializes >
 Lifespan ..> LoggingSetup : calls >

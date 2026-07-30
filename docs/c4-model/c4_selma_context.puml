@@ -55,7 +55,7 @@ Rel(compliance_rep, selma, "submits targets for inspection; acknowledges finding
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(selma, governance_contracts, "reads rule definitions at compile time only", "Compile-Time Only", $tags="compile_only")
+Rel(selma, governance_contracts, "optional import/export of dual-document directive packages", "HTTPS / Package", $tags="mediated")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
 Rel(selma, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(selma, audit_platform, "publishes finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")

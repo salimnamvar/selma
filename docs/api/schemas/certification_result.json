@@ -181,7 +181,7 @@
           "evidence": {
             "validation_method": "Static analysis + architectural audit of guidance_only edges",
             "test_results": [
-              { "criterion": "Rule Inspector does not read policy_doctrine.yaml for evaluation", "passed": true },
+              { "criterion": "Rule Inspector does not read policy doctrine documents from directive_store for evaluation", "passed": true },
               { "criterion": "Finding FSM does not use policy doctrine for transitions", "passed": true }
             ]
           },

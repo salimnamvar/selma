@@ -20,7 +20,7 @@ state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-I
 state "Validating Gates" as ValidatingGates #1B7A6E {
   [*] --> AA01
   state "AA-01\nMediated Feedback" as AA01 #1B7A6E : **entry** analytics has no write path\nto CG-IR / Finding FSM\nmethod: integration (no finding→compile)
-  state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** policy_doctrine.yaml absent\nfrom runtime paths\nmethod: static analysis + path assert
+  state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** doctrine guidance_only via\ndirectives_adapter; absent from\nevaluation/FSM paths\nmethod: static analysis + path assert
   state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
   state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : **entry** waive + approve SoD tests\nmethod: integration SoD corpus
   state "AA-05\nConflict Determinism" as AA05 #1B7A6E : **entry** byte-identical replay\nmethod: conflict replay corpus

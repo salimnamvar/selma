@@ -26,15 +26,15 @@ plantuml -tsvg docs/class-diagram/*.puml
 |----|------|-------------|
 | CLS-001 | [cd_001_domain_model.puml](cd_001_domain_model.puml) | Domain model: aggregates, value objects, domain services, events, and repository ports |
 | CLS-002 | [cd_002_application_services.puml](cd_002_application_services.puml) | Application services: all use case classes, port interfaces, DTOs, and pipeline chains |
-| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure adapters: persistence, detection, policy, targets, auth, and external dependencies |
+| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure adapters: dual-document directives, CG-IR, events, artifacts, detection, targets, auth |
 
 ## Layer Summary
 
 | Diagram | Clean Architecture Layer | Key Elements |
 |---------|------------------------|--------------|
 | CLS-001 | Domain | Aggregates (Directive, CgIrSnapshot, Finding, etc.), Value Objects, Domain Services, Events, Repository Ports |
-| CLS-002 | Application | 33 use cases across 7 bounded contexts, 6 port interfaces, 4 DTOs, pipeline chains |
-| CLS-003 | Infrastructure | 6 adapter implementations, detection evaluators, policy reader, target gateway, capability source, bootstrap |
+| CLS-002 | Application | Use cases across bounded contexts, ports (incl. dual-document DirectiveRepository), DTOs, pipeline chains |
+| CLS-003 | Infrastructure | Adapters: SqlDirectiveRepository (executable + doctrine), CG-IR, events, artifacts, detection, target gateway, bootstrap |
 
 ## Shared Styles
 

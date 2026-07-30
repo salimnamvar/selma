@@ -33,8 +33,12 @@ authority_hierarchy:
       - layer: directive_instances
 
   - layer: directive_instances
-    location: "directive/"
-    description: "Actual rule JSON and policy YAML files authored by regulatory officials"
+    location: "directive_store (PostgreSQL dual documents)"
+    description: >
+      Authoritative dual-document directives authored or imported by regulatory
+      officials: executable_document (rule_schema) + policy_doctrine_document
+      (policy_doctrine), linked by paired_policy_ref. Optional external packages
+      may be imported; the store is the system of record.
     authority_over: []
 
 concern_split:

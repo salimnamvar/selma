@@ -12,7 +12,7 @@ as a baseline checklist.
 | Layer | Design Freeze target | Current scaffold (approx.) | Gap severity |
 | :--- | :--- | :--- | :--- |
 | Domain | Full aggregates (Directive, CG-IR, Finding FSM, …) | Lint-oriented entities (`Finding` file:line, `Rule`, `Policy`) | High |
-| Application ports | Store + detection + policy guidance ports | Rule/directive/parser/evaluator/reporter ports | High |
+| Application ports | Four stores + detection; dual-document DirectiveRepository (no separate doctrine port) | Rule/directive/parser/evaluator/reporter ports | High |
 | Use cases | Governance, compile, inspect, FSM, certify | `inspect_source`, `query_directive` | High |
 | Infrastructure | Four stores + pure detection registry | Config validators, AST evaluators, JSON rule repo | High |
 | Interfaces | REST Application Service + CLI/TUI | CLI/TUI shells | Medium |
@@ -24,11 +24,11 @@ as a baseline checklist.
 | :--- | :--- |
 | `domain/entities/finding.py` | Evolve into lifecycle Finding **or** rename to `LintFinding` and introduce new aggregate |
 | `domain/entities/rule.py` | Align with `rule_schema` universal fields (`deontic`, `detection`, …) |
-| `domain/entities/policy.py` | Guidance-only doctrine model; no eval fields |
+| `domain/entities/policy.py` | PolicyDoctrineDoc VO co-stored with Directive; no eval fields; load via DirectiveRepository only |
 | `domain/value_objects/guidance.py` | Keep as guidance read model VO |
 | `domain/value_objects/rule_id.py` | Split/align `LineageId` vs `ExecutionId` |
 | `application/ports/evaluator_port.py` | Rename/generalize to `DetectionEngine` port |
-| `application/ports/rule_repository_port.py` | Split rule dataset vs CG-IR repository concepts |
+| `application/ports/rule_repository_port.py` | Become dual-document `DirectiveRepository` + separate `CgIrRepository` (not a filesystem doctrine reader) |
 | `application/use_cases/inspect_source.py` | Become `SubmitInspection` against CG-IR, not ad-hoc source lint only |
 | `infrastructure/evaluators/*` | Move behind detection adapters; enforce purity |
 | `infrastructure/config/*` | Keep for schema validation bootstrap |
@@ -64,7 +64,7 @@ as a baseline checklist.
 3. CgIrRepository + compilation validate/publish (even if filesystem CAS)  
 4. Inspection pipeline producing FindingCreated  
 5. Capability gate middleware  
-6. GuidanceResolver (analyzer)  
+6. GuidanceResolver (analyzer) via `DirectiveRepository.readPolicyDoctrine`
 7. Conflict + certification suites  
 8. REST surface parity with `interfaces/rest_api.yaml`
 

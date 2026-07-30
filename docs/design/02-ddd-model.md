@@ -71,7 +71,7 @@ See: [`../class-diagram/`](../class-diagram/) for aggregate structure, value obj
 | ConflictArtifact | Conflict | `conflict/detection`, `precedence` |
 | CertificationRun | Certification | `certification/gates.yaml` |
 
-**Dual document:** The Directive aggregate **references** policy doctrine by `paired_policy_ref` but does **not** embed executable evaluation logic from YAML.
+**Dual document:** The Directive aggregate **stores** both an executable rule document (`rule_schema`) and a policy doctrine document (`policy_doctrine`) in `directive_store`, linked by `paired_policy_ref` and co-versioned per revision. Doctrine is **not** used for evaluation; only the executable document compiles to CG-IR.
 
 ## Domain services (stateless rules)
 
@@ -104,7 +104,7 @@ See [06-domain-events-and-stores.md](06-domain-events-and-stores.md) for full sc
 
 | External / adjacent | Translation |
 | :--- | :--- |
-| Policy doctrine YAML | Guidance read model only; never mutates Finding FSM |
+| Policy doctrine document (in directive_store) | Guidance read model only via Directives Adapter; never mutates Finding FSM |
 | Legacy lint “Finding” (file:line:code) | Map to inspection location + message fields; identity is `finding_id` + control binding |
 | Language adapters | Live only under `detection.adapters[]`; core stays universal |
 | CI/CD | Triggers auditor; does not write directives or findings |

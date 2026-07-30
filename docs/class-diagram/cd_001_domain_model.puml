@@ -60,25 +60,46 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       __state__
       + status: DirectiveStatus {active|deprecated|draft}
       + revision: int
+      + executable_document: ExecutableRuleDoc
+      + policy_doctrine_document: PolicyDoctrineDoc
+      + paired_policy_ref: PairedPolicyRef
       + metadata: Map~String,Object~
       --
       <<invariant>>
       . lineage_id matches ^[A-Z]{2,5}-\d{3}[A-Z]?$
       . revision > 0
       . status transition: draft→active→deprecated
+      . executable + doctrine co-versioned per revision
+      . paired_policy_ref resolves within directive_store
     }
 
     class "**DirectiveRevision**" as DirectiveRevision <<Entity>> #ECEFF1/546E7A {
       + revision: int
       + changed_at: HlcTimestamp
       + changed_by: String
-      + snapshot: Directive
+      + executable_document: ExecutableRuleDoc
+      + policy_doctrine_document: PolicyDoctrineDoc
+      + paired_policy_ref: PairedPolicyRef
+    }
+
+    class "**ExecutableRuleDoc**" as ExecutableRuleDoc <<Value Object>> #E8EAF6/3F51B5 {
+      + content: Map {rule_schema}
+      --
+      <<role>> compile-time evaluation source only
+    }
+
+    class "**PolicyDoctrineDoc**" as PolicyDoctrineDoc <<Value Object>> #E8EAF6/3F51B5 {
+      + content: Map {policy_doctrine}
+      --
+      <<role>> guidance_only after findings
     }
 
     note bottom of Directive
-      **Aggregate Root**
-      Holds identity via LineageId;
-      ExecutionId rotates on re-activation.
+      **Aggregate Root — dual document**
+      Both documents stored in directive_store
+      under one lineage/execution identity.
+      Compiler uses executable only;
+      Finding Analyzer uses doctrine only.
     end note
   }
 
@@ -492,6 +513,9 @@ package "<<ports>>\nRepository Interfaces" as PORT_PKG #FCE4EC/C62828 {
     + save(directive: Directive): void
     + findByStatus(status: DirectiveStatus): List~Directive~
     + nextExecutionId(): ExecutionId
+    + readExecutable(id: LineageId | ExecutionId): ExecutableRuleDoc
+    + readPolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    + listPolicyRefs(filter: Map): List~PairedPolicyRef~
   }
 
   interface "**CgIrRepository**" as CgIrRepository <<Port>> #FCE4EC/C62828 {
@@ -519,10 +543,6 @@ package "<<ports>>\nRepository Interfaces" as PORT_PKG #FCE4EC/C62828 {
     + hashTarget(target: Target): TargetHash
   }
 
-  interface "**PolicyDoctrineReader**" as PolicyDoctrineReader <<Port>> #FCE4EC/C62828 {
-    + read(ref: PairedPolicyRef): GuidancePayload
-    + listAvailable(): List~PairedPolicyRef~
-  }
 }
 
 ' ═══════════════════════════════════════════════════════════
@@ -538,6 +558,10 @@ Directive --> Subject : subject
 Directive --> Predicate : predicate
 Directive --> DetectionSpec : detection_spec
 Directive --> PairedPolicyRef : paired_policy_ref
+Directive *-- ExecutableRuleDoc : executable_document
+Directive *-- PolicyDoctrineDoc : policy_doctrine_document
+DirectiveRevision *-- ExecutableRuleDoc
+DirectiveRevision *-- PolicyDoctrineDoc
 Directive --> Applicability : applicability
 Directive --> Priority : priority
 
@@ -606,13 +630,14 @@ CertificationRun ..> CertificationCompleted : raises >
 
 ' ── Repository ports → aggregates (persists) ─────────────
 DirectiveRepository ..> Directive : persists >
+DirectiveRepository ..> ExecutableRuleDoc : readExecutable >
+DirectiveRepository ..> GuidancePayload : readPolicyDoctrine >
 CgIrRepository ..> CgIrSnapshot : persists >
 EventStore ..> FindingCreated : stores >
 ArtifactRepository ..> InspectionSnapshot : persists >
 ArtifactRepository ..> Finding : persists >
 ArtifactRepository ..> ConflictArtifact : persists >
 TargetGateway ..> Target : fetches >
-PolicyDoctrineReader ..> GuidancePayload : reads >
 
 ' ── Read models ──────────────────────────────────────────
 GuidanceView ..> PairedPolicyRef : references >
