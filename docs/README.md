@@ -5,7 +5,7 @@
 | **Specification contracts** | [`spec/`](spec/README.md) | Normative behavior (`contracts/`) |
 | **Schemas** | [`schema/`](schema/) | Rule + policy structure (v1.0.0) |
 | **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Source of truth for structure** (context / container / component) |
-| **State machines** | [`state-machine/`](state-machine/README.md) | FSMs and pipelines |
+| **State machines** | [`state/`](state/README.md) | FSMs and pipelines |
 | **Design Freeze** | [`design/`](design/README.md) | DDD, ports, packages, use cases |
 | **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index (stories live in contracts) |
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
@@ -23,7 +23,7 @@
 2. `schema/` — data shapes
 3. **`c4-model/`** — structural architecture (entity IDs, containers, components, stores)
 4. `design/` — how Implementation is structured (packages, ports, use cases)
-5. `state-machine/` + other diagrams — behavior and detail views; must not contradict C4 or contracts
+5. `state/` + other diagrams — behavior and detail views; must not contradict C4 or contracts
 
 Diagrams and design prose use C4 resource-oriented IDs from
 [`c4-model/README.md`](c4-model/README.md) (e.g. `api`, `compilation`,

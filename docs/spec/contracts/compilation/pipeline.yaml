@@ -5,7 +5,7 @@
 contract_id: "compilation.pipeline"
 schema_version: "1.0.0"
 owner_component: "compilation"
-state_machine_ref: "../../state-machine/selma_compilation_pipeline.puml"
+state_machine_ref: "../../state/selma_compilation_pipeline.puml"
 description: >
   Defines the canonical transformation pipeline from Directive Graph to
   CG-IR snapshot. Each stage has defined inputs, outputs, invariants,

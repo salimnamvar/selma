@@ -1,7 +1,7 @@
 # 01 — Design Freeze Status
 
-**Status:** Complete (documentation freeze)  
-**Schema / contract version:** 1.0.0  
+**Status:** Complete (documentation freeze)
+**Schema / contract version:** 1.0.0
 **Date:** 2026-07-29
 
 ## Purpose
@@ -20,7 +20,7 @@ may lag the freeze; gaps are tracked in [08-implementation-gap-map.md](08-implem
 | Archives migrated to contract tree | All content migrated to `docs/spec/contracts/`; archives deleted |
 | Universal schemas v1.0.0 | `rule_schema.json`, `policy_doctrine.yaml` |
 | Dual-document directives (eval vs guidance) | C4 identities + meta/authority concern_split |
-| State machines linked to contracts | `docs/state-machine/README.md` catalog |
+| State machines linked to contracts | `docs/state/README.md` catalog |
 | Story IDs `US-DOMAIN-NNN` | Embedded in contracts |
 | Interface contracts present | CLI / REST / TUI under `contracts/interfaces/` |
 | Certification gates defined | `contracts/certification/gates.yaml` AA-01…AA-07 |

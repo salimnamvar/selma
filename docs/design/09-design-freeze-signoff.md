@@ -28,17 +28,17 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 4 | Finding Lifecycle FSM (normative) | COMPLETE | `docs/state-machine/selma_finding_lifecycle.puml` |
-| 5 | Directive Lifecycle | COMPLETE | `docs/state-machine/selma_directive_lifecycle.puml` |
-| 6 | Compilation Pipeline | COMPLETE | `docs/state-machine/selma_compilation_pipeline.puml` |
-| 7 | Inspection Pipeline | COMPLETE | `docs/state-machine/selma_inspection_pipeline.puml` |
-| 8 | Conflict Resolution | COMPLETE | `docs/state-machine/selma_conflict_resolution.puml` |
-| 9 | Architecture Certification | COMPLETE | `docs/state-machine/selma_architecture_certification.puml` |
-| 10 | Authorization | COMPLETE | `docs/state-machine/selma_authorization.puml` |
-| 11 | Artifact Lifecycle | COMPLETE | `docs/state-machine/selma_artifact_lifecycle.puml` |
-| 12 | HLC Clock | COMPLETE | `docs/state-machine/selma_hlc_clock.puml` |
-| 13 | CG-IR Hash Chain | COMPLETE | `docs/state-machine/selma_cgir_hash_chain.puml` |
-| 14 | Machine Interaction Overview | COMPLETE | `docs/state-machine/selma_machine_interaction.puml` |
+| 4 | Finding Lifecycle FSM (normative) | COMPLETE | `docs/state/selma_finding_lifecycle.puml` |
+| 5 | Directive Lifecycle | COMPLETE | `docs/state/selma_directive_lifecycle.puml` |
+| 6 | Compilation Pipeline | COMPLETE | `docs/state/selma_compilation_pipeline.puml` |
+| 7 | Inspection Pipeline | COMPLETE | `docs/state/selma_inspection_pipeline.puml` |
+| 8 | Conflict Resolution | COMPLETE | `docs/state/selma_conflict_resolution.puml` |
+| 9 | Architecture Certification | COMPLETE | `docs/state/selma_architecture_certification.puml` |
+| 10 | Authorization | COMPLETE | `docs/state/selma_authorization.puml` |
+| 11 | Artifact Lifecycle | COMPLETE | `docs/state/selma_artifact_lifecycle.puml` |
+| 12 | HLC Clock | COMPLETE | `docs/state/selma_hlc_clock.puml` |
+| 13 | CG-IR Hash Chain | COMPLETE | `docs/state/selma_cgir_hash_chain.puml` |
+| 14 | Machine Interaction Overview | COMPLETE | `docs/state/selma_machine_interaction.puml` |
 
 ### Sequence Diagrams (8 diagrams)
 

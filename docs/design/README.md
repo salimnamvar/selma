@@ -8,7 +8,7 @@ normative contracts. Structure and behavior sources remain authoritative:
 | Behavioral contracts | [`../spec/contracts/`](../spec/contracts/) |
 | Data shapes | [`../schema/`](../schema/) |
 | Structural architecture (C4) | [`../c4-model/`](../c4-model/) |
-| Behavioral FSMs / pipelines | [`../state-machine/`](../state-machine/) |
+| Behavioral FSMs / pipelines | [`../state/`](../state/) |
 | Use-case diagrams | [`../usecase/`](../usecase/) |
 | **Design Freeze (this tree)** | `docs/design/` |
 

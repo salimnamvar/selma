@@ -5,7 +5,7 @@
 contract_id: "inspection.pipeline"
 schema_version: "1.0.0"
 owner_component: "inspection"
-state_machine_ref: "../../state-machine/selma_inspection_pipeline.puml"
+state_machine_ref: "../../state/selma_inspection_pipeline.puml"
 description: >
   Defines the 6-stage inspection pipeline that evaluates a target against a
   frozen CG-IR snapshot. Each stage has defined inputs, outputs, and error

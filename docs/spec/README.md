@@ -50,7 +50,7 @@ Every contract file follows this template:
 contract_id: "domain.subdomain"        # e.g., "compilation.pipeline"
 schema_version: "1.0.0"                # Must match meta/versioning.yaml
 owner_component: "c4_component_id"     # C4 ID from docs/c4-model/
-state_machine_ref: "../state-machine/xxx.puml"  # If applicable
+state_machine_ref: "../state/xxx.puml"  # If applicable
 
 invariants:
   - id: "INV-XXX-001"
@@ -72,7 +72,7 @@ stories:                                # Acceptance criteria live HERE
 ## Cross-References
 
 - **C4 Architecture** — [`../c4-model/`](../c4-model/) (structural source of truth)
-- **State Machines** — [`../state-machine/`](../state-machine/) (behavioral FSMs)
+- **State Machines** — [`../state/`](../state/) (behavioral FSMs)
 - **Schemas** — [`../schema/`](../schema/) (data structure contracts)
 - **Design Freeze** — [`../design/`](../design/README.md) (DDD, ports, packages, use cases)
 - **Use Case Diagrams** — [`../usecase/`](../usecase/README.md) (index only; stories remain in contracts)

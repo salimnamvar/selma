@@ -5,7 +5,7 @@
 contract_id: "finding_lifecycle.transitions"
 schema_version: "1.0.0"
 owner_component: "findings"
-state_machine_ref: "../../state-machine/selma_finding_lifecycle.puml"
+state_machine_ref: "../../state/selma_finding_lifecycle.puml"
 description: >
   Defines all allowed state transitions, their triggers, gating capabilities,
   and SoD constraints. Each transition is a discrete, auditable event appended

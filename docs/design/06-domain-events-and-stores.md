@@ -46,7 +46,7 @@ Security audit event: attempted action, actor, capability, reason (`segregation 
 
 - Every append carries `logical_clock`.
 - Total order for a stream is HLC then `event_id` tie-break.
-- Detail machine: `state-machine/selma_hlc_clock.puml`.
+- Detail machine: `state/selma_hlc_clock.puml`.
 - Contract: `data_stores/event_store.yaml`.
 
 ## CG-IR hash events / provenance
@@ -69,8 +69,8 @@ Detail: `selma_cgir_hash_chain.puml`, `compilation/pipeline.yaml`.
 
 ## Conflict artifacts
 
-- Within-lineage unresolvable → requires human action  
-- Cross-lineage → advisory (`binding_status=advisory`) without rewriting findings  
+- Within-lineage unresolvable → requires human action
+- Cross-lineage → advisory (`binding_status=advisory`) without rewriting findings
 
 Stored in `artifacts`; never silently dropped.
 
@@ -78,17 +78,17 @@ Stored in `artifacts`; never silently dropped.
 
 Guidance resolved by the `findings` use-case cluster is a **read model** field on query responses:
 
-- `reasoning`, `remediation_strategy`, `remediation_steps`, domain examples  
-- Source: policy doctrine in `directives` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`  
-- Must not be required for FSM transition validity  
+- `reasoning`, `remediation_strategy`, `remediation_steps`, domain examples
+- Source: policy doctrine in `directives` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`
+- Must not be required for FSM transition validity
 
 ## Replication
 
 Adapters may push to `optional_export`:
 
-- finding events  
-- inspection snapshots  
-- certification artifacts  
+- finding events
+- inspection snapshots
+- certification artifacts
 
 Replication is best-effort relative to local append success; local immutability wins.
 

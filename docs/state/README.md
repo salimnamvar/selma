@@ -41,7 +41,7 @@ The normative finding FSM contract is [`finding_lifecycle/`](../spec/contracts/f
 Requires [PlantUML](https://plantuml.com/):
 
 ```bash
-plantuml docs/state-machine/*.puml
+plantuml docs/state/*.puml
 ```
 
 Shared styles: `common/sm_styles.puml`.

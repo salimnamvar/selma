@@ -76,7 +76,7 @@ Three-level C4 model using **Clean Architecture** layering and **resource-orient
 
 ## Canonical registry
 
-IDs, names, tech, and descriptions: `common/c4_identities.puml`.  
+IDs, names, tech, and descriptions: `common/c4_identities.puml`.
 Styles: `common/c4_styles.puml`.
 
 ## Rendering
@@ -87,5 +87,5 @@ plantuml docs/c4-model/c4_selma_container.puml
 plantuml docs/c4-model/c4_selma_component.puml
 ```
 
-Behavior FSMs: [`../state-machine/`](../state-machine/README.md).  
+Behavior FSMs: [`../state/`](../state/README.md).
 Application design freeze: [`../design/`](../design/README.md).

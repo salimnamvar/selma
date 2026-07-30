@@ -1,6 +1,6 @@
 # Selma — Activity Diagrams
 
-Activity diagrams showing process flows and decision logic across Selma's key workflows. Complements the [state machines](../state-machine/README.md) (which model state *transitions*) with a focus on *procedural flow*, parallelism, and swim-lane partitioning.
+Activity diagrams showing process flows and decision logic across Selma's key workflows. Complements the [state machines](../state/README.md) (which model state *transitions*) with a focus on *procedural flow*, parallelism, and swim-lane partitioning.
 
 Read with [`contracts/`](../spec/contracts/) for the full behavioral contracts.
 
@@ -26,9 +26,9 @@ Read with [`contracts/`](../spec/contracts/) for the full behavioral contracts.
 
 | Activity Diagram | Corresponding State Machine |
 | :--- | :--- |
-| `act_001_inspection_pipeline.puml` | [`selma_inspection_pipeline.puml`](../state-machine/selma_inspection_pipeline.puml) |
-| `act_002_finding_disposition.puml` | [`selma_finding_lifecycle.puml`](../state-machine/selma_finding_lifecycle.puml) |
-| `act_003_directive_amendment.puml` | [`selma_directive_lifecycle.puml`](../state-machine/selma_directive_lifecycle.puml) + [`selma_compilation_pipeline.puml`](../state-machine/selma_compilation_pipeline.puml) |
+| `act_001_inspection_pipeline.puml` | [`selma_inspection_pipeline.puml`](../state/selma_inspection_pipeline.puml) |
+| `act_002_finding_disposition.puml` | [`selma_finding_lifecycle.puml`](../state/selma_finding_lifecycle.puml) |
+| `act_003_directive_amendment.puml` | [`selma_directive_lifecycle.puml`](../state/selma_directive_lifecycle.puml) + [`selma_compilation_pipeline.puml`](../state/selma_compilation_pipeline.puml) |
 
 ## Rendering
 
@@ -43,6 +43,6 @@ Shared styles: `common/act_styles.puml`.
 ## Related Documents
 
 - [Specification Contracts](../spec/contracts/) — normative behavioral contracts
-- [State Machines](../state-machine/README.md) — FSMs and pipeline state transitions
+- [State Machines](../state/README.md) — FSMs and pipeline state transitions
 - [C4 Architecture](../c4-model/README.md) — structural architecture
 - [Design Freeze](../design/README.md) — DDD, ports & adapters, package layout
