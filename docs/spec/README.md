@@ -30,10 +30,10 @@ Structural ownership of contracts maps to **C4 component IDs**
 
 | Contract file | C4 store ID | Repository component |
 | :--- | :--- | :--- |
-| `data_stores/directive_store.yaml` | `directives` | `directives_repository` |
-| `data_stores/cgir_store.yaml` | `compiled_rules` | `compiled_rules_repository` |
-| `data_stores/event_store.yaml` | `finding_events` | `finding_events_repository` |
-| `data_stores/artifact_store.yaml` | `artifacts` | `artifacts_repository` |
+| `data_stores/directives.yaml` | `directives` | `directives_repository` |
+| `data_stores/compiled_rules.yaml` | `compiled_rules` | `compiled_rules_repository` |
+| `data_stores/finding_events.yaml` | `finding_events` | `finding_events_repository` |
+| `data_stores/artifacts.yaml` | `artifacts` | `artifacts_repository` |
 
 ## Schema Contracts (Separate)
 

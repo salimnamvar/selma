@@ -1,7 +1,7 @@
-# directive_store.yaml
+# directives.yaml
 # Normative source for the Directives resource store contract (C4 ID: directives).
 
-contract_id: "data_stores.directive_store"
+contract_id: "data_stores.directives"
 schema_version: "1.0.0"
 owner_component: "directives_repository"
 description: >

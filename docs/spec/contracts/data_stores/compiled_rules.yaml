@@ -1,8 +1,8 @@
-# cgir_store.yaml
-# Compiled Rules store (C4 ID: compiled_rules).
+# compiled_rules.yaml
+# Compiled Rules store (C4 store ID: compiled_rules).
 # Normative source for the CG-IR content-addressed store contract.
 
-contract_id: "data_stores.cgir_store"
+contract_id: "data_stores.compiled_rules"
 schema_version: "1.0.0"
 owner_component: "compiled_rules_repository"
 description: >

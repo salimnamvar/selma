@@ -1,8 +1,8 @@
-# event_store.yaml
+# finding_events.yaml
 # Finding Events store (C4 ID: finding_events).
 # Normative source for the Finding Event Stream store contract.
 
-contract_id: "data_stores.event_store"
+contract_id: "data_stores.finding_events"
 schema_version: "1.0.0"
 owner_component: "finding_events_repository"
 description: >
@@ -177,11 +177,11 @@ retention_policy:
 invariants:
   - id: "INV-ES-001"
     statement: "Events are immutable once written"
-    enforcement: "event_store"
+    enforcement: "finding_events"
 
   - id: "INV-ES-002"
     statement: "event_hash ensures integrity of all event fields"
-    enforcement: "event_store"
+    enforcement: "finding_events"
 
   - id: "INV-ES-003"
     statement: "Per-node HLC tuple is strictly lexicographically non-decreasing"
@@ -189,7 +189,7 @@ invariants:
 
   - id: "INV-ES-004"
     statement: "No duplicate event_ids"
-    enforcement: "event_store"
+    enforcement: "finding_events"
 
   - id: "INV-ES-005"
     statement: "Analytics are read-only; no write path to CG-IR or FSM"
@@ -197,7 +197,7 @@ invariants:
 
   - id: "INV-ES-006"
     statement: "chain_hash forms a contiguous hash chain; deletion or reordering of events breaks the chain"
-    enforcement: "event_store"
+    enforcement: "finding_events"
 
 stories:
   - story_id: "US-ES-001"

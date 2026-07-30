@@ -21,7 +21,7 @@ The normative finding FSM contract is [`finding_lifecycle/`](../spec/contracts/f
 | `selma_architecture_certification.puml` | Architectural Certification | [`certification/gates.yaml`](../spec/contracts/certification/gates.yaml) | Extracted |
 | `selma_authorization.puml` | Capability Authorization | [`authorization/capabilities.yaml`](../spec/contracts/authorization/capabilities.yaml) | Extracted |
 | `selma_artifact_lifecycle.puml` | Artifact Lifecycle | [`data_stores/`](../spec/contracts/data_stores/) | Extracted |
-| `selma_hlc_clock.puml` | HLC Event Ordering | [`data_stores/event_store.yaml`](../spec/contracts/data_stores/event_store.yaml) | Detail view |
+| `selma_hlc_clock.puml` | HLC Event Ordering | [`data_stores/finding_events.yaml`](../spec/contracts/data_stores/finding_events.yaml) | Detail view |
 | `selma_cgir_hash_chain.puml` | CG-IR Hash & Reuse | [`compilation/pipeline.yaml`](../spec/contracts/compilation/pipeline.yaml) | Detail view |
 | `selma_machine_interaction.puml` | Machine Interaction Overview | [`../c4-model/c4_selma_component.puml`](../c4-model/c4_selma_component.puml) | Overview |
 | `common/sm_styles.puml` | Shared theme | — | — |

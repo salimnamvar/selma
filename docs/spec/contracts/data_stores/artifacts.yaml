@@ -1,8 +1,8 @@
-# artifact_store.yaml
+# artifacts.yaml
 # Artifacts store (C4 ID: artifacts).
 # Normative source for execution artifact storage contract.
 
-contract_id: "data_stores.artifact_store"
+contract_id: "data_stores.artifacts"
 schema_version: "1.0.0"
 owner_component: "artifacts_repository"
 description: >
