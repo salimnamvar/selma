@@ -2,9 +2,9 @@
 ' ============================================================
 ' Selma — Artifact Lifecycle State Machine
 ' Source:  docs/spec/contracts/data_stores/
-' C4:      Snapshots Adapter → artifact_store → audit_platform
-'          Compiled Rules Adapter → cgir_store (CG-IR snapshots)
-'          Findings & Audit Trail Adapter → event_store (events)
+' C4:      artifacts_repository → artifacts
+'          Compiled Rules Adapter → compiled_rules (CG-IR snapshots)
+'          Findings & Audit Trail Adapter → finding_events (events)
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -32,14 +32,14 @@ state "Durable Artifact" as Durable #2C6E49 {
   --
   state "Replication Region" as ReplRegion {
     [*] --> NotReplicated
-    state "Not\nReplicated" as NotReplicated #B9770E : **entry** no audit_platform copy yet\n**allowed** async replicate\n**forbidden** claim replica exists
-    state "Replicated" as Replicated #2C6E49 : **entry** audit_platform append-only copy\n**allowed** retain\n**forbidden** mutate replica as source of truth rewrite
+    state "Not\nReplicated" as NotReplicated #B9770E : **entry** no optional_export copy yet\n**allowed** async replicate\n**forbidden** claim replica exists
+    state "Replicated" as Replicated #2C6E49 : **entry** optional_export append-only copy\n**allowed** retain\n**forbidden** mutate replica as source of truth rewrite
 
-    NotReplicated --> Replicated : <b>ArtifactReplicated</b>\nactor: System\ncommand: append-only copy to audit_platform
+    NotReplicated --> Replicated : <b>ArtifactReplicated</b>\nactor: System\ncommand: append-only copy to optional_export
   }
 }
 
-state "Archived" as Archived #4A4A4A : **entry** long-term retention **terminal**\n**allowed** read-only · audit_platform copy\n**forbidden** delete before retention policy
+state "Archived" as Archived #4A4A4A : **entry** long-term retention **terminal**\n**allowed** read-only · optional_export copy\n**forbidden** delete before retention policy
 
 Building --> Validated : <b>ArtifactValidated</b>\nactor: System\ncommand: validate hashes / schema
 Building --> RejectedBuild : <b>ArtifactBuildRejected</b>\nactor: System\n/ noDurableArtifact()

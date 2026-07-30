@@ -1,11 +1,10 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma
-' Purpose:   Black-box view of the two governance actors and the
-'            four external systems Selma certifies against, inspects,
-'            and streams findings and security audit records into.
-' Contract:  1.0.0
-' Diagram:   1.0.0 (Phase B AIP alignment)
+' Purpose:   Actors and optional external Target Sources.
+'            Tier-C integrations (CI/CD, audit export, remediation)
+'            are not first-class context peers.
+' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_context
 title Selma -- Context Diagram
@@ -17,47 +16,16 @@ title Selma -- Context Diagram
 
 LAYOUT_LEFT_RIGHT()
 
-' ============================================================
-'  ACTORS
-' ============================================================
-
 Person(regulatory_official, $NAME_regulatory_official, $DESC_regulatory_official)
-Person(compliance_rep, $NAME_compliance_rep, $DESC_compliance_rep)
-
-
-' ============================================================
-'  SYSTEM IN SCOPE
-' ============================================================
+Person(compliance_representative, $NAME_compliance_representative, $DESC_compliance_representative)
 
 System(selma, $NAME_selma, $DESC_selma)
 
+System_Ext(target_sources, $NAME_target_sources, $DESC_target_sources)
 
-' ============================================================
-'  EXTERNAL SYSTEMS
-' ============================================================
-
-System_Ext(cicd, $NAME_cicd, $DESC_cicd)
-System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
-System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
-System_Ext(remediation_systems, $NAME_remediation_systems, $DESC_remediation_systems)
-
-
-' ============================================================
-'  RELATIONSHIPS -- Actor Ingress
-' ============================================================
-
-Rel(regulatory_official, selma, "authors and governs directives; resolves findings; views analytics", "HTTPS", $tags="capability_enforced")
-Rel(compliance_rep, selma, "submits targets for inspection; acknowledges findings; views findings and analytics", "HTTPS", $tags="capability_enforced")
-
-
-' ============================================================
-'  RELATIONSHIPS -- External System Interactions
-' ============================================================
-
-Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
-Rel(selma, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-Rel(selma, audit_platform, "publishes finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
-Rel(selma, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
+Rel(regulatory_official, selma, "authors directives; resolves findings; reads guidance", "HTTPS", $tags="capability_enforced")
+Rel(compliance_representative, selma, "submits targets and inspections; acknowledges findings; reads guidance", "HTTPS", $tags="capability_enforced")
+Rel(selma, target_sources, "optionally fetches targets by reference", "HTTPS / API", $tags="mediated")
 
 SHOW_LEGEND()
 @enduml

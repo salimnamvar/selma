@@ -4,7 +4,7 @@
 
 contract_id: "certification.gates"
 schema_version: "1.0.0"
-owner_component: "architectural_auditor"
+owner_component: "certification_tool"
 description: >
   Defines the 7 architectural audit gates required for production-grade
   reference implementation certification. Gates are non-blocking for spec
@@ -30,7 +30,7 @@ gates:
     story_refs: ["US-CD-001"]
     criteria:
       - "Rule Inspector and Finding FSM MUST NOT read policy doctrine documents for evaluation or state transitions"
-      - "Finding Analyzer MAY read policy doctrine documents from directive_store via directives_adapter and paired_policy_ref for guidance_only resolution"
+      - "Finding Analyzer MAY read policy doctrine documents from directives via directives_repository and paired_policy_ref for guidance_only resolution"
       - "There MUST NOT be a separate PolicyDoctrineReader or filesystem doctrine path used at runtime"
       - "CI static analysis scans evaluation/FSM paths for doctrine access used as executable logic"
       - "Conflict resolution uses contract algorithm over schema/CG-IR fields only"
@@ -110,7 +110,7 @@ invariants:
 
 stories:
   - story_id: "US-GA-001"
-    as: "architectural_auditor"
+    as: "certification_tool"
     i_want: "to verify architectural audit gates before production certification"
     so_that: "reference implementations are production-grade"
     acceptance_criteria:

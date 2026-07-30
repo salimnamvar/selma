@@ -4,7 +4,7 @@
 
 contract_id: "authorization.capabilities"
 schema_version: "1.0.0"
-owner_component: "application_service"
+owner_component: "api"
 description: >
   Defines the complete capability catalog for the Selma system.
   Capabilities are the atomic units of authorization — each action
@@ -150,7 +150,7 @@ invariants:
 
 stories:
   - story_id: "US-CA-001"
-    as: "application_service"
+    as: "api"
     i_want: "to gate all actions on capability checks"
     so_that: "only authorized actors can perform system actions"
     acceptance_criteria:

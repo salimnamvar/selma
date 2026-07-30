@@ -4,10 +4,10 @@
 title SEQ-008 Authorization Check\nCapability-Based Access Control with SoD
 
 actor "User" as user
-participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
-participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
-participant "findings_audit_adapter\n(Python/SHA-256/Append-Only)" as FAA #D08770
-database "event_store\n(Append-Only Log)" as ES #4C566A
+participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
+participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "finding_events_repository\n(Append-Only)" as FAA #D08770
+database "finding_events\n(Append-Only Log)" as ES #4C566A
 
 autonumber
 

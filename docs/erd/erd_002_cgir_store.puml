@@ -1,4 +1,4 @@
-@startuml erd_002_cgir_store
+@startuml erd_002_compiled_rules
 !include common/erd_styles.puml
 
 title CGIR Store (Content-Addressed) — Immutable

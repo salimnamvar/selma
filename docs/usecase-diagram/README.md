@@ -22,14 +22,14 @@ plantuml docs/usecase-diagram/uc_*.puml
 
 | ID | Bounded Context | Primary Actor(s) | Key Component | File |
 |----|-----------------|-------------------|---------------|------|
-| UC-001 | Governance Authoring | Regulatory Official | `directives_adapter`, `application_service` | [uc_001_governance.puml](uc_001_governance.puml) |
-| UC-002 | Compilation | CI/CD Pipeline, Regulatory Official (indirect) | `hermetic_compiler` | [uc_002_compilation.puml](uc_002_compilation.puml) |
-| UC-003 | Inspection | Compliance Representative | `rule_inspector` | [uc_003_inspection.puml](uc_003_inspection.puml) |
-| UC-004 | Finding Lifecycle | Regulatory Official, Compliance Representative | `lifecycle_finder` | [uc_004_findings.puml](uc_004_findings.puml) |
-| UC-005 | Conflict | Regulatory Official | `conflict_resolver` | [uc_005_conflict.puml](uc_005_conflict.puml) |
-| UC-006 | Authorization | Both actors | `application_service` | [uc_006_authorization.puml](uc_006_authorization.puml) |
-| UC-007 | Guidance & Analytics | Both actors | `finding_analyzer` | [uc_007_guidance.puml](uc_007_guidance.puml) |
-| UC-008 | Certification | CI/CD Pipeline | `architectural_auditor` | [uc_008_certification.puml](uc_008_certification.puml) |
+| UC-001 | Governance Authoring | Regulatory Official | `directives_repository`, `api` | [uc_001_governance.puml](uc_001_governance.puml) |
+| UC-002 | Compilation | CI/CD Pipeline, Regulatory Official (indirect) | `compilation` | [uc_002_compilation.puml](uc_002_compilation.puml) |
+| UC-003 | Inspection | Compliance Representative | `inspection` | [uc_003_inspection.puml](uc_003_inspection.puml) |
+| UC-004 | Finding Lifecycle | Regulatory Official, Compliance Representative | `findings` | [uc_004_findings.puml](uc_004_findings.puml) |
+| UC-005 | Conflict | Regulatory Official | `ResolveConflict` + `findings` / `compilation` | [uc_005_conflict.puml](uc_005_conflict.puml) |
+| UC-006 | Authorization | Both actors | `api` | [uc_006_authorization.puml](uc_006_authorization.puml) |
+| UC-007 | Guidance & Analytics | Both actors | `findings` | [uc_007_guidance.puml](uc_007_guidance.puml) |
+| UC-008 | Certification | CI/CD Pipeline | `certification_tool` | [uc_008_certification.puml](uc_008_certification.puml) |
 
 ## Actor Legend
 

@@ -8,7 +8,7 @@ left to right direction
 actor "Regulatory\nOfficial" as RO #E3F2FD
 
 rectangle "Selma Application" as SYS {
-  rectangle "Conflict Resolution\n(conflict_resolver)" as BOUNDED {
+  rectangle "Conflict Resolution\n(ResolveConflict)" as BOUNDED {
 
     usecase "Detect Conflict"                as UC1
     usecase "Resolve Conflict\n(deterministic)" as UC2

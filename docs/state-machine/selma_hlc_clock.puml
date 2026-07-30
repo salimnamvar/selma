@@ -43,7 +43,7 @@ state "Partition Heal" as PartitionHeal #A93226 {
   Reconciling --> [*] : <b>HealCompleted</b>\nactor: System
 }
 
-Initialized --> Steady : <b>HlcStateLoaded</b>\nactor: System\ncommand: restore (pt, lc) from event_store
+Initialized --> Steady : <b>HlcStateLoaded</b>\nactor: System\ncommand: restore (pt, lc) from finding_events
 
 Steady --> LocalSend : <b>HlcLocalSend</b>\nactor: System\ncommand: hlc_send
 Steady --> RemoteReceive : <b>HlcRemoteReceive</b>\nactor: System\ncommand: hlc_receive

@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Finding Lifecycle\n(lifecycle_finder)" as BOUNDED {
+  rectangle "Finding Lifecycle\n(findings)" as BOUNDED {
 
     usecase "Create Finding\n(auto from inspection)" as UC1
     usecase "Open Finding"              as UC2

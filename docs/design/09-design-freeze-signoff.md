@@ -66,17 +66,17 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 | # | Artifact | Status | File |
 |---|----------|--------|------|
 | 26 | CLS-001 Domain Model | COMPLETE | `docs/class-diagram/cd_001_domain_model.puml` |
-| 27 | CLS-002 Application Services | COMPLETE | `docs/class-diagram/cd_002_application_services.puml` |
+| 27 | CLS-002 Application Services | COMPLETE | `docs/class-diagram/cd_002_apis.puml` |
 | 28 | CLS-003 Infrastructure Adapters | COMPLETE | `docs/class-diagram/cd_003_infrastructure_adapters.puml` |
 
 ### Entity-Relationship Diagrams (4 diagrams)
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 29 | ERD-001 Directive Store | COMPLETE | `docs/erd/erd_001_directive_store.puml` |
-| 30 | ERD-002 CG-IR Store | COMPLETE | `docs/erd/erd_002_cgir_store.puml` |
-| 31 | ERD-003 Event Store | COMPLETE | `docs/erd/erd_003_event_store.puml` |
-| 32 | ERD-004 Artifact Store | COMPLETE | `docs/erd/erd_004_artifact_store.puml` |
+| 29 | ERD-001 Directive Store | COMPLETE | `docs/erd/erd_001_directives.puml` |
+| 30 | ERD-002 CG-IR Store | COMPLETE | `docs/erd/erd_002_compiled_rules.puml` |
+| 31 | ERD-003 Event Store | COMPLETE | `docs/erd/erd_003_finding_events.puml` |
+| 32 | ERD-004 Artifact Store | COMPLETE | `docs/erd/erd_004_artifacts.puml` |
 
 ### Use Case Diagrams (8 diagrams)
 
@@ -164,14 +164,14 @@ All 8 bounded contexts defined in `docs/design/02-ddd-model.md` are covered:
 
 | Bounded Context | C4 Owner Components | Contract Domain | Coverage |
 |----------------|---------------------|-----------------|----------|
-| Governance Authoring | `directives_adapter`, `application_service` | `directive/*` | Full |
-| Compilation | `hermetic_compiler` | `compilation/*` | Full |
-| Compiled Rules | `compiled_rules_adapter` | `data_stores/cgir_store` | Full |
-| Inspection | `rule_inspector` | `inspection/*` | Full |
-| Finding Lifecycle | `lifecycle_finder` | `finding_lifecycle/*` | Full |
-| Authorization | `application_service` | `authorization/*` | Full |
-| Guidance & Analytics | `finding_analyzer` | policy doctrine (guidance) | Full |
-| Certification | `architectural_auditor` | `certification/*` | Full |
+| Governance Authoring | `directives_repository`, `api` | `directive/*` | Full |
+| Compilation | `compilation` | `compilation/*` | Full |
+| Compiled Rules | `compiled_rules_repository` | `data_stores/compiled_rules` | Full |
+| Inspection | `inspection` | `inspection/*` | Full |
+| Finding Lifecycle | `findings` | `finding_lifecycle/*` | Full |
+| Authorization | `api` | `authorization/*` | Full |
+| Guidance & Analytics | `findings` | policy doctrine (guidance) | Full |
+| Certification | `certification_tool` | `certification/*` | Full |
 
 ---
 
@@ -229,7 +229,7 @@ All 24 specification contracts under `docs/spec/contracts/` use `schema_version:
 | finding_lifecycle/ | states.yaml, transitions.yaml, sod_contract.yaml | 1.0.0 |
 | conflict/ | detection.yaml, precedence.yaml | 1.0.0 |
 | authorization/ | capabilities.yaml, role_matrix.yaml | 1.0.0 |
-| data_stores/ | directive_store.yaml, cgir_store.yaml, event_store.yaml, artifact_store.yaml | 1.0.0 |
+| data_stores/ | directives.yaml, compiled_rules.yaml, finding_events.yaml, artifacts.yaml | 1.0.0 |
 | certification/ | gates.yaml | 1.0.0 |
 | directive/ | lifecycle.yaml, identity.yaml, amendment.yaml | 1.0.0 |
 | interfaces/ | rest_api.yaml, cli_contract.yaml, tui_contract.yaml | 1.0.0 |

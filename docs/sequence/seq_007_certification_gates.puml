@@ -4,9 +4,9 @@
 title SEQ-007 Certification Gates\n7-Gate Architectural Certification
 
 actor "CI/CD Pipeline" as cicd
-participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
-participant "architectural_auditor\n(Python)" as AA #A3BE8C
-participant "snapshots_adapter\n(Python/Object Store)" as SA #81A1C1
+participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "certification_tool\n(offline/CI)" as AA #A3BE8C
+participant "artifacts_repository\n(Object Store)" as SA #81A1C1
 
 autonumber
 

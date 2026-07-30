@@ -1,4 +1,4 @@
-@startuml erd_001_directive_store
+@startuml erd_001_directives
 !include common/erd_styles.puml
 
 title Directive Store (PostgreSQL) — Mutable, Versioned

@@ -4,7 +4,7 @@
 
 contract_id: "inspection.finding"
 schema_version: "1.0.0"
-owner_component: "rule_inspector"
+owner_component: "inspection"
 description: >
   Defines the schema and semantics for finding objects produced by the
   inspection pipeline. Findings are the primary output of evaluation
@@ -141,7 +141,7 @@ invariants:
 
 stories:
   - story_id: "US-FC-001"
-    as: "rule_inspector"
+    as: "inspection"
     i_want: "to produce well-structured finding objects"
     so_that: "findings carry all information needed for lifecycle management"
     acceptance_criteria:

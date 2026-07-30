@@ -1,22 +1,16 @@
 # Selma Sequence Diagrams
 
-PlantUML sequence diagrams documenting the core workflows of the Selma compliance platform.
+PlantUML sequence diagrams for core resource workflows.
 
 ## Prerequisites
 
 - [PlantUML](https://plantuml.com/) (v1.2022.1+)
-- Java Runtime (for PlantUML rendering)
+- Java Runtime
 
 ## Usage
 
 ```bash
-# Render all diagrams
 plantuml docs/sequence/*.puml
-
-# Render a single diagram
-plantuml docs/sequence/seq_001_directive_crud.puml
-
-# Render to SVG (recommended for docs)
 plantuml -tsvg docs/sequence/*.puml
 ```
 
@@ -24,42 +18,37 @@ plantuml -tsvg docs/sequence/*.puml
 
 | ID | File | Description |
 |----|------|-------------|
-| SEQ-001 | [seq_001_directive_crud.puml](seq_001_directive_crud.puml) | Directive CRUD lifecycle (Create/Modify/Retire/Fork/Merge/Split/Restore) |
-| SEQ-002 | [seq_002_compilation_pipeline.puml](seq_002_compilation_pipeline.puml) | Hermetic compilation of directive graph to CG-IR |
-| SEQ-003 | [seq_003_inspection_pipeline.puml](seq_003_inspection_pipeline.puml) | 6-stage inspection pipeline (normalize, classify, select, evaluate, aggregate, report) |
-| SEQ-004 | [seq_004_finding_lifecycle.puml](seq_004_finding_lifecycle.puml) | Finding state transitions through 10-state FSM |
-| SEQ-005 | [seq_005_conflict_resolution.puml](seq_005_conflict_resolution.puml) | Deterministic + human conflict resolution |
-| SEQ-006 | [seq_006_guidance_resolution.puml](seq_006_guidance_resolution.puml) | Resolve paired policy doctrine for finding guidance |
-| SEQ-007 | [seq_007_certification_gates.puml](seq_007_certification_gates.puml) | 7-gate architectural certification (AA-01 through AA-07) |
-| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | Capability-based access control with Segregation of Duties |
+| SEQ-001 | [seq_001_directive_crud.puml](seq_001_directive_crud.puml) | Directive resource lifecycle |
+| SEQ-002 | [seq_002_compilation_pipeline.puml](seq_002_compilation_pipeline.puml) | Compilation → Compiled Rules |
+| SEQ-003 | [seq_003_inspection_pipeline.puml](seq_003_inspection_pipeline.puml) | Inspection pipeline |
+| SEQ-004 | [seq_004_finding_lifecycle.puml](seq_004_finding_lifecycle.puml) | Findings resource FSM |
+| SEQ-005 | [seq_005_conflict_resolution.puml](seq_005_conflict_resolution.puml) | ResolveConflict domain service |
+| SEQ-006 | [seq_006_guidance_resolution.puml](seq_006_guidance_resolution.puml) | Finding guidance via Directives |
+| SEQ-007 | [seq_007_certification_gates.puml](seq_007_certification_gates.puml) | Offline/CI certification tool |
+| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | Capability + SoD at API |
 
-## Shared Styles
+## Participants (C4 1.1.0)
 
-Common styling definitions are in [`common/seq_styles.puml`](common/seq_styles.puml). All diagrams include this file via `!include common/seq_styles.puml`.
+| ID | Technology | Role |
+|----|------------|------|
+| `clients` | CLI/Web/Desktop/Mobile | Driving adapters |
+| `api` | FastAPI/Pydantic | Resource API gate |
+| `compilation` | Python/JSON Schema/SHA-256 | Compile use cases |
+| `inspection` | Python/RE2/SHA-256 | Inspection use cases |
+| `findings` | Python/Pydantic | Findings lifecycle + guidance reads |
+| `ResolveConflict` | domain service | Precedence algorithm (not a C4 peer) |
+| `directives_repository` | SQLAlchemy/PostgreSQL | Directives port |
+| `compiled_rules_repository` | CAS | Compiled Rules port |
+| `finding_events_repository` | Append-Only | Finding Events port |
+| `artifacts_repository` | Object Store | Artifacts port |
+| `target_sources_gateway` | HTTP client | Optional remote targets |
+| `certification_tool` | offline/CI | AA gates (not in-process peer) |
 
-## Participants (Components)
+## Resource stores
 
-| Component | Technology | Role |
-|-----------|-----------|------|
-| selma_interface | CLI/WebApp/DesktopApp/MobileApp | User-facing interface |
-| application_service | FastAPI/Pydantic | API gateway and orchestration |
-| directives_adapter | Python/SQLAlchemy/PostgreSQL | Dual-document directive persistence (executable + doctrine) |
-| hermetic_compiler | Python/JSON Schema/SHA-256 | Deterministic CG-IR compilation |
-| compiled_rules_adapter | Python/SHA-256/CAS | Compiled rule storage (CAS) |
-| rule_inspector | Python/RE2/SHA-256 | 6-stage inspection engine |
-| lifecycle_finder | Python/Pydantic | Finding FSM lifecycle management |
-| conflict_resolver | Python/Pydantic | Conflict detection and resolution |
-| finding_analyzer | Python/Pydantic | Guidance via directives_adapter; analytics |
-| architectural_auditor | Python | 7-gate certification auditor |
-| snapshots_adapter | Python/Object Store | Inspection snapshot persistence |
-| findings_audit_adapter | Python/SHA-256/Append-Only | Finding audit trail (append-only) |
-| target_adapter | Python/HTTP Client | Target data retrieval |
-
-## Data Stores
-
-| Store | Type | Purpose |
+| C4 ID | Type | Purpose |
 |-------|------|---------|
-| directive_store | PostgreSQL | Dual-document directives (executable rule + policy doctrine), versioned revisions |
-| cgir_store | Content-Addressed Storage | CG-IR nodes, edges, and snapshots |
-| event_store | Append-Only Log | Finding events and audit trail |
-| artifact_store | Object Store | Inspection snapshots and certification artifacts |
+| `directives` | PostgreSQL | Dual-document directives |
+| `compiled_rules` | CAS | Immutable CG-IR snapshots |
+| `finding_events` | Append-Only Log | Finding lifecycle events |
+| `artifacts` | Object Store | Write-once evidence blobs |

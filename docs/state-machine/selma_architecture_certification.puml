@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — Architectural Certification State Machine
 ' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-07)
-' C4:      Architectural Auditor → Snapshots Adapter → artifact_store
+' C4:      Architectural Auditor → Snapshots Adapter → artifacts
 '          trigger: CI/CD → Application Service
 ' Contract: 1.0.0
 ' ============================================================
@@ -20,7 +20,7 @@ state "Collecting\nEvidence" as CollectingEvidence #1B7A6E : **entry** load CG-I
 state "Validating Gates" as ValidatingGates #1B7A6E {
   [*] --> AA01
   state "AA-01\nMediated Feedback" as AA01 #1B7A6E : **entry** analytics has no write path\nto CG-IR / Finding FSM\nmethod: integration (no finding→compile)
-  state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** doctrine guidance_only via\ndirectives_adapter; absent from\nevaluation/FSM paths\nmethod: static analysis + path assert
+  state "AA-02\nDeclarative Governance" as AA02 #1B7A6E : **entry** doctrine guidance_only via\ndirectives_repository; absent from\nevaluation/FSM paths\nmethod: static analysis + path assert
   state "AA-03\nEvaluator Purity" as AA03 #1B7A6E : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
   state "AA-04\nSegregation of Duties" as AA04 #1B7A6E : **entry** waive + approve SoD tests\nmethod: integration SoD corpus
   state "AA-05\nConflict Determinism" as AA05 #1B7A6E : **entry** byte-identical replay\nmethod: conflict replay corpus
@@ -39,7 +39,7 @@ state "Validating Gates" as ValidatingGates #1B7A6E {
 state "Passed" as Passed #2C6E49 : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
 state "Failed" as Failed #A93226 : **entry** one or more gates red\n**allowed** write fail evidence\n**forbidden** certify
 state "Rejected" as Rejected #A93226 : **entry** evidence incomplete\nor non-reproducible run\n**allowed** remediate then re-run\n**forbidden** certify
-state "Certified" as Certified #2C6E49 : **entry** certification artifact sealed\n**allowed** archive · audit_platform replica\n**forbidden** alter gate report
+state "Certified" as Certified #2C6E49 : **entry** certification artifact sealed\n**allowed** archive · optional long-term export\n**forbidden** alter gate report
 state "Remediation\nRequired" as RemediationRequired #B9770E : **entry** engineering fixes needed\n**allowed** new commit / rebuild\n**forbidden** mutate CG-IR · Finding FSM · Directive Graph
 state "Archived" as Archived #4A4A4A : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** rewrite
 
@@ -63,7 +63,7 @@ Passed --> Certified : <b>CertificationSealed</b>\nactor: System\ncommand: write
 Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: US-GA-001
 Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nactor: System
 
-Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async audit_platform replica
+Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async optional long-term export
 RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (CI/CD)\ncommand: new certification run_id
 Archived --> [*] : <b>Finalized</b>\nactor: System
 

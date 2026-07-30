@@ -1,10 +1,11 @@
 ' ============================================================
 ' Title:     Selma -- Component Diagram
-' Boundary:  Selma Application
-' Purpose:   Internal components of selma_app. Selma Interface,
-'            data stores, and external systems from the Container
-'            Diagram appear as external. No modules — components only.
-' Contract:  1.0.0
+' Boundary:  Application
+' Purpose:   Clean Architecture inside Application:
+'            API (driving) → use-case clusters → repositories
+'            (driven). Domain services (e.g. ResolveConflict)
+'            are not peer components.
+' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram
@@ -16,158 +17,65 @@ title Selma -- Component Diagram
 
 LAYOUT_LEFT_RIGHT()
 
-' ============================================================
-'  EXTERNAL SYSTEMS (ID + Name from c4_identities.puml)
-' ============================================================
+System_Ext(target_sources, $NAME_target_sources, $DESC_target_sources)
 
-System_Ext(cicd, $NAME_cicd, $DESC_cicd)
-System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
-System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
-System_Ext(remediation_systems, $NAME_remediation_systems, $DESC_remediation_systems)
+Container_Ext(clients, $NAME_clients, $TECH_clients, $DESC_clients)
 
+ContainerDb_Ext(directives, $NAME_directives, $TECH_directives, $DESC_directives, $tags="store")
+ContainerDb_Ext(compiled_rules, $NAME_compiled_rules, $TECH_compiled_rules, $DESC_compiled_rules, $tags="store")
+ContainerDb_Ext(finding_events, $NAME_finding_events, $TECH_finding_events, $DESC_finding_events, $tags="store")
+ContainerDb_Ext(artifacts, $NAME_artifacts, $TECH_artifacts, $DESC_artifacts, $tags="store")
 
-' ============================================================
-'  SELMA INTERFACE (ID + Name from Container; now external)
-' ============================================================
+Container_Boundary(application, $NAME_application) {
 
-Container_Ext(selma_interface, $NAME_selma_interface, $TECH_selma_interface, $DESC_selma_interface)
+    Component(api, $NAME_api, $TECH_api, $DESC_api, $tags="gate")
 
+    Component(compilation, $NAME_compilation, $TECH_compilation, $DESC_compilation, $tags="hermetic")
+    Component(inspection, $NAME_inspection, $TECH_inspection, $DESC_inspection)
+    Component(findings, $NAME_findings, $TECH_findings, $DESC_findings)
 
-' ============================================================
-'  DATA STORES (ID + Name from Container; now external)
-' ============================================================
-
-ContainerDb_Ext(directive_store, $NAME_directive_store, $TECH_directive_store, $DESC_directive_store, $tags="store")
-ContainerDb_Ext(cgir_store, $NAME_cgir_store, $TECH_cgir_store, $DESC_cgir_store, $tags="store")
-ContainerDb_Ext(event_store, $NAME_event_store, $TECH_event_store, $DESC_event_store, $tags="store")
-ContainerDb_Ext(artifact_store, $NAME_artifact_store, $TECH_artifact_store, $DESC_artifact_store, $tags="store")
-
-
-' ============================================================
-'  SELMA APPLICATION BOUNDARY (ID = selma_app, Name = $NAME_selma_app)
-' ============================================================
-
-Container_Boundary(selma_app, $NAME_selma_app) {
-
-    Component(application_service, $NAME_application_service, $TECH_application_service, $DESC_application_service, $tags="gate")
-    Component(hermetic_compiler, $NAME_hermetic_compiler, $TECH_hermetic_compiler, $DESC_hermetic_compiler, $tags="hermetic")
-    Component(rule_inspector, $NAME_rule_inspector, $TECH_rule_inspector, $DESC_rule_inspector)
-    Component(conflict_resolver, $NAME_conflict_resolver, $TECH_conflict_resolver, $DESC_conflict_resolver)
-    Component(lifecycle_finder, $NAME_lifecycle_finder, $TECH_lifecycle_finder, $DESC_lifecycle_finder)
-    Component(finding_analyzer, $NAME_finding_analyzer, $TECH_finding_analyzer, $DESC_finding_analyzer)
-    Component(architectural_auditor, $NAME_architectural_auditor, $TECH_architectural_auditor, $DESC_architectural_auditor)
-    Component(directives_adapter, $NAME_directives_adapter, $TECH_directives_adapter, $DESC_directives_adapter)
-    Component(compiled_rules_adapter, $NAME_compiled_rules_adapter, $TECH_compiled_rules_adapter, $DESC_compiled_rules_adapter)
-    Component(findings_audit_adapter, $NAME_findings_audit_adapter, $TECH_findings_audit_adapter, $DESC_findings_audit_adapter)
-    Component(snapshots_adapter, $NAME_snapshots_adapter, $TECH_snapshots_adapter, $DESC_snapshots_adapter)
-    Component(target_adapter, $NAME_target_adapter, $TECH_target_adapter, $DESC_target_adapter)
+    Component(directives_repository, $NAME_directives_repository, $TECH_directives_repository, $DESC_directives_repository)
+    Component(compiled_rules_repository, $NAME_compiled_rules_repository, $TECH_compiled_rules_repository, $DESC_compiled_rules_repository)
+    Component(finding_events_repository, $NAME_finding_events_repository, $TECH_finding_events_repository, $DESC_finding_events_repository)
+    Component(artifacts_repository, $NAME_artifacts_repository, $TECH_artifacts_repository, $DESC_artifacts_repository)
+    Component(target_sources_gateway, $NAME_target_sources_gateway, $TECH_target_sources_gateway, $DESC_target_sources_gateway)
 
 }
 
+' Driving: clients → api
+Rel(clients, api, "resource-oriented API calls", "REST / HTTPS", $tags="capability_enforced")
 
-' ============================================================
-'  RELATIONSHIPS -- Interface -> Application Service
-' ============================================================
+' API → use-case clusters
+Rel(api, directives_repository, "directive resource CRUD and lifecycle", "Internal", $tags="capability_enforced")
+Rel(api, compilation, "triggers compile on directive change", "Internal")
+Rel(api, inspection, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
+Rel(api, findings, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
+Rel(api, finding_events_repository, "appends capability denial events", "Append-Only", $tags="immutable")
 
-Rel(selma_interface, application_service, "forwards user requests as REST API calls", "REST / HTTPS", $tags="capability_enforced")
+' Compilation
+Rel(compilation, directives_repository, "reads executable documents under read-lock", "Internal", $tags="compile_only")
+Rel(compilation, compiled_rules_repository, "publishes compiled rule snapshots", "Internal", $tags="compile_only")
 
+' Inspection
+Rel(inspection, target_sources_gateway, "fetches remote targets when referenced", "Internal", $tags="mediated")
+Rel(inspection, compiled_rules_repository, "loads frozen compiled rules", "Internal", $tags="validation_only")
+Rel(inspection, findings, "opens findings after evaluation", "Internal", $tags="immutable")
+Rel(inspection, artifacts_repository, "writes inspection snapshots and traces", "Internal", $tags="immutable")
 
-' ============================================================
-'  RELATIONSHIPS -- External System Interactions
-' ============================================================
+' Findings
+Rel(findings, finding_events_repository, "appends lifecycle and SoD events", "Internal", $tags="immutable")
+Rel(findings, compiled_rules_repository, "reads creator provenance for SoD", "Internal", $tags="validation_only")
+Rel(findings, directives_repository, "reads policy doctrine for guidance", "Internal", $tags="guidance_only")
+Rel(findings, artifacts_repository, "reads and writes conflict and evidence artifacts", "Internal", $tags="immutable")
 
-Rel(target_adapter, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
-Rel(cicd, application_service, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
-Rel(lifecycle_finder, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
+' Optional external
+Rel(target_sources_gateway, target_sources, "fetches targets by reference", "HTTPS / API", $tags="mediated")
 
-
-' ============================================================
-'  RELATIONSHIPS -- Application Service -> Components
-' ============================================================
-
-Rel(application_service, directives_adapter, "routes directive CRUD and lifecycle operations", "Internal", $tags="capability_enforced")
-Rel(application_service, hermetic_compiler, "triggers compilation on directive change or CI/CD request", "Internal")
-Rel(application_service, rule_inspector, "routes inspection submissions with target payload", "Internal", $tags="capability_enforced")
-Rel(application_service, lifecycle_finder, "routes finding lifecycle transitions and evidence submission", "Internal", $tags="capability_enforced")
-Rel(application_service, conflict_resolver, "routes conflict resolution and consistency review requests", "Internal", $tags="capability_enforced")
-Rel(application_service, finding_analyzer, "routes read queries for analytics, directives, findings, and audits", "Internal", $tags="capability_enforced")
-Rel(application_service, architectural_auditor, "triggers architectural certification on CI/CD request", "Internal", $tags="validation_only")
-Rel(application_service, findings_audit_adapter, "appends denied-request records", "Append-Only", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Hermetic Compiler
-' ============================================================
-
-Rel(hermetic_compiler, directives_adapter, "reads executable rule documents and lineage under read-lock (not policy doctrines)", "Internal", $tags="compile_only")
-Rel(hermetic_compiler, compiled_rules_adapter, "publishes immutable compiled rule snapshots", "Internal", $tags="compile_only")
-Rel(hermetic_compiler, conflict_resolver, "applies conflict resolution mapping at compile time", "Internal", $tags="compile_only")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Rule Inspector
-' ============================================================
-
-Rel(rule_inspector, target_adapter, "requests target retrieval from external systems", "Internal", $tags="mediated")
-Rel(rule_inspector, compiled_rules_adapter, "loads frozen rule snapshot for evaluation", "Internal", $tags="validation_only")
-Rel(rule_inspector, finding_analyzer, "fetches historical finding summaries for inspection context", "Internal", $tags="validation_only")
-Rel(rule_inspector, conflict_resolver, "applies pre-computed conflict resolution when multiple rules fire", "Internal", $tags="validation_only")
-Rel(rule_inspector, lifecycle_finder, "emits new findings after evaluation completes", "Internal", $tags="immutable")
-Rel(rule_inspector, snapshots_adapter, "stores inspection snapshot, execution trace, and reproducibility hash", "Internal", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Lifecycle Finder
-' ============================================================
-
-Rel(lifecycle_finder, findings_audit_adapter, "appends finding lifecycle, permission denial, and segregation-of-duties events", "Internal", $tags="immutable")
-Rel(lifecycle_finder, compiled_rules_adapter, "reads provenance data for segregation-of-duties enforcement", "Internal", $tags="validation_only")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Conflict Resolver
-' ============================================================
-
-Rel(conflict_resolver, compiled_rules_adapter, "reads frozen rule metadata for specificity scoring and priority comparison", "Internal", $tags="validation_only")
-Rel(conflict_resolver, snapshots_adapter, "stores and reads conflict artifacts pending human resolution", "Internal", $tags="immutable")
-Rel(conflict_resolver, findings_audit_adapter, "appends conflict resolution permission denial records", "Internal", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Finding Analyzer (Read-Only)
-' ============================================================
-
-Rel(finding_analyzer, findings_audit_adapter, "reads finding events for aggregates, trends, and views", "Internal", $tags="validation_only")
-Rel(finding_analyzer, compiled_rules_adapter, "reads compiled rule nodes for directive views and causal explanations", "Internal", $tags="validation_only")
-Rel(finding_analyzer, directives_adapter, "reads paired policy doctrine documents for guidance resolution after evaluation", "Internal", $tags="guidance_only")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Architectural Auditor
-' ============================================================
-
-Rel(architectural_auditor, compiled_rules_adapter, "inspects compiled rules for evaluator purity, conflict determinism, discriminator completeness, and portability", "Internal", $tags="validation_only")
-Rel(architectural_auditor, findings_audit_adapter, "inspects event stream for segregation-of-duties enforcement evidence", "Internal", $tags="validation_only")
-Rel(architectural_auditor, hermetic_compiler, "inspects compilation assertion output for policy runtime prohibition", "Internal", $tags="validation_only")
-Rel(architectural_auditor, snapshots_adapter, "writes certification artifacts with pass/fail evidence", "Internal", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Adapter -> Data Store
-' ============================================================
-
-Rel(directives_adapter, directive_store, "reads and writes dual-document directives (executable rule + policy doctrine), lineage, and revisions", "SQL", $tags="capability_enforced")
-Rel(compiled_rules_adapter, cgir_store, "publishes and loads immutable compiled rule snapshots", "CAS", $tags="immutable")
-Rel(findings_audit_adapter, event_store, "appends finding events and security denial records", "Append-Only", $tags="immutable")
-Rel(snapshots_adapter, artifact_store, "stores inspection snapshots, traces, conflict artifacts, and certification artifacts", "Object Write", $tags="immutable")
-
-
-' ============================================================
-'  RELATIONSHIPS -- Audit Replication
-' ============================================================
-
-Rel(findings_audit_adapter, audit_platform, "publishes finding events and security audit records for long-term retention", "Append-Only", $tags="immutable_async")
-Rel(snapshots_adapter, audit_platform, "publishes inspection snapshots, traces, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")
+' Repositories → stores
+Rel(directives_repository, directives, "persists dual-document directives", "SQL", $tags="capability_enforced")
+Rel(compiled_rules_repository, compiled_rules, "publishes and loads snapshots", "CAS", $tags="immutable")
+Rel(finding_events_repository, finding_events, "appends events", "Append-Only", $tags="immutable")
+Rel(artifacts_repository, artifacts, "write-once artifacts", "Object Write", $tags="immutable")
 
 SHOW_LEGEND()
 @enduml

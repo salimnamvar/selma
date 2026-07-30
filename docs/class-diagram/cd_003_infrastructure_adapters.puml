@@ -245,15 +245,15 @@ package "<<external>>\nExternal Dependencies" as EXTERNAL #ECEFF1/546E7A {
   }
 
   class "**PostgreSQL**" as PostgreSQL <<Database>> #ECEFF1/546E7A {
-    directive_store, event_store
+    directives, finding_events
   }
 
   class "**Object Store**" as ObjectStore <<Storage>> #ECEFF1/546E7A {
-    artifact_store (S3-compatible)
+    artifacts (S3-compatible)
   }
 
   class "**Filesystem**" as Filesystem <<Storage>> #ECEFF1/546E7A {
-    cgir_store (CAS)
+    compiled_rules (CAS)
   }
 }
 

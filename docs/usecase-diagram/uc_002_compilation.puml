@@ -9,7 +9,7 @@ actor "CI/CD\nPipeline" as CICD #E8F5E9
 actor "Regulatory\nOfficial" as RO #E3F2FD
 
 rectangle "Selma Application" as SYS {
-  rectangle "Compilation\n(hermetic_compiler)" as BOUNDED {
+  rectangle "Compilation\n(compilation)" as BOUNDED {
 
     usecase "Trigger Compilation"             as UC1
     usecase "Validate Rule Schema"            as UC2
@@ -40,7 +40,7 @@ UC8 ..> UC6 : <<extend>>
 
 ' ---- notes ----
 note right of UC1
-  **Pre:** Executable documents in directive_store; CI or directive change trigger
+  **Pre:** Executable documents in directives; CI or directive change trigger
   **Post:** Compilation pipeline initiated
 end note
 
@@ -51,7 +51,7 @@ end note
 
 note bottom of UC7
   **Pre:** CG-IR materialized
-  **Post:** Snapshot published to cgir_store (CAS)
+  **Post:** Snapshot published to compiled_rules (CAS)
 end note
 
 @enduml

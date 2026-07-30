@@ -41,7 +41,7 @@ Insp --> Conf : <b>ConflictDetected</b>\nmulti-rule fire on frozen CG-IR
 
 Find --> Hlc : <b>FindingEventAppended</b>\nevery success event
 Hlc --> Find : <b>HlcTagged</b>\ntag logical_clock
-Find --> Art : <b>FindingEventAppended</b>\nappend event_store
+Find --> Art : <b>FindingEventAppended</b>\nappend finding_events
 
 Conf --> Art : <b>ConflictArtifactPublished</b>
 Comp --> Conf : <b>ConflictDetected</b>\ncompile-time conflict map

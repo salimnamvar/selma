@@ -41,7 +41,7 @@ orchestration.
 | `GetInspection` | (read) | ArtifactRepository | — |
 | `ExplainFinding` | `finding.view` | EventStore, CgIrRepository, DirectiveRepository.readPolicyDoctrine (guidance) | US-IP-002 |
 
-**Invariant:** Rule Inspector evaluation path does **not** call `DirectiveRepository.readPolicyDoctrine`.
+**Invariant:** Inspection evaluation path (`inspection` component) does **not** call `DirectiveRepository.readPolicyDoctrine`.
 
 ## Finding lifecycle
 
@@ -77,7 +77,7 @@ System automatic transitions (Created→Open, Evidence→Pending, Verified/Waive
 
 | Use case | Capability | Ports | Stories |
 | :--- | :--- | :--- | :--- |
-| `RunArchitecturalCertification` | CI / auditor | all relevant fakes/fixtures, ArtifactRepository | US-GA-001, AA-01…AA-07 |
+| `RunArchitecturalCertification` | offline / CI tool (not in-process C4 peer) | fixtures + ArtifactRepository | US-GA-001, AA-01…AA-07 |
 
 ## Interface mapping (REST families)
 

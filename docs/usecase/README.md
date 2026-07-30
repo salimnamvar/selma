@@ -10,9 +10,9 @@ This file is a navigational index only — no use case prose lives here.
 | Actor | C4 ID | Summary |
 | :--- | :--- | :--- |
 | Regulatory Official | `regulatory_official` | Full directive lifecycle, dispositions, conflict resolution |
-| Compliance Representative | `compliance_rep` | Submit targets, acknowledge findings, submit evidence |
+| Compliance Representative | `compliance_representative` | Submit targets, acknowledge findings, submit evidence |
 | System | — | Automatic FSM edges, compilation, inspection evaluation |
-| CI/CD | `cicd` | Architectural certification trigger |
+| Certification runner | offline/CI tool | Optional AA-01…AA-07 gates (not a C4 external peer) |
 | AI Agent | (acts as official or rep) | Same capabilities as human principal |
 
 ## Epic Index

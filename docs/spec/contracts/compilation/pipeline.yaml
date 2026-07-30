@@ -4,7 +4,7 @@
 
 contract_id: "compilation.pipeline"
 schema_version: "1.0.0"
-owner_component: "hermetic_compiler"
+owner_component: "compilation"
 state_machine_ref: "../../state-machine/selma_compilation_pipeline.puml"
 description: >
   Defines the canonical transformation pipeline from Directive Graph to
@@ -178,7 +178,7 @@ invariants:
 
 stories:
   - story_id: "US-CP-001"
-    as: "hermetic_compiler"
+    as: "compilation"
     i_want: "to compile directives into immutable CG-IR snapshots"
     so_that: "evaluation is deterministic and reproducible"
     acceptance_criteria:
@@ -187,7 +187,7 @@ stories:
       - "Given a published CG-IR snapshot. When any mutation is attempted. Then the mutation is rejected (immutability)."
 
   - story_id: "US-CP-002"
-    as: "hermetic_compiler"
+    as: "compilation"
     i_want: "to validate schema before any CG-IR generation"
     so_that: "invalid directives never reach the execution layer"
     acceptance_criteria:
@@ -196,7 +196,7 @@ stories:
       - "Given a rule with non-UTC timestamp. When validation runs. Then the rule is rejected with SchemaError."
 
   - story_id: "US-CP-003"
-    as: "hermetic_compiler"
+    as: "compilation"
     i_want: "to reuse unchanged subgraphs during incremental compilation"
     so_that: "compilation is efficient for large directive sets"
     acceptance_criteria:

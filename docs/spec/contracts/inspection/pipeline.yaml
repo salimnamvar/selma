@@ -4,7 +4,7 @@
 
 contract_id: "inspection.pipeline"
 schema_version: "1.0.0"
-owner_component: "rule_inspector"
+owner_component: "inspection"
 state_machine_ref: "../../state-machine/selma_inspection_pipeline.puml"
 description: >
   Defines the 6-stage inspection pipeline that evaluates a target against a
@@ -205,7 +205,7 @@ invariants:
 
 stories:
   - story_id: "US-IP-001"
-    as: "rule_inspector"
+    as: "inspection"
     i_want: "to evaluate targets against frozen CG-IR snapshots"
     so_that: "compliance findings are deterministic and reproducible"
     acceptance_criteria:
@@ -214,7 +214,7 @@ stories:
       - "Given a dependency-failed node. When evaluation runs. Then the dependent node is skipped with no finding (Skipped trace entry only)."
 
   - story_id: "US-IP-002"
-    as: "rule_inspector"
+    as: "inspection"
     i_want: "to apply deontic modality semantics to detection outcomes"
     so_that: "findings correctly reflect the nature of the rule violation"
     acceptance_criteria:

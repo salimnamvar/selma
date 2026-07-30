@@ -6,17 +6,19 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 
 | ID | Title | File | Description |
 |:---|:------|:-----|:------------|
-| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Full production topology: network zones, containers, data stores, external systems, monitoring |
+| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Topology aligned with C4 containers and resource stores |
 
 ## Network Zones
 
 | Zone | Purpose | Components |
 |:-----|:--------|:-----------|
-| **Public** | User-facing entry point | Load Balancer, Selma Interface |
-| **Application** | Core business logic | Selma Application container |
-| **Data** | Persistent storage | PostgreSQL, CGIR Store, Event Store, Artifact Store |
-| **External** | Third-party integrations | CI/CD, Target Systems, Audit Platform, Remediation |
-| **Monitoring** | Observability stack | Prometheus/Grafana, ELK/Loki, Jaeger |
+| **Public** | User-facing entry | Load balancer, Clients |
+| **Application** | Core process | Application (`api`, compilation, inspection, findings) |
+| **Data** | Resource stores | Directives, Compiled Rules, Finding Events, Artifacts |
+| **External** | Optional only | Target Sources (pull by reference) |
+| **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
+
+CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers.
 
 ## Environment Requirements
 
@@ -24,75 +26,60 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 
 | Requirement | Version | Notes |
 |:------------|:--------|:------|
-| Python | 3.11+ | Runtime for Selma Application |
+| Python | 3.11+ | Application runtime |
 | Docker | 24+ | Container runtime |
-| PostgreSQL | 15+ | Directive Store, Event Store |
-| Nginx / Traefik | latest | Load balancer and TLS termination |
+| PostgreSQL | 15+ | Directives + Finding Events |
+| Nginx / Traefik | latest | TLS termination |
 
-### Compute Resources (per Selma Application container)
+### Compute Resources (per Application replica)
 
 | Resource | Minimum | Recommended |
 |:---------|:--------|:------------|
 | CPU | 2 cores | 4 cores |
 | RAM | 4 GB | 8 GB |
-| Disk | 20 GB | 50 GB (for local CGIR/artifact cache) |
+| Disk | 20 GB | 50 GB (local Compiled Rules / Artifacts cache) |
 
 ### Data Store Sizing
 
-| Store | Storage Type | Scaling Strategy |
-|:------|:-------------|:-----------------|
-| Directive Store | PostgreSQL (managed or self-hosted) | Vertical + read replicas |
-| CGIR Store | Filesystem or S3-compatible | Horizontal (object store) |
-| Event Store | PostgreSQL (append-only) or Kafka | Partition by time |
-| Artifact Store | S3-compatible object store | Horizontal (object store) |
+| C4 store | Storage type | Scaling |
+|:---------|:-------------|:--------|
+| Directives | PostgreSQL | Vertical + read replicas |
+| Compiled Rules | Filesystem or S3 CAS | Horizontal object store |
+| Finding Events | PostgreSQL append-only or Kafka | Partition by time |
+| Artifacts | S3-compatible object store | Horizontal |
 
 ## Deployment Notes
 
-### Hermetic Compiler
+### Compilation (hermetic)
 
-The Hermetic Compiler operates in a **network-isolated environment** during rule compilation. This ensures:
+- Deterministic compile; no network egress mid-compile
+- Executable documents read from **Directives** under read-lock before hermetic boundary
+- Policy doctrines are not loaded for evaluation
 
-- Deterministic compilation output (no external fetches mid-compile)
-- Security guarantee: compiled rules cannot exfiltrate data during compilation
-- Executable rule documents are read from the **Directive Store** under read-lock **before** entering the hermetic boundary; policy doctrines are not loaded for evaluation
+### TLS
 
-### TLS Termination
+TLS terminates at the load balancer. Internal zone traffic may use plain HTTP in a trusted network; mTLS optional for zero-trust.
 
-TLS is terminated at the load balancer. Internal traffic between zones uses plain HTTP within the trusted network. For zero-trust environments, enable mTLS between zones.
+### Connection pooling
 
-### Connection Pooling
-
-Use PgBouncer or equivalent connection pooler in front of PostgreSQL to manage:
-
-- Directive Store connections (read/write with locking)
-- Event Store connections (append-only writes)
+PgBouncer (or equivalent) for Directives and Finding Events.
 
 ### Backup & Recovery
 
-| Store | Backup Strategy | RPO | RTO |
-|:------|:----------------|:----|:----|
-| Directive Store | Automated PITR (point-in-time recovery) | < 5 min | < 1 hour |
-| CGIR Store | None required (reconstructable by recompiling from Directive Store) | N/A | < 30 min (recompile) |
-| Event Store | Replicated + archived to Audit Platform | < 1 min | < 1 hour |
-| Artifact Store | Cross-region replication | < 15 min | < 2 hours |
+| C4 store | Backup | RPO | RTO |
+|:---------|:-------|:----|:----|
+| Directives | PITR | < 5 min | < 1 hour |
+| Compiled Rules | Rebuild by recompile from Directives | N/A | < 30 min |
+| Finding Events | Replicated append log | < 1 min | < 1 hour |
+| Artifacts | Cross-region replication | < 15 min | < 2 hours |
 
-### Horizontal Scaling
+### Horizontal scaling
 
-The Selma Application supports horizontal scaling via multiple container replicas behind the load balancer. State is fully externalized to the data stores. The Hermetic Compiler does not require sticky sessions.
-
-### Monitoring Endpoints
-
-| Stack | Protocol | Purpose |
-|:------|:---------|:--------|
-| Prometheus | HTTP `/metrics` | Application and infrastructure metrics |
-| ELK / Loki | OTLP or stdout | Structured application logs |
-| Jaeger | OTLP / Jaeger agent | Distributed request tracing |
+Application replicas behind the load balancer; state externalized to the four stores.
 
 ## Security Considerations
 
-1. **Network segmentation**: Data zone is not directly accessible from Public zone; all traffic routes through Application zone
-2. **Hermetic boundary**: No network egress during compile phase
-3. **Write-once artifacts**: Artifact Store enforces WORM (write once, read many) semantics
-4. **Append-only events**: Event Store is append-only; no mutation or deletion of events
-5. **Immutable CGIR**: Compiled rule snapshots are content-addressed and immutable
-6. **Capability enforcement**: All user actions are gated by capability checks at the Application Service boundary
+1. Network segmentation: Data zone not reachable from Public without Application
+2. Hermetic boundary during compile
+3. Write-once Artifacts; append-only Finding Events; immutable Compiled Rules
+4. Capability enforcement at `api`

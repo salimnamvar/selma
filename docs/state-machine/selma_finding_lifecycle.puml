@@ -3,7 +3,7 @@
 ' Selma — Finding Lifecycle State Machine (NORMATIVE)
 ' Source:  docs/spec/contracts/finding_lifecycle/
 '          (states.yaml, transitions.yaml, sod_contract.yaml)
-' C4:      Lifecycle Finder → Findings & Audit Trail Adapter → event_store
+' C4:      Lifecycle Finder → Findings & Audit Trail Adapter → finding_events
 ' Contract: 1.0.0
 ' ============================================================
 

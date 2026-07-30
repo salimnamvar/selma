@@ -54,7 +54,7 @@ cross_layer_binding:
     spec_layer: "Normative resolve_conflict algorithm defined in docs/spec/contracts/conflict/"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
   runtime_role: >
-    Instance documents conforming to this schema are stored in directive_store
+    Instance documents conforming to this schema are stored in directives
     alongside the paired executable rule document (dual-document Directive).
     They ARE read at runtime ONLY AFTER evaluation produces a finding, via
     Directives Adapter (DirectiveRepository.readPolicyDoctrine) and
@@ -64,7 +64,7 @@ cross_layer_binding:
     compile-time validators check pairing/version legality — never by
     interpreting policy prose as executable logic.
   storage: >
-    System of record: directive_store (PostgreSQL), co-versioned with
+    System of record: directives (PostgreSQL), co-versioned with
     executable_document under the same lineage/execution revision.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
@@ -495,15 +495,15 @@ runtime_usage:
   description: >
     Documents how Selma's components use this policy doctrine at runtime.
     This is meta-documentation, not executable logic. Instance documents
-    are stored in directive_store with the paired executable rule.
+    are stored in directives with the paired executable rule.
   storage: >
-    System of record: directive_store via Directives Adapter. No separate
+    System of record: directives via Directives Adapter. No separate
     filesystem doctrine path or PolicyDoctrineReader component.
   guidance_resolution: >
     After Rule Inspector creates a finding, paired_policy_ref on the finding
     is resolved by Finding Analyzer through Directives Adapter
     (DirectiveRepository.readPolicyDoctrine). The doctrine document is loaded
-    from directive_store only for guidance fields.
+    from directives only for guidance fields.
   ai_agent_consumption: >
     AI agents receive the full guidance section via the query API. They use:
     1. vocabulary to understand canonical terms

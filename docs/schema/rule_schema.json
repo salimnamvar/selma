@@ -32,12 +32,12 @@
     "spec_is_normative": true,
     "schema_is_structural_projection": true,
     "policy_is_governance_intent": true,
-    "policy_runtime_role": "Paired policy doctrine documents live in directive_store with the executable rule (dual-document Directive). They are read AFTER evaluation for guidance/reasoning via Directives Adapter and paired_policy_ref. NOT used for evaluation, inspection, or FSM transitions. No separate PolicyDoctrineReader.",
+    "policy_runtime_role": "Paired policy doctrine documents live in directives with the executable rule (dual-document Directive). They are read AFTER evaluation for guidance/reasoning via Directives Adapter and paired_policy_ref. NOT used for evaluation, inspection, or FSM transitions. No separate PolicyDoctrineReader.",
     "runtime_executable_source": "docs/spec/contracts/conflict/ resolve_conflict over schema/CG-IR fields only",
     "rule": "docs/spec/contracts/ is the normative behavioral source. Schema is a structural projection of contract invariants. Policy describes governance intent only.",
     "version_compatibility_math": "A rule dataset with schema version S.S.S is compatible with policy version P.P.P if and only if major(S) == major(P). Formally: dataset(s) accepts policy(p) ⟺ ⌊s⌋ == ⌊p⌋. MINOR and PATCH differences are compatible within the same MAJOR family. A validator MUST reject datasets where major versions differ.",
     "adapter_pattern_note": "Language-specific detection details belong ONLY in detection_spec.adapters[].adapter_config. The universal detection spec (structural_spec, semantic_spec, pattern_spec, composite_spec) MUST remain language-agnostic. Adapters translate abstract detection to concrete language-specific evaluators.",
-    "policy_contract_version_check": "JSON Schema cannot enforce that policy_contract_version matches the paired policy_doctrine_document version in directive_store. The compilation engine MUST reject directives where major(policy_contract_version) != major(doctrine.version) at compile time.",
+    "policy_contract_version_check": "JSON Schema cannot enforce that policy_contract_version matches the paired policy_doctrine_document version in directives. The compilation engine MUST reject directives where major(policy_contract_version) != major(doctrine.version) at compile time.",
     "audit_corpus": "Formal verification audits MUST include docs/spec/contracts/, rule_schema.json, policy_doctrine.yaml, and docs/spec/README.md as the complete normative corpus. Archived prose lives under docs/spec/ARCHIVE_* for historical reference only."
   },
   "x-discriminator-note": {

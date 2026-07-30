@@ -41,7 +41,7 @@ src/selma/
     clock/
     bootstrap/              # logging, lifespan, config load
   interfaces/
-    rest/                   # Application Service HTTP
+    rest/                   # api component (resource-oriented HTTP)
     cli/
     tui/
   composition/              # DI / wiring only
@@ -51,17 +51,23 @@ src/selma/
 
 | Package | C4 components | Contracts |
 | :--- | :--- | :--- |
-| `domain.governance` | directives domain | `directive/*` |
-| `domain.compilation` | hermetic models | `compilation/*` |
-| `domain.inspection` | inspector models | `inspection/*` |
-| `domain.finding` | lifecycle_finder models | `finding_lifecycle/*` |
-| `domain.conflict` | conflict_resolver models | `conflict/*` |
+| `domain.governance` | Directive aggregate | `directive/*` |
+| `domain.compilation` | CG-IR models | `compilation/*` |
+| `domain.inspection` | Target, InspectionSnapshot | `inspection/*` |
+| `domain.finding` | Finding FSM models | `finding_lifecycle/*` |
+| `domain.conflict` | ConflictArtifact, ResolveConflict (domain service) | `conflict/*` |
 | `domain.authorization` | capability VOs | `authorization/*` |
-| `application.use_cases.*` | application_service orchestration | `interfaces/*` + domain contracts |
-| `infrastructure.persistence.directives` | `directives_adapter` | dual-document `directive_store` |
-| `infrastructure.persistence.*` | other `*_adapter` | `data_stores/*` |
-| `infrastructure.detection` | supports compiler + inspector | schema detection_spec |
-| `interfaces.*` | selma_interface + app ingress | `interfaces/*` |
+| `application.use_cases.compilation` | `compilation` | `compilation/*` |
+| `application.use_cases.inspection` | `inspection` | `inspection/*` |
+| `application.use_cases.finding` | `findings` | `finding_lifecycle/*` |
+| `application.use_cases.governance` | directive use cases via `api` | `directive/*` |
+| `infrastructure.persistence.directives` | `directives_repository` | C4 `directives` |
+| `infrastructure.persistence.cgir` | `compiled_rules_repository` | C4 `compiled_rules` |
+| `infrastructure.persistence.events` | `finding_events_repository` | C4 `finding_events` |
+| `infrastructure.persistence.artifacts` | `artifacts_repository` | C4 `artifacts` |
+| `infrastructure.targets` | `target_sources_gateway` | optional |
+| `infrastructure.detection` | supports compilation + inspection | detection_spec |
+| `interfaces.*` | `clients` + `api` | `interfaces/*` |
 
 ## Dependency rules (enforceable in Implementation)
 
@@ -78,8 +84,9 @@ src/selma/
 Prefer package names that match ubiquitous language; map to C4 in module docstrings:
 
 ```
-# lifecycle_finder component → domain.finding + application.use_cases.finding
-# finding_fsm_engine contract alias → same packages
+# findings component → domain.finding + application.use_cases.finding
+# compilation component → domain.compilation + application.use_cases.compilation
+# directives_repository → infrastructure.persistence.directives
 ```
 
 ## Configuration layout (docs)

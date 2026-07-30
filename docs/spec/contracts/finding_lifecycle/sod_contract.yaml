@@ -4,7 +4,7 @@
 
 contract_id: "finding_lifecycle.sod"
 schema_version: "1.0.0"
-owner_component: "finding_fsm_engine"
+owner_component: "findings"
 description: >
   Defines segregation of duties constraints that prevent conflicts of interest
   in finding lifecycle operations. These rules are enforced at FSM transition

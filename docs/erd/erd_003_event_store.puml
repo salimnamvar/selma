@@ -1,4 +1,4 @@
-@startuml erd_003_event_store
+@startuml erd_003_finding_events
 !include common/erd_styles.puml
 
 title Event Store (Append-Only Log) — Immutable

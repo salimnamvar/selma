@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Authorization\n(application_service)" as BOUNDED {
+  rectangle "Authorization\n(api)" as BOUNDED {
 
     usecase "Authenticate User"             as UC1
     usecase "Check Capability"              as UC2

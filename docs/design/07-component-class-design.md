@@ -1,33 +1,43 @@
 # 07 — Component Class Design
 
-See: [`../class-diagram/`](../class-diagram/) for component class structure, methods, and fields.
+See: [`../class-diagram/`](../class-diagram/) for structure, methods, and fields.
 
-## Component → class diagram mapping
+## C4 component → design mapping
 
-| C4 Component | Class diagram | Contracts |
+| C4 ID | Class / package focus | Contracts |
 | :--- | :--- | :--- |
-| `application_service` | `cd_001_domain_model.puml` | `interfaces/*`, `authorization/*` |
-| `hermetic_compiler` | `cd_001_domain_model.puml` | `compilation/*` |
-| `rule_inspector` | `cd_001_domain_model.puml` | `inspection/*` |
-| `conflict_resolver` | `cd_001_domain_model.puml` | `conflict/*` |
-| `lifecycle_finder` | `cd_001_domain_model.puml` | `finding_lifecycle/*` |
-| `finding_analyzer` | `cd_001_domain_model.puml` | `inspection/finding_contract.yaml`, `schema/policy_doctrine.yaml` |
-| `architectural_auditor` | `cd_001_domain_model.puml` | `certification/gates.yaml` |
+| `api` | REST routers, capability gate, DTO mapping | `interfaces/*`, `authorization/*` |
+| `compilation` | CompileDirectives, MaterializeCgIr, PublishSnapshot | `compilation/*` |
+| `inspection` | SubmitInspection, pipeline stages | `inspection/*` |
+| `findings` | Finding FSM use cases, ResolveGuidance, read models | `finding_lifecycle/*`, guidance |
+| `directives_repository` | SqlDirectiveRepository | `data_stores/directives` |
+| `compiled_rules_repository` | ContentAddressedCgIrStore | `data_stores/compiled_rules` |
+| `finding_events_repository` | AppendOnlyEventLog | `data_stores/finding_events` |
+| `artifacts_repository` | ObjectArtifactStore | `data_stores/artifacts` |
+| `target_sources_gateway` | HttpTargetGateway (optional) | target schema |
+
+## Domain services (not C4 components)
+
+| Service | Used by | Contract |
+| :--- | :--- | :--- |
+| `ResolveConflict` | `compilation`, `inspection`, `findings` | `conflict/*` |
+| `LineageService` | directive use cases via `api` | `directive/identity` |
+| `FindingFsm` | `findings` | `finding_lifecycle/*` |
+| `GuidanceResolver` | `findings` | policy doctrine schema |
 
 ## Adapter → port mapping
 
-| Adapter class | Port | Store / system |
+| Adapter class | Port | C4 store / system |
 | :--- | :--- | :--- |
-| `SqlDirectiveRepository` | `DirectiveRepository` | `directive_store` (executable rule + policy doctrine dual documents) |
-| `ContentAddressedCgIrStore` | `CgIrRepository` | `cgir_store` |
-| `AppendOnlyEventLog` | `EventStore` | `event_store` |
-| `ObjectArtifactStore` | `ArtifactRepository` | `artifact_store` |
-| `HttpTargetGateway` | `TargetGateway` | `regulated_systems` |
+| `SqlDirectiveRepository` | `DirectiveRepository` | `directives` |
+| `ContentAddressedCgIrStore` | `CgIrRepository` | `compiled_rules` |
+| `AppendOnlyEventLog` | `EventStore` | `finding_events` |
+| `ObjectArtifactStore` | `ArtifactRepository` | `artifacts` |
+| `HttpTargetGateway` | `TargetGateway` | `target_sources` (optional) |
 
 **Constraints:**
-- There is **no** separate `PolicyDoctrineReader` / filesystem doctrine adapter.
-- `finding_analyzer` must not write CG-IR, directives, or FSM state; guidance uses `DirectiveRepository.readPolicyDoctrine` only.
-- `rule_inspector` must not call `readPolicyDoctrine` on the evaluate path.
-- Language-specific code (e.g. Python AST) lives only behind adapters referenced from `detection.adapters[]`, not in domain.
 
-Gate definitions: `certification/gates.yaml` (including AA-02 guidance_only interpretation).
+- No separate doctrine reader; doctrine only via `DirectiveRepository.readPolicyDoctrine`.
+- `findings` must not write `compiled_rules` or mutate directives from analytics.
+- `inspection` must not call `readPolicyDoctrine` on evaluate path.
+- Certification (AA-01…AA-07) is an offline/CI tool, not an in-process C4 peer.

@@ -44,44 +44,50 @@ may lag the freeze; gaps are tracked in [08-implementation-gap-map.md](08-implem
 3. **Design docs** beat ad-hoc package choices in code.
 4. **C4 IDs** are the canonical component names for ownership mapping.
 
-### Component ID reconciliation
+### Component ID reconciliation (C4 1.1.0)
 
-Contracts sometimes use logical engine names; C4 uses component IDs.
-Use this map everywhere:
+Resource-oriented C4 IDs are canonical. Legacy contract aliases map as follows:
 
-| C4 component ID | Contract `owner_component` aliases | Role |
+| C4 ID | Legacy `owner_component` aliases | Role |
 | :--- | :--- | :--- |
-| `application_service` | `application_service` | Ingress, authz, orchestration |
-| `hermetic_compiler` | `hermetic_compiler` | Compile-time CG-IR |
-| `rule_inspector` | `rule_inspector` | Inspection pipeline |
-| `conflict_resolver` | `conflict_resolver` | Conflict resolution |
-| `lifecycle_finder` | `finding_fsm_engine` | Finding FSM + SoD gates |
-| `finding_analyzer` | (analytics / guidance) | Read-only guidance + aggregates |
-| `architectural_auditor` | `architectural_auditor` | AA-01…AA-07 |
-| `directives_adapter` | `directives_adapter` | Directive store port impl |
-| `compiled_rules_adapter` | `cgir_adapter` | CG-IR store port impl |
-| `findings_audit_adapter` | `event_adapter` | Event store port impl |
-| `snapshots_adapter` | `artifact_adapter` | Artifact store port impl |
-| `target_adapter` | `target_adapter` | External target systems |
+| `api` | `api` | Resource API gate, authz, orchestration |
+| `compilation` | `compilation` | Compile executable docs → CG-IR |
+| `inspection` | `inspection` | Inspection pipeline |
+| `findings` | `lifecycle_finder`, `finding_fsm_engine`, `finding_analyzer` | Finding lifecycle, SoD, guidance reads |
+| `directives_repository` | `directives_repository` | Directives store port |
+| `compiled_rules_repository` | `compiled_rules_repository`, `cgir_adapter` | Compiled Rules store port |
+| `finding_events_repository` | `finding_events_repository`, `event_adapter` | Finding Events store port |
+| `artifacts_repository` | `artifacts_repository`, `artifact_adapter` | Artifacts store port |
+| `target_sources_gateway` | `target_sources_gateway` | Optional Target Sources gateway |
+
+**Not C4 components** (domain service / tool): `ResolveConflict` (legacy `conflict_resolver`); AA certification suite (legacy `architectural_auditor`, run as offline/CI tool).
+
+| C4 store ID | Contract path (filename unchanged) |
+| :--- | :--- |
+| `directives` | `data_stores/directive_store.yaml` |
+| `compiled_rules` | `data_stores/cgir_store.yaml` |
+| `finding_events` | `data_stores/event_store.yaml` |
+| `artifacts` | `data_stores/artifact_store.yaml` |
 
 ## Frozen principles (non-negotiable)
 
 1. **Compile-time / runtime separation** — executable rule documents → CG-IR at compile time; never re-interpret prose policy for evaluation.
-2. **Guidance only after findings** — policy doctrine documents in `directive_store` via `paired_policy_ref` / `DirectiveRepository.readPolicyDoctrine` for humans/AI; never for FSM transitions.
-3. **Dual-document single store** — executable rule + policy doctrine co-versioned under one Directive; `directives_adapter` owns both; no separate policy-doctrine adapter; no external Governance Contracts corpus.
-4. **One normative FSM** — Finding 10-state machine; other diagrams are extracted pipelines.
+2. **Guidance only after findings** — policy doctrine in `directives` via `paired_policy_ref` / `DirectiveRepository.readPolicyDoctrine`; never for FSM transitions.
+3. **Dual-document single store** — executable + doctrine co-versioned; `directives_repository` owns both; no external Governance Contracts corpus.
+4. **One normative FSM** — Finding 10-state machine under `findings` component.
 5. **Capability + SoD before mutation** — human edges gated; denials audit with no partial mutation.
-6. **Immutable compiled/event/snapshot stores** — append-only or content-addressed.
+6. **Four resource stores by mutability** — `directives` · `compiled_rules` · `finding_events` · `artifacts`.
 7. **Domain-agnostic core** — language-specific detail only in `detection.adapters[]`.
+8. **Slim C4** — optional Target Sources only as external system; CI/audit/remediation are not context peers.
 
 ## Open decisions (implementation may choose; design stays stable)
 
 | ID | Topic | Constraint |
 | :--- | :--- | :--- |
-| OD-01 | Concrete DB for directive_store | Must support versioned rows + exclusive write lock semantics |
-| OD-02 | CAS backend for cgir_store | Content-addressed by snapshot/node hash; immutable publish |
-| OD-03 | Event log technology | Append-only, hash-chained events, HLC ordering |
-| OD-04 | API framework | Application Service is single ingress; REST contract is behavioral |
+| OD-01 | Concrete DB for `directives` | Versioned rows + exclusive write lock semantics |
+| OD-02 | CAS backend for `compiled_rules` | Content-addressed by snapshot/node hash; immutable publish |
+| OD-03 | Event log for `finding_events` | Append-only, hash-chained, HLC ordering |
+| OD-04 | API framework | `api` is single ingress; REST is resource-oriented |
 | OD-05 | Multi-tenant isolation | Out of freeze scope unless contracts gain tenant invariants |
 
 ## Change control

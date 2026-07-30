@@ -4,7 +4,7 @@
 
 contract_id: "conflict.precedence"
 schema_version: "1.0.0"
-owner_component: "conflict_resolver"
+owner_component: "ResolveConflict"
 state_machine_ref: "../../state-machine/selma_conflict_resolution.puml"
 description: >
   Defines the unified conflict resolution function and precedence chain.
@@ -126,31 +126,31 @@ cross_lineage_advisory:
 invariants:
   - id: "INV-PR-001"
     statement: "Explicit override takes precedence over all computed factors"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-PR-002"
     statement: "Conflict resolution MUST be deterministic for identical CG-IR snapshot"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-PR-003"
     statement: "Unresolvable conflicts MUST produce Conflict Artifact (not silent default)"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-PR-004"
     statement: "defer_to self-reference MUST be ignored (fall through to computed)"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-PR-005"
     statement: "defer_to cycles cause all defer_to overrides in the pair to be ignored"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-PR-006"
     statement: "Cross-lineage advisory artifacts MUST NOT auto-modify findings or CG-IR"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
 stories:
   - story_id: "US-PR-001"
-    as: "conflict_resolver"
+    as: "ResolveConflict"
     i_want: "to resolve conflicts using a deterministic precedence chain"
     so_that: "conflict outcomes are reproducible and auditable"
     acceptance_criteria:
@@ -160,7 +160,7 @@ stories:
       - "Given two rules that tie on all factors. When resolve_conflict runs. Then a Conflict Artifact is produced for human review."
 
   - story_id: "US-PR-002"
-    as: "conflict_resolver"
+    as: "ResolveConflict"
     i_want: "to handle defer_to strategies safely"
     so_that: "defer_to never produces cycles or self-references"
     acceptance_criteria:

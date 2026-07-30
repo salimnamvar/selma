@@ -4,7 +4,7 @@
 
 contract_id: "interfaces.tui_contract"
 schema_version: "1.0.0"
-owner_component: "application_service"
+owner_component: "api"
 description: >
   Defines the TUI (Terminal User Interface) behavior contract for the
   Selma system. Screens map to the same capability-gated operations
@@ -152,7 +152,7 @@ invariants:
 
 stories:
   - story_id: "US-TU-001"
-    as: "application_service"
+    as: "api"
     i_want: "to provide a terminal UI for all system operations"
     so_that: "users can interact with Selma visually from the terminal"
     acceptance_criteria:

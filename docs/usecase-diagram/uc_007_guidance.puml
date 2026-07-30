@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Guidance & Analytics\n(finding_analyzer)" as BOUNDED {
+  rectangle "Guidance & Analytics\n(findings)" as BOUNDED {
 
     usecase "Resolve Guidance"              as UC1
     usecase "View Finding Aggregates"       as UC2

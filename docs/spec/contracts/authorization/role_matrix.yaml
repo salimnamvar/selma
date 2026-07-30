@@ -4,7 +4,7 @@
 
 contract_id: "authorization.role_matrix"
 schema_version: "1.0.0"
-owner_component: "application_service"
+owner_component: "api"
 description: >
   Defines the three roles and their capability assignments.
   Roles bind to authenticated actor identity (human or AI agent).
@@ -90,7 +90,7 @@ invariants:
 
 stories:
   - story_id: "US-RM-001"
-    as: "application_service"
+    as: "api"
     i_want: "to enforce role-based capability assignments"
     so_that: "each role has exactly the capabilities it needs"
     acceptance_criteria:

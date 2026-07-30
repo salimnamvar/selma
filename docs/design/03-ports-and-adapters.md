@@ -1,97 +1,87 @@
-# 03 — Ports & Adapters (Hexagonal)
+# 03 — Ports & Adapters (Hexagonal / Clean Architecture)
 
 ## Dependency rule
 
 ```
-interfaces (CLI / TUI / REST)
+clients (CLI / Web / Desktop / Mobile)
         │
         ▼
-application (use cases, ports)
+api (resource-oriented ingress)
+        │
+        ▼
+application use cases (compilation, inspection, findings, directives)
         │
         ▼
 domain (aggregates, VOs, domain services)
         ▲
         │ implements ports
-infrastructure (adapters, evaluators, parsers, DBs)
+infrastructure (*_repository, *_gateway)
 ```
 
 - **Domain** depends on nothing inside the app.
 - **Application** depends on domain + port interfaces only.
 - **Infrastructure** implements ports; may use frameworks.
-- **Interfaces** call application use cases; never domain repositories directly.
+- **Clients** call the API; never domain repositories directly.
 
 ## Driving adapters (primary / inbound)
 
-| Adapter | C4 | Protocol | Use cases invoked |
+| Adapter | C4 | Protocol | Use cases |
 | :--- | :--- | :--- | :--- |
-| REST API | `selma_interface` → `application_service` | HTTP/JSON | All mutating + query families |
-| CLI | interface | argv / exit codes | inspect, query, certify (subset) |
-| TUI | interface | interactive | inspect, finding workflow (subset) |
-| CI/CD hook | external `cicd` | pipeline job | `RunArchitecturalCertification` |
+| REST / channel clients | `clients` → `api` | HTTPS / resource JSON | All mutating + query families |
+| CLI / TUI | `clients` | argv / interactive | inspect, findings, certify subset |
 
 ## Driven adapters (secondary / outbound)
 
-| Port (application) | Adapter (infrastructure) | Store / system | Contract |
+| Port (application) | Adapter (infrastructure) | C4 store / system | Contract |
 | :--- | :--- | :--- | :--- |
-| `DirectiveRepository` | Directives Adapter (`SqlDirectiveRepository`) | `directive_store` (executable + policy doctrine dual documents) | `data_stores/directive_store`, `rule_schema.json`, `policy_doctrine.yaml` |
-| `CgIrRepository` | Compiled Rules Adapter | `cgir_store` | `data_stores/cgir_store` |
-| `EventStore` | Findings & Audit Trail Adapter | `event_store` | `data_stores/event_store` |
-| `ArtifactRepository` | Inspection Snapshots Adapter | `artifact_store` | `data_stores/artifact_store` |
-| `TargetGateway` | Target Adapter | `regulated_systems` | inspection target schema |
+| `DirectiveRepository` | Directives Repository | `directives` | `data_stores/directive_store` |
+| `CgIrRepository` | Compiled Rules Repository | `compiled_rules` | `data_stores/cgir_store` |
+| `EventStore` | Finding Events Repository | `finding_events` | `data_stores/event_store` |
+| `ArtifactRepository` | Artifacts Repository | `artifacts` | `data_stores/artifact_store` |
+| `TargetGateway` | Target Sources Gateway (optional) | `target_sources` | inspection target schema |
 | `DetectionEngine` | adapter registry + pure evaluators | in-process | compilation + inspection |
-| `AuditReplicator` | Findings/Snapshots adapters | `audit_platform` | replication only |
-| `RemediationNotifier` | optional notifier | `remediation_systems` | notify only, no remote mutate |
 | `Clock` / `HlcClock` | system clock + HLC | — | event ordering |
 | `HashService` | SHA-256 (or versioned algo) | — | node/snapshot/event hashes |
 | `CapabilitySource` | authn/authz provider | claims / RBAC map | `authorization/*` |
 
 ## Port catalog
 
-See: [`../class-diagram/`](../class-diagram/) for port interface signatures.
-
-| Port | Owner | Contract |
+| Port | C4 owner | Contract |
 | :--- | :--- | :--- |
-| `DirectiveRepository` | `directives_adapter` | `data_stores/directive_store` (dual documents) |
-| `CgIrRepository` | `compiled_rules_adapter` | `data_stores/cgir_store` |
-| `EventStore` | `findings_audit_adapter` | `data_stores/event_store` |
-| `ArtifactRepository` | `snapshots_adapter` | `data_stores/artifact_store` |
-| `TargetGateway` | `target_adapter` | inspection target schema |
-| `DetectionEngine` | adapter registry | compilation + inspection |
-| `AuditReplicator` | `event_adapter` | replication only |
-| `RemediationNotifier` | optional notifier | notify only, no remote mutate |
-| `Clock` / `HlcClock` | system clock + HLC | event ordering |
-| `HashService` | SHA-256 (or versioned algo) | node/snapshot/event hashes |
-| `CapabilitySource` | authn/authz provider | `authorization/*` |
+| `DirectiveRepository` | `directives_repository` | dual-document `directives` |
+| `CgIrRepository` | `compiled_rules_repository` | `compiled_rules` |
+| `EventStore` | `finding_events_repository` | `finding_events` |
+| `ArtifactRepository` | `artifacts_repository` | `artifacts` |
+| `TargetGateway` | `target_sources_gateway` | optional remote targets |
+| `DetectionEngine` | infrastructure.detection | compilation + inspection |
 
-**Dual-document `DirectiveRepository`:** persists and loads both the executable rule document and the policy doctrine document for each directive revision. Methods include `readExecutable` (compile path) and `readPolicyDoctrine` (guidance path via `paired_policy_ref`).
+**Dual-document `DirectiveRepository`:** `readExecutable` (compile path) and `readPolicyDoctrine` (guidance path via `paired_policy_ref`).
 
-**`readPolicyDoctrine` consumers:** `finding_analyzer` / `ResolveGuidance` only after findings exist (**guidance_only**).
-**Forbidden consumers of doctrine:** `rule_inspector` evaluation path, `lifecycle_finder` transition logic. Hermetic compiler uses `readExecutable` only (may validate pairing/version consistency, never evaluate doctrine prose).
+**`readPolicyDoctrine` consumers:** `findings` guidance reads only after findings exist (`guidance_only`).  
+**Forbidden:** `inspection` evaluate path, finding FSM transition logic. `compilation` uses `readExecutable` only (may check pairing/version).
+
+## Explicit non-ports / non-components
+
+- Separate `PolicyDoctrineReader` or filesystem doctrine adapter
+- Peer C4 components for Conflict Resolver, Finding Analyzer, Architectural Auditor
+- External Governance Contracts / CI/CD / audit platform / remediation as required runtime peers
+- Direct SQL from use cases
+- Finding FSM helpers that accept policy prose
 
 ## Relationship styles (C4 alignment)
 
-| Edge | Style meaning |
+| Edge | Style |
 | :--- | :--- |
-| Application → core components | command / query dispatch |
-| Core → adapters | port calls |
-| `finding_analyzer` → `directives_adapter.readPolicyDoctrine` | **guidance_only** |
-| Adapters → external audit | replicate |
-| Analytics → CG-IR / FSM | **forbidden write** (AA-01) |
+| `api` → use-case components | command / query dispatch |
+| Use cases → repositories | port calls |
+| `findings` → `directives_repository.readPolicyDoctrine` | **guidance_only** |
+| Repositories → stores | persistence |
 
 ## Testing ports
 
 | Test type | Doubles |
 | :--- | :--- |
-| Domain unit | pure aggregates/services; no ports |
-| Application | in-memory fakes for all driven ports |
-| Adapter contract | testcontainers / filesystem CAS fixtures |
-| Certification | AA gate suite against reference fixtures |
-
-## Explicit non-ports
-
-Do **not** expose:
-
-- Direct SQL/session from application use cases
-- A separate `PolicyDoctrineReader` or filesystem doctrine adapter (doctrine lives in `directive_store` via `DirectiveRepository`)
-- Global mutable “current policy” used by evaluators
-- Finding FSM transition helpers that accept policy prose
+| Domain unit | pure aggregates/services |
+| Application | in-memory fakes for driven ports |
+| Adapter contract | testcontainers / CAS fixtures |
+| Certification | AA gate suite as offline tool against fixtures |

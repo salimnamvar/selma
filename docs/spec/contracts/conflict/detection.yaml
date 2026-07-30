@@ -4,7 +4,7 @@
 
 contract_id: "conflict.detection"
 schema_version: "1.0.0"
-owner_component: "conflict_resolver"
+owner_component: "ResolveConflict"
 state_machine_ref: "../../state-machine/selma_conflict_resolution.puml"
 description: >
   Defines when conflicts exist between rules. Conflicts are identified
@@ -79,15 +79,15 @@ temporal_binding:
 invariants:
   - id: "INV-CD-001"
     statement: "Conflict detection MUST be deterministic for identical CG-IR snapshot"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-CD-002"
     statement: "Cross-lineage conflicts MUST NOT trigger automatic resolution"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-CD-003"
     statement: "NeedsReview findings MUST NOT trigger conflict detection"
-    enforcement: "conflict_resolver"
+    enforcement: "ResolveConflict"
 
   - id: "INV-CD-004"
     statement: "created_at is frozen in CG-IR node_body — conflict outcomes are snapshot-bound"
@@ -95,7 +95,7 @@ invariants:
 
 stories:
   - story_id: "US-CD-001"
-    as: "conflict_resolver"
+    as: "ResolveConflict"
     i_want: "to detect conflicts between rules deterministically"
     so_that: "conflict resolution produces identical outcomes for identical inputs"
     acceptance_criteria:

@@ -33,7 +33,7 @@ authority_hierarchy:
       - layer: directive_instances
 
   - layer: directive_instances
-    location: "directive_store (PostgreSQL dual documents)"
+    location: "directives (PostgreSQL dual documents)"
     description: >
       Authoritative dual-document directives authored in Selma by regulatory
       officials: executable_document (rule_schema) + policy_doctrine_document

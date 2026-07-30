@@ -4,7 +4,7 @@
 
 contract_id: "directive.amendment"
 schema_version: "1.0.0"
-owner_component: "directives_adapter"
+owner_component: "directives_repository"
 description: >
   Defines how directives are amended — metadata rules, anchor references,
   and parameter field behavior.
@@ -85,7 +85,7 @@ invariants:
 
 stories:
   - story_id: "US-AM-001"
-    as: "directives_adapter"
+    as: "directives_repository"
     i_want: "to enforce metadata non-executability"
     so_that: "metadata cannot influence evaluation or conflict resolution"
     acceptance_criteria:

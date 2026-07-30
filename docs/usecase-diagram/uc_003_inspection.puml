@@ -8,7 +8,7 @@ left to right direction
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Inspection\n(rule_inspector)" as BOUNDED {
+  rectangle "Inspection\n(inspection)" as BOUNDED {
 
     usecase "Submit Target\nfor Inspection"  as UC1
     usecase "Normalize Target"               as UC2

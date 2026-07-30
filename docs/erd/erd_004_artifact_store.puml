@@ -1,4 +1,4 @@
-@startuml erd_004_artifact_store
+@startuml erd_004_artifacts
 !include common/erd_styles.puml
 
 title Artifact Store (Object Store) — Write-Once

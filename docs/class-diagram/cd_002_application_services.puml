@@ -1,4 +1,4 @@
-@startuml cd_002_application_services
+@startuml cd_002_apis
 ' ─────────────────────────────────────────────────────────────
 ' CLS-002 · Application Services — Selma Rule Regularity Platform
 ' PlantUML class diagram

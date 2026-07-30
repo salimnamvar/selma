@@ -4,7 +4,7 @@
 
 contract_id: "directive.lifecycle"
 schema_version: "1.0.0"
-owner_component: "directives_adapter"
+owner_component: "directives_repository"
 description: >
   Defines the lifecycle states and operations for directives.
   Directives are the human-authored source-of-truth that compile
@@ -90,7 +90,7 @@ invariants:
 
 stories:
   - story_id: "US-DL-001"
-    as: "directives_adapter"
+    as: "directives_repository"
     i_want: "to manage directive lifecycle states"
     so_that: "directives follow a predictable lifecycle"
     acceptance_criteria:

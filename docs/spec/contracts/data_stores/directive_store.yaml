@@ -1,10 +1,9 @@
 # directive_store.yaml
-# Normative source for the Directive Graph store contract.
-# Contract for the Directive Graph store.
+# Normative source for the Directives resource store contract (C4 ID: directives).
 
 contract_id: "data_stores.directive_store"
 schema_version: "1.0.0"
-owner_component: "directives_adapter"
+owner_component: "directives_repository"
 description: >
   Defines the contract for the Directive Graph storage layer.
   Supports versioned, mutable directives with read/write locking.
@@ -19,7 +18,7 @@ storage_model:
     conforming to policy_doctrine.yaml — guidance_only after findings; (3) paired_policy_ref
     linking the two; plus scope, priority, lineage, and metadata.
   system_of_record: >
-    directive_store is authoritative for both documents. No separate filesystem
+    directives is authoritative for both documents. No separate filesystem
     policy-doctrine store, PolicyDoctrineReader adapter, or external Governance
     Contracts corpus. Schemas that constrain documents live in docs/schema/;
     instances are authored only through Selma into this store.
@@ -79,15 +78,15 @@ operations:
     description: "Read executable rule document only (compile path)"
     locking: "read_lock"
     produces: "executable_document (rule_schema)"
-    consumers: ["hermetic_compiler"]
+    consumers: ["compilation"]
 
   - name: "read_policy_doctrine"
     capability: null
     description: "Read policy doctrine document by paired_policy_ref (guidance path only)"
     locking: "read_lock"
     produces: "policy_doctrine_document / GuidancePayload"
-    consumers: ["finding_analyzer"]
-    forbidden_consumers: ["rule_inspector", "lifecycle_finder"]
+    consumers: ["findings"]
+    forbidden_consumers: ["inspection", "findings"]
 
 concurrency_model:
   description: "Locking semantics for directive store"
@@ -123,15 +122,15 @@ invariants:
 
   - id: "INV-DS-005"
     statement: "Each revision MUST store both executable_document and policy_doctrine_document linked by paired_policy_ref"
-    enforcement: "directives_adapter"
+    enforcement: "directives_repository"
 
   - id: "INV-DS-006"
     statement: "read_policy_doctrine MUST NOT be used for evaluation, inspection, or finding FSM transitions"
-    enforcement: "architectural_auditor (AA-02)"
+    enforcement: "certification_tool (AA-02)"
 
 stories:
   - story_id: "US-DS-001"
-    as: "directives_adapter"
+    as: "directives_repository"
     i_want: "to enforce read/write locking on directive operations"
     so_that: "concurrent access is safe and modifications are serialized"
     acceptance_criteria:

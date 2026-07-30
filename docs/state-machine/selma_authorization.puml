@@ -5,7 +5,7 @@
 '          docs/spec/contracts/authorization/role_matrix.yaml
 ' C4:      Application Service (ingress gate)
 '          + Lifecycle Finder / Conflict Resolver (domain gates)
-'          denials → Findings & Audit Trail Adapter → event_store
+'          denials → Findings & Audit Trail Adapter → finding_events
 ' Contract: 1.0.0
 ' ============================================================
 

@@ -8,7 +8,7 @@ left to right direction
 actor "CI/CD\nPipeline" as CICD #E8F5E9
 
 rectangle "Selma Application" as SYS {
-  rectangle "Certification\n(architectural_auditor)" as BOUNDED {
+  rectangle "Certification\n(certification_tool)" as BOUNDED {
 
     usecase "Run Architectural\nCertification"          as UC0
     usecase "Validate Mediated\nFeedback"               as UC1

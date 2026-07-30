@@ -43,13 +43,13 @@ All dependency arrows point **inward** — the Dependency Rule is enforced struc
 | Context | Packages | C4 Component Mapping |
 |---------|----------|---------------------|
 | domain.shared | LineageId, Hlc, hashes, errors | Shared value objects |
-| domain.governance | Directive aggregate, LineageService | directives_adapter |
-| domain.compilation | CgIrSnapshot, ControlNode, DependencyEdge | hermetic_compiler |
-| domain.inspection | Target, InspectionSnapshot, DetectionOutcome | rule_inspector |
-| domain.finding | Finding aggregate, FindingFsm, Disposition | lifecycle_finder |
-| domain.conflict | ConflictArtifact, ResolveConflict | conflict_resolver |
-| domain.authorization | Capability value objects | CapabilitySource |
-| domain.certification | Gate IDs, CertificationRun | architectural_auditor |
+| domain.governance | Directive aggregate, LineageService | directives_repository |
+| domain.compilation | CgIrSnapshot, ControlNode, DependencyEdge | compilation |
+| domain.inspection | Target, InspectionSnapshot, DetectionOutcome | inspection |
+| domain.finding | Finding aggregate, FindingFsm, Disposition | findings |
+| domain.conflict | ConflictArtifact, ResolveConflict | ResolveConflict |
+| domain.authorization | Capability value objects | `api` |
+| domain.certification | Gate IDs, CertificationRun | offline/CI tool (not C4 peer) |
 
 ## Shared Styles
 

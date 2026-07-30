@@ -4,8 +4,8 @@
 ' Source:  docs/spec/contracts/conflict/detection.yaml
 '          docs/spec/contracts/conflict/precedence.yaml
 ' C4:      Conflict Resolver
-'          artifacts → Snapshots Adapter → artifact_store
-'          denials → Findings & Audit Trail Adapter → event_store
+'          artifacts → Snapshots Adapter → artifacts
+'          denials → Findings & Audit Trail Adapter → finding_events
 ' Contract: 1.0.0
 ' ============================================================
 

@@ -2,16 +2,16 @@
 
 ## Store roles (frozen)
 
-| Store | Mutability | Writer components | Reader components |
+| C4 store ID | Mutability | Writer components | Reader components |
 | :--- | :--- | :--- | :--- |
-| `directive_store` | Mutable versioned dual documents (executable + doctrine) | `directives_adapter` via governance use cases | compiler `readExecutable` (read lock), analyzer `readPolicyDoctrine` (guidance_only), queries |
-| `cgir_store` | Immutable CAS | `compiled_rules_adapter` via compiler publish | inspector, conflict, lifecycle (provenance) |
-| `event_store` | Append-only | `findings_audit_adapter` via FSM + authz denials | analyzer, queries, audit replicate |
-| `artifact_store` | Write-once objects | snapshots + conflict + certification adapters | queries, audit replicate |
+| `directives` | Mutable versioned dual documents | `directives_repository` via directive use cases / `api` | `compilation.readExecutable` (read lock), `findings.readPolicyDoctrine` (guidance_only), queries |
+| `compiled_rules` | Immutable CAS | `compiled_rules_repository` via `compilation` | `inspection`, `findings` (provenance), conflict domain service |
+| `finding_events` | Append-only | `finding_events_repository` via `findings` + `api` denials | `findings` reads, queries |
+| `artifacts` | Write-once objects | `artifacts_repository` via `inspection` / `findings` / cert tool | queries |
 
 ## Finding event stream
 
-Normative types (from `finding_lifecycle/transitions` + event_store contract):
+Normative types (from `finding_lifecycle/transitions` + finding_events contract):
 
 ### FindingCreated
 
@@ -72,19 +72,19 @@ Detail: `selma_cgir_hash_chain.puml`, `compilation/pipeline.yaml`.
 - Within-lineage unresolvable → requires human action  
 - Cross-lineage → advisory (`binding_status=advisory`) without rewriting findings  
 
-Stored in `artifact_store`; never silently dropped.
+Stored in `artifacts`; never silently dropped.
 
 ## Guidance payload (not an event source of truth)
 
 Guidance resolved by Finding Analyzer is a **read model** field on query responses:
 
 - `reasoning`, `remediation_strategy`, `remediation_steps`, domain examples  
-- Source: policy doctrine document in `directive_store` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`  
+- Source: policy doctrine in `directives` via `paired_policy_ref` and `DirectiveRepository.readPolicyDoctrine`  
 - Must not be required for FSM transition validity  
 
 ## Replication
 
-Adapters may push to `audit_platform`:
+Adapters may push to `optional_export`:
 
 - finding events  
 - inspection snapshots  

@@ -4,7 +4,7 @@
 
 contract_id: "interfaces.rest_api"
 schema_version: "1.0.0"
-owner_component: "application_service"
+owner_component: "api"
 description: >
   Defines the REST API contract for the Selma system. This is a
   behavioral contract — specific endpoint paths are implementation-
@@ -156,7 +156,7 @@ invariants:
 
 stories:
   - story_id: "US-RA-001"
-    as: "application_service"
+    as: "api"
     i_want: "to expose REST endpoints for all system operations"
     so_that: "clients can interact with Selma via HTTP"
     acceptance_criteria:

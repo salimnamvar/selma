@@ -4,11 +4,11 @@
 title SEQ-006 Guidance Resolution\nResolve Paired Policy Doctrine for Finding Guidance
 
 actor "User" as user
-participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
-participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
-participant "finding_analyzer\n(Python/Pydantic)" as FA #A3BE8C
-participant "directives_adapter\n(SQLAlchemy/PostgreSQL)" as DA #D08770
-database "directive_store\n(dual documents)" as DS #5E81AC
+participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
+participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "findings\n(Python/Pydantic)" as FA #A3BE8C
+participant "directives_repository\n(SQLAlchemy/PostgreSQL)" as DA #D08770
+database "directives\n(dual documents)" as DS #5E81AC
 
 autonumber
 
@@ -58,11 +58,10 @@ SI --> user: guidance view
 deactivate SI
 
 note right of DA
-    Directives Adapter is the sole
+    Directives Repository is the sole
     reader of policy doctrines.
     Doctrines live with executable
-    rules in directive_store — no
-    filesystem PolicyDoctrineReader.
+    rules in the directives store.
 end note
 
 note right of FA

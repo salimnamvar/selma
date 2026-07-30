@@ -4,7 +4,7 @@
 
 contract_id: "directive.identity"
 schema_version: "1.0.0"
-owner_component: "directives_adapter"
+owner_component: "directives_repository"
 description: >
   Defines the dual identity model: Lineage ID (immutable root) and
   Execution ID (active node identity). Also defines deterministic merge
@@ -93,7 +93,7 @@ uniqueness:
 
 stories:
   - story_id: "US-ID-001"
-    as: "directives_adapter"
+    as: "directives_repository"
     i_want: "to maintain dual identity with immutable lineage and mutable execution"
     so_that: "audit trail is preserved while allowing lifecycle operations"
     acceptance_criteria:

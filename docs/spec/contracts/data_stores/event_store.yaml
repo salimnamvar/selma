@@ -1,10 +1,10 @@
 # event_store.yaml
+# Finding Events store (C4 ID: finding_events).
 # Normative source for the Finding Event Stream store contract.
-# Contract for the Finding Event Stream store.
 
 contract_id: "data_stores.event_store"
 schema_version: "1.0.0"
-owner_component: "event_adapter"
+owner_component: "finding_events_repository"
 description: >
   Defines the contract for the Finding Event Stream — an append-only
   audit log with HLC ordering and event hashing.

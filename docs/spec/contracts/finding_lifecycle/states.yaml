@@ -4,7 +4,7 @@
 
 contract_id: "finding_lifecycle.states"
 schema_version: "1.0.0"
-owner_component: "finding_fsm_engine"
+owner_component: "findings"
 state_machine_ref: "../../state-machine/selma_finding_lifecycle.puml"
 description: >
   Defines the 11 states of the Finding FSM. Each state has a clear

@@ -47,14 +47,14 @@
 
 | Bounded context | Primary aggregates | C4 owners | Contracts |
 | :--- | :--- | :--- | :--- |
-| **Governance Authoring** | DirectiveGraph, Directive | `directives_adapter`, `application_service` | `directive/*` |
-| **Compilation** | CompilationJob, CgIrSnapshot | `hermetic_compiler` | `compilation/*` |
-| **Inspection** | InspectionSnapshot, Target | `rule_inspector` | `inspection/*` |
-| **Finding Lifecycle** | Finding | `lifecycle_finder` | `finding_lifecycle/*` |
-| **Conflict** | ConflictArtifact | `conflict_resolver` | `conflict/*` |
-| **Authorization** | ActorCapabilityGrant (or session claims) | `application_service` | `authorization/*` |
-| **Guidance & Analytics** | (read models) GuidanceView, AggregateReport | `finding_analyzer` | policy schema + inspection guidance |
-| **Certification** | CertificationRun | `architectural_auditor` | `certification/gates.yaml` |
+| **Governance Authoring** | DirectiveGraph, Directive | `api`, `directives_repository` | `directive/*` |
+| **Compilation** | CompilationJob, CgIrSnapshot | `compilation` | `compilation/*` |
+| **Inspection** | InspectionSnapshot, Target | `inspection` | `inspection/*` |
+| **Finding Lifecycle** | Finding | `findings` | `finding_lifecycle/*` |
+| **Conflict** | ConflictArtifact | domain service `ResolveConflict` (used by `compilation` / `inspection` / `findings`) | `conflict/*` |
+| **Authorization** | ActorCapabilityGrant (or session claims) | `api` | `authorization/*` |
+| **Guidance & Analytics** | GuidanceView, AggregateReport | `findings` (read models) | policy schema + finding guidance |
+| **Certification** | CertificationRun | offline/CI tool (writes `artifacts`) | `certification/gates.yaml` |
 
 Contexts communicate via **application orchestration** and **immutable store contracts**, not by sharing mutable entities across package boundaries.
 
@@ -65,13 +65,13 @@ See: [`../class-diagram/`](../class-diagram/) for aggregate structure, value obj
 | Aggregate | Bounded Context | Contract |
 | :--- | :--- | :--- |
 | Directive | Governance Authoring | `directive/identity`, `lifecycle`, `amendment` |
-| CgIrSnapshot | Compilation | `compilation/pipeline`, `hermetic_boundary`, `data_stores/cgir_store` |
-| InspectionSnapshot | Inspection | `inspection/pipeline`, `finding_contract`, `data_stores/artifact_store` |
-| Finding | Finding Lifecycle | `finding_lifecycle/*`, `data_stores/event_store` |
+| CgIrSnapshot | Compilation | `compilation/pipeline`, `hermetic_boundary`, `data_stores/compiled_rules` → C4 `compiled_rules` |
+| InspectionSnapshot | Inspection | `inspection/pipeline`, `finding_contract`, `data_stores/artifacts` → C4 `artifacts` |
+| Finding | Finding Lifecycle | `finding_lifecycle/*`, `data_stores/finding_events` → C4 `finding_events` |
 | ConflictArtifact | Conflict | `conflict/detection`, `precedence` |
 | CertificationRun | Certification | `certification/gates.yaml` |
 
-**Dual document:** The Directive aggregate **stores** both an executable rule document (`rule_schema`) and a policy doctrine document (`policy_doctrine`) in `directive_store`, linked by `paired_policy_ref` and co-versioned per revision. Doctrine is **not** used for evaluation; only the executable document compiles to CG-IR.
+**Dual document:** The Directive aggregate **stores** both an executable rule document (`rule_schema`) and a policy doctrine document (`policy_doctrine`) in C4 store `directives`, linked by `paired_policy_ref` and co-versioned per revision. Doctrine is **not** used for evaluation; only the executable document compiles to CG-IR.
 
 ## Domain services (stateless rules)
 
@@ -91,21 +91,21 @@ See [06-domain-events-and-stores.md](06-domain-events-and-stores.md) for full sc
 
 | Event | Aggregate | Append target |
 | :--- | :--- | :--- |
-| `FindingCreated` | Finding | event_store |
-| `DispositionChanged` | Finding | event_store |
-| `FindingClosed` | Finding | event_store |
-| `CapabilityDenied` | (security audit) | event_store |
-| `CgIrPublished` | CgIrSnapshot | provenance / cgir_store metadata |
-| `InspectionCompleted` | InspectionSnapshot | artifact_store |
-| `ConflictEscalated` | ConflictArtifact | artifact_store |
-| `CertificationCompleted` | CertificationRun | artifact_store |
+| `FindingCreated` | Finding | `finding_events` |
+| `DispositionChanged` | Finding | `finding_events` |
+| `FindingClosed` | Finding | `finding_events` |
+| `CapabilityDenied` | (security audit) | `finding_events` |
+| `CgIrPublished` | CgIrSnapshot | provenance / `compiled_rules` metadata |
+| `InspectionCompleted` | InspectionSnapshot | `artifacts` |
+| `ConflictEscalated` | ConflictArtifact | `artifacts` |
+| `CertificationCompleted` | CertificationRun | `artifacts` |
 
 ## Anti-corruption notes
 
 | External / adjacent | Translation |
 | :--- | :--- |
-| Policy doctrine document (in directive_store) | Guidance read model only via Directives Adapter; never mutates Finding FSM |
-| External Git/package rule trees | Not part of architecture; instances are authored in Selma into directive_store only |
+| Policy doctrine document (in `directives`) | Guidance read model only via Directives Repository; never mutates Finding FSM |
+| External Git/package rule trees | Not part of architecture; instances authored in Selma into `directives` only |
 | Legacy lint “Finding” (file:line:code) | Map to inspection location + message fields; identity is `finding_id` + control binding |
 | Language adapters | Live only under `detection.adapters[]`; core stays universal |
 | CI/CD | Triggers auditor; does not write directives or findings |

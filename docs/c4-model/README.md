@@ -1,43 +1,85 @@
 # Selma — C4 Architecture Diagrams
 
-Three-level C4 architecture model for the Selma rule regularity platform.
+Three-level C4 model using **Clean Architecture** layering and **resource-oriented** entity IDs/names.
 
 ## Diagrams
 
 | Level | File | Scope |
 | :--- | :--- | :--- |
-| **Context** | `c4_selma_context.puml` | Actors, external systems, Selma as a black box |
-| **Container** | `c4_selma_container.puml` | Interface, Application, four data stores |
-| **Component** | `c4_selma_component.puml` | 12 internal components with adapters |
+| **Context** | `c4_selma_context.puml` | Actors, Selma, optional Target Sources |
+| **Container** | `c4_selma_container.puml` | Clients, Application, four resource stores |
+| **Component** | `c4_selma_component.puml` | API, use-case clusters, repositories, optional gateway |
 
-## Component Inventory
+## Entity ID map (canonical)
 
-| Component | Package | Responsibility |
+| ID | Kind | Display name |
 | :--- | :--- | :--- |
-| **Application Service** | Ingress | Entry point: authenticates, validates, dispatches, orchestrates compilation |
-| **Hermetic Compiler** | Core | Compile-time only: validates directives, publishes immutable CG-IR snapshots |
-| **Rule Inspector** | Core | Runtime evaluation: executes compiled rules against submitted targets |
-| **Conflict Resolver** | Core | Deterministic conflict resolution: priority, specificity, recency precedence |
-| **Lifecycle Finder** | Core | Finding FSM: 10-state lifecycle with SoD enforcement |
-| **Finding Analyzer** | Read | Read-only aggregates, trends, causal explanations, and guidance from policy doctrines via Directives Adapter |
-| **Architectural Auditor** | Read | Seven-gate certification on CI/CD trigger |
-| **Directives Adapter** | Persistence | Dual-document directive CRUD (executable rule + policy doctrine), lineage, and guidance loads via `paired_policy_ref` |
-| **Compiled Rules Adapter** | Persistence | Content-addressed storage of CG-IR snapshots |
-| **Findings Audit Adapter** | Persistence | Append-only event streams and audit replication |
-| **Inspection Snapshots Adapter** | Persistence | Immutable snapshots and certification artifacts |
-| **Target Adapter** | Persistence | Outbound mediation to external regulated systems |
+| `regulatory_official` | Actor | Regulatory Official |
+| `compliance_representative` | Actor | Compliance Representative |
+| `selma` | System | Selma |
+| `target_sources` | External (optional) | Target Sources |
+| `clients` | Container | Clients |
+| `application` | Container | Application |
+| `directives` | Store | Directives |
+| `compiled_rules` | Store | Compiled Rules |
+| `finding_events` | Store | Finding Events |
+| `artifacts` | Store | Artifacts |
+| `api` | Component (gate) | API |
+| `compilation` | Component (hermetic) | Compilation |
+| `inspection` | Component | Inspection |
+| `findings` | Component | Findings |
+| `directives_repository` | Component (infra) | Directives Repository |
+| `compiled_rules_repository` | Component (infra) | Compiled Rules Repository |
+| `finding_events_repository` | Component (infra) | Finding Events Repository |
+| `artifacts_repository` | Component (infra) | Artifacts Repository |
+| `target_sources_gateway` | Component (infra, optional) | Target Sources Gateway |
 
-## Canonical Identity Registry
+## Not C4 peers (by design)
 
-All entity IDs, names, tech stacks, and descriptions are defined in `common/c4_identities.puml`. This file is the single source of truth — no diagram hardcodes entity metadata.
+| Concern | Where it lives instead |
+| :--- | :--- |
+| Conflict resolution algorithm | Domain service `ResolveConflict` used by Compilation / Inspection |
+| Guidance & analytics | Findings resource reads (`guidance_only` via Directives Repository) |
+| AA-01…AA-07 certification | Offline/CI tool suite; writes Artifacts only when run |
+| CI/CD | Optional client of API / certify tool |
+| Long-term audit export | Ops export from Finding Events / Artifacts (not a product peer) |
+| Remediation ticketing | Optional notify after finding transitions (not a product peer) |
+| Governance Contracts Git corpus | Removed; instances only in Directives |
 
-## Visual Styling
+## Clean Architecture mapping
 
-`common/c4_styles.puml` defines the shared palette: element colors, relationship line styles, boundary styles, and legend entries. Include after the C4-PlantUML macro, before `c4_identities.puml`.
+| CA ring | C4 entities |
+| :--- | :--- |
+| Interface adapters (driving) | `clients`, `api` |
+| Application use cases | `compilation`, `inspection`, `findings` (+ directive use cases via `api` → `directives_repository`) |
+| Domain | Aggregates/services in design class diagrams (not all drawn as C4 components) |
+| Interface adapters (driven) | `*_repository`, `target_sources_gateway` |
+| Frameworks & drivers | Store containers `directives`, `compiled_rules`, `finding_events`, `artifacts` |
+
+## Resource-oriented resources (API surface alignment)
+
+| Resource collection | Store / component |
+| :--- | :--- |
+| `/directives` | `directives` + `directives_repository` |
+| `/compiled-rules` (or compile side-effect) | `compiled_rules` + `compilation` |
+| `/inspections` | `inspection` + `artifacts` |
+| `/findings` (+ `/findings/{id}/guidance`) | `findings` + `finding_events` |
+| `/artifacts` | `artifacts` |
+
+## Design principles
+
+- **Dual-document directives** in `directives` only; `directives_repository` owns both documents
+- **Compile/runtime split**: Compilation → `compiled_rules`; Inspection never reads doctrines
+- **Guidance only after findings**: Findings → doctrine via `directives_repository` (`guidance_only`)
+- **Four stores by mutability**: mutable directives · immutable CG-IR · append-only events · write-once artifacts
+- **Primary target path is inline**; Target Sources is optional pull
+
+## Canonical registry
+
+IDs, names, tech, and descriptions: `common/c4_identities.puml`.  
+Styles: `common/c4_styles.puml`.
 
 ## Rendering
-
-Requires [PlantUML](https://plantuml.com/) and [C4-PlantUML](https://github.com/plantuml-stdlib/C4-PlantUML) v2.13.0:
 
 ```bash
 plantuml docs/c4-model/c4_selma_context.puml
@@ -45,25 +87,5 @@ plantuml docs/c4-model/c4_selma_container.puml
 plantuml docs/c4-model/c4_selma_component.puml
 ```
 
-## Behavioral state machines
-
-C4 describes *structure* (containers, components, adapters).  
-Lifecycle and pipeline *behavior* lives in [`../state-machine/`](../state-machine/README.md) (PlantUML catalog + README).
-
-Ownership of each machine maps to the component inventory above (e.g. Hermetic Compiler ↔ Compilation pipeline, Lifecycle Finder ↔ Finding FSM).
-
-## Design Principles
-
-- **Compile-time/runtime separation**: Executable rule documents compile to CG-IR; policy doctrine documents are read only for guidance after findings, never for evaluation
-- **Dual-document directives in one store**: Every directive revision holds a linked executable rule (JSON) and policy doctrine (YAML) in `directive_store`; `directives_adapter` is the sole adapter for both documents
-- **No separate policy-doctrine adapter**: Guidance resolves doctrines through `directives_adapter` + `paired_policy_ref`, not a filesystem/Git reader
-- **No external Governance Contracts system**: Schemas live in `docs/schema/`; directive instances are authored in Selma and stored in `directive_store`. Compile and guidance never depend on an external Git/package corpus
-- **Immutable storage**: CG-IR, events, snapshots are append-only
-- **Capability-based access control**: Permissions enforced at component boundaries
-- **Segregation of duties**: Directive creator ≠ Finding waiver
-
-## Design Freeze
-
-Application architecture (DDD, ports & adapters, packages, use cases) is frozen in
-[`../design/`](../design/README.md). C4 remains the structural view; design docs own
-package and port surfaces for Implementation.
+Behavior FSMs: [`../state-machine/`](../state-machine/README.md).  
+Application design freeze: [`../design/`](../design/README.md).

@@ -4,12 +4,12 @@
 title SEQ-001 Directive CRUD\nCreate / Modify / Retire / Fork / Merge / Split / Restore
 
 actor "User" as user
-participant "selma_interface\n(CLI/WebApp/DesktopApp/MobileApp)" as SI #EBCB8B
-participant "application_service\n(FastAPI/Pydantic)" as AS #88C0D0
-participant "directives_adapter\n(Python/SQLAlchemy/PostgreSQL)" as DA #81A1C1
-database "directive_store\n(PostgreSQL)" as DS #4C566A
-participant "hermetic_compiler\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
-participant "compiled_rules_adapter\n(Python/SHA-256/CAS)" as CRA #B48EAD
+participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
+participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "directives_repository\n(SQLAlchemy/PostgreSQL)" as DA #81A1C1
+database "directives\n(PostgreSQL)" as DS #4C566A
+participant "compilation\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
+participant "compiled_rules_repository\n(Python/SHA-256/CAS)" as CRA #B48EAD
 
 autonumber
 

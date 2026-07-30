@@ -3,7 +3,7 @@
 ' Selma — Directive Lifecycle State Machine
 ' Source:  docs/spec/contracts/directive/lifecycle.yaml
 '          docs/spec/contracts/directive/identity.yaml
-' C4:      Application Service + Directives Adapter → directive_store
+' C4:      Application Service + Directives Adapter → directives
 '          Hermetic Compiler on every publish / identity op
 ' Contract: 1.0.0
 ' ============================================================

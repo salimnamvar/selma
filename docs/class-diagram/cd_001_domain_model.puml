@@ -70,7 +70,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       . revision > 0
       . status transition: draft→active→deprecated
       . executable + doctrine co-versioned per revision
-      . paired_policy_ref resolves within directive_store
+      . paired_policy_ref resolves within directives
     }
 
     class "**DirectiveRevision**" as DirectiveRevision <<Entity>> #ECEFF1/546E7A {
@@ -96,7 +96,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
 
     note bottom of Directive
       **Aggregate Root — dual document**
-      Both documents stored in directive_store
+      Both documents stored in directives
       under one lineage/execution identity.
       Compiler uses executable only;
       Finding Analyzer uses doctrine only.

@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — CG-IR Hash Composition & Incremental Reuse
 ' Source:  docs/spec/contracts/compilation/pipeline.yaml
-' C4:      Hermetic Compiler → Compiled Rules Adapter → cgir_store
+' C4:      Hermetic Compiler → Compiled Rules Adapter → compiled_rules
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -44,7 +44,7 @@ state "Compose Snapshot" as ComposeSnapshot #3B7DD8 {
   SnapshotHashComposed --> [*] : <b>ComposeCompleted</b>\nactor: System
 }
 
-state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup cgir_store\n**allowed** dedup or new write
+state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup compiled_rules\n**allowed** dedup or new write
 state "Published\n(Dedup)" as PublishedDedup #2C6E49 : **entry** hash exists · no-op **terminal**\n**allowed** return existing hash\n**forbidden** rewrite bytes
 state "Published\n(New)" as PublishedNew #2C6E49 : **entry** novel snapshot write-once **terminal**\n**allowed** CAS put\n**forbidden** in-place update
 

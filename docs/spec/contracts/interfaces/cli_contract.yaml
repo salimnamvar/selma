@@ -4,7 +4,7 @@
 
 contract_id: "interfaces.cli_contract"
 schema_version: "1.0.0"
-owner_component: "application_service"
+owner_component: "api"
 description: >
   Defines the CLI behavior contract for the Selma system. Commands
   map to the same capability-gated operations as the REST API.
@@ -137,7 +137,7 @@ invariants:
 
 stories:
   - story_id: "US-CL-001"
-    as: "application_service"
+    as: "api"
     i_want: "to expose CLI commands for all system operations"
     so_that: "users can interact with Selma from the terminal"
     acceptance_criteria:

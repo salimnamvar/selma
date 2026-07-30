@@ -236,27 +236,26 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
 
 note right of INTERFACES
   **C4 Components**
-  • application_service → interfaces.rest
-  • selma_interface → cli / tui
+  • api → interfaces.rest
+  • clients → cli / tui
 end note
 
 note right of INFRASTRUCTURE
   **C4 Adapter Components**
-  • directives_adapter → persistence.directives
-  • compiled_rules_adapter → persistence.cgir
-  • findings_audit_adapter → persistence.events
-  • snapshots_adapter → persistence.artifacts
-  • target_adapter → targets
+  • directives_repository → persistence.directives
+  • compiled_rules_repository → persistence.cgir
+  • finding_events_repository → persistence.events
+  • artifacts_repository → persistence.artifacts
+  • target_sources_gateway → targets
 end note
 
 note right of APPLICATION
-  **C4 Core Components**
-  • hermetic_compiler → use_cases.compilation
-  • rule_inspector → use_cases.inspection
-  • conflict_resolver → use_cases.conflict
-  • lifecycle_finder → use_cases.finding
-  • finding_analyzer → use_cases.guidance
-  • architectural_auditor → use_cases.certification
+  **C4 use-case clusters**
+  • compilation → use_cases.compilation
+  • inspection → use_cases.inspection
+  • findings → use_cases.finding (+ guidance)
+  • ResolveConflict → domain service (not C4 peer)
+  • certification → offline/CI tool (not C4 peer)
 end note
 
 ' ═══════════════════════════════════════════════════════════
