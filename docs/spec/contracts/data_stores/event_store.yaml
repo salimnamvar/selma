@@ -85,6 +85,7 @@ event_payloads:
       - "denial_code"
     optional_fields:
       - "finding_id"
+    notes: "finding_id is REQUIRED when denial is for finding-related capabilities (finding.*, evidence.*); optional for non-finding actions (directive.*, inspection.*)."
 
   - event_type: "SoDDenied"
     required_fields:
