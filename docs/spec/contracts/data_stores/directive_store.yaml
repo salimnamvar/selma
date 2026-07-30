@@ -86,7 +86,7 @@ operations:
     locking: "read_lock"
     produces: "policy_doctrine_document / GuidancePayload"
     consumers: ["findings"]
-    forbidden_consumers: ["inspection", "findings"]
+    forbidden_consumers: ["inspection"]
 
 concurrency_model:
   description: "Locking semantics for directive store"
