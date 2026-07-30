@@ -7,7 +7,7 @@
 ' Contract: 1.0.0
 ' ============================================================
 
-title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 10-state · hierarchical remediation · SoD-1/SoD-2 · system-only close</i></size>
+title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 11-state · hierarchical remediation · SoD-1/SoD-2 · system-only close</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -35,11 +35,14 @@ state "Dismissed\n(Invalid)" as Dismissed #4A4A4A : **entry** disposition=invali
 state "Waived\n(Accepted Risk)" as Waived #B9770E : **entry** disposition=waived **pre-terminal**\n**allowed** system close only\n**forbidden** human close · reopen
 state "Closed" as Closed #4A4A4A : **entry** terminal sink\n**allowed** read-only / analytics\n**forbidden** reopen · any mutation
 
+state "Superseded\n(Replaced)" as Superseded #4A4A4A : **entry** disposition=superseded **terminal**\n**allowed** read-only / analytics\n**forbidden** any transition
+
 Created --> Open : <b>Opened</b>\nactor: System\ncommand: auto-open\nstream: DispositionChanged\n/ dispositionRemainsValid()
 
 Open --> InRemediation : <b>AcknowledgementAccepted</b>\nactor: Compliance Representative\ncommand: finding.acknowledge\n[capability: finding.acknowledge]\nstream: DispositionChanged\nstory: US-FL-010
 Open --> Dismissed : <b>DismissalDeclared</b>\nactor: Regulatory Official\ncommand: finding.dismiss\n[capability: finding.dismiss]\n/ setDispositionInvalid()\nstream: DispositionChanged\nstory: US-FL-001
 Open --> Waived : <b>WaiverGranted</b>\nactor: Regulatory Official\ncommand: finding.waive\n[capability: finding.waive]\n[sod1ActorNotInCreatorProvenance]\n/ setDispositionWaived()\nstream: DispositionChanged\nstory: US-SD-001 / US-SD-001
+Open --> Superseded : <b>Superseded</b>\nactor: Regulatory Official\ncommand: finding.supersede\n[capability: finding.supersede]\n[sod1ActorNotInCreatorProvenance]\n/ setDispositionSuperseded()\nstream: DispositionChanged\nstory: US-FL-012
 
 ' Exit remediation composite
 Rejected --> Open : <b>ReopenDeclared</b>\nactor: Regulatory Official\ncommand: finding.reopen\n[capability: finding.reject_remediation]\n[hasMandatoryComments]\nstream: DispositionChanged\nstory: US-FL-010
@@ -49,5 +52,6 @@ Waived --> Closed : <b>FindingClosed</b>\nactor: System\ncommand: auto-close\nst
 ' Terminal business states → Final pseudostate (STM-015 / STM-024)
 Dismissed --> [*] : <b>Finalized</b>\nactor: System
 Closed --> [*] : <b>Finalized</b>\nactor: System
+Superseded --> [*] : <b>Finalized</b>\nactor: System
 
 @enduml
