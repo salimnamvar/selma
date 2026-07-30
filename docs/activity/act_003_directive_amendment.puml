@@ -86,8 +86,11 @@ if (Compilation Succeeded?) then (yes)
   #2C6E49:Return Success\n+ New Snapshot Hash;
   stop
 else (no)
-  #A93226:Rollback Directive Change;
-  :Return Error\nwith Compilation Failure Details;
+  :Acquire Write Lock\non Directive Graph;
+  :Create Revert Revision\n(compensating write);
+  :Persist Revert to Directives store;
+  :Release Write Lock;
+  #A93226:Return Error\nwith Compilation Failure Details;
   stop
 endif
 
