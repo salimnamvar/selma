@@ -1,6 +1,6 @@
 # 07 — Component Class Design
 
-See: [`../class-diagram/`](../class-diagram/) for structure, methods, and fields.
+See: [`../class/`](../class/) for structure, methods, and fields.
 
 Modules use **`{resource}_{layer}`**. Methods use **ROD Verb+Resource** names
 (see [03](03-ports-and-adapters.md), [04](04-package-architecture.md), [05](05-application-use-cases.md)).

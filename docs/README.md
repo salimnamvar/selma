@@ -7,10 +7,10 @@
 | **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Source of truth for structure** (context / container / component) |
 | **State machines** | [`state-machine/`](state-machine/README.md) | FSMs and pipelines |
 | **Design Freeze** | [`design/`](design/README.md) | DDD, ports, packages, use cases |
-| **Use case diagrams** | [`usecase-diagram/`](usecase-diagram/README.md) | Actor / epic index (stories live in contracts) |
+| **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index (stories live in contracts) |
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
-| **Class diagrams** | [`class-diagram/`](class-diagram/README.md) | Domain / application / infrastructure classes |
-| **Package diagrams** | [`package-diagram/`](package-diagram/README.md) | Clean Architecture package layout |
+| **Class diagrams** | [`class/`](class/README.md) | Domain / application / infrastructure classes |
+| **Package diagrams** | [`package/`](package/README.md) | Clean Architecture package layout |
 | **ERDs** | [`erd/`](erd/README.md) | Four resource stores |
 | **Activity diagrams** | [`activity/`](activity/README.md) | Procedural swim-lane flows |
 | **API** | [`api/`](api/README.md) | OpenAPI + resource schemas |
@@ -19,11 +19,11 @@
 
 ## Authority
 
-1. `spec/contracts/` — what the system MUST do  
-2. `schema/` — data shapes  
-3. **`c4-model/`** — structural architecture (entity IDs, containers, components, stores)  
-4. `design/` — how Implementation is structured (packages, ports, use cases)  
-5. `state-machine/` + other diagrams — behavior and detail views; must not contradict C4 or contracts  
+1. `spec/contracts/` — what the system MUST do
+2. `schema/` — data shapes
+3. **`c4-model/`** — structural architecture (entity IDs, containers, components, stores)
+4. `design/` — how Implementation is structured (packages, ports, use cases)
+5. `state-machine/` + other diagrams — behavior and detail views; must not contradict C4 or contracts
 
 Diagrams and design prose use C4 resource-oriented IDs from
 [`c4-model/README.md`](c4-model/README.md) (e.g. `api`, `compilation`,

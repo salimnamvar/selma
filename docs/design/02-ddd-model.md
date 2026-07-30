@@ -62,7 +62,7 @@ Contexts communicate via **application orchestration** and **immutable store con
 
 ## Aggregates
 
-See: [`../class-diagram/`](../class-diagram/) for aggregate structure, value objects, entities, and invariants.
+See: [`../class/`](../class/) for aggregate structure, value objects, entities, and invariants.
 
 | Aggregate | Bounded Context | Contract |
 | :--- | :--- | :--- |

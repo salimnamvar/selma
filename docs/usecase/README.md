@@ -15,10 +15,10 @@ align with [`../c4-model/`](../c4-model/README.md).
 
 ```bash
 # Single diagram
-plantuml docs/usecase-diagram/uc_001_governance.puml
+plantuml docs/usecase/uc_001_governance.puml
 
 # All diagrams
-plantuml docs/usecase-diagram/uc_*.puml
+plantuml docs/usecase/uc_*.puml
 ```
 
 ## Actor Catalog (C4)

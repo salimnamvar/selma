@@ -65,9 +65,9 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 26 | CLS-001 Domain Model | COMPLETE | `docs/class-diagram/cd_001_domain_model.puml` |
-| 27 | CLS-002 Application Services | COMPLETE | `docs/class-diagram/cd_002_application_services.puml` |
-| 28 | CLS-003 Infrastructure Adapters | COMPLETE | `docs/class-diagram/cd_003_infrastructure_adapters.puml` |
+| 26 | CLS-001 Domain Model | COMPLETE | `docs/class/cd_001_domain_model.puml` |
+| 27 | CLS-002 Application Services | COMPLETE | `docs/class/cd_002_application_services.puml` |
+| 28 | CLS-003 Infrastructure Adapters | COMPLETE | `docs/class/cd_003_infrastructure_adapters.puml` |
 
 ### Entity-Relationship Diagrams (4 diagrams)
 
@@ -82,20 +82,20 @@ All diagrams and artifacts are **COMPLETE**. No items were marked OPTIONAL or sk
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 33 | UC-001 Governance Authoring | COMPLETE | `docs/usecase-diagram/uc_001_governance.puml` |
-| 34 | UC-002 Compilation | COMPLETE | `docs/usecase-diagram/uc_002_compilation.puml` |
-| 35 | UC-003 Inspection | COMPLETE | `docs/usecase-diagram/uc_003_inspection.puml` |
-| 36 | UC-004 Finding Lifecycle | COMPLETE | `docs/usecase-diagram/uc_004_findings.puml` |
-| 37 | UC-005 Conflict | COMPLETE | `docs/usecase-diagram/uc_005_conflict.puml` |
-| 38 | UC-006 Authorization | COMPLETE | `docs/usecase-diagram/uc_006_authorization.puml` |
-| 39 | UC-007 Guidance (findings reads) | COMPLETE | `docs/usecase-diagram/uc_007_guidance.puml` |
-| 40 | UC-008 Certification | COMPLETE | `docs/usecase-diagram/uc_008_certification.puml` |
+| 33 | UC-001 Governance Authoring | COMPLETE | `docs/usecase/uc_001_governance.puml` |
+| 34 | UC-002 Compilation | COMPLETE | `docs/usecase/uc_002_compilation.puml` |
+| 35 | UC-003 Inspection | COMPLETE | `docs/usecase/uc_003_inspection.puml` |
+| 36 | UC-004 Finding Lifecycle | COMPLETE | `docs/usecase/uc_004_findings.puml` |
+| 37 | UC-005 Conflict | COMPLETE | `docs/usecase/uc_005_conflict.puml` |
+| 38 | UC-006 Authorization | COMPLETE | `docs/usecase/uc_006_authorization.puml` |
+| 39 | UC-007 Guidance (findings reads) | COMPLETE | `docs/usecase/uc_007_guidance.puml` |
+| 40 | UC-008 Certification | COMPLETE | `docs/usecase/uc_008_certification.puml` |
 
 ### Package & Deployment Diagrams (2 diagrams)
 
 | # | Artifact | Status | File |
 |---|----------|--------|------|
-| 41 | PKG-001 Clean Architecture | COMPLETE | `docs/package-diagram/pkg_001_clean_architecture.puml` |
+| 41 | PKG-001 Clean Architecture | COMPLETE | `docs/package/pkg_001_clean_architecture.puml` |
 | 42 | DEP-001 Production Deployment | COMPLETE | `docs/deployment/dep_001_production.puml` |
 
 ### Design Documents (8 documents)
@@ -146,7 +146,7 @@ Verified against `docs/design/04-package-architecture.md`:
 | Composition | Wiring only; depends on all layers | CONFORMANT |
 
 All dependency arrows point inward. The Dependency Rule is enforced structurally
-via the target package layout in `docs/package-diagram/pkg_001_clean_architecture.puml`.
+via the target package layout in `docs/package/pkg_001_clean_architecture.puml`.
 
 ### 2.2 Resource-Oriented Design (ROD) Conformance
 

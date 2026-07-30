@@ -75,7 +75,7 @@ stories:                                # Acceptance criteria live HERE
 - **State Machines** — [`../state-machine/`](../state-machine/) (behavioral FSMs)
 - **Schemas** — [`../schema/`](../schema/) (data structure contracts)
 - **Design Freeze** — [`../design/`](../design/README.md) (DDD, ports, packages, use cases)
-- **Use Case Diagrams** — [`../usecase-diagram/`](../usecase-diagram/README.md) (index only; stories remain in contracts)
+- **Use Case Diagrams** — [`../usecase/`](../usecase/README.md) (index only; stories remain in contracts)
 
 ## Migration Status
 

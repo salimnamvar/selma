@@ -5,8 +5,8 @@ PlantUML package diagrams for Clean Architecture with **`{resource}_{layer}`** m
 ## Usage
 
 ```bash
-plantuml docs/package-diagram/pkg_001_clean_architecture.puml
-plantuml -tsvg docs/package-diagram/*.puml
+plantuml docs/package/pkg_001_clean_architecture.puml
+plantuml -tsvg docs/package/*.puml
 ```
 
 ## Diagram Index

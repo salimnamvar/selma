@@ -1,6 +1,6 @@
 @startuml pkg_001_clean_architecture
 ' PKG-001 · Clean Architecture — {resource}_{layer} modules
-!includeurl ../class-diagram/common/cd_styles.puml
+!includeurl ../class/common/cd_styles.puml
 
 title **PKG-001 — Clean Architecture Packages**\nSelma · {resource}_{layer} · Resource-Oriented Design\n
 

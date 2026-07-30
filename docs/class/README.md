@@ -11,13 +11,13 @@ PlantUML class diagrams documenting the domain model, application services, and 
 
 ```bash
 # Render all diagrams
-plantuml docs/class-diagram/*.puml
+plantuml docs/class/*.puml
 
 # Render a single diagram
-plantuml docs/class-diagram/cd_001_domain_model.puml
+plantuml docs/class/cd_001_domain_model.puml
 
 # Render to SVG (recommended for docs)
-plantuml -tsvg docs/class-diagram/*.puml
+plantuml -tsvg docs/class/*.puml
 ```
 
 ## Diagram Index
