@@ -46,6 +46,33 @@ artifact_types:
           type: "string (SHA-256)"
     immutability: "Once completed, never modified"
 
+  - name: "conflict_artifact"
+    description: "Human-reviewable conflict resolution artifact"
+    schema:
+      required_fields:
+        - field: "artifact_id"
+          type: "string (UUID)"
+        - field: "conflict_type"
+          type: "enum"
+          values: ["within_lineage", "cross_lineage"]
+        - field: "binding_status"
+          type: "enum"
+          values: ["pending", "resolved", "rejected", "archived", "advisory"]
+        - field: "rule_a_id"
+          type: "string (execution_id)"
+        - field: "rule_b_id"
+          type: "string (execution_id)"
+        - field: "resolution_type"
+          type: "string (override|priority|specificity|recency|artifact)"
+        - field: "created_at"
+          type: "datetime (ISO 8601, UTC)"
+    immutability: "Append-only versioning: each state transition creates a new immutable version; previous versions retained for audit"
+    notes: >
+      ConflictArtifacts support state transitions (HumanReview → ArtifactResolved → ArtifactArchived)
+      via append-only versioning. Each transition writes a new immutable version with the updated
+      binding_status. The store retains all versions for audit trail. This differs from
+      inspection_snapshots which are truly write-once.
+
   - name: "pipeline_trace_entry"
     description: "Individual stage execution record"
     schema:
