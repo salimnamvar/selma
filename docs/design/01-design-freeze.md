@@ -74,7 +74,7 @@ Resource-oriented C4 IDs are canonical. Legacy contract aliases map as follows:
 1. **Compile-time / runtime separation** — executable rule documents → CG-IR at compile time; never re-interpret prose policy for evaluation.
 2. **Guidance only after findings** — policy doctrine in `directives` via `paired_policy_ref` / `DirectiveRepository.readPolicyDoctrine`; never for FSM transitions.
 3. **Dual-document single store** — executable + doctrine co-versioned; `directives_repository` owns both; no external Governance Contracts corpus.
-4. **One normative FSM** — Finding 10-state machine under `findings` component.
+4. **One normative FSM** — Finding 11-state machine under `findings` component.
 5. **Capability + SoD before mutation** — human edges gated; denials audit with no partial mutation.
 6. **Four resource stores by mutability** — `directives` · `compiled_rules` · `finding_events` · `artifacts`.
 7. **Domain-agnostic core** — language-specific detail only in `detection.adapters[]`.

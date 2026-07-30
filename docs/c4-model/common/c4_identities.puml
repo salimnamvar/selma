@@ -93,7 +93,7 @@
 
 !$NAME_findings = "Findings"
 !$TECH_findings = "Python / Pydantic"
-!$DESC_findings = "Application service for the findings resource: 10-state lifecycle, SoD, dispositions, evidence, and read models including guidance (doctrine via Directives repository + paired_policy_ref). Appends Finding Events; does not write Compiled Rules or mutate directives from analytics."
+!$DESC_findings = "Application service for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance (doctrine via Directives repository + paired_policy_ref). Appends Finding Events; does not write Compiled Rules or mutate directives from analytics."
 
 !$NAME_directives_repository = "Directives Repository"
 !$TECH_directives_repository = "Python / SQLAlchemy / PostgreSQL"
