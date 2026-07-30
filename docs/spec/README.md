@@ -74,7 +74,8 @@ stories:                                # Acceptance criteria live HERE
 - **C4 Architecture** — [`../c4-model/`](../c4-model/) (structural source of truth)
 - **State Machines** — [`../state/`](../state/) (behavioral FSMs)
 - **Schemas** — [`../schema/`](../schema/) (data structure contracts)
-- **Design Freeze** — [`../design/`](../design/README.md) (DDD, ports, packages, use cases)
+- **Class Diagrams** — [`../class/`](../class/README.md) (domain model)
+- **Package Diagrams** — [`../package/`](../package/README.md) (Clean Architecture layout)
 - **Use Case Diagrams** — [`../usecase/`](../usecase/README.md) (index only; stories remain in contracts)
 
 ## Migration Status

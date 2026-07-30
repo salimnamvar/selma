@@ -45,4 +45,5 @@ Shared styles: `common/act_styles.puml`.
 - [Specification Contracts](../spec/contracts/) — normative behavioral contracts
 - [State Machines](../state/README.md) — FSMs and pipeline state transitions
 - [C4 Architecture](../c4-model/README.md) — structural architecture
-- [Design Freeze](../design/README.md) — DDD, ports & adapters, package layout
+- [Class Diagrams](../class/README.md) — domain classes
+- [Package Diagrams](../package/README.md) — Clean Architecture layout

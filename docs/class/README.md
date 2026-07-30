@@ -51,9 +51,7 @@ Common styling definitions are in [`common/cd_styles.puml`](common/cd_styles.pum
 | Port | `#FCE4EC` (crimson) | `#C62828` |
 | Entity | `#ECEFF1` (grey) | `#546E7A` |
 
-## Design Reference
+## Related Documents
 
-- Domain model: [`../design/02-ddd-model.md`](../design/02-ddd-model.md)
-- Ports and adapters: [`../design/03-ports-and-adapters.md`](../design/03-ports-and-adapters.md)
-- Application use cases: [`../design/05-application-use-cases.md`](../design/05-application-use-cases.md)
-- Component class design: [`../design/07-component-class-design.md`](../design/07-component-class-design.md)
+- [C4 Architecture](../c4-model/README.md) — structural architecture
+- [Package Diagrams](../package/README.md) — Clean Architecture package layout

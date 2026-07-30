@@ -59,7 +59,7 @@ plantuml docs/usecase/uc_*.puml
 - System boundary rectangles group use cases by bounded context
 - All diagrams share styling from `common/uc_styles.puml`
 
-## Design Reference
+## Related Documents
 
 - C4 structure: [`../c4-model/README.md`](../c4-model/README.md)
-- Application orchestration: [`../design/05-application-use-cases.md`](../design/05-application-use-cases.md)
+- Specification contracts: [`../spec/contracts/`](../spec/contracts/)

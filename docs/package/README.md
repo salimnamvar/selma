@@ -38,8 +38,7 @@ Package structure aligns with C4 components:
 - `authorization` — Enforced at API gate (cross-cutting concern)
 - `detections` — Part of inspection pipeline
 
-## Design reference
+## Related Documents
 
-- [04-package-architecture.md](../design/04-package-architecture.md)
-- [03-ports-and-adapters.md](../design/03-ports-and-adapters.md)
-- [05-application-use-cases.md](../design/05-application-use-cases.md)
+- [C4 Architecture](../c4-model/README.md)
+- [Class Diagrams](../class/README.md)

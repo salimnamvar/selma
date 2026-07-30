@@ -58,7 +58,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       + lineage_id: LineageId
       + execution_id: ExecutionId
       __state__
-      + status: DirectiveStatus {active|deprecated|draft}
+      + status: DirectiveStatus {active|deprecated|draft|superseded}
       + revision: int
       + executable_document: ExecutableRuleDoc
       + policy_doctrine_document: PolicyDoctrineDoc
@@ -68,7 +68,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       <<invariant>>
       . lineage_id matches ^[A-Z]{2,5}-\d{3}[A-Z]?$
       . revision > 0
-      . status transition: draft→active→deprecated
+      . status transition: draft→active→deprecated, superseded
       . executable + doctrine co-versioned per revision
       . paired_policy_ref resolves within directives
     }
@@ -190,13 +190,14 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
     abstract "**FsmState**" as FsmState <<enum>> #FFF8E1/F9A825 {
       Created
       Open
-      UnderReview
-      EvidenceSubmitted
-      Validated
-      Remediated
+      Acknowledged
+      "Evidence Submitted"
+      "Pending Verification"
       Verified
-      Waived
+      Rejected
       Dismissed
+      Waived
+      Superseded
       Closed
     }
 
@@ -205,6 +206,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
       invalid
       waived
       dismissed
+      superseded
     }
 
     abstract "**Severity**" as SeverityVO <<enum>> #FFF8E1/F9A825 {

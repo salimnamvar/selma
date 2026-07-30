@@ -104,4 +104,4 @@ plantuml docs/c4-model/c4_selma_component.puml
 ```
 
 Behavior FSMs: [`../state/`](../state/README.md).
-Application design freeze: [`../design/`](../design/README.md).
+Implementation structure: [`../class/`](../class/README.md), [`../package/`](../package/README.md).

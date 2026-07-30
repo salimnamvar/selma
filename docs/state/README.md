@@ -51,4 +51,5 @@ Shared styles: `common/sm_styles.puml`.
 - [Specification Contracts](../spec/contracts/) — normative behavioral contracts
 - [C4 Architecture](../c4-model/README.md) — structural architecture
 - [Schema Contracts](../schema/) — data structure contracts
-- [Design Freeze](../design/README.md) — DDD, ports & adapters, package layout
+- [Class Diagrams](../class/README.md) — domain model
+- [Package Diagrams](../package/README.md) — Clean Architecture layout
