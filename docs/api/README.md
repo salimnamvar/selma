@@ -35,10 +35,10 @@ Primary collections match C4 stores / use-case clusters:
 | Finding Events      | `/findings/{finding_id}/events`                    | GET                        | `finding_events` |
 | Finding Guidance    | `/findings/{finding_id}/guidance`                  | GET                        | `findings` + doctrine via `directives_repository` |
 | Artifacts           | `/artifacts` (as exposed)                          | GET                        | `artifacts` |
-| Conflicts           | `/conflicts`                                       | GET                        | domain `ResolveConflict` (not a C4 peer) |
-| Conflict Resolutions| `/conflicts/{conflict_id}/resolutions`             | POST                       | same |
-| Certifications      | `/certifications`                                  | POST, GET                  | offline/CI `certification_tool` (optional; not in-process C4 peer) |
-| Certification       | `/certifications/{certification_id}`               | GET                        | same |
+| Conflicts           | `/conflicts`                                       | GET                    | `findings` (via `ResolveConflict` domain service) |
+| Conflict Resolutions| `/conflicts/{conflict_id}/resolutions`             | POST                   | same |
+| Certifications      | `/certifications`                                  | POST, GET              | `api` (delegates to external CI tool suite) |
+| Certification       | `/certifications/{certification_id}`               | GET                    | same |
 
 ## Authentication
 
