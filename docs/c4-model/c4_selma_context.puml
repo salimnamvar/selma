@@ -2,7 +2,7 @@
 ' Title:     Selma -- Context Diagram
 ' Boundary:  Selma
 ' Purpose:   Black-box view of the two governance actors and the
-'            five external systems Selma compiles against, certifies,
+'            four external systems Selma certifies against, inspects,
 '            and streams findings and security audit records into.
 ' Contract:  1.0.0
 ' Diagram:   1.0.0 (Phase B AIP alignment)
@@ -36,7 +36,6 @@ System(selma, $NAME_selma, $DESC_selma)
 '  EXTERNAL SYSTEMS
 ' ============================================================
 
-System_Ext(governance_contracts, $NAME_governance_contracts, $DESC_governance_contracts)
 System_Ext(cicd, $NAME_cicd, $DESC_cicd)
 System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
 System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
@@ -55,7 +54,6 @@ Rel(compliance_rep, selma, "submits targets for inspection; acknowledges finding
 '  RELATIONSHIPS -- External System Interactions
 ' ============================================================
 
-Rel(selma, governance_contracts, "optional import/export of dual-document directive packages", "HTTPS / Package", $tags="mediated")
 Rel(cicd, selma, "triggers architectural certification and runtime compliance checks", "CI/CD")
 Rel(selma, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(selma, audit_platform, "publishes finding events, security audit records, inspection snapshots, and certification artifacts for long-term retention", "Append-Only", $tags="immutable_async")

@@ -29,7 +29,6 @@ Person(compliance_rep, $NAME_compliance_rep, $DESC_compliance_rep)
 '  EXTERNAL SYSTEMS (ID + Name from c4_identities.puml)
 ' ============================================================
 
-System_Ext(governance_contracts, $NAME_governance_contracts, $DESC_governance_contracts)
 System_Ext(cicd, $NAME_cicd, $DESC_cicd)
 System_Ext(regulated_systems, $NAME_regulated_systems, $DESC_regulated_systems)
 System_Ext(audit_platform, $NAME_audit_platform, $DESC_audit_platform)
@@ -78,7 +77,6 @@ Rel(selma_interface, selma_app, "forwards user requests as REST API calls", "RES
 
 Rel(selma_app, regulated_systems, "inspects targets conforming to target schema", "HTTPS / API", $tags="mediated")
 Rel(cicd, selma_app, "triggers architectural certification and runtime compliance checks", "CI/CD", $tags="validation_only")
-Rel(selma_app, governance_contracts, "optional import/export of dual-document directive packages", "HTTPS / Package", $tags="mediated")
 Rel(selma_app, remediation_systems, "emits finding events and status changes", "Mediated / Webhook", $tags="mediated_async")
 
 

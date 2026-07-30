@@ -68,7 +68,7 @@ Use this map everywhere:
 
 1. **Compile-time / runtime separation** — executable rule documents → CG-IR at compile time; never re-interpret prose policy for evaluation.
 2. **Guidance only after findings** — policy doctrine documents in `directive_store` via `paired_policy_ref` / `DirectiveRepository.readPolicyDoctrine` for humans/AI; never for FSM transitions.
-3. **Dual-document single store** — executable rule + policy doctrine co-versioned under one Directive; `directives_adapter` owns both; no separate policy-doctrine adapter.
+3. **Dual-document single store** — executable rule + policy doctrine co-versioned under one Directive; `directives_adapter` owns both; no separate policy-doctrine adapter; no external Governance Contracts corpus.
 4. **One normative FSM** — Finding 10-state machine; other diagrams are extracted pipelines.
 5. **Capability + SoD before mutation** — human edges gated; denials audit with no partial mutation.
 6. **Immutable compiled/event/snapshot stores** — append-only or content-addressed.

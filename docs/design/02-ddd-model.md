@@ -105,6 +105,7 @@ See [06-domain-events-and-stores.md](06-domain-events-and-stores.md) for full sc
 | External / adjacent | Translation |
 | :--- | :--- |
 | Policy doctrine document (in directive_store) | Guidance read model only via Directives Adapter; never mutates Finding FSM |
+| External Git/package rule trees | Not part of architecture; instances are authored in Selma into directive_store only |
 | Legacy lint “Finding” (file:line:code) | Map to inspection location + message fields; identity is `finding_id` + control binding |
 | Language adapters | Live only under `detection.adapters[]`; core stays universal |
 | CI/CD | Triggers auditor; does not write directives or findings |

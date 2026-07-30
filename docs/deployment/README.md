@@ -15,7 +15,7 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 | **Public** | User-facing entry point | Load Balancer, Selma Interface |
 | **Application** | Core business logic | Selma Application container |
 | **Data** | Persistent storage | PostgreSQL, CGIR Store, Event Store, Artifact Store |
-| **External** | Third-party integrations | Governance Contracts, CI/CD, Target Systems, Audit Platform, Remediation |
+| **External** | Third-party integrations | CI/CD, Target Systems, Audit Platform, Remediation |
 | **Monitoring** | Observability stack | Prometheus/Grafana, ELK/Loki, Jaeger |
 
 ## Environment Requirements
@@ -54,7 +54,7 @@ The Hermetic Compiler operates in a **network-isolated environment** during rule
 
 - Deterministic compilation output (no external fetches mid-compile)
 - Security guarantee: compiled rules cannot exfiltrate data during compilation
-- Governance Contracts (Git) are cloned **before** entering the hermetic boundary
+- Executable rule documents are read from the **Directive Store** under read-lock **before** entering the hermetic boundary; policy doctrines are not loaded for evaluation
 
 ### TLS Termination
 
@@ -72,7 +72,7 @@ Use PgBouncer or equivalent connection pooler in front of PostgreSQL to manage:
 | Store | Backup Strategy | RPO | RTO |
 |:------|:----------------|:----|:----|
 | Directive Store | Automated PITR (point-in-time recovery) | < 5 min | < 1 hour |
-| CGIR Store | None required (reconstructable from Governance Contracts) | N/A | < 30 min (recompile) |
+| CGIR Store | None required (reconstructable by recompiling from Directive Store) | N/A | < 30 min (recompile) |
 | Event Store | Replicated + archived to Audit Platform | < 1 min | < 1 hour |
 | Artifact Store | Cross-region replication | < 15 min | < 2 hours |
 

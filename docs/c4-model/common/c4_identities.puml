@@ -35,15 +35,17 @@
 !$DESC_selma = "Domain-agnostic rule regularity platform. Compiles human-authored regulatory directives into executable rules, inspects submitted targets against those rules, and manages findings through a full lifecycle with audit trail. Enforces capability-based access control and segregation of duties across all governance operations."
 
 ' ------------------------------------------------------------
-' External systems (ID = governance_contracts | cicd |
-'   regulated_systems | audit_platform | remediation_systems)
+' External systems (ID = cicd | regulated_systems |
+'   audit_platform | remediation_systems)
 ' Layers: Context, Container, Component
+'
+' NOTE: There is no external "Governance Contracts" system.
+' Dual-document directives (executable rule + policy doctrine) are
+' authored in Selma and stored in directive_store. Schemas live in
+' docs/schema/ (product design), not as a C4 external system.
 ' ------------------------------------------------------------
-!$NAME_governance_contracts = "Governance Contracts"
-!$DESC_governance_contracts = "Optional external packages for import/export and schema packaging (rule_schema, policy_doctrine shapes). Not the system of record. Authoritative dual-document directives (executable rule + policy doctrine) live in the Directives store after authoring or import. Packages never drive evaluation or finding FSM transitions."
-
 !$NAME_cicd = "CI/CD Pipeline"
-!$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and verifies that governance artifacts are never accessed at runtime."
+!$DESC_cicd = "Continuous integration pipeline that triggers architectural certification and runtime compliance checks against Selma Application."
 
 !$NAME_regulated_systems = "Target & Regulated Entity Systems"
 !$DESC_regulated_systems = "External systems from which Selma pulls targets for inspection. Any subject domain: financial ledgers, software repositories, document stores, environmental monitoring, or other. Targets conform to the target schema."

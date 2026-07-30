@@ -57,6 +57,7 @@ Ownership of each machine maps to the component inventory above (e.g. Hermetic C
 - **Compile-time/runtime separation**: Executable rule documents compile to CG-IR; policy doctrine documents are read only for guidance after findings, never for evaluation
 - **Dual-document directives in one store**: Every directive revision holds a linked executable rule (JSON) and policy doctrine (YAML) in `directive_store`; `directives_adapter` is the sole adapter for both documents
 - **No separate policy-doctrine adapter**: Guidance resolves doctrines through `directives_adapter` + `paired_policy_ref`, not a filesystem/Git reader
+- **No external Governance Contracts system**: Schemas live in `docs/schema/`; directive instances are authored in Selma and stored in `directive_store`. Compile and guidance never depend on an external Git/package corpus
 - **Immutable storage**: CG-IR, events, snapshots are append-only
 - **Capability-based access control**: Permissions enforced at component boundaries
 - **Segregation of duties**: Directive creator ≠ Finding waiver

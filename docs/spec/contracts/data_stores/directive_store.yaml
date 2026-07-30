@@ -20,7 +20,9 @@ storage_model:
     linking the two; plus scope, priority, lineage, and metadata.
   system_of_record: >
     directive_store is authoritative for both documents. No separate filesystem
-    policy-doctrine store or PolicyDoctrineReader adapter.
+    policy-doctrine store, PolicyDoctrineReader adapter, or external Governance
+    Contracts corpus. Schemas that constrain documents live in docs/schema/;
+    instances are authored only through Selma into this store.
 
 operations:
   - name: "create"

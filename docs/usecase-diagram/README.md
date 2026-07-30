@@ -38,7 +38,7 @@ plantuml docs/usecase-diagram/uc_*.puml
 | Regulatory Official | Human / AI agent | Regulatory authority with full directive lifecycle capabilities |
 | Compliance Representative | Human / AI / Programmatic service | Regulated entity; submits targets, acknowledges findings |
 | CI/CD Pipeline | System | Triggers certification and compliance checks |
-| External Systems | System | Governance Contracts, Target Systems, Audit Platform, Remediation Systems |
+| External Systems | System | CI/CD, Target Systems, Audit Platform, Remediation Systems |
 
 ## Conventions
 

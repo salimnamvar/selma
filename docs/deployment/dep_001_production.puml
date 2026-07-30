@@ -116,11 +116,6 @@ package "Data Zone" as DATA_ZONE #FFF3E0/FFE0B2 {
 
 package "External Zone" as EXT_ZONE #FCE4EC/F8BBD0 {
 
-    cloud "Governance Contracts\n(Git Repository)" as GOVERNANCE_CONTRACTS {
-        artifact "Rule Definitions (JSON)" as RULE_DEFS
-        artifact "Policy Doctrines (YAML)" as POLICY_DOCS
-    }
-
     cloud "CI/CD Pipeline\n(GitHub Actions / GitLab CI / Jenkins)" as CICD {
         artifact "Certification Trigger" as CERT_TRIGGER
     }
@@ -171,7 +166,7 @@ FASTAPI --> ARTIFACT_STORE : Object Write\n(write-once)
 '  CONNECTIONS -- Application Zone → External Zone
 ' ============================================================
 
-HERMETIC_COMPILER --> GOVERNANCE_CONTRACTS : Compile-Time Only\n(Git clone / read)
+HERMETIC_COMPILER --> DIRECTIVE_STORE : Compile-Time Only\n(read executable documents under lock)
 FASTAPI --> TARGET_SYSTEMS : HTTPS / API\n(inspection queries)
 FASTAPI --> REMEDIATION : Mediated / Webhook\n(finding events)
 FASTAPI --> AUDIT_PLATFORM : Append-Only / Async\n(event & artifact replication)

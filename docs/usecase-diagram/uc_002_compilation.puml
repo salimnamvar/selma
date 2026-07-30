@@ -22,10 +22,6 @@ rectangle "Selma Application" as SYS {
   }
 }
 
-rectangle "External Systems" as EXT {
-  usecase "Governance Contracts"  as EXT1
-}
-
 ' ---- associations ----
 CICD --> UC1
 RO --> UC1 : <<indirect>>\n(via directive change)
@@ -41,11 +37,10 @@ UC5 ..> UC6 : <<include>>
 UC6 ..> UC7 : <<include>>
 
 UC8 ..> UC6 : <<extend>>
-UC7 ..> EXT1 : <<include>>
 
 ' ---- notes ----
 note right of UC1
-  **Pre:** Directive source available, CI trigger fired
+  **Pre:** Executable documents in directive_store; CI or directive change trigger
   **Post:** Compilation pipeline initiated
 end note
 
@@ -56,7 +51,7 @@ end note
 
 note bottom of UC7
   **Pre:** CG-IR materialized
-  **Post:** Snapshot published to Governance Contracts
+  **Post:** Snapshot published to cgir_store (CAS)
 end note
 
 @enduml
