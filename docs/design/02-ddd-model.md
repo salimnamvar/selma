@@ -77,15 +77,15 @@ See: [`../class/`](../class/) for aggregate structure, value objects, entities, 
 
 ## Domain services (stateless rules)
 
-| Service | Responsibility | Context |
-| :--- | :--- | :--- |
-| `LineageService` | fork/merge/split identity rules, DAG depth | Governance |
-| `DetectionDiscriminator` | strategy ↔ active `*_spec` + adapters | Compilation |
-| `ResolveConflict` | multi-factor precedence algorithm | Conflict |
-| `FindingFsm` | transition table + SoD predicates | Finding Lifecycle |
-| `ScopeMatcher` | applicability / specificity scoring | Inspection / Conflict |
-| `GuidanceResolver` | load doctrine by `paired_policy_ref` | Guidance |
-| `CapabilityGate` | cap check + denial audit | Authorization |
+| Service | Responsibility | Context | Layer |
+| :--- | :--- | :--- | :--- |
+| `LineageService` | fork/merge/split identity rules, DAG depth | Governance | domain |
+| `DetectionDiscriminator` | strategy ↔ active `*_spec` + adapters | Compilation | domain |
+| `ResolveConflict` | multi-factor precedence algorithm | Conflict | domain |
+| `FindingFsm` | transition table + SoD predicates | Finding Lifecycle | domain |
+| `ScopeMatcher` | applicability / specificity scoring | Inspection / Conflict | domain |
+| `GuidanceResolver` | load doctrine by `paired_policy_ref` | Guidance | application |
+| `CapabilityGate` | cap check + denial audit | Authorization | application |
 
 ## Domain events (summary)
 
