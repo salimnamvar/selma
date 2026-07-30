@@ -62,6 +62,35 @@ sod_rules:
     provenance_source: "Finding Event Stream (DispositionChanged events)"
     story_refs: ["US-SD-002"]
 
+  - rule_id: "SOD-003"
+    name: "Creator Cannot Supersede Own Findings"
+    description: >
+      An actor who authored a directive MUST NOT supersede findings raised by that
+      directive. This prevents rule authors from silently replacing findings they caused.
+    capability: "finding.supersede"
+    constraint:
+      type: "actor_not_in_creator_provenance"
+      check: "actor NOT IN creator_provenance(finding.control_id)"
+      fields:
+        - "actor (current request identity)"
+        - "finding.control_id (directive execution ID)"
+        - "creator_provenance (sorted array of actor IDs from CG-IR snapshot node provenance)"
+    enforcement_point: "finding_fsm_engine"
+    denial:
+      code: "403 CapabilityDenied"
+      reason: "segregation of duties: creator cannot supersede own findings"
+      audit: true
+    provenance_source: "metadata.audit.authored_by (compiled to creator_provenance at snapshot time)"
+    inheritance:
+      description: "creator_provenance is inherited through lifecycle operations"
+      rules:
+        - "directive.create: authored_by = authenticated actor"
+        - "directive.modify: authored_by preserved from parent revision"
+        - "fork: child inherits authored_by from parent"
+        - "split: child inherits authored_by from parent"
+        - "merge: creator_provenance = sorted-set union of all parent authored_by values"
+    story_refs: ["US-SD-003"]
+
 capability_matrix:
   description: "Role-based capability assignments"
   roles:
@@ -170,6 +199,15 @@ stories:
       - "Given a finding where actor-X submitted evidence. When actor-Y (different actor) attempts finding.approve_remediation. Then the action succeeds."
 
   - story_id: "US-SD-003"
+    as: "finding_fsm_engine"
+    i_want: "to prevent directive creators from superseding findings they caused"
+    so_that: "compliance failures cannot be silently replaced by the responsible party"
+    acceptance_criteria:
+      - "Given a finding raised by directive TRAF-001. When the actor who authored TRAF-001 attempts finding.supersede. Then the action is denied with 403 CapabilityDenied."
+      - "Given a finding raised by directive TRAF-001. When an actor NOT in creator_provenance attempts finding.supersede. Then the action succeeds."
+      - "Given a merged directive with creator_provenance = [actor-A, actor-B]. When actor-A attempts finding.supersede. Then the action is denied (actor appears in provenance)."
+
+  - story_id: "US-SD-004"
     as: "finding_fsm_engine"
     i_want: "to enforce capability checks at all mutation gates"
     so_that: "unauthorized actions are rejected before any state change"

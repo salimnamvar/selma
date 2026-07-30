@@ -75,9 +75,10 @@ capabilities:
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
     - cap_id: "finding.supersede"
-      description: "Mark finding as superseded"
+      description: "Mark finding as superseded (Open → Superseded)"
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
+      sod_check: "creator_cannot_supersede"
 
   evidence:
     - cap_id: "evidence.submit"
