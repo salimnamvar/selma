@@ -4,6 +4,7 @@
 
 contract_id: "inspection.pipeline"
 schema_version: "1.0.0"
+design_contract_version: "1.1.0"
 owner_component: "inspections_application"
 state_machine_ref: "../../state/selma_inspection_pipeline.puml"
 description: >

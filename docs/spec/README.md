@@ -1,15 +1,24 @@
 # Selma — Specification Contracts
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+
 Bounded-context contract tree. Each contract owns one domain, is machine-readable,
 and contains its own acceptance criteria.
 
 ## Authority
 
-See [`contracts/meta/authority.yaml`](contracts/meta/authority.yaml) for the
-normative hierarchy: Spec Contracts > Schema Contracts > Directive Instances.
+See [`contracts/meta/authority.yaml`](contracts/meta/authority.yaml) for the full
+hierarchy (design standards → C4 → contracts → schema → API → views).
 
-Structural ownership of contracts maps to **C4 component IDs**
-([`../c4-model/README.md`](../c4-model/README.md)).
+Contract front-matter MUST include `contract_id`, `schema_version`,
+`design_contract_version: "1.1.0"`, and `owner_component` from
+[`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)
+([`contract.schema.json`](../standards/contract.schema.json)).
+
+```bash
+python scripts/check_design_alignment.py
+```
 
 ## Contract Tree
 

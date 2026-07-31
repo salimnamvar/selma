@@ -498,7 +498,7 @@ runtime_usage:
     are stored in directives with the paired executable rule.
   storage: >
     System of record: directives via directives_repository. No separate
-    filesystem doctrine path or PolicyDoctrineReader component.
+    MUST NOT use a filesystem doctrine path or PolicyDoctrineReader component.
   guidance_resolution: >
     After inspection creates a finding, paired_policy_ref on the finding
     is resolved by findings through directives_repository

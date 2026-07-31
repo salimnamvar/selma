@@ -4,18 +4,41 @@
 
 contract_id: "meta.authority"
 schema_version: "1.0.0"
+design_contract_version: "1.1.0"
 owner: null
 description: >
   Defines the authority hierarchy between contract layers.
   No other contract may override this hierarchy.
 
 authority_hierarchy:
+  - layer: design_standards
+    location: "docs/standards/"
+    description: >
+      Checkable design discipline: C4 ID registry (c4_registry.yaml), contract
+      front-matter schema (contract.schema.json), diagram header rules, and
+      alignment checker (scripts/check_design_alignment.py). Does not define
+      domain behavior; enforces consistent IDs and ownership for investigation.
+    authority_over:
+      - layer: structural_architecture
+      - layer: specification_contracts
+      - layer: api_surface
+
+  - layer: structural_architecture
+    location: "docs/c4-model/"
+    description: >
+      Structural source of truth for peers (context/container/component).
+      design_contract_version 1.1.0. IDs must match docs/standards/c4_registry.yaml.
+    authority_over:
+      - layer: behavior_views
+      - layer: implementation_views
+
   - layer: specification_contracts
     location: "docs/spec/contracts/"
     description: "Normative behavioral source — defines what the system MUST do"
     authority_over:
       - layer: schema_contracts
       - layer: directive_contracts
+      - layer: behavior_views
 
   - layer: schema_contracts
     location: "docs/schema/"
@@ -25,6 +48,13 @@ authority_hierarchy:
       - "policy_doctrine.yaml"
     authority_over:
       - layer: directive_instances
+
+  - layer: api_surface
+    location: "docs/api/"
+    description: >
+      HTTP resource surface (OpenAPI 3.1). Validated with Redocly
+      (docs/api/redocly.yaml). Paths and owners must match c4_registry api_resources.
+    authority_over: []
 
   - layer: directive_contracts
     location: "docs/spec/contracts/directive/"
@@ -39,6 +69,16 @@ authority_hierarchy:
       officials: executable_document (rule_schema) + policy_doctrine_document
       (policy_doctrine), linked by paired_policy_ref. System of record — there
       is no external Governance Contracts corpus in the architecture.
+    authority_over: []
+
+  - layer: behavior_views
+    location: "docs/{state,sequence,activity,usecase}/"
+    description: "Behavioral diagrams; must not invent peers or contradict contracts/C4"
+    authority_over: []
+
+  - layer: implementation_views
+    location: "docs/{class,package,erd,deployment}/"
+    description: "Implementation structure views; package/class IDs map to C4 peers"
     authority_over: []
 
 concern_split:
