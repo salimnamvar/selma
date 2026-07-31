@@ -1,6 +1,6 @@
 {
   "title": "DirectiveView",
-  "description": "Representation of a dual-document directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml, identity.yaml, and data_stores/directives_store.yaml. Each directive stores an executable rule document (rule_schema) and a linked policy doctrine document (policy_doctrine) in directives. Only the executable document compiles into CG-IR; doctrine is guidance_only.",
+  "description": "Dual-document directive resource (directives_application \u2192 directives_repository \u2192 directives_store). Schema: docs/spec/contracts/directive/lifecycle.yaml, identity.yaml, and data_stores/directives_store.yaml. Executable rule (rule_schema) + policy doctrine (policy_doctrine) co-versioned. Only the executable compiles into CG-IR; doctrine is guidance_only after findings exist.",
   "type": "object",
   "required": [
     "lineage_id",

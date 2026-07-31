@@ -1,6 +1,6 @@
 {
   "title": "FindingView",
-  "description": "Representation of a finding produced by the inspection pipeline. Schema is grounded in docs/spec/contracts/inspection/finding_contract.yaml and docs/spec/contracts/finding_lifecycle/states.yaml.",
+  "description": "Finding resource projection (findings_application; system of record is finding_events_store). Schema: docs/spec/contracts/inspection/finding_contract.yaml and finding_lifecycle/states.yaml.",
   "type": "object",
   "required": [
     "finding_id",

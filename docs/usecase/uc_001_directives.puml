@@ -1,4 +1,4 @@
-@startuml uc_001_governance
+@startuml uc_001_directives
 !include common/uc_styles.puml
 
 title **UC-001 — Directives**\n(C4: api → directives_application → directives_repository)

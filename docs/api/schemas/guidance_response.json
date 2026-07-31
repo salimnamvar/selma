@@ -1,6 +1,6 @@
 {
   "title": "GuidanceResponse",
-  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directives via paired_policy_ref and directives_repository (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 \u2014 never used for evaluation or FSM transitions.",
+  "description": "Resolved guidance for a finding (findings_application read model). Derived from the policy doctrine in directives_store via paired_policy_ref and directives_repository (GetDirectivePolicyDoctrine). guidance_only per gate AA-02 \u2014 never used for evaluation or FSM transitions. Not a freestanding guidance engine.",
   "type": "object",
   "required": [
     "finding_id",

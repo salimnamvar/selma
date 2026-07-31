@@ -1,6 +1,6 @@
 {
   "title": "CertificationResult",
-  "description": "Result of an architectural audit certification run. All 7 gates (AA-01 through AA-07) must pass for production-grade certification. Schema is grounded in docs/spec/contracts/certification/gates.yaml.",
+  "description": "Result of an architectural audit certification run produced by offline/CI certification_tool (not an in-process C4 peer). Stored as artifacts_store kind=certification. All 7 gates (AA-01 through AA-07) must pass for production-grade certification. Schema: docs/spec/contracts/certification/gates.yaml.",
   "type": "object",
   "required": [
     "certification_id",

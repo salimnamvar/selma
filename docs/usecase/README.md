@@ -15,7 +15,7 @@ align with [`../c4-model/`](../c4-model/README.md).
 
 ```bash
 # Single diagram
-plantuml docs/usecase/uc_001_governance.puml
+plantuml docs/usecase/uc_001_directives.puml
 
 # All diagrams
 plantuml docs/usecase/uc_*.puml
@@ -42,7 +42,7 @@ plantuml docs/usecase/uc_*.puml
 
 | Epic / ID | Context | Primary Actor(s) | C4 / design owner | File | Primary contracts |
 |-----------|---------|-------------------|-------------------|------|-------------------|
-| UC-001 | Directives | Regulatory Official | `api`, `directives_application` | [uc_001_governance.puml](uc_001_governance.puml) | `directive/*` |
+| UC-001 | Directives | Regulatory Official | `api`, `directives_application` | [uc_001_directives.puml](uc_001_directives.puml) | `directive/*` |
 | UC-002 | Compilation | Regulatory Official (via directive change) | `compilation_application` | [uc_002_compilation.puml](uc_002_compilation.puml) | `compilation/*` |
 | UC-003 | Inspection | Compliance Representative | `inspections_application` | [uc_003_inspection.puml](uc_003_inspection.puml) | `inspection/*` |
 | UC-004 | Finding Lifecycle | Both actors | `findings_application` | [uc_004_findings.puml](uc_004_findings.puml) | `finding_lifecycle/*` |
