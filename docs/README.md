@@ -94,6 +94,7 @@ under-report security and concurrency decisions that are already normative.
 | Concern | Primary authority |
 | :--- | :--- |
 | C4 peer IDs / non-peers | [`standards/c4_registry.yaml`](standards/c4_registry.yaml), [`c4-model/`](c4-model/README.md) |
+| Authentication (JWT/OIDC) | [`spec/contracts/authorization/authentication.yaml`](spec/contracts/authorization/authentication.yaml) |
 | Capability catalog / roles | [`spec/contracts/authorization/`](spec/contracts/authorization/) |
 | JWT / HTTP security schemes | [`api/components/security.yaml`](api/components/security.yaml) |
 | Denial audit at gate | C4 `DenialAuditPort` + [`spec/contracts/finding_lifecycle/sod_contract.yaml`](spec/contracts/finding_lifecycle/sod_contract.yaml) |

@@ -28,7 +28,13 @@ plantuml -tsvg docs/sequence/*.puml
 | SEQ-005 | [seq_005_conflict_resolution.puml](seq_005_conflict_resolution.puml) | `ResolveConflict` domain service (not C4 peer) + artifact-backed human review |
 | SEQ-006 | [seq_006_guidance_resolution.puml](seq_006_guidance_resolution.puml) | Finding guidance via `findings_application` + doctrine |
 | SEQ-007 | [seq_007_certification_gates.puml](seq_007_certification_gates.puml) | Offline/CI `certification_tool` (not C4 peer) → artifacts |
-| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | Capability + SoD at `api` |
+| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | JWT authN + CapabilityEnforcer + DenialAuditPort |
+
+## Cross-cutting sequence notes
+
+- **SEQ-001:** durable directive mutation inserts `compile_request` outbox; short read locks released before hermetic CPU compile.
+- **SEQ-006:** guidance resolves **revision-pinned** `paired_policy_ref` only (never latest doctrine head).
+- **SEQ-008:** authentication via JWT; denials append through application-owned **DenialAuditPort**.
 
 ## Participants (C4 1.1.0)
 
