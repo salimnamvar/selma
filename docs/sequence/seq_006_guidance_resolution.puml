@@ -1,4 +1,10 @@
 @startuml seq_006_guidance_resolution
+' ============================================================
+' Title:     SEQ-006 Guidance Resolution
+' Source:    docs/spec/contracts/inspection/finding_contract.yaml
+' C4:        findings_application → directives_repository (guidance_only)
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-006 Guidance Resolution\nResolve Paired Policy Doctrine for Finding Guidance

@@ -1,4 +1,10 @@
 @startuml cd_003_infrastructure_adapters
+' ============================================================
+' Title:     CLS-003 Infrastructure Adapters
+' Source:    docs/spec/contracts/data_stores/
+' C4:        *_repository / target_sources_gateway → *_store
+' Contract:  1.1.0
+' ============================================================
 ' CLS-003 · Infrastructure — {resource}_infrastructure adapters
 !includeurl common/cd_styles.puml
 

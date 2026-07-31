@@ -1,4 +1,10 @@
 @startuml seq_005_conflict_resolution
+' ============================================================
+' Title:     SEQ-005 Conflict Resolution
+' Source:    docs/spec/contracts/conflict/
+' C4:        ResolveConflict (domain · not peer); artifacts_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-005 Conflict Resolution\nDomain service ResolveConflict (not a C4 peer)\nInvoked by compilation_application / inspections_application

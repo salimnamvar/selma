@@ -1,4 +1,10 @@
 @startuml uc_003_inspection
+' ============================================================
+' Title:     UC-003 Inspection
+' Source:    docs/spec/contracts/inspection/
+' C4:        inspections_application
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-003 — Inspection**\n(Bounded Context: Inspection · C4: inspections_application)

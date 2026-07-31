@@ -6,7 +6,7 @@
 ' C4:      ResolveConflict
 '          artifacts → artifacts_repository → artifacts
 '          denials → finding_events_repository → finding_events
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>

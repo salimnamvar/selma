@@ -3,9 +3,9 @@
 ' Selma — Directive Lifecycle State Machine
 ' Source:  docs/spec/contracts/directive/lifecycle.yaml
 '          docs/spec/contracts/directive/identity.yaml
-' C4:      api + directives_repository → directives_store
+' C4:      api → directives_application → directives_repository → directives_store
 '          compilation on every publish / identity op
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>

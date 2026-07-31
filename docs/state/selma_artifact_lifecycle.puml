@@ -5,7 +5,7 @@
 ' C4:      artifacts_repository → artifacts_store
 '          compiled_rules_repository → compiled_rules_store (CG-IR snapshots)
 '          finding_events_repository → finding_events_store (events)
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthogonal reference ‖ replication · no silent rewrite</i></size>

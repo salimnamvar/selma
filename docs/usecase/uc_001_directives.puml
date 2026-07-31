@@ -1,4 +1,10 @@
 @startuml uc_001_directives
+' ============================================================
+' Title:     UC-001 Directives
+' Source:    docs/spec/contracts/directive/
+' C4:        api → directives_application
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-001 — Directives**\n(C4: api → directives_application → directives_repository)

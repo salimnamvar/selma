@@ -1,4 +1,10 @@
 @startuml seq_003_inspection_pipeline
+' ============================================================
+' Title:     SEQ-003 Inspection Pipeline
+' Source:    docs/spec/contracts/inspection/
+' C4:        inspections_application → findings_application / artifacts_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-003 Inspection Pipeline\n6-Stage Inspection Pipeline

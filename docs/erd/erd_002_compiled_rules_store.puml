@@ -1,4 +1,10 @@
 @startuml erd_002_compiled_rules_store
+' ============================================================
+' Title:     ERD-002 Compiled Rules Store
+' Source:    docs/spec/contracts/data_stores/compiled_rules_store.yaml
+' C4:        compiled_rules_store ← compiled_rules_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/erd_styles.puml
 
 title Compiled Rules Store (Content-Addressed) — C4 store: compiled_rules_store · Immutable

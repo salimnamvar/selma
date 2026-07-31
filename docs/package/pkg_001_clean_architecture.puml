@@ -1,4 +1,10 @@
 @startuml pkg_001_clean_architecture
+' ============================================================
+' Title:     PKG-001 Clean Architecture Packages
+' Source:    docs/c4-model/README.md package alignment
+' C4:        {resource}_{layer} maps to C4 peers
+' Contract:  1.1.0
+' ============================================================
 ' PKG-001 · Clean Architecture — {resource}_{layer} modules
 !includeurl ../class/common/cd_styles.puml
 

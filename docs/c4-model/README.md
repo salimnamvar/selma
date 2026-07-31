@@ -1,8 +1,11 @@
 # Selma — C4 Architecture Diagrams
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · This directory is the structural SSoT (peers only)
+
 Three-level C4 model using **Clean Architecture** layering and **resource-oriented** entity IDs/names. Every structural ID carries a **layer postfix** (or role token) so its Clean Architecture ring is obvious.
 
-**Contract version:** 1.1.0 (aligned across all diagrams)
+**Contract version:** 1.1.0 — IDs MUST match [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml). Diagrams include `Contract: 1.1.0` headers.
 
 ## C4 levels (layer by layer)
 

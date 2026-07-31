@@ -4,7 +4,7 @@
 ' Source:  docs/spec/contracts/compilation/pipeline.yaml
 '          docs/spec/contracts/compilation/hermetic_boundary.yaml
 ' C4:      compilation_application → compiled_rules_repository → compiled_rules_store
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>Hierarchical validate → materialize · all-or-nothing CAS · no runtime policy</i></size>

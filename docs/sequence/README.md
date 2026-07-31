@@ -1,5 +1,8 @@
 # Selma Sequence Diagrams
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+
 PlantUML sequence diagrams for core resource workflows.
 
 ## Prerequisites

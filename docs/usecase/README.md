@@ -1,5 +1,8 @@
 # Selma — Use Case Diagrams
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+
 Normative acceptance criteria live as `stories:` inside [`../spec/contracts/`](../spec/contracts/) (`US-DOMAIN-NNN`). This file is a navigational index only — no use case prose lives here.
 
 PlantUML use case diagrams for each bounded context. Actors and components

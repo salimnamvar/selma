@@ -1,4 +1,10 @@
 @startuml seq_001_directive_crud
+' ============================================================
+' Title:     SEQ-001 Directive CRUD
+' Source:    docs/spec/contracts/directive/
+' C4:        api → directives_application → directives_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-001 Directive CRUD\nCreate / Modify / Retire / Fork / Merge / Split / Restore

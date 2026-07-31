@@ -1,4 +1,10 @@
 @startuml uc_008_certification
+' ============================================================
+' Title:     UC-008 Certification
+' Source:    docs/spec/contracts/certification/gates.yaml
+' C4:        certification_tool (offline · not peer)
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-008 — Architectural Certification**\n(Offline/CI tool · not an in-process C4 peer)

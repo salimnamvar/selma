@@ -1,4 +1,10 @@
 @startuml seq_004_finding_lifecycle
+' ============================================================
+' Title:     SEQ-004 Finding Lifecycle
+' Source:    docs/spec/contracts/finding_lifecycle/
+' C4:        findings_application → finding_events_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-004 Finding Lifecycle\n11-State FSM Finding State Transitions

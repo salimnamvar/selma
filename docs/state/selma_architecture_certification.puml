@@ -4,7 +4,7 @@
 ' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-07)
 ' C4:      certification_tool → artifacts_repository → artifacts_store
 '          trigger: CI/CD → api
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Architectural Certification FSM\n<size:12><i>offline/CI seven-gate audit (not C4 peer) · hierarchical AA composite · no runtime policy contamination</i></size>

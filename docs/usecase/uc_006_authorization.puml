@@ -1,4 +1,10 @@
 @startuml uc_006_authorization
+' ============================================================
+' Title:     UC-006 Authorization
+' Source:    docs/spec/contracts/authorization/
+' C4:        api
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-006 — Authorization**\n(Bounded Context: Authorization · C4: api)

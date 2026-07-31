@@ -1,4 +1,10 @@
 @startuml erd_001_directives_store
+' ============================================================
+' Title:     ERD-001 Directives Store
+' Source:    docs/spec/contracts/data_stores/directives_store.yaml
+' C4:        directives_store ← directives_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/erd_styles.puml
 
 title Directives Store (PostgreSQL) — C4 store: directives_store · Mutable, Versioned

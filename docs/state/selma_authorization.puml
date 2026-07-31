@@ -6,7 +6,7 @@
 ' C4:      api (ingress gate)
 '          + findings / ResolveConflict (domain gates)
 '          denials → finding_events_repository → finding_events
-' Contract: 1.0.0
+' Contract: 1.1.0
 ' ============================================================
 
 title Selma — Capability Authorization FSM\n<size:12><i>Hierarchical evaluate · allow | deny+audit · hard-reject</i></size>

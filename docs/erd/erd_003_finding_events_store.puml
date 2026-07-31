@@ -1,4 +1,10 @@
 @startuml erd_003_finding_events_store
+' ============================================================
+' Title:     ERD-003 Finding Events Store
+' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
+' C4:        finding_events_store ← finding_events_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/erd_styles.puml
 
 title Finding Events Store (Append-Only Log) — C4 store: finding_events_store · Immutable

@@ -1,5 +1,8 @@
 # Selma — State Machine Diagrams
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+
 Canonical state machines describing how state evolves inside Selma's components.
 **C4** ([`../c4-model/`](../c4-model/README.md)) is the structural source of truth;
 this directory describes behavior only. Component names in diagram headers match

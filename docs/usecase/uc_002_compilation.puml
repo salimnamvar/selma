@@ -1,4 +1,10 @@
 @startuml uc_002_compilation
+' ============================================================
+' Title:     UC-002 Compilation
+' Source:    docs/spec/contracts/compilation/
+' C4:        compilation_application
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-002 — Compilation**\n(Bounded Context: Compilation · C4: compilation_application)

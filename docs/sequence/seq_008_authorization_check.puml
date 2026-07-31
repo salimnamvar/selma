@@ -1,4 +1,10 @@
 @startuml seq_008_authorization_check
+' ============================================================
+' Title:     SEQ-008 Authorization Check
+' Source:    docs/spec/contracts/authorization/
+' C4:        api gate → finding_events_repository (denials)
+' Contract:  1.1.0
+' ============================================================
 !include common/seq_styles.puml
 
 title SEQ-008 Authorization Check\nCapability-Based Access Control with SoD

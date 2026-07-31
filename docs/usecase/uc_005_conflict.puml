@@ -1,4 +1,10 @@
 @startuml uc_005_conflict
+' ============================================================
+' Title:     UC-005 Conflict
+' Source:    docs/spec/contracts/conflict/
+' C4:        ResolveConflict (domain · not peer)
+' Contract:  1.1.0
+' ============================================================
 !include common/uc_styles.puml
 
 title **UC-005 — Conflict Resolution**\n(Domain service ResolveConflict · not a C4 peer)\nUsed by compilation_application / inspections_application

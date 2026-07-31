@@ -1,4 +1,10 @@
 @startuml cd_002_application_services
+' ============================================================
+' Title:     CLS-002 Application Services
+' Source:    docs/spec/contracts/
+' C4:        directives|compilation|inspections|findings_application + ports
+' Contract:  1.1.0
+' ============================================================
 ' ─────────────────────────────────────────────────────────────
 ' CLS-002 · Application Services — Selma Rule Regularity Platform
 ' PlantUML class diagram

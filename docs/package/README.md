@@ -1,5 +1,8 @@
 # Selma Package Diagrams
 
+> **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+
 PlantUML package diagrams for Clean Architecture with **`{resource}_{layer}`** modules.
 
 ## Usage

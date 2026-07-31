@@ -1,6 +1,6 @@
 ' ============================================================
 ' Selma — Shared Activity Diagram Theme
-' Contract: docs/spec/contracts/ 1.0.0
+' Contract: design_contract_version 1.1.0 (docs/standards/c4_registry.yaml)
 ' Usage:    !include ../common/act_styles.puml
 '
 ' Governance:

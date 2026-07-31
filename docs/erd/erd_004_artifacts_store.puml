@@ -1,4 +1,10 @@
 @startuml erd_004_artifacts_store
+' ============================================================
+' Title:     ERD-004 Artifacts Store
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+' C4:        artifacts_store ← artifacts_repository
+' Contract:  1.1.0
+' ============================================================
 !include common/erd_styles.puml
 
 title Artifacts Store (Object Store) — C4 store: artifacts_store · Write-Once
