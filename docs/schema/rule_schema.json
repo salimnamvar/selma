@@ -64,7 +64,7 @@
       {"from": "Verified", "to": "Closed", "trigger": "automatic", "actor": "system"},
       {"from": "Waived", "to": "Closed", "trigger": "automatic", "actor": "system"}
     ],
-    "note": "FSM is enforced at runtime by the findings component, not by JSON Schema structural validation of rule datasets."
+    "note": "FSM is enforced at runtime by the findings_application component, not by JSON Schema structural validation of rule datasets."
   },
   "x-portability-note": {
     "normative_status": "informative",

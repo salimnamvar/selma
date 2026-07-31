@@ -4,7 +4,7 @@
 
 contract_id: "conflict.precedence"
 schema_version: "1.0.0"
-owner_component: "compilation"
+owner_component: "compilation_application"
 state_machine_ref: "../../state/selma_conflict_resolution.puml"
 description: >
   Defines the unified conflict resolution function and precedence chain.

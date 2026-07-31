@@ -4,7 +4,7 @@
 
 contract_id: "compilation.hermetic_boundary"
 schema_version: "1.0.0"
-owner_component: "compilation"
+owner_component: "compilation_application"
 state_machine_ref: "../../state/selma_compilation_pipeline.puml"
 description: >
   Defines the invariants that ensure compilation is hermetic — fully
@@ -115,7 +115,7 @@ invariants:
 
 stories:
   - story_id: "US-HB-001"
-    as: "compilation"
+    as: "compilation_application"
     i_want: "to guarantee compilation reproducibility via frozen environment"
     so_that: "any historical CG-IR snapshot can be exactly reproduced"
     acceptance_criteria:
@@ -123,7 +123,7 @@ stories:
       - "Given a frozen environment. When frozen_env_hash is computed. Then the hash excludes the frozen_env_hash field itself."
 
   - story_id: "US-HB-002"
-    as: "compilation"
+    as: "compilation_application"
     i_want: "to reject version incompatibilities at compile time"
     so_that: "incompatible artifacts are never mixed"
     acceptance_criteria:

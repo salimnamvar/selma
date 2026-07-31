@@ -4,7 +4,7 @@
 
 contract_id: "finding_lifecycle.sod"
 schema_version: "1.0.0"
-owner_component: "findings"
+owner_component: "findings_application"
 description: >
   Defines segregation of duties constraints that prevent conflicts of interest
   in finding lifecycle operations. These rules are enforced at FSM transition
@@ -146,7 +146,7 @@ enforcement_gates:
     failure: "Reject before target validation"
 
   - gate: "finding_fsm_transitions"
-    location: "findings"
+    location: "findings_application"
     description: "Per-transition capability + SoD checks"
     failure: "Reject transition; FSM state unchanged; no event appended"
 

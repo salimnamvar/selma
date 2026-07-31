@@ -4,7 +4,7 @@
 
 contract_id: "conflict.detection"
 schema_version: "1.0.0"
-owner_component: "compilation"
+owner_component: "compilation_application"
 state_machine_ref: "../../state/selma_conflict_resolution.puml"
 description: >
   Defines when conflicts exist between rules. Conflicts are identified

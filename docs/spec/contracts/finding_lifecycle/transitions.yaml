@@ -4,7 +4,7 @@
 
 contract_id: "finding_lifecycle.transitions"
 schema_version: "1.0.0"
-owner_component: "findings"
+owner_component: "findings_application"
 state_machine_ref: "../../state/selma_finding_lifecycle.puml"
 description: >
   Defines all allowed state transitions, their triggers, gating capabilities,
@@ -180,11 +180,11 @@ event_schema:
 invariants:
   - id: "INV-FL-010"
     statement: "Every transition MUST produce an append-only event in the Finding Event Stream"
-    enforcement: "finding_events"
+    enforcement: "finding_events_store"
 
   - id: "INV-FL-011"
     statement: "Events are immutable once written; event_hash ensures integrity"
-    enforcement: "finding_events"
+    enforcement: "finding_events_store"
 
   - id: "INV-FL-012"
     statement: "FSM transitions MUST be rejected if the source state does not match current finding state"

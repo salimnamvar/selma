@@ -84,21 +84,21 @@ sod_constraints:
     name: "Creator Cannot Waive Own Findings"
     capability: "finding.waive"
     check: "actor NOT IN creator_provenance(finding.control_id)"
-    enforcement: "findings"
+    enforcement: "findings_application"
     story_refs: ["US-SD-001"]
 
   - constraint_id: "SOD-002"
     name: "Evidence Submitter Cannot Approve Own Remediation"
     capability: "finding.approve_remediation"
     check: "actor != evidence_submitter(finding_id)"
-    enforcement: "findings"
+    enforcement: "findings_application"
     story_refs: ["US-SD-002"]
 
   - constraint_id: "SOD-003"
     name: "Creator Cannot Supersede Own Findings"
     capability: "finding.supersede"
     check: "actor NOT IN creator_provenance(finding.control_id)"
-    enforcement: "findings"
+    enforcement: "findings_application"
     story_refs: ["US-SD-003"]
 
 invariants:

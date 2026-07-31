@@ -11,7 +11,7 @@ description: >
   specific, but behavior and error semantics are normative.
 
 endpoint_families:
-  - family: "directives"
+  - family: "directives_store"
     description: "Directive CRUD and lifecycle operations"
     operations:
       - method: "POST"
@@ -57,7 +57,7 @@ endpoint_families:
           - "409 Conflict: invalid lifecycle transition"
         locking: "write_lock"
 
-  - family: "inspections"
+  - family: "inspections_application"
     description: "Inspection submission and results"
     operations:
       - method: "POST"
@@ -68,7 +68,7 @@ endpoint_families:
         errors:
           - "400 SchemaError: invalid target"
           - "403 CapabilityDenied"
-        locking: "read_lock (compilation)"
+        locking: "read_lock (compilation_application)"
 
       - method: "GET"
         action: "Read inspection results"
@@ -87,7 +87,7 @@ endpoint_families:
           - "403 CapabilityDenied"
           - "404 NotFound"
 
-  - family: "findings"
+  - family: "findings_application"
     description: "Finding lifecycle management"
     operations:
       - method: "GET"

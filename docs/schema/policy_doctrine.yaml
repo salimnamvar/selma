@@ -64,7 +64,7 @@ cross_layer_binding:
     compile-time validators check pairing/version legality — never by
     interpreting policy prose as executable logic.
   storage: >
-    System of record: directives (PostgreSQL), co-versioned with
+    System of record: directives_store (PostgreSQL), co-versioned with
     executable_document under the same lineage/execution revision.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."

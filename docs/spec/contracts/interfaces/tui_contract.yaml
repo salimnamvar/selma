@@ -39,7 +39,7 @@ screen_families:
           - "Preview CG-IR impact before save"
           - "Requires capability check on save"
 
-  - family: "inspection"
+  - family: "inspections_application"
     description: "Inspection submission and review"
     screens:
       - name: "submit_inspection"
