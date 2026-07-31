@@ -55,12 +55,14 @@ Rel(api, directives_application, "directive resource CRUD and lifecycle", "Inter
 Rel(api, compilation_application, "triggers compile on directive change", "Internal", $tags="capability_enforced")
 Rel(api, inspections_application, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
 Rel(api, findings_application, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
-' Gate side-effect: capability denials are audit, not a domain use case
-Rel(api, finding_events_repository, "appends capability denial events", "Append-Only", $tags="immutable")
+' Gate side-effect via application-owned DenialAuditPort (implemented by
+' finding_events_repository). Not a domain findings use case; not store I/O.
+Rel(api, finding_events_repository, "DenialAuditPort: append capability denial events", "Append-Only", $tags="immutable")
 
 ' ── Directives Application ──
 Rel(directives_application, directives_repository, "reads and writes dual-document directives", "Internal")
-Rel(directives_application, compilation_application, "requests compile after durable directive change", "Internal")
+' v1: in-process synchronous compile after durable write (same process as api)
+Rel(directives_application, compilation_application, "requests compile after durable directive change (sync v1)", "Internal")
 
 ' ── Compilation Application (hermetic) ──
 Rel(compilation_application, directives_repository, "reads executable documents under read-lock", "Internal", $tags="compile_only")

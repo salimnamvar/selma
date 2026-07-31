@@ -10,7 +10,7 @@
 ' PlantUML class diagram
 ' ─────────────────────────────────────────────────────────────
 
-!includeurl common/cd_styles.puml
+!include common/cd_styles.puml
 
 title **CLS-002 — Application Services**\nSelma · Rule Regularity Platform\n
 
@@ -39,6 +39,14 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
     + AppendFindingEvent(event: DomainEvent): void
     + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
     + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
+  }
+
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
+    + AppendDenial(actor: ActorId, capability: String, action: String, reason: String, timestamp: HlcTimestamp): void
+    --
+    <<owner>> findings_application (application-owned)
+    <<consumer>> api / rest_interface only
+    <<implementer>> findings_infrastructure / finding_events_repository
   }
 
   interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {

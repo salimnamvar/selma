@@ -31,6 +31,8 @@ post-finding guidance.
 **Not product peers:** CI/CD, long-term audit export, remediation ticketing.
 Conflict resolution (`ResolveConflict`) and guidance are domain / findings
 concerns. Certification (AA-01…AA-07) is offline/CI `certification_tool`.
+Capability denials at `api` use application-owned **`DenialAuditPort`**
+(implemented by `finding_events_repository`).
 
 ## Design standards (mandatory)
 
@@ -44,6 +46,14 @@ All design work MUST follow [`standards/`](standards/README.md):
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 
 **design_contract_version:** `1.1.0` (shared by C4, API `info.version`, contracts, diagram headers).
+
+### Naming dual (C4 vs packages)
+
+| Concept | C4 peer ID | Package prefix |
+| :--- | :--- | :--- |
+| Hermetic compile → CG-IR | `compilation_application` | `compiled_rules_application` / `compiled_rules_*` |
+
+One concept, two names by design. Never invent a C4 peer `compiled_rules_application`.
 
 ## Documentation map
 
@@ -67,12 +77,30 @@ All design work MUST follow [`standards/`](standards/README.md):
 ## Authority (investigation order)
 
 1. **`standards/`** — IDs, owners, version line (how we write design)
-2. **`spec/contracts/`** — what the system MUST do
+2. **`spec/contracts/`** — what the system MUST do (behavior, locks, SoD, authz)
 3. **`schema/`** — data shapes
 4. **`c4-model/`** — structural architecture (peers only)
 5. **`api/`** — HTTP surface (Redocly-valid)
 6. Behavior views (`state`, `sequence`, `activity`, `usecase`) — must not contradict 2–5
 7. Implementation views (`class`, `package`, `erd`, `deployment`) — map to C4 peers
+
+**Do not treat C4 alone as complete.** Authorization, hermetic locks, finding FSM,
+and store contracts live under `spec/contracts/` and are mandatory before coding.
+Structural-only reviews (C4 + package + deployment without standards/spec) will
+under-report security and concurrency decisions that are already normative.
+
+### Where common concerns are documented
+
+| Concern | Primary authority |
+| :--- | :--- |
+| C4 peer IDs / non-peers | [`standards/c4_registry.yaml`](standards/c4_registry.yaml), [`c4-model/`](c4-model/README.md) |
+| Capability catalog / roles | [`spec/contracts/authorization/`](spec/contracts/authorization/) |
+| JWT / HTTP security schemes | [`api/components/security.yaml`](api/components/security.yaml) |
+| Denial audit at gate | C4 `DenialAuditPort` + [`spec/contracts/finding_lifecycle/sod_contract.yaml`](spec/contracts/finding_lifecycle/sod_contract.yaml) |
+| Compile hermeticity + read locks | [`spec/contracts/compilation/`](spec/contracts/compilation/) |
+| Guidance revision pinning | `paired_policy_ref` in [`spec/contracts/data_stores/directives_store.yaml`](spec/contracts/data_stores/directives_store.yaml) |
+| RPO/RTO / TLS / composed recovery | [`deployment/`](deployment/README.md) |
+| Package ↔ C4 map | [`package/`](package/README.md), [`class/`](class/README.md) |
 
 ### Canonical C4 IDs
 
@@ -90,6 +118,8 @@ See full registry: [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
 ```
 clients → api → *_application → *_repository | *_gateway → *_store | externals
 ```
+
+Narrow exception: `api` → `DenialAuditPort` (implemented by `finding_events_repository`) for capability-denial audit only.
 
 ## Implementation
 

@@ -6,7 +6,7 @@
 ' Contract:  1.1.0
 ' ============================================================
 ' CLS-003 · Infrastructure — {resource}_infrastructure adapters
-!includeurl common/cd_styles.puml
+!include common/cd_styles.puml
 
 title **CLS-003 — Infrastructure Adapters**\nROD port methods · {resource}_infrastructure modules\n
 
@@ -29,6 +29,9 @@ package "<<ports>>\nApplication ports" as PORTS #FCE4EC/C62828 {
     + AppendFindingEvent(event: DomainEvent): void
     + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
     + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
+  }
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
+    + AppendDenial(actor: ActorId, capability: String, action: String, reason: String, timestamp: HlcTimestamp): void
   }
   interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {
     + SaveInspectionArtifact(snapshot: InspectionSnapshot): void
@@ -66,8 +69,15 @@ package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
     + AppendFindingEvent(...)
     + ListFindingEvents(...)
     + ListFindingEventsSince(...)
+    + AppendDenial(...)
+    --
+    <<implements>> FindingEventRepository
+    <<implements>> DenialAuditPort
   }
 }
+
+AppendOnlyFindingEventRepository ..|> FindingEventRepository
+AppendOnlyFindingEventRepository ..|> DenialAuditPort
 
 package "artifacts_infrastructure" as INFRA_ART #FFE0B2/F57C00 {
   class "**ObjectArtifactRepository**" as ObjectArtifactRepository <<Adapter>> {

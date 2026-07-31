@@ -2,8 +2,8 @@
 ' cd_styles.puml — Shared skinparam & style constants for Selma
 ' Class Diagrams (PlantUML)
 '
-' Include at the top of every diagram:
-'   !includeurl common/cd_styles.puml
+' Include at the top of every diagram (local path; not !includeurl):
+'   !include common/cd_styles.puml
 ' ─────────────────────────────────────────────────────────────
 
 ' ── Global appearance ───────────────────────────────────────

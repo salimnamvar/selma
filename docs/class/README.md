@@ -41,7 +41,7 @@ plantuml -tsvg docs/class/*.puml
 
 ## Shared Styles
 
-Common styling definitions are in [`common/cd_styles.puml`](common/cd_styles.puml). All diagrams include this file via `!includeurl common/cd_styles.puml`.
+Common styling definitions are in [`common/cd_styles.puml`](common/cd_styles.puml). All diagrams include this file via `!include common/cd_styles.puml` (local path; do not use `!includeurl` for in-repo styles).
 
 ### Colour Palette
 

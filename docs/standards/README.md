@@ -50,10 +50,20 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 ## Non-peers (never C4 boxes)
 
-- Domain service `ResolveConflict`
+- Domain service `ResolveConflict` (`conflicts_domain`; used by compile + inspect packages)
+- Application port `DenialAuditPort` (consumer: `api`; implementer: `finding_events_repository`)
 - Offline/CI `certification_tool`
-- Findings guidance / aggregate **read models** (not engines)
+- Findings guidance / aggregate **read models** (not engines); doctrine by `paired_policy_ref` revision
 - Optional CI/CD, audit export, remediation ticketing
+
+### Package aliases (not C4 peer IDs)
+
+| Package | C4 peer |
+| :--- | :--- |
+| `compiled_rules_application` | `compilation_application` |
+| `compiled_rules_infrastructure` | `compiled_rules_repository` |
+
+See `package_aliases` in [`c4_registry.yaml`](c4_registry.yaml).
 
 ## Design contract version
 

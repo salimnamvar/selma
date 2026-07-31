@@ -144,19 +144,32 @@ allowed_owner_components:
 non_peers:
   - id: ResolveConflict
     kind: domain_service
-    lives_in: "compilation_application / inspections_application (in-process)"
+    lives_in: "compilation_application / inspections_application (in-process); package conflicts_domain"
+  - id: DenialAuditPort
+    kind: application_port
+    lives_in: "application-owned port; consumer api; implementer finding_events_repository"
   - id: certification_tool
     kind: offline_tool
     lives_in: "CI / local; may write artifacts_store kind=certification"
   - id: guidance_read_models
     kind: findings_read_model
-    lives_in: "findings_application (guidance_only + analytics.view)"
+    lives_in: "findings_application (guidance_only + analytics.view); doctrine by paired_policy_ref revision"
   - id: cicd_client
     kind: optional_client
   - id: audit_export
     kind: ops_export
   - id: remediation_ticketing
     kind: optional_notify
+
+# --- Package aliases (not C4 peer IDs; documentation only) --------------------
+# Package modules may use resource-prefixed names that differ from C4 process IDs.
+package_aliases:
+  - package: compiled_rules_application
+    c4_peer: compilation_application
+    note: "Package emphasizes resource written; C4 emphasizes hermetic compile process"
+  - package: compiled_rules_infrastructure
+    c4_peer: compiled_rules_repository
+    note: "Implements CompiledRulesRepository port"
 
 # --- API resource surface (must match docs/api/openapi.yaml) ------------------
 api_resources:

@@ -6,7 +6,8 @@
 ' Contract:  1.1.0
 ' ============================================================
 ' PKG-001 · Clean Architecture — {resource}_{layer} modules
-!includeurl ../class/common/cd_styles.puml
+' Local include (do not use !includeurl for in-repo styles)
+!include ../class/common/cd_styles.puml
 
 title **PKG-001 — Clean Architecture Packages**\nSelma · {resource}_{layer} · Resource-Oriented Design\n
 
@@ -19,7 +20,7 @@ skinparam package {
 
 package "<<interface>>\n*_interface" as INTERFACES #E3F2FD/1565C0 {
   package "rest_interface" as IF_REST #BBDEFB/1976D2 {
-    [Resource routers] as REST_ROUTER
+    [Resource routers + capability gate] as REST_ROUTER
   }
   package "cli_interface" as IF_CLI #BBDEFB/1976D2
   package "tui_interface" as IF_TUI #BBDEFB/1976D2
@@ -62,6 +63,7 @@ package "<<application>>\n*_application" as APPLICATION #E8F5E9/2E7D32 {
   package "findings_application" as APP_FIND #C8E6C9/388E3C {
     [GetFinding / ListFindings / GetFindingGuidance / …] as UC_FIND
     interface FindingEventRepository
+    interface DenialAuditPort
   }
 }
 
@@ -77,6 +79,7 @@ package "<<domain>>\n*_domain" as DOMAIN #FFFFFF/78909C {
 }
 
 INTERFACES .down.> APPLICATION : <<uses>>
+IF_REST ..> DenialAuditPort : <<uses>> gate denials
 COMPOSITION .down.> INTERFACES : <<wires>>
 COMPOSITION .down.> INFRASTRUCTURE : <<wires>>
 COMPOSITION .down.> APPLICATION : <<wires>>
@@ -85,13 +88,16 @@ COMPOSITION .down.> DOMAIN : <<wires>>
 INFRA_DIR ..> APP_DIR : <<implements>>
 INFRA_CR ..> APP_CR : <<implements>>
 INFRA_FE ..> APP_FIND : <<implements>>
+INFRA_FE ..> DenialAuditPort : <<implements>>
 INFRA_ART ..> APP_FIND : <<implements>>
 INFRA_ART ..> APP_INS : <<implements>>
 INFRA_INS ..> APP_INS : <<implements>>
 
 APP_DIR .down.> DOM_DIR : <<depends>>
 APP_CR .down.> DOM_CR : <<depends>>
+APP_CR .down.> DOM_CON : <<depends>> ResolveConflict
 APP_INS .down.> DOM_INS : <<depends>>
+APP_INS .down.> DOM_CON : <<depends>> ResolveConflict
 APP_FIND .down.> DOM_FIND : <<depends>>
 
 DOM_DIR .down.> DOM_SHARED
@@ -103,8 +109,14 @@ DOM_CON .down.> DOM_SHARED
 note right of APPLICATION
   **ROD operations**
   Create/Get/List/Update + lifecycle verbs
-  GetFindingGuidance (sub-resource)
+  GetFindingGuidance (sub-resource;
+  doctrine by paired_policy_ref revision)
   No bare execute() as public API
+
+  **DenialAuditPort**
+  Application-owned; consumed by api/rest_interface;
+  implemented by findings_infrastructure.
+  Single method: AppendDenial(...)
 end note
 
 note right of INFRASTRUCTURE
@@ -117,7 +129,9 @@ note right of INFRASTRUCTURE
 
   **Alignment with C4:**
   Each infrastructure package implements
-  a C4 repository component.
+  a C4 repository/gateway component.
+  findings_infrastructure also implements
+  DenialAuditPort for the capability gate.
 end note
 
 legend bottom
@@ -134,8 +148,9 @@ legend bottom
   - compiled_rules_* (compile) → compilation_application + compiled_rules_repository
   - inspections_* → inspections_application (+ target_sources_gateway)
   - findings_* → findings_application + finding_events_repository
+  - DenialAuditPort → app port; implementer finding_events_repository
   - artifacts_infrastructure → artifacts_repository
-  - conflicts_domain → Domain service (not C4 component)
+  - conflicts_domain → ResolveConflict (not C4 component)
   - stores → directives_store | compiled_rules_store |
              finding_events_store | artifacts_store
 endlegend

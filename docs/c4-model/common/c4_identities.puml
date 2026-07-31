@@ -111,7 +111,7 @@
 ' ------------------------------------------------------------
 !$NAME_api = "API"
 !$TECH_api = "FastAPI / Pydantic"
-!$DESC_api = "Resource-oriented ingress and capability/SoD gate (Clean Architecture driving adapter). Authenticates, enforces capabilities, validates request/response resources, and dispatches only to application use-case clusters (*_application). Appends capability-denial events via Finding Events Repository. No domain rules and no direct store I/O except denial audit."
+!$DESC_api = "Resource-oriented ingress and capability/SoD gate (Clean Architecture driving adapter). Authenticates (JWT bearer; see OpenAPI securitySchemes), enforces capabilities from the authorization contracts, validates request/response resources, and dispatches only to application use-case clusters (*_application). Capability denials append via application-owned DenialAuditPort (implemented by Finding Events Repository). No domain rules and no direct store I/O."
 
 !$NAME_directives_application = "Directives Application"
 !$TECH_directives_application = "Python / Pydantic"
@@ -127,7 +127,7 @@
 
 !$NAME_findings_application = "Findings Application"
 !$TECH_findings_application = "Python / Pydantic"
-!$DESC_findings_application = "Application use-case cluster for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance (doctrine via Directives Repository + paired_policy_ref). Appends to Finding Events Store; does not write Compiled Rules or mutate directives from analytics."
+!$DESC_findings_application = "Application use-case cluster for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance. Guidance resolves policy doctrine by the finding's revision-pinned paired_policy_ref (not latest doctrine). Appends to Finding Events Store; does not write Compiled Rules or mutate directives from analytics. Declares DenialAuditPort for the api gate (implemented by Finding Events Repository)."
 
 !$NAME_directives_repository = "Directives Repository"
 !$TECH_directives_repository = "Python / SQLAlchemy / PostgreSQL"

@@ -62,7 +62,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 ### Naming notes
 
-- **`compilation_application`** — hermetic compile process; publishes `compiled_rules_store` (not named `compiled_rules_application` in C4 so the hermetic process stays explicit; packages may still use `compiled_rules_*`).
+- **`compilation_application` (C4 ID)** — hermetic compile process; publishes `compiled_rules_store`. **Package prefix is `compiled_rules_*`** (e.g. `compiled_rules_application`, `compiled_rules_infrastructure`) so the resource that is written stays explicit. These are **one concept, two names by design**: C4 emphasizes the hermetic process; packages emphasize the compiled-rules resource. Never invent a C4 peer ID `compiled_rules_application`.
 - **`findings_application` vs `finding_events_store`** — findings is the resource/use-case projection; finding events is the append-only system of record.
 - **`{resource}_repository`** pairs with `{resource}_store` (e.g. `directives_repository` → `directives_store`).
 
@@ -79,18 +79,31 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 **Dependency rules on the Component diagram**
 
 1. `clients` → `api` only  
-2. `api` → `*_application` only (plus denial audit → `finding_events_repository` as gate side-effect)  
-3. `*_application` → `*_repository` / `*_gateway` (and peer use cases when needed, e.g. `inspections_application` → `findings_application`)  
-4. `*_repository` → `*_store`; `*_gateway` → external system  
-5. Never: `api` → `*_store`; never: repository → use case; never: store → component  
+2. `api` → `*_application` only  
+3. **Capability-denial audit (narrow exception):** `api` may append denials only through application-owned **`DenialAuditPort`** (not via store I/O and not via full findings use cases). On the Component diagram this is drawn as `api` → `finding_events_repository` because that adapter is the sole implementer of `DenialAuditPort`. Package/class diagrams show the port as an application-owned interface implemented by `findings_infrastructure`.  
+4. `*_application` → `*_repository` / `*_gateway` (and peer use cases when needed, e.g. `inspections_application` → `findings_application`)  
+5. `*_repository` → `*_store`; `*_gateway` → external system  
+6. Never: `api` → `*_store`; never: repository → use case; never: store → component; never: `api` → arbitrary repository methods beyond `DenialAuditPort.AppendDenial(...)`
+
+### DenialAuditPort (gate side-effect)
+
+| Item | Rule |
+| :--- | :--- |
+| Owner | Application layer (declared next to findings ports; see [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml)) |
+| Implementer | `finding_events_repository` / `findings_infrastructure` |
+| Consumer | `api` only (capability gate) |
+| Surface | Single write method: append capability-denial event (actor, capability, action, reason, timestamp) |
+| Why not full findings use cases | Avoid circular dependency: gate must audit denials even when the denied action would have entered `findings_application` |
+| Normative audit content | [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml), [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml) |
 
 ## Not C4 peers (by design)
 
 | Concern | Where it lives instead |
 | :--- | :--- |
-| Conflict resolution algorithm | Domain service `ResolveConflict` used by Compilation / Inspections Application |
-| Guidance & analytics | Findings Application → doctrine via `directives_repository` (`guidance_only`) |
-| AA-01…AA-07 certification | Offline/CI tool suite; writes Artifacts Store only when run |
+| Conflict resolution algorithm | Domain service `ResolveConflict` in `conflicts_domain`; invoked **in-process** by `compilation_application` and `inspections_application` (package edges required; not a C4 component) |
+| Guidance & analytics | Findings Application → doctrine via `directives_repository` (`guidance_only`); revision pinned by `paired_policy_ref` (see Design principles) |
+| AA-01…AA-07 certification | Offline/CI **`certification_tool`** (registry non-peer); may write `artifacts_store` kind=certification only when run — not drawn as Context/Container peer |
+| Capability catalog / SoD | Enforced at `api`; normative in [`../spec/contracts/authorization/`](../spec/contracts/authorization/) and OpenAPI [`../api/components/security.yaml`](../api/components/security.yaml) |
 | CI/CD | Optional client of API / certify tool |
 | Long-term audit export | Ops export from Finding Events / Artifacts stores (not a product peer) |
 | Remediation ticketing | Optional notify after finding transitions (not a product peer) |
@@ -111,9 +124,12 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 - **Dual-document directives** in `directives_store` only; `directives_repository` owns both documents
 - **Compile/runtime split**: Compilation Application → `compiled_rules_store`; Inspections Application never reads doctrines
 - **Guidance only after findings**: Findings Application → doctrine via `directives_repository` (`guidance_only`)
+- **Guidance temporal integrity**: guidance loads the doctrine revision identified by the finding’s `paired_policy_ref` (revision-pinned). Implementations MUST NOT resolve “latest doctrine” for a finding created under an older revision. Normative dual-document identity: [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml)
 - **Four stores by mutability**: mutable directives · immutable CG-IR · append-only events · write-once artifacts
 - **Primary target path is inline**; Target Sources is optional pull
-- **Application layer is mandatory**: resource mutations go through `*_application`, not `api` → repository (except capability-denial audit at the gate)
+- **Application layer is mandatory**: resource mutations go through `*_application`. The only gate→driven path is `DenialAuditPort` (above)
+- **Compile trigger coupling (v1)**: `directives_application` → `compilation_application` is **in-process and synchronous** after a durable directive write. Clients may also trigger compile via `/directives/.../compilations`. Future scale-out may introduce an async worker boundary without changing C4 peer IDs; until then treat the edge as same-process
+- **Compile concurrency**: compilation acquires **read locks** on directive rows; mutations take write locks. Normative rules: [`../spec/contracts/compilation/pipeline.yaml`](../spec/contracts/compilation/pipeline.yaml) `concurrency_model`, [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml)
 
 **Finding vs Finding Events**
 
@@ -132,16 +148,29 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 | Package module | C4 component |
 | :--- | :--- |
 | `directives_application` / `directives_domain` | `directives_application` (+ domain not drawn) |
-| `compiled_rules_application` / hermetic compile | `compilation_application` |
+| `compiled_rules_application` / `compiled_rules_domain` | **`compilation_application`** (C4 process name; package keeps resource prefix) |
 | `inspections_application` / `inspections_domain` | `inspections_application` |
 | `findings_application` / `findings_domain` | `findings_application` |
 | `directives_infrastructure` | `directives_repository` |
 | `compiled_rules_infrastructure` | `compiled_rules_repository` |
-| `findings_infrastructure` (events) | `finding_events_repository` |
+| `findings_infrastructure` (events) | `finding_events_repository` (+ implements `DenialAuditPort`) |
 | `artifacts_infrastructure` | `artifacts_repository` |
 | `inspections_infrastructure` (targets) | `target_sources_gateway` |
 | `rest_interface` / CLI / TUI | `api` + container `clients` |
-| `conflicts_domain` | in-process only (not a C4 component) |
+| `conflicts_domain` (`ResolveConflict`) | in-process only; used by compile + inspect packages (not a C4 component) |
+
+## Normative cross-references (behavior not re-specified here)
+
+Structural docs define *what exists and how it depends*. Behavior is owned by contracts:
+
+| Concern | Authority |
+| :--- | :--- |
+| Capability catalog, role matrix | [`../spec/contracts/authorization/`](../spec/contracts/authorization/) |
+| Hermetic compile + lock model | [`../spec/contracts/compilation/`](../spec/contracts/compilation/) |
+| Finding FSM / SoD / denial audit fields | [`../spec/contracts/finding_lifecycle/`](../spec/contracts/finding_lifecycle/) |
+| REST surface + error semantics | [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml), [`../api/`](../api/README.md) |
+| Store mutability & ops | [`../spec/contracts/data_stores/`](../spec/contracts/data_stores/) |
+| Deployment RPO/RTO, TLS, zones | [`../deployment/`](../deployment/README.md) |
 
 ## Canonical registry
 

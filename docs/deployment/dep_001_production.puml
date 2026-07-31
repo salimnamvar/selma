@@ -43,14 +43,14 @@ package "Monitoring" as MON #E8EAF6/C5CAE9 {
     node "Jaeger" as JAEGER
 }
 
-CLIENTS --> LOAD_BALANCER : HTTPS
-LOAD_BALANCER --> APP : HTTPS API
+CLIENTS --> LOAD_BALANCER : HTTPS (TLS required)
+LOAD_BALANCER --> APP : HTTPS API (TLS required in prod)
 
-APP --> DIRECTIVES : SQL
-APP --> COMPILED : CAS
-APP --> EVENTS : Append-Only
-APP --> ARTIFACTS : Object Write
-APP --> TARGETS : optional HTTPS
+APP --> DIRECTIVES : SQL / TLS
+APP --> COMPILED : CAS / TLS
+APP --> EVENTS : Append-Only / TLS
+APP --> ARTIFACTS : Object Write / TLS
+APP --> TARGETS : optional HTTPS (timeouts + circuit breaker)
 
 APP ..> PROM
 APP ..> ELK
@@ -62,7 +62,8 @@ legend bottom
   | application | Process: api, *_application, *_repository, *_gateway |
   | directives_store · compiled_rules_store · finding_events_store · artifacts_store | Data zone stores |
   | target_sources | Optional external pull only |
-  | CI/CD · audit export · remediation | Not required deploy peers |
+  | CI/CD · audit export · remediation · certification_tool | Not required deploy peers |
+  | Transport | TLS on all production hops; mTLS recommended for zero-trust data zone |
 endlegend
 
 @enduml

@@ -10,7 +10,7 @@
 ' PlantUML class diagram
 ' ─────────────────────────────────────────────────────────────
 
-!includeurl common/cd_styles.puml
+!include common/cd_styles.puml
 
 title **CLS-001 — Domain Model**\nSelma · Rule Regularity Platform\n
 
