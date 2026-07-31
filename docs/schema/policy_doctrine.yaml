@@ -3,7 +3,7 @@
 # Contains NO machine-executable logic. Priority hierarchy and conflict
 # resolution are DECLARATIVE DESCRIPTIONS of governance intent, not
 # executable algorithms. The machine implementation lives in the
-# Compilation Engine, not here.
+# compilation_application, not here.
 #
 # NORMATIVE BEHAVIORAL SOURCE: docs/spec/contracts/
 # This file is a governance intent layer, not a structural or behavioral source.

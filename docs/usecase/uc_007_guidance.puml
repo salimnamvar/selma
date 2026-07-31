@@ -1,7 +1,7 @@
 @startuml uc_007_guidance
 !include common/uc_styles.puml
 
-title **UC-007 — Guidance**\n(Findings resource reads · C4: findings_application + directives_repository)
+title **UC-007 — Finding Guidance**\n(C4: findings_application + directives_repository · guidance_only)
 
 left to right direction
 
@@ -9,48 +9,35 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Findings guidance reads\n(findings · guidance_only)" as BOUNDED {
+  rectangle "Findings guidance & read models\n(findings_application · not a guidance engine)" as BOUNDED {
 
-    usecase "Resolve Guidance"              as UC1
-    usecase "View Finding Aggregates"       as UC2
-    usecase "View Trend Analysis"           as UC3
-    usecase "View Compliance Dashboard"     as UC4
-    usecase "Explain Finding\nCausally"     as UC5
+    usecase "Get Finding Guidance"          as UC1
+    usecase "List Finding Aggregates"       as UC2
   }
 }
 
 ' ---- associations ----
 RO --> UC1
 RO --> UC2
-RO --> UC3
-RO --> UC4
-RO --> UC5
 
 CR --> UC1
 CR --> UC2
-CR --> UC3
-CR --> UC4
-CR --> UC5
-
-UC5 ..> UC2 : <<include>>
 
 ' ---- notes ----
 note right of UC1
   **Pre:** Finding exists with paired_policy_ref
   **Post:** Doctrine loaded via directives_repository
   (guidance_only); never used for evaluation or FSM
-  **C4:** not a freestanding analytics engine
+  **Path:** GET /findings/{id}/guidance
+  **C4:** not a freestanding guidance/analytics engine
 end note
 
-note right of UC5
-  **Pre:** Finding selected; causal chain data present
-  **Post:** Human-readable causal explanation
-  produced linking finding to root directive/control
-end note
-
-note bottom of UC4
-  **Pre:** Actor authenticated with dashboard capability
-  **Post:** Aggregated compliance posture rendered
+note bottom of UC2
+  **Pre:** Actor has analytics.view
+  **Post:** Read-only aggregates over
+  finding_events_store (no write path to
+  compiled_rules or finding FSM — AA-01)
+  **C4:** findings_application read model
 end note
 
 @enduml

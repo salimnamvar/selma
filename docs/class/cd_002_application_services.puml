@@ -292,89 +292,40 @@ package "<<use_cases.findings_application>>\nFindings Application" as UC_FINDING
 }
 
 ' ═══════════════════════════════════════════════════════════
-'  CONFLICT USE CASES
+'  ARTIFACT / CONFLICT REVIEW (not freestanding C4 engines)
+'  ResolveConflict domain service lives under domain;
+'  human review is findings/artifacts-backed convenience.
 ' ═══════════════════════════════════════════════════════════
-package "<<use_cases.conflict>>\nConflict Resolution" as UC_CONFLICT #E8F5E9/2E7D32 {
+package "<<use_cases.findings_application>>\nConflict artifact review\n(findings + artifacts · not a C4 peer)" as UC_CONFLICT_REVIEW #E8F5E9/2E7D32 {
 
-  abstract class "**DetectConflict**" as DetectConflict <<Use Case>> #E8F5E9/2E7D32 {
-    - directiveRepo: DirectiveRepository
-    + execute(a: Directive, b: Directive): ConflictArtifact
-  }
-
-  abstract class "**ResolveConflict**" as ResolveConflictUC <<Use Case>> #E8F5E9/2E7D32 {
-    - conflictResolver: ResolveConflict
+  abstract class "**ReviewConflictArtifact**" as ReviewConflictArtifact <<Use Case>> #E8F5E9/2E7D32 {
     - artifactRepo: ArtifactRepository
-    + execute(artifact: ConflictArtifact): ConflictArtifact
-  }
-
-  abstract class "**EscalateToHuman**" as EscalateToHuman <<Use Case>> #E8F5E9/2E7D32 {
-    - artifactRepo: ArtifactRepository
-    - eventStore: EventStore
-    + execute(artifact: ConflictArtifact): void
+    - events: FindingEventRepository
+    + ReviewConflictArtifact(artifact_id: UUID, decision: String): ConflictArtifact
     --
-    <<requires>> conflict.resolution.escalate
+    <<requires>> conflict.resolve
+    <<module>> findings_application
+    note: deterministic resolve is domain service\nused by compilation/inspections_application
   }
 
-  abstract class "**ReviewArtifact**" as ReviewArtifact <<Use Case>> #E8F5E9/2E7D32 {
-    - artifactRepo: ArtifactRepository
-    - eventStore: EventStore
-    + execute(artifact_id: UUID, decision: String): ConflictArtifact
+  abstract class "**ListFindingAggregates**" as ListFindingAggregates <<Use Case>> #E8F5E9/2E7D32 {
+    - events: FindingEventRepository
+    + ListFindingAggregates(req: QueryRequest): AggregateReport
     --
-    <<requires>> conflict.resolution.review
+    <<requires>> analytics.view
+    <<module>> findings_application
+    note: read model over finding_events_store\n— not a freestanding analytics engine
   }
 }
 
-' ═══════════════════════════════════════════════════════════
-'  GUIDANCE USE CASES
-' ═══════════════════════════════════════════════════════════
-package "<<use_cases.guidance>>\nGuidance & Analytics" as UC_GUIDANCE #E8F5E9/2E7D32 {
-
-  abstract class "**ResolveGuidance**" as ResolveGuidance <<Use Case>> #E8F5E9/2E7D32 {
-    - directiveRepo: DirectiveRepository
-    + execute(ref: PairedPolicyRef): GuidancePayload
-    --
-    <<guidance_only>> doctrine via DirectiveRepository
-  }
-
-  abstract class "**ViewAggregates**" as ViewAggregates <<Use Case>> #E8F5E9/2E7D32 {
-    - eventStore: EventStore
-    + execute(req: QueryRequest): AggregateReport
-  }
-
-  abstract class "**ViewTrends**" as ViewTrends <<Use Case>> #E8F5E9/2E7D32 {
-    - eventStore: EventStore
-    + execute(req: QueryRequest): TrendReport
-  }
-
-  abstract class "**ViewDashboard**" as ViewDashboard <<Use Case>> #E8F5E9/2E7D32 {
-    - eventStore: EventStore
-    - directiveRepo: DirectiveRepository
-    + execute(): DashboardView
-  }
-
-  abstract class "**ExplainCausally**" as ExplainCausally <<Use Case>> #E8F5E9/2E7D32 {
-    - eventStore: EventStore
-    - cgIrRepo: CgIrRepository
-    + execute(finding_id: FindingId): CausalExplanation
-  }
-}
-
-' ═══════════════════════════════════════════════════════════
-'  CERTIFICATION USE CASES
-' ═══════════════════════════════════════════════════════════
-package "<<use_cases.certification>>\nCertification" as UC_CERT #E8F5E9/2E7D32 {
-
-  abstract class "**RunCertification**" as RunCertification <<Use Case>> #E8F5E9/2E7D32 {
-    - artifactRepo: ArtifactRepository
-    + execute(): CertificationRun
-    --
-    <<requires>> certification.run.execute
-  }
-
-  abstract class "**ValidateGate**" as ValidateGate <<Use Case>> #E8F5E9/2E7D32 {
-    + execute(gate_id: String\n{AA-01..AA-07}): GateResult
-  }
-}
+note as N_CERT
+  **certification_tool (offline/CI)**
+  AA-01…AA-07 are **not** in-process application use cases.
+  The tool suite may write certification blobs via
+  ArtifactRepository → artifacts_store.
+  Clients **read** them as Artifacts (kind=certification).
+  See contracts/certification/gates.yaml.
+end note
 
 ' ═══════════════════════════════════════════════════════════
 '  RELATIONSHIPS
@@ -416,32 +367,16 @@ GetFinding ..> FindingEventRepository : uses >
 ListFindings ..> FindingEventRepository : uses >
 GetFindingGuidance ..> DirectiveRepository : uses >
 
-' ── Conflict use cases → ports ────────────────────────────
-DetectConflict ..> DirectiveRepository : uses >
-ResolveConflictUC ..> ArtifactRepository : uses >
-EscalateToHuman ..> ArtifactRepository : uses >
-EscalateToHuman ..> FindingEventRepository : uses >
-ReviewArtifact ..> ArtifactRepository : uses >
-ReviewArtifact ..> FindingEventRepository : uses >
-
-' ── Guidance / analytics (legacy package; prefer findings) ─
-ResolveGuidance ..> DirectiveRepository : uses >
-ViewAggregates ..> FindingEventRepository : uses >
-ViewTrends ..> FindingEventRepository : uses >
-ViewDashboard ..> FindingEventRepository : uses >
-ViewDashboard ..> DirectiveRepository : uses >
-ExplainCausally ..> FindingEventRepository : uses >
-ExplainCausally ..> CompiledRulesRepository : uses >
-
-' ── Certification ─────────────────────────────────────────
-RunCertification ..> ArtifactRepository : uses >
+' ── Conflict review / findings aggregates → ports ─────────
+ReviewConflictArtifact ..> ArtifactRepository : uses >
+ReviewConflictArtifact ..> FindingEventRepository : uses >
+ListFindingAggregates ..> FindingEventRepository : uses >
 
 ' ── DTO usage ────────────────────────────────────────────
 CreateDirective ..> DirectiveCreateRequest : accepts >
-SubmitInspection ..> InspectRequest : accepts >
-SubmitInspection ..> InspectResponse : produces >
-ViewAggregates ..> QueryRequest : accepts >
-ViewTrends ..> QueryRequest : accepts >
+CreateInspection ..> InspectRequest : accepts >
+CreateInspection ..> InspectResponse : produces >
+ListFindingAggregates ..> QueryRequest : accepts >
 
 ' ═══════════════════════════════════════════════════════════
 '  LEGEND

@@ -22,10 +22,10 @@ plantuml -tsvg docs/sequence/*.puml
 | SEQ-002 | [seq_002_compilation_pipeline.puml](seq_002_compilation_pipeline.puml) | Compilation → Compiled Rules |
 | SEQ-003 | [seq_003_inspection_pipeline.puml](seq_003_inspection_pipeline.puml) | Inspection pipeline |
 | SEQ-004 | [seq_004_finding_lifecycle.puml](seq_004_finding_lifecycle.puml) | Findings resource FSM |
-| SEQ-005 | [seq_005_conflict_resolution.puml](seq_005_conflict_resolution.puml) | ResolveConflict domain service |
-| SEQ-006 | [seq_006_guidance_resolution.puml](seq_006_guidance_resolution.puml) | Finding guidance via Directives |
-| SEQ-007 | [seq_007_certification_gates.puml](seq_007_certification_gates.puml) | Offline/CI certification tool |
-| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | Capability + SoD at API |
+| SEQ-005 | [seq_005_conflict_resolution.puml](seq_005_conflict_resolution.puml) | `ResolveConflict` domain service (not C4 peer) + artifact-backed human review |
+| SEQ-006 | [seq_006_guidance_resolution.puml](seq_006_guidance_resolution.puml) | Finding guidance via `findings_application` + doctrine |
+| SEQ-007 | [seq_007_certification_gates.puml](seq_007_certification_gates.puml) | Offline/CI `certification_tool` (not C4 peer) → artifacts |
+| SEQ-008 | [seq_008_authorization_check.puml](seq_008_authorization_check.puml) | Capability + SoD at `api` |
 
 ## Participants (C4 1.1.0)
 

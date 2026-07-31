@@ -46,7 +46,7 @@ package "<<application>>\n*_application" as APPLICATION #E8F5E9/2E7D32 {
     [CreateDirective / GetDirective / ListDirectives / …] as UC_DIR
     interface DirectiveRepository
   }
-  package "compiled_rules_application" as APP_CR #C8E6C9/388E3C {
+  package "compiled_rules_application\n(C4: compilation_application)" as APP_CR #C8E6C9/388E3C {
     [CompileDirectives / PublishCompiledRules] as UC_CR
     interface CompiledRulesRepository
   }

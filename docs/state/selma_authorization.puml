@@ -21,7 +21,7 @@ state "Identity\nVerified" as IdentityVerified #1B7A6E : **entry** authenticated
 ' ---------- Hierarchical: access evaluation pipeline ----------
 state "Evaluate Access" as EvaluateAccess #1B7A6E {
   [*] --> CapabilityEvaluated
-  state "Capability\nEvaluated" as CapabilityEvaluated #1B7A6E : **entry** matrix role × capability\n**allowed** PASS → SoD or stage\n**forbidden** implicit grant\nmatrix: Official directive.* · finding.dismiss/waive/\napprove/reject/supersede · conflict.resolve\nCompliance: inspection.* · acknowledge · evidence\nSystem: inspection.submit · finding.view · analytics.view
+  state "Capability\nEvaluated" as CapabilityEvaluated #1B7A6E : **entry** matrix role × capability\n**allowed** PASS → SoD or stage\n**forbidden** implicit grant\nmatrix: Official directive.* · finding.dismiss/waive/\napprove/reject/supersede · conflict.resolve\nCompliance: inspection.* · acknowledge · evidence\nBoth: finding.view · analytics.view (findings read models)
   state "SoD\nEvaluated" as SoDEvaluated #B9770E : **entry** only finding.waive or\nfinding.approve_remediation\n**allowed** SoD-1 creator_provenance\nSoD-2 evidence_submitter\n**forbidden** skip SoD on those actions
   state "Stage Gate\nChecked" as StageGateChecked #1B7A6E : **entry** enforcement point match\n1 ingress · 2 directive write lock\n3 inspection entry · 4 Finding FSM\n5 conflict resolution\n**forbidden** bypass stage
   state "Allowed" as Allowed #2C6E49 : **entry** proceed to domain FSM/pipeline\n**allowed** dispatch command\n**forbidden** skip audit on later deny paths (N/A)

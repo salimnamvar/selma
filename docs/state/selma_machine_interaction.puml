@@ -2,24 +2,24 @@
 ' ============================================================
 ' Selma — State Machine Interaction Overview
 ' Source:  docs/c4-model/c4_selma_component.puml + docs/state-machine ownership
-' Contract: 1.0.0
-' Role:    Cross-machine handoff overview (not a lifecycle aggregate)
+' Contract: 1.1.0
+' Role:    Cross-machine handoff overview (behavior only; C4 owns structure)
 ' ============================================================
 
-title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · primary machines · detail views · no independent 9th aggregate</i></size>
+title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · FSMs · domain service · offline tool · not freestanding engines</i></size>
 
 !include ./common/sm_styles.puml
 
-state "Capability Authorization" as Authz #B9770E : **cross-cutting**\ningress · matrix · SoD · stage\nallow | deny + audit
-state "Directive Lifecycle" as Dir #2C6E49 : Draft · Active\nDeprecated · Superseded\nfork/merge/split → Draft children
-state "Compilation / CG-IR" as Comp #1B7A6E : hermetic gates\nread lock · CAS publish
+state "Capability Authorization" as Authz #B9770E : **api gate (cross-cutting)**\ningress · matrix · SoD · stage\nallow | deny + audit
+state "Directive Lifecycle" as Dir #2C6E49 : C4: directives_application\nDraft · Active\nDeprecated · Superseded
+state "Compilation / CG-IR" as Comp #1B7A6E : C4: compilation_application\nhermetic gates · CAS publish
 state "CG-IR Hash Detail" as Hash #1B7A6E : dual-hash · reuse\n(detail of Comp)
-state "Inspection Execution" as Insp #1B7A6E : six pure stages\npin · evaluate · report
-state "Finding Lifecycle" as Find #3B7DD8 : **normative §3.1**\n10 states · SoD · system close
+state "Inspection Execution" as Insp #1B7A6E : C4: inspections_application\nsix pure stages
+state "Finding Lifecycle" as Find #3B7DD8 : C4: findings_application\n**normative** · 11 states · SoD
 state "HLC Detail" as Hlc #3B7DD8 : (pt, lc) advance\n(detail of event envelope)
-state "Conflict Resolution" as Conf #1B7A6E : cascade · artifact\nbinding vs advisory
-state "Architectural Certification" as Cert #B9770E : AA-01..AA-07\noffline/CI tool
-state "Artifact Lifecycle" as Art #4A4A4A : write-once · CAS\nreplicate · archive
+state "Conflict Resolution" as Conf #1B7A6E : domain ResolveConflict\n(not a C4 peer) · artifacts
+state "Architectural Certification" as Cert #B9770E : certification_tool\n(offline/CI · not C4 peer)
+state "Artifact Lifecycle" as Art #4A4A4A : C4: artifacts_repository\nwrite-once · four kinds
 
 [*] --> Authz : <b>MutatingRequestReceived</b>
 Authz --> Dir : <b>AuthzAllowedDirective</b>\n[capability directive.*]

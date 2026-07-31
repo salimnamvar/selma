@@ -24,9 +24,9 @@ plantuml -tsvg docs/class/*.puml
 
 | ID | File | Description |
 |----|------|-------------|
-| CLS-001 | [cd_001_domain_model.puml](cd_001_domain_model.puml) | Domain model: aggregates, value objects, domain services, events, and repository ports |
-| CLS-002 | [cd_002_application_services.puml](cd_002_application_services.puml) | Application services: all use case classes, port interfaces, DTOs, and pipeline chains |
-| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure adapters: dual-document directives, CG-IR, events, artifacts, detection, targets, auth |
+| CLS-001 | [cd_001_domain_model.puml](cd_001_domain_model.puml) | Domain model aligned with C4 resources: directives, compiled rules, inspections, findings; domain `ResolveConflict`; offline cert artifacts; findings read models |
+| CLS-002 | [cd_002_application_services.puml](cd_002_application_services.puml) | Application use cases for the four `*_application` clusters + artifact-backed conflict review (no freestanding guidance/cert engines) |
+| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure: `*_repository` / `target_sources_gateway` adapters matching C4 driven ports |
 
 ## Layer Summary
 

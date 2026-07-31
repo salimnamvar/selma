@@ -79,14 +79,18 @@ package "inspections_infrastructure" as INFRA_INS #FFE0B2/F57C00 {
   }
 }
 
-package "detections_infrastructure" as INFRA_DET #FFE0B2/F57C00 {
-  class "**DetectionEngine**" as DetectionEngine {
+' Detection evaluators live under inspections path (not a C4 peer engine).
+package "inspections_infrastructure\n(evaluators)" as INFRA_DET #FFE0B2/F57C00 {
+  class "**DetectionEvaluator**" as DetectionEvaluator {
     + ValidateDetectionSpec(...)
     + EvaluateControls(...)
+    --
+    <<pure>> no I/O · no randomness (AA-03)
   }
 }
 
-package "authorization_infrastructure" as INFRA_AUTH #FFE0B2/F57C00 {
+' Capability checks enforced at api gate (cross-cutting, not a store peer).
+package "authorization (api support)" as INFRA_AUTH #FFE0B2/F57C00 {
   class "**CapabilitySource**" as CapabilitySource {
     + ListActorCapabilities(actor_id): Set~CapabilityId~
     + HasCapability(actor_id, capability): boolean
