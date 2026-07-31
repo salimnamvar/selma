@@ -1,0 +1,86 @@
+# R5 Artifacts — artifacts_repository → artifacts_store
+# Write-once inspection, conflict, certification, and evidence blobs.
+# Conflict human review is a sub-resource; ResolveConflict is a domain service
+# (not a C4 peer). Certification runs are offline/CI (certification_tool).
+
+/artifacts:
+  get:
+    operationId: listArtifacts
+    tags: [Artifacts]
+    summary: List artifacts
+    description: |
+      Lists write-once artifacts in `artifacts_store` (inspection snapshots,
+      conflict artifacts, certification reports, evidence). Storage adapter is
+      `artifacts_repository` — not a freestanding product engine.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/ArtifactKindFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/ConflictStatusFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Artifact list
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListArtifactsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+
+/artifacts/{artifact_id}:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/ArtifactId
+  get:
+    operationId: getArtifact
+    tags: [Artifacts]
+    summary: Get artifact
+    description: |
+      Returns a write-once artifact by id. Certification results produced by the
+      offline/CI `certification_tool` are kind=certification. Conflict artifacts
+      from domain service `ResolveConflict` are kind=conflict.
+    responses:
+      "200":
+        description: Artifact payload
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ArtifactView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+
+/artifacts/{artifact_id}/resolutions:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/ArtifactId
+  post:
+    operationId: resolveConflictArtifact
+    tags: [Artifacts]
+    summary: Resolve conflict artifact (human)
+    description: |
+      Records a human resolution on a **conflict** artifact. Requires
+      `conflict.resolve`. Deterministic compile/eval resolutions are produced by
+      domain service `ResolveConflict` inside `compilation_application` /
+      `inspections_application` (not this endpoint). Gate AA-05 covers
+      deterministic outcomes for identical CG-IR.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/ConflictResolutionRequest
+    responses:
+      "200":
+        description: Conflict artifact updated
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ConflictView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound

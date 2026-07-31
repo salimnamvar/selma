@@ -1,6 +1,4 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://selma.dev/schemas/finding_view.json",
   "title": "FindingView",
   "description": "Representation of a finding produced by the inspection pipeline. Schema is grounded in docs/spec/contracts/inspection/finding_contract.yaml and docs/spec/contracts/finding_lifecycle/states.yaml.",
   "type": "object",
@@ -34,13 +32,13 @@
       "type": "string",
       "description": "Execution ID of the source directive (CG-IR node directive_id).",
       "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-[A-Z0-9]+)*$",
-      "examples": ["SC101", "TRAF-001-A"]
+      "example": "SC101"
     },
     "lineage_id": {
       "type": "string",
       "description": "Immutable lineage root of the source directive. Never changes across revisions.",
       "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
-      "examples": ["SC101", "TRAF-001"]
+      "example": "SC101"
     },
     "fsm_state": {
       "type": "string",
@@ -62,17 +60,33 @@
     "disposition": {
       "type": "string",
       "description": "Resolution status of the finding.",
-      "enum": ["valid", "invalid", "waived", "superseded"]
+      "enum": [
+        "valid",
+        "invalid",
+        "waived",
+        "superseded"
+      ]
     },
     "severity": {
       "type": "string",
       "description": "Finding severity computed from detection outcome and deontic modality. Permission Fail findings are always informational.",
-      "enum": ["critical", "high", "medium", "low", "informational"]
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "informational"
+      ]
     },
     "outcome": {
       "type": "string",
       "description": "Raw detection outcome from the inspection evaluation.",
-      "enum": ["Pass", "Fail", "Partial", "NeedsReview"]
+      "enum": [
+        "Pass",
+        "Fail",
+        "Partial",
+        "NeedsReview"
+      ]
     },
     "confidence": {
       "type": "number",
@@ -164,8 +178,12 @@
           "items": {
             "type": "object",
             "properties": {
-              "line_number": { "type": "integer" },
-              "content": { "type": "string" }
+              "line_number": {
+                "type": "integer"
+              },
+              "content": {
+                "type": "string"
+              }
             }
           }
         },
@@ -185,7 +203,7 @@
       "type": "string",
       "description": "Reference to the paired policy doctrine entry. Used for guidance_only resolution (never for evaluation or FSM transitions per gate AA-02).",
       "pattern": "^[a-z][a-z0-9_]+$",
-      "examples": ["sc101_parameterized_queries"]
+      "example": "sc101_parameterized_queries"
     },
     "actor": {
       "type": "string",
@@ -193,7 +211,7 @@
     },
     "comments": {
       "type": "string",
-      "description": "Mandatory for Rejected→Open (TR-FL-009) and Open→Superseded (TR-FL-012) transitions. Captures the rationale for reopening or superseding a finding.",
+      "description": "Mandatory for Rejected\u2192Open (TR-FL-009) and Open\u2192Superseded (TR-FL-012) transitions. Captures the rationale for reopening or superseding a finding.",
       "minLength": 1,
       "maxLength": 2000
     },
@@ -213,65 +231,99 @@
       "properties": {
         "self": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "inspections_application": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "events": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "guidance": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "directive": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         }
       }
     }
   },
   "additionalProperties": false,
-  "examples": [
-    {
-      "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
-      "inspection_id": "ins-9876-fedc-ba98-7654-3210fedcba98",
-      "control_id": "SC101",
-      "lineage_id": "SC101",
-      "fsm_state": "Open",
-      "disposition": "valid",
-      "severity": "high",
-      "outcome": "Fail",
-      "confidence": 0.95,
-      "location": {
-        "file": "src/auth/login.py",
-        "line_start": 12,
-        "line_end": 12,
-        "function": "login"
+  "example": {
+    "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
+    "inspection_id": "ins-9876-fedc-ba98-7654-3210fedcba98",
+    "control_id": "SC101",
+    "lineage_id": "SC101",
+    "fsm_state": "Open",
+    "disposition": "valid",
+    "severity": "high",
+    "outcome": "Fail",
+    "confidence": 0.95,
+    "location": {
+      "file": "src/auth/login.py",
+      "line_start": 12,
+      "line_end": 12,
+      "function": "login"
+    },
+    "evidence": {
+      "description": "String interpolation detected in SQL query construction",
+      "matched_pattern": "f\"SELECT.*FROM.*WHERE.*{'",
+      "context_lines": [
+        {
+          "line_number": 11,
+          "content": "def login(username, password):"
+        },
+        {
+          "line_number": 12,
+          "content": "    query = f\"SELECT * FROM users WHERE name='{username}'\""
+        }
+      ]
+    },
+    "reasoning": "The login function constructs a SQL query using f-string interpolation with the username parameter. This creates a SQL injection vector because user input is directly embedded in the query string without sanitization or parameterization.",
+    "paired_policy_ref": "sc101_parameterized_queries",
+    "actor": "system",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z",
+    "_links": {
+      "self": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678"
       },
-      "evidence": {
-        "description": "String interpolation detected in SQL query construction",
-        "matched_pattern": "f\"SELECT.*FROM.*WHERE.*{'",
-        "context_lines": [
-          { "line_number": 11, "content": "def login(username, password):" },
-          { "line_number": 12, "content": "    query = f\"SELECT * FROM users WHERE name='{username}'\"" }
-        ]
+      "inspections_application": {
+        "href": "/inspections/ins-9876-fedc-ba98-7654-3210fedcba98"
       },
-      "reasoning": "The login function constructs a SQL query using f-string interpolation with the username parameter. This creates a SQL injection vector because user input is directly embedded in the query string without sanitization or parameterization.",
-      "paired_policy_ref": "sc101_parameterized_queries",
-      "actor": "system",
-      "created_at": "2025-01-15T10:30:00Z",
-      "updated_at": "2025-01-15T10:30:00Z",
-      "_links": {
-        "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
-        "inspections_application": { "href": "/inspections/ins-9876-fedc-ba98-7654-3210fedcba98" },
-        "events": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/events" },
-        "guidance": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
-        "directive": { "href": "/directives/SC101" }
+      "events": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/events"
+      },
+      "guidance": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance"
+      },
+      "directive": {
+        "href": "/directives/SC101"
       }
     }
-  ]
+  }
 }

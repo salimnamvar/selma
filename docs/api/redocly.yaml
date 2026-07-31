@@ -1,0 +1,13 @@
+apis:
+  selma@v1:
+    root: openapi.yaml
+
+extends:
+  - recommended
+
+rules:
+  tag-description: warn
+  operation-description: warn
+  operation-operationId: error
+  no-unresolved-refs: error
+  path-parameters-defined: error

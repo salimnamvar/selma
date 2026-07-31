@@ -1,0 +1,130 @@
+components:
+  parameters:
+    LineageId:
+      name: lineage_id
+      in: path
+      required: true
+      description: Immutable directive lineage identifier (e.g. SC101, TRAF-001).
+      schema:
+        type: string
+        pattern: "^[A-Z]{2,5}\\d{3}[A-Z]?$"
+      examples:
+        sc101: { value: SC101 }
+        traf: { value: TRAF001 }
+
+    Revision:
+      name: revision
+      in: path
+      required: true
+      description: Directive revision number (1-based).
+      schema:
+        type: integer
+        minimum: 1
+
+    InspectionId:
+      name: inspection_id
+      in: path
+      required: true
+      description: Inspection identifier.
+      schema:
+        type: string
+        format: uuid
+
+    FindingId:
+      name: finding_id
+      in: path
+      required: true
+      description: Finding identifier.
+      schema:
+        type: string
+        format: uuid
+
+    ArtifactId:
+      name: artifact_id
+      in: path
+      required: true
+      description: Write-once artifact identifier in artifacts_store.
+      schema:
+        type: string
+
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      description: Maximum items per page (AIP-158).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    PageToken:
+      name: page_token
+      in: query
+      required: false
+      description: Opaque pagination token from a previous list response (AIP-158).
+      schema:
+        type: string
+
+    TargetIdFilter:
+      name: target_id
+      in: query
+      required: false
+      description: Filter inspections by target identifier.
+      schema:
+        type: string
+
+    LineageIdFilter:
+      name: lineage_id
+      in: query
+      required: false
+      description: Filter by directive lineage identifier.
+      schema:
+        type: string
+
+    FsmStateFilter:
+      name: fsm_state
+      in: query
+      required: false
+      description: Filter findings by FSM state.
+      schema:
+        type: string
+        enum:
+          - Created
+          - Open
+          - Acknowledged
+          - Evidence Submitted
+          - Pending Verification
+          - Verified
+          - Rejected
+          - Dismissed
+          - Waived
+          - Superseded
+          - Closed
+
+    SeverityFilter:
+      name: severity
+      in: query
+      required: false
+      description: Filter findings by severity.
+      schema:
+        type: string
+        enum: [critical, high, medium, low, informational]
+
+    ArtifactKindFilter:
+      name: kind
+      in: query
+      required: false
+      description: Filter artifacts by kind.
+      schema:
+        type: string
+        enum: [inspection, conflict, certification, evidence, other]
+
+    ConflictStatusFilter:
+      name: status
+      in: query
+      required: false
+      description: When listing conflict artifacts, filter by binding status.
+      schema:
+        type: string
+        enum: [open, resolved, advisory]

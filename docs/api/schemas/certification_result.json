@@ -1,6 +1,4 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://selma.dev/schemas/certification_result.json",
   "title": "CertificationResult",
   "description": "Result of an architectural audit certification run. All 7 gates (AA-01 through AA-07) must pass for production-grade certification. Schema is grounded in docs/spec/contracts/certification/gates.yaml.",
   "type": "object",
@@ -21,12 +19,17 @@
     "run_id": {
       "type": "string",
       "description": "Reference to the underlying system run or CI pipeline that triggered certification.",
-      "examples": ["run-20250115-001", "ci-pipeline-12345"]
+      "example": "run-20250115-001"
     },
     "status": {
       "type": "string",
       "description": "Overall certification status. Pass requires all 7 gates to pass.",
-      "enum": ["pass", "fail", "in_progress", "error"]
+      "enum": [
+        "pass",
+        "fail",
+        "in_progress",
+        "error"
+      ]
     },
     "gates": {
       "type": "array",
@@ -78,11 +81,19 @@
       "properties": {
         "self": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "run": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         }
       }
     }
@@ -92,12 +103,23 @@
     "gate_result": {
       "type": "object",
       "description": "Result for a single architectural audit gate.",
-      "required": ["gate_id", "pass_fail"],
+      "required": [
+        "gate_id",
+        "pass_fail"
+      ],
       "properties": {
         "gate_id": {
           "type": "string",
           "description": "Architectural audit gate identifier.",
-          "enum": ["AA-01", "AA-02", "AA-03", "AA-04", "AA-05", "AA-06", "AA-07"]
+          "enum": [
+            "AA-01",
+            "AA-02",
+            "AA-03",
+            "AA-04",
+            "AA-05",
+            "AA-06",
+            "AA-07"
+          ]
         },
         "name": {
           "type": "string",
@@ -115,7 +137,12 @@
         "pass_fail": {
           "type": "string",
           "description": "Gate outcome.",
-          "enum": ["pass", "fail", "skip", "error"]
+          "enum": [
+            "pass",
+            "fail",
+            "skip",
+            "error"
+          ]
         },
         "evidence": {
           "type": "object",
@@ -131,16 +158,24 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "criterion": { "type": "string" },
-                  "passed": { "type": "boolean" },
-                  "details": { "type": "string" }
+                  "criterion": {
+                    "type": "string"
+                  },
+                  "passed": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "string"
+                  }
                 }
               }
             },
             "artifacts_store": {
               "type": "array",
               "description": "Evidence artifacts_store (logs, reports, hashes).",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": true
@@ -154,87 +189,117 @@
       "additionalProperties": false
     }
   },
-  "examples": [
-    {
-      "certification_id": "cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-      "run_id": "run-20250115-001",
-      "status": "pass",
-      "gates": [
-        {
-          "gate_id": "AA-01",
-          "name": "Mediated Feedback",
-          "pass_fail": "pass",
-          "evidence": {
-            "validation_method": "Integration test proving finding events cannot trigger compilation",
-            "test_results": [
-              { "criterion": "findings cannot write to compiled_rules", "passed": true, "details": "Verified via integration test" },
-              { "criterion": "Analytics engine cannot modify finding FSM state", "passed": true, "details": "Verified via integration test" },
-              { "criterion": "Finding events cannot trigger compilation", "passed": true, "details": "Verified via integration test" }
-            ]
-          },
-          "duration_ms": 1250
+  "example": {
+    "certification_id": "cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "run_id": "run-20250115-001",
+    "status": "pass",
+    "gates": [
+      {
+        "gate_id": "AA-01",
+        "name": "Mediated Feedback",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Integration test proving finding events cannot trigger compilation",
+          "test_results": [
+            {
+              "criterion": "findings cannot write to compiled_rules",
+              "passed": true,
+              "details": "Verified via integration test"
+            },
+            {
+              "criterion": "Findings guidance/analytics read models cannot modify finding FSM state",
+              "passed": true,
+              "details": "Verified via integration test"
+            },
+            {
+              "criterion": "Finding events cannot trigger compilation",
+              "passed": true,
+              "details": "Verified via integration test"
+            }
+          ]
         },
-        {
-          "gate_id": "AA-02",
-          "name": "Declarative Governance",
-          "pass_fail": "pass",
-          "evidence": {
-            "validation_method": "Static analysis + architectural audit of guidance_only edges",
-            "test_results": [
-              { "criterion": "inspection does not read policy doctrine documents from directives for evaluation", "passed": true },
-              { "criterion": "Finding FSM does not use policy doctrine for transitions", "passed": true }
-            ]
-          },
-          "duration_ms": 3400
-        },
-        {
-          "gate_id": "AA-03",
-          "name": "Detection Evaluator Purity",
-          "pass_fail": "pass",
-          "evidence": { "validation_method": "AST analysis" },
-          "duration_ms": 890
-        },
-        {
-          "gate_id": "AA-04",
-          "name": "Segregation of Duties",
-          "pass_fail": "pass",
-          "evidence": { "validation_method": "Integration test" },
-          "duration_ms": 2100
-        },
-        {
-          "gate_id": "AA-05",
-          "name": "Conflict Resolution Determinism",
-          "pass_fail": "pass",
-          "evidence": { "validation_method": "Replay test" },
-          "duration_ms": 1500
-        },
-        {
-          "gate_id": "AA-06",
-          "name": "Discriminator Completeness",
-          "pass_fail": "pass",
-          "evidence": { "validation_method": "Corpus of invalid pairings must be rejected" },
-          "duration_ms": 670
-        },
-        {
-          "gate_id": "AA-07",
-          "name": "Portable Serialization",
-          "pass_fail": "pass",
-          "evidence": { "validation_method": "RE2 canary test vectors + UTC/NaN rejection tests" },
-          "duration_ms": 420
-        }
-      ],
-      "started_at": "2025-01-15T10:00:00Z",
-      "completed_at": "2025-01-15T10:00:10Z",
-      "summary": {
-        "total_gates": 7,
-        "passed": 7,
-        "failed": 0,
-        "blocking_failures": []
+        "duration_ms": 1250
       },
-      "_links": {
-        "self": { "href": "/certifications/cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
-        "run": { "href": "/runs/run-20250115-001" }
+      {
+        "gate_id": "AA-02",
+        "name": "Declarative Governance",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Static analysis + architectural audit of guidance_only edges",
+          "test_results": [
+            {
+              "criterion": "inspection does not read policy doctrine documents from directives for evaluation",
+              "passed": true
+            },
+            {
+              "criterion": "Finding FSM does not use policy doctrine for transitions",
+              "passed": true
+            }
+          ]
+        },
+        "duration_ms": 3400
+      },
+      {
+        "gate_id": "AA-03",
+        "name": "Detection Evaluator Purity",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "AST analysis"
+        },
+        "duration_ms": 890
+      },
+      {
+        "gate_id": "AA-04",
+        "name": "Segregation of Duties",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Integration test"
+        },
+        "duration_ms": 2100
+      },
+      {
+        "gate_id": "AA-05",
+        "name": "Conflict Resolution Determinism",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Replay test"
+        },
+        "duration_ms": 1500
+      },
+      {
+        "gate_id": "AA-06",
+        "name": "Discriminator Completeness",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Corpus of invalid pairings must be rejected"
+        },
+        "duration_ms": 670
+      },
+      {
+        "gate_id": "AA-07",
+        "name": "Portable Serialization",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "RE2 canary test vectors + UTC/NaN rejection tests"
+        },
+        "duration_ms": 420
+      }
+    ],
+    "started_at": "2025-01-15T10:00:00Z",
+    "completed_at": "2025-01-15T10:00:10Z",
+    "summary": {
+      "total_gates": 7,
+      "passed": 7,
+      "failed": 0,
+      "blocking_failures": []
+    },
+    "_links": {
+      "self": {
+        "href": "/artifacts/cert-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+      },
+      "run": {
+        "href": "/artifacts?kind=certification"
       }
     }
-  ]
+  }
 }

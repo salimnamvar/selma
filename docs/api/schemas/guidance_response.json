@@ -1,10 +1,13 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://selma.dev/schemas/guidance_response.json",
   "title": "GuidanceResponse",
-  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directives via paired_policy_ref and directives_repository (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 — never used for evaluation or FSM transitions.",
+  "description": "Resolved guidance for a finding. Derived from the policy doctrine document in directives via paired_policy_ref and directives_repository (DirectiveRepository.readPolicyDoctrine). Guidance_only path per gate AA-02 \u2014 never used for evaluation or FSM transitions.",
   "type": "object",
-  "required": ["finding_id", "paired_policy_ref", "reasoning", "remediation_strategy"],
+  "required": [
+    "finding_id",
+    "paired_policy_ref",
+    "reasoning",
+    "remediation_strategy"
+  ],
   "properties": {
     "finding_id": {
       "type": "string",
@@ -15,7 +18,7 @@
       "type": "string",
       "description": "Reference resolving to the policy doctrine document in directives_store (e.g. 'sc101_parameterized_queries').",
       "pattern": "^[a-z][a-z0-9_]+$",
-      "examples": ["sc101_parameterized_queries", "sc042_no_silent_failures"]
+      "example": "sc101_parameterized_queries"
     },
     "reasoning": {
       "type": "string",
@@ -24,7 +27,7 @@
     "remediation_strategy": {
       "type": "string",
       "description": "High-level strategy for remediation.",
-      "examples": ["Replace string interpolation with parameterized query", "Add structured error handling with specific exception types"]
+      "example": "Replace string interpolation with parameterized query"
     },
     "remediation_steps": {
       "type": "array",
@@ -32,8 +35,11 @@
       "items": {
         "type": "string"
       },
-      "examples": [
-        ["Import the database parameterized query API", "Replace f-string query construction with parameter placeholders", "Bind parameters via the driver's parameter binding mechanism", "Add integration test verifying no SQL injection vector"]
+      "example": [
+        "Import the database parameterized query API",
+        "Replace f-string query construction with parameter placeholders",
+        "Bind parameters via the driver's parameter binding mechanism",
+        "Add integration test verifying no SQL injection vector"
       ]
     },
     "domain_examples": {
@@ -41,12 +47,18 @@
       "description": "Illustrative examples from the policy doctrine showing compliant and non-compliant patterns.",
       "items": {
         "type": "object",
-        "required": ["label", "snippet"],
+        "required": [
+          "label",
+          "snippet"
+        ],
         "properties": {
           "label": {
             "type": "string",
             "description": "Descriptive label for the example.",
-            "enum": ["compliant", "non_compliant"]
+            "enum": [
+              "compliant",
+              "non_compliant"
+            ]
           },
           "snippet": {
             "type": "string",
@@ -65,7 +77,10 @@
       "description": "Definitions of domain-specific terms used in the guidance.",
       "items": {
         "type": "object",
-        "required": ["term", "definition"],
+        "required": [
+          "term",
+          "definition"
+        ],
         "properties": {
           "term": {
             "type": "string",
@@ -92,59 +107,69 @@
         "self": {
           "type": "object",
           "properties": {
-            "href": { "type": "string" }
+            "href": {
+              "type": "string"
+            }
           }
         },
         "finding": {
           "type": "object",
           "properties": {
-            "href": { "type": "string" }
+            "href": {
+              "type": "string"
+            }
           }
         },
         "policy_doctrine": {
           "type": "object",
           "properties": {
-            "href": { "type": "string" }
+            "href": {
+              "type": "string"
+            }
           }
         }
       }
     }
   },
-  "examples": [
-    {
-      "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
-      "paired_policy_ref": "sc101_parameterized_queries",
-      "reasoning": "The finding detected string interpolation in a SQL query construction, which creates a SQL injection vector. The paired policy mandates parameterized queries for all database interactions.",
-      "remediation_strategy": "Replace string interpolation with parameterized query",
-      "remediation_steps": [
-        "Import the database parameterized query API",
-        "Replace f-string query construction with parameter placeholders",
-        "Bind parameters via the driver's parameter binding mechanism",
-        "Add integration test verifying no SQL injection vector"
-      ],
-      "domain_examples": [
-        {
-          "label": "non_compliant",
-          "snippet": "query = f\"SELECT * FROM users WHERE name='{username}'\"",
-          "language": "python"
-        },
-        {
-          "label": "compliant",
-          "snippet": "query = \"SELECT * FROM users WHERE name=?\"\ndb.execute(query, (username,))",
-          "language": "python"
-        }
-      ],
-      "vocabulary": [
-        {
-          "term": "parameterized query",
-          "definition": "A database query where user-supplied values are passed as separate parameters rather than interpolated into the query string, preventing SQL injection."
-        }
-      ],
-      "_links": {
-        "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
-        "finding": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
-        "policy_doctrine": { "href": "/directives/SC101/doctrine" }
+  "example": {
+    "finding_id": "f8a1b2c3-d4e5-6f78-9abc-def012345678",
+    "paired_policy_ref": "sc101_parameterized_queries",
+    "reasoning": "The finding detected string interpolation in a SQL query construction, which creates a SQL injection vector. The paired policy mandates parameterized queries for all database interactions.",
+    "remediation_strategy": "Replace string interpolation with parameterized query",
+    "remediation_steps": [
+      "Import the database parameterized query API",
+      "Replace f-string query construction with parameter placeholders",
+      "Bind parameters via the driver's parameter binding mechanism",
+      "Add integration test verifying no SQL injection vector"
+    ],
+    "domain_examples": [
+      {
+        "label": "non_compliant",
+        "snippet": "query = f\"SELECT * FROM users WHERE name='{username}'\"",
+        "language": "python"
+      },
+      {
+        "label": "compliant",
+        "snippet": "query = \"SELECT * FROM users WHERE name=?\"\ndb.execute(query, (username,))",
+        "language": "python"
+      }
+    ],
+    "vocabulary": [
+      {
+        "term": "parameterized query",
+        "definition": "A database query where user-supplied values are passed as separate parameters rather than interpolated into the query string, preventing SQL injection."
+      }
+    ],
+    "_links": {
+      "self": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance"
+      },
+      "finding": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678"
+      },
+      "policy_doctrine": {
+        "href": "/directives/SC101/doctrine"
       }
     }
-  ]
+  }
 }

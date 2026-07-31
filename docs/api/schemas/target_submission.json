@@ -1,22 +1,28 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://selma.dev/schemas/target_submission.json",
   "title": "TargetSubmission",
   "description": "Payload for submitting a target for inspection. Conforms to the inspection pipeline contract (docs/spec/contracts/inspection/pipeline.yaml).",
   "type": "object",
-  "required": ["target_id", "target_type", "target_data"],
+  "required": [
+    "target_id",
+    "target_type",
+    "target_data"
+  ],
   "properties": {
     "target_id": {
       "type": "string",
       "description": "Unique identifier for the target being inspected.",
       "minLength": 1,
-      "examples": ["tgt_001", "file:src/auth/login.py"]
+      "example": "tgt_001"
     },
     "target_type": {
       "type": "string",
       "description": "Classification of the target content. Determines evaluation strategy.",
-      "enum": ["text", "structured", "binary"],
-      "examples": ["text"]
+      "enum": [
+        "text",
+        "structured",
+        "binary"
+      ],
+      "example": "text"
     },
     "target_data": {
       "type": "object",
@@ -41,7 +47,9 @@
           "additionalProperties": true
         }
       },
-      "required": ["content_hash"],
+      "required": [
+        "content_hash"
+      ],
       "additionalProperties": true
     },
     "metadata": {
@@ -74,20 +82,18 @@
     }
   },
   "additionalProperties": false,
-  "examples": [
-    {
-      "target_id": "src/auth/login.py",
-      "target_type": "text",
-      "target_data": {
-        "content": "def login(username, password):\n    query = f\"SELECT * FROM users WHERE name='{username}'\"\n    return db.execute(query)\n",
-        "content_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-      },
-      "metadata": {
-        "domain": "security",
-        "format": "python",
-        "submitted_at": "2025-01-15T10:30:00Z",
-        "submitted_by": "user:alice"
-      }
+  "example": {
+    "target_id": "src/auth/login.py",
+    "target_type": "text",
+    "target_data": {
+      "content": "def login(username, password):\n    query = f\"SELECT * FROM users WHERE name='{username}'\"\n    return db.execute(query)\n",
+      "content_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+    },
+    "metadata": {
+      "domain": "security",
+      "format": "python",
+      "submitted_at": "2025-01-15T10:30:00Z",
+      "submitted_by": "user:alice"
     }
-  ]
+  }
 }

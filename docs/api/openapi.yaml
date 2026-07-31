@@ -1,0 +1,116 @@
+openapi: "3.1.0"
+
+info:
+  title: Selma API
+  version: "1.1.0"
+  description: |
+    Resource-oriented REST API for **Selma**, a domain-agnostic rule regularity
+    platform. Structure aligns with C4 Contract **1.1.0**
+    (`docs/c4-model/`).
+
+    ## Resources (ROD)
+
+    | # | Resource | Collection / path | C4 owner | Methods |
+    |---|----------|-------------------|----------|---------|
+    | R1 | Directive | `/directives/{lineage_id}` · `/revisions/{revision}` | `directives_application` | Get, Update, Retire, GetRevision |
+    | R2 | Compilation | `/directives/{lineage_id}/compilations` | `compilation_application` | Create, List |
+    | R3 | Inspection | `/inspections` · `/inspections/{inspection_id}` | `inspections_application` | Create, List, Get |
+    | R3b | Inspection findings | `/inspections/{inspection_id}/findings` | `findings_application` | List |
+    | R4 | Finding | `/findings/{finding_id}` | `findings_application` | Get, Update (FSM) |
+    | R4b | Finding events | `/findings/{finding_id}/events` | `finding_events_store` | List |
+    | R4c | Finding guidance | `/findings/{finding_id}/guidance` | `findings_application` (`guidance_only`) | Get |
+    | R5 | Artifact | `/artifacts` · `/artifacts/{artifact_id}` | `artifacts_repository` | List, Get |
+    | R5b | Conflict resolution | `/artifacts/{artifact_id}/resolutions` | domain `ResolveConflict` + artifacts | Create (human) |
+
+    **Not freestanding API peers:** conflict *engine*, guidance/analytics *engine*,
+    in-process certification service. Certification (AA-01…AA-07) is offline/CI
+    `certification_tool` writing `artifacts_store` (kind=certification).
+
+    ## Conventions
+
+    - Capability + SoD enforced at the `api` gate before use-case dispatch.
+    - Uniform error envelope (`Error` schema); denials produce audit events.
+    - Pagination: `page_size` / `page_token` (AIP-158 style).
+    - Path Item Objects are grouped by **resource** under `paths/` (one file per
+      resource family). Shared parameters, responses, and schemas live under
+      `components/`. JSON Schema wire types for primary views live in `schemas/`.
+    - Normative behavior: `docs/spec/contracts/`. Structural IDs: `docs/c4-model/`.
+
+    ## Path files
+
+    | File | Resource | URI prefix |
+    |------|----------|------------|
+    | `paths/directives.yaml` | R1 Directive | `/directives/{lineage_id}*` |
+    | `paths/compilations.yaml` | R2 Compilation | `/directives/{lineage_id}/compilations` |
+    | `paths/inspections.yaml` | R3 Inspection | `/inspections*` |
+    | `paths/findings.yaml` | R4 Finding | `/findings/{finding_id}*` |
+    | `paths/artifacts.yaml` | R5 Artifact | `/artifacts*` |
+
+  contact:
+    name: Selma Team
+  license:
+    name: Proprietary
+    url: https://selma.dev/license
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://api.selma.dev/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Directives
+    description: Dual-document directive CRUD and lifecycle (`directives_application`)
+  - name: Compilations
+    description: Hermetic CG-IR compile under a directive (`compilation_application`)
+  - name: Inspections
+    description: Target inspection pipeline (`inspections_application`)
+  - name: Findings
+    description: Finding lifecycle, events, and projections (`findings_application`)
+  - name: Guidance
+    description: Finding guidance sub-resource (`guidance_only` doctrine reads)
+  - name: Artifacts
+    description: Write-once evidence, conflict, and certification blobs (`artifacts_repository`)
+
+paths:
+  /directives/{lineage_id}:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}"
+  /directives/{lineage_id}/revisions/{revision}:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}~1revisions~1{revision}"
+
+  /directives/{lineage_id}/compilations:
+    $ref: "paths/compilations.yaml#/~1directives~1{lineage_id}~1compilations"
+
+  /inspections:
+    $ref: "paths/inspections.yaml#/~1inspections"
+  /inspections/{inspection_id}:
+    $ref: "paths/inspections.yaml#/~1inspections~1{inspection_id}"
+  /inspections/{inspection_id}/findings:
+    $ref: "paths/inspections.yaml#/~1inspections~1{inspection_id}~1findings"
+
+  /findings/{finding_id}:
+    $ref: "paths/findings.yaml#/~1findings~1{finding_id}"
+  /findings/{finding_id}/events:
+    $ref: "paths/findings.yaml#/~1findings~1{finding_id}~1events"
+  /findings/{finding_id}/guidance:
+    $ref: "paths/findings.yaml#/~1findings~1{finding_id}~1guidance"
+
+  /artifacts:
+    $ref: "paths/artifacts.yaml#/~1artifacts"
+  /artifacts/{artifact_id}:
+    $ref: "paths/artifacts.yaml#/~1artifacts~1{artifact_id}"
+  /artifacts/{artifact_id}/resolutions:
+    $ref: "paths/artifacts.yaml#/~1artifacts~1{artifact_id}~1resolutions"
+
+components:
+  securitySchemes:
+    $ref: "components/security.yaml#/components/securitySchemes"
+  parameters:
+    $ref: "components/parameters.yaml#/components/parameters"
+  schemas:
+    $ref: "components/schemas.yaml#/components/schemas"
+  responses:
+    $ref: "components/responses.yaml#/components/responses"

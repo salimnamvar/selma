@@ -1,0 +1,96 @@
+# R1 Directives — directives_application → directives_repository → directives_store
+# Collection identity is lineage_id; revisions are co-versioned dual documents.
+
+/directives/{lineage_id}:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/LineageId
+  get:
+    operationId: getDirective
+    tags: [Directives]
+    summary: Get directive
+    description: |
+      Returns the latest revision of a dual-document directive (executable rule +
+      policy doctrine). Read-only; no capability required (per rest_api.yaml).
+
+      C4: `api` → `directives_application` → `directives_repository` → `directives_store`.
+    responses:
+      "200":
+        description: Directive document
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/DirectiveView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+  put:
+    operationId: updateDirective
+    tags: [Directives]
+    summary: Update directive (new revision)
+    description: |
+      Updates directive content and creates a new revision with the same
+      `lineage_id`. Requires `directive.modify`. Write lock acquired before
+      processing. May request compile via `compilation_application` after durable write.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/DirectiveUpdate
+    responses:
+      "200":
+        description: Updated directive with new revision
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/DirectiveView
+      "400":
+        $ref: ../components/responses.yaml#/components/responses/SchemaError
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+  delete:
+    operationId: retireDirective
+    tags: [Directives]
+    summary: Retire directive
+    description: |
+      Transitions directive to deprecated/retired status. Requires `directive.retire`.
+      No new compilations permitted for retired lineages.
+    responses:
+      "200":
+        description: Directive retired
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/DirectiveView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+
+/directives/{lineage_id}/revisions/{revision}:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/LineageId
+    - $ref: ../components/parameters.yaml#/components/parameters/Revision
+  get:
+    operationId: getDirectiveRevision
+    tags: [Directives]
+    summary: Get directive revision
+    description: Returns a specific historical revision of a dual-document directive.
+    responses:
+      "200":
+        description: Directive revision
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/DirectiveView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound

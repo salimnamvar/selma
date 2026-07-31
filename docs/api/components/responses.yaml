@@ -1,0 +1,90 @@
+components:
+  responses:
+    Unauthorized:
+      description: "401 — Missing or invalid authentication token"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: Unauthorized
+              message: Missing or invalid Bearer token
+              details: {}
+              request_id: req_auth001
+
+    CapabilityDenied:
+      description: "403 — Actor lacks required capability or SoD check failed"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: CapabilityDenied
+              message: "Actor lacks required capability: finding.waive"
+              details:
+                required_capability: finding.waive
+                actor_capabilities: [finding.view, finding.acknowledge]
+              request_id: req_cap001
+
+    NotFound:
+      description: "404 — Resource not found"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: NotFound
+              message: Resource not found
+              details:
+                resource_type: finding
+                resource_id: f8a1b2c3-d4e5-6f78-9abc-def012345678
+              request_id: req_404001
+
+    SchemaError:
+      description: "400 — Request body fails schema validation"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: SchemaError
+              message: Request body validation failed
+              details:
+                validation_errors:
+                  - path: /target_type
+                    message: "Must be one of: text, structured, binary"
+              request_id: req_sch001
+
+    Conflict:
+      description: "409 — Resource state conflict"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: Conflict
+              message: Compilation already in progress for this lineage
+              details:
+                existing_compilation_id: comp-abc123
+              request_id: req_con001
+
+    FsmError:
+      description: "400 — Invalid finding FSM transition"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              code: FSMError
+              message: "Invalid transition: Dismissed → Acknowledged"
+              details:
+                current_state: Dismissed
+                requested_transition: acknowledge
+                allowed_transitions: []
+              request_id: req_fsm001

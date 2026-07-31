@@ -1,0 +1,100 @@
+# R3 Inspections — inspections_application (+ optional target_sources_gateway)
+# Findings opened via findings_application; evidence written to artifacts_store.
+
+/inspections:
+  post:
+    operationId: createInspection
+    tags: [Inspections]
+    summary: Create inspection
+    description: |
+      Submits a target (inline body or optional remote reference) for evaluation
+      against frozen compiled rules. Requires `inspection.submit`.
+
+      Six-stage pipeline: normalize → classify → select_controls → evaluate →
+      aggregate → report. Never reads policy doctrines.
+
+      C4: `api` → `inspections_application` → `compiled_rules_repository` /
+      optional `target_sources_gateway` → opens findings via `findings_application`.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/TargetSubmission
+    responses:
+      "201":
+        description: Inspection completed
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/InspectionResult
+      "400":
+        $ref: ../components/responses.yaml#/components/responses/SchemaError
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+  get:
+    operationId: listInspections
+    tags: [Inspections]
+    summary: List inspections
+    description: Returns a paginated list of inspections.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/TargetIdFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/LineageIdFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Inspection list
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListInspectionsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+
+/inspections/{inspection_id}:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/InspectionId
+  get:
+    operationId: getInspection
+    tags: [Inspections]
+    summary: Get inspection
+    description: Returns the immutable inspection snapshot.
+    responses:
+      "200":
+        description: Inspection snapshot
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/InspectionResult
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+
+/inspections/{inspection_id}/findings:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/InspectionId
+  get:
+    operationId: listInspectionFindings
+    tags: [Findings]
+    summary: List findings for inspection
+    description: Returns findings produced by the inspection (findings_application projection).
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/FsmStateFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/SeverityFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Finding list
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListFindingsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound

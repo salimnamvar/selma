@@ -1,0 +1,11 @@
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT encoding actor identity and capability set. Claims include `sub`
+        (actor ID) and `capabilities` (array of capability strings). Capability
+        checks are enforced at the `api` gate per
+        `docs/spec/contracts/authorization/capabilities.yaml`.

@@ -1,0 +1,105 @@
+# R4 Findings — findings_application → finding_events_repository → finding_events_store
+# Guidance is a sub-resource (guidance_only doctrine via directives_repository).
+
+/findings/{finding_id}:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/FindingId
+  get:
+    operationId: getFinding
+    tags: [Findings]
+    summary: Get finding
+    description: |
+      Returns full finding details including evidence and disposition.
+      Requires `finding.view` where capability gating applies.
+    responses:
+      "200":
+        description: Finding details
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/FindingView
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+  patch:
+    operationId: updateFinding
+    tags: [Findings]
+    summary: Transition finding (FSM)
+    description: |
+      Triggers an FSM state transition. Gated by capability checks and SoD per
+      `finding_lifecycle/transitions.yaml` and `sod_contract.yaml`. Each success
+      appends an immutable event to `finding_events_store`.
+
+      Valid examples: Open → acknowledge | dismiss | waive;
+      Pending Verification → approve_remediation | reject_remediation;
+      Rejected → reopen.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/FindingTransition
+    responses:
+      "200":
+        description: Finding updated
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/FindingView
+      "400":
+        $ref: ../components/responses.yaml#/components/responses/FsmError
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+
+/findings/{finding_id}/events:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/FindingId
+  get:
+    operationId: listFindingEvents
+    tags: [Findings]
+    summary: List finding events
+    description: |
+      Returns the append-only event stream for the finding. Events are immutable
+      and hash-chained (`finding_events_store`).
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Event stream page
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListFindingEventsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+
+/findings/{finding_id}/guidance:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/FindingId
+  get:
+    operationId: getFindingGuidance
+    tags: [Guidance]
+    summary: Get finding guidance
+    description: |
+      Returns remediation guidance resolved from the paired policy doctrine via
+      `directives_repository` (`guidance_only`). Never used for evaluation or FSM
+      transitions (gate AA-02). Not a freestanding guidance engine.
+    responses:
+      "200":
+        description: Guidance payload
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/GuidanceResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound

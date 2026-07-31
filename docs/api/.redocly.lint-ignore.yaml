@@ -1,0 +1,9 @@
+# Documented suppressions for openapi.yaml lint warnings.
+# Each entry is a deliberate design decision, not an oversight.
+openapi.yaml:
+  # License is proprietary; SPDX not required for internal design docs.
+  info-license:
+    - "#/info"
+  # Local development server is intentional.
+  no-server-example.com:
+    - "#/servers/0/url"

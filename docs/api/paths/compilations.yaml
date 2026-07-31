@@ -1,0 +1,55 @@
+# R2 Compilations — compilation_application → compiled_rules_repository → compiled_rules_store
+# Nested under directives (hermetic compile of executable document only).
+
+/directives/{lineage_id}/compilations:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/LineageId
+  post:
+    operationId: createCompilation
+    tags: [Compilations]
+    summary: Trigger compilation
+    description: |
+      Triggers hermetic CG-IR compilation for the directive's executable document.
+      Requires compile capability as defined in authorization contracts.
+      Compilation is idempotent for identical directive content (content-addressed
+      publish to `compiled_rules_store`). Policy doctrines are not loaded for evaluation.
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/CompilationRequest
+    responses:
+      "201":
+        description: Compilation accepted / completed status
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/CompilationStatus
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+      "409":
+        $ref: ../components/responses.yaml#/components/responses/Conflict
+  get:
+    operationId: listCompilations
+    tags: [Compilations]
+    summary: List compilations
+    description: Returns compilation history for the directive lineage.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Compilation list
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListCompilationsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound

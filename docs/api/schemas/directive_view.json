@@ -1,8 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://selma.dev/schemas/directive_view.json",
   "title": "DirectiveView",
-  "description": "Representation of a dual-document directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml, identity.yaml, and data_stores/directive_store.yaml. Each directive stores an executable rule document (rule_schema) and a linked policy doctrine document (policy_doctrine) in directives. Only the executable document compiles into CG-IR; doctrine is guidance_only.",
+  "description": "Representation of a dual-document directive. Schema is grounded in docs/spec/contracts/directive/lifecycle.yaml, identity.yaml, and data_stores/directives_store.yaml. Each directive stores an executable rule document (rule_schema) and a linked policy doctrine document (policy_doctrine) in directives. Only the executable document compiles into CG-IR; doctrine is guidance_only.",
   "type": "object",
   "required": [
     "lineage_id",
@@ -20,18 +18,23 @@
       "type": "string",
       "description": "Immutable lineage root identifier. Never changes across revisions, forks, merges, or splits. Assigned once at creation from Machine ID.",
       "pattern": "^[A-Z]{2,5}\\d{3}[A-Z]?$",
-      "examples": ["SC101", "TRAF001", "AUTH001"]
+      "example": "SC101"
     },
     "execution_id": {
       "type": "string",
       "description": "Active node identity for CG-IR compilation and runtime evaluation. Changes on fork, merge, or split. On first creation equals lineage_id.",
       "pattern": "^[A-Z][A-Z0-9]+(-[0-9]+(-[A-Z0-9]+)*)?$",
-      "examples": ["SC101", "SC101-1", "TRAF-001-A", "AUTH-001-M3A7F2B1C4D5E6F7"]
+      "example": "SC101"
     },
     "status": {
       "type": "string",
-      "description": "Lifecycle state of the directive. Per directive/lifecycle.yaml: draft → active → deprecated|superseded.",
-      "enum": ["draft", "active", "deprecated", "superseded"]
+      "description": "Lifecycle state of the directive. Per directive/lifecycle.yaml: draft \u2192 active \u2192 deprecated|superseded.",
+      "enum": [
+        "draft",
+        "active",
+        "deprecated",
+        "superseded"
+      ]
     },
     "revision": {
       "type": "integer",
@@ -61,12 +64,22 @@
         "type": {
           "type": "string",
           "description": "Deontic modality type.",
-          "enum": ["obligation", "prohibition", "permission"]
+          "enum": [
+            "obligation",
+            "prohibition",
+            "permission"
+          ]
         },
         "severity_default": {
           "type": "string",
           "description": "Default severity for Fail outcomes.",
-          "enum": ["critical", "high", "medium", "low", "informational"]
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational"
+          ]
         },
         "detection": {
           "type": "object",
@@ -79,22 +92,38 @@
           "properties": {
             "target_type": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
-            "domain": { "type": "array", "items": { "type": "string" } },
-            "jurisdiction": { "type": "array", "items": { "type": "string" } }
+            "domain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "jurisdiction": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
           "additionalProperties": true
         },
         "conflicts_with": {
           "type": "array",
           "description": "Declared conflict pairs (compile-time only).",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "depends_on": {
           "type": "array",
           "description": "Execution IDs of directives this directive depends on.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -123,19 +152,25 @@
             "merge_provenance": {
               "type": "array",
               "description": "Source lineage IDs for merge operations.",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
         "parent_lineage_ids": {
           "type": "array",
           "description": "Parent lineage IDs from fork/merge/split operations.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "parent_execution_ids": {
           "type": "array",
           "description": "Parent execution IDs from fork/merge/split operations.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -156,75 +191,108 @@
       "properties": {
         "self": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "revisions": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "compilations": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         },
         "latest_revision": {
           "type": "object",
-          "properties": { "href": { "type": "string" } }
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
         }
       }
     }
   },
   "additionalProperties": false,
-  "examples": [
-    {
+  "example": {
+    "lineage_id": "SC101",
+    "execution_id": "SC101",
+    "status": "active",
+    "revision": 3,
+    "executable_document": {
+      "id": "SC101",
       "lineage_id": "SC101",
-      "execution_id": "SC101",
-      "status": "active",
-      "revision": 3,
-      "executable_document": {
-        "id": "SC101",
-        "lineage_id": "SC101",
-        "name": "Parameterized Queries",
-        "description": "All database queries MUST use parameterized query mechanisms. String interpolation in SQL construction is prohibited.",
-        "type": "obligation",
-        "severity_default": "high",
-        "detection": {
-          "strategy": "pattern",
-          "pattern_spec": {
-            "language": "python",
-            "patterns": ["f\".*SELECT.*", "f\".*INSERT.*", "f\".*UPDATE.*", "f\".*DELETE.*"]
-          }
-        },
-        "scope": {
-          "target_type": ["text"],
-          "domain": ["security"],
-          "jurisdiction": ["any"],
-          "conflicts_with": [],
-          "depends_on": []
+      "name": "Parameterized Queries",
+      "description": "All database queries MUST use parameterized query mechanisms. String interpolation in SQL construction is prohibited.",
+      "type": "obligation",
+      "severity_default": "high",
+      "detection": {
+        "strategy": "pattern",
+        "pattern_spec": {
+          "language": "python",
+          "patterns": [
+            "f\".*SELECT.*",
+            "f\".*INSERT.*",
+            "f\".*UPDATE.*",
+            "f\".*DELETE.*"
+          ]
         }
       },
-      "policy_doctrine_document": {
-        "doctrine": {
-          "name": "sc101_parameterized_queries",
-          "version": "1.0.0"
-        },
-        "guidance": {
-          "reasoning": "String interpolation in SQL enables injection attacks.",
-          "remediation_strategy": "Use parameterized queries for all database interactions"
-        }
+      "scope": {
+        "target_type": [
+          "text"
+        ],
+        "domain": [
+          "security"
+        ],
+        "jurisdiction": [
+          "any"
+        ],
+        "conflicts_with": [],
+        "depends_on": []
+      }
+    },
+    "policy_doctrine_document": {
+      "doctrine": {
+        "name": "sc101_parameterized_queries",
+        "version": "1.0.0"
       },
-      "paired_policy_ref": "sc101_parameterized_queries",
-      "metadata": {
-        "created_by": "user:alice",
-        "migration": {}
+      "guidance": {
+        "reasoning": "String interpolation in SQL enables injection attacks.",
+        "remediation_strategy": "Use parameterized queries for all database interactions"
+      }
+    },
+    "paired_policy_ref": "sc101_parameterized_queries",
+    "metadata": {
+      "created_by": "user:alice",
+      "migration": {}
+    },
+    "created_at": "2024-06-01T00:00:00Z",
+    "updated_at": "2025-01-10T14:30:00Z",
+    "_links": {
+      "self": {
+        "href": "/directives/SC101"
       },
-      "created_at": "2024-06-01T00:00:00Z",
-      "updated_at": "2025-01-10T14:30:00Z",
-      "_links": {
-        "self": { "href": "/directives/SC101" },
-        "revisions": { "href": "/directives/SC101/revisions" },
-        "compilations": { "href": "/directives/SC101/compilations" },
-        "latest_revision": { "href": "/directives/SC101/revisions/3" }
+      "revisions": {
+        "href": "/directives/SC101/revisions"
+      },
+      "compilations": {
+        "href": "/directives/SC101/compilations"
+      },
+      "latest_revision": {
+        "href": "/directives/SC101/revisions/3"
       }
     }
-  ]
+  }
 }
