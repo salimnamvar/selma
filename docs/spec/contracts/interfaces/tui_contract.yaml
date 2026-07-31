@@ -88,20 +88,20 @@ screen_families:
           - "Confirmation dialog for irreversible actions"
           - "Comment/reason input where required"
 
-  - family: "analytics"
-    description: "Analytics dashboard"
+  - family: "findings_read_models"
+    description: "Finding aggregates dashboard (findings_application · not a freestanding analytics peer)"
     screens:
       - name: "dashboard"
         capability: "analytics.view"
-        behavior: "View analytics and trends"
+        behavior: "View finding aggregates and trends"
         features:
           - "Finding rate trends"
           - "Severity distribution"
           - "Recurrence patterns"
           - "Compliance posture overview"
 
-  - family: "conflict_resolution"
-    description: "Conflict review and resolution"
+  - family: "conflict_artifacts"
+    description: "Conflict artifact review (ResolveConflict domain service; artifacts_store kind=conflict)"
     screens:
       - name: "conflict_list"
         capability: "conflict.resolve"
@@ -112,7 +112,7 @@ screen_families:
 
       - name: "conflict_resolution"
         capability: "conflict.resolve"
-        behavior: "Resolve conflict"
+        behavior: "Record human resolution on conflict artifact"
         features:
           - "Side-by-side rule comparison"
           - "Resolution strategy selection"

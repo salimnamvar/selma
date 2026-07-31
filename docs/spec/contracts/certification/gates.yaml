@@ -4,14 +4,15 @@
 
 contract_id: "certification.gates"
 schema_version: "1.0.0"
-owner_component: "api"
+owner_component: "certification_tool"
 description: >
   Defines the 7 architectural audit gates required for production-grade
   reference implementation certification. Gates are non-blocking for spec
   conformance of the document suite but MUST be satisfied for implementation
   certification.
-  Note: certification_tool (offline/CI) is the external implementation of these gates.
-  API provides read access to certification results stored as artifacts.
+  Implementation: offline/CI certification_tool (not an in-process C4 peer).
+  Results MAY be written to artifacts_store (kind=certification) and read via
+  the Artifacts API. There is no in-process certifications Application component.
 
 gates:
   - gate_id: "AA-01"
@@ -20,10 +21,10 @@ gates:
     validation_method: "Integration test proving finding events cannot trigger compilation"
     story_refs: ["US-GA-001"]
     criteria:
-      - "Analytics engine cannot write to CG-IR store"
-      - "Analytics engine cannot modify finding FSM state"
+      - "findings_application read models cannot write to compiled_rules_store"
+      - "findings_application guidance/aggregates cannot modify finding FSM state"
       - "Finding events cannot trigger compilation"
-      - "Mediated feedback flow: Event Stream → Analytics → Human → Directive change → Recompile"
+      - "Mediated feedback flow: finding_events_store → read-only findings views → Human → directives change → recompile"
 
   - gate_id: "AA-02"
     name: "Declarative Governance"
@@ -117,5 +118,5 @@ stories:
     so_that: "reference implementations are production-grade"
     acceptance_criteria:
       - "Given a reference implementation. When architectural audit runs. Then all 7 gates (AA-01 through AA-07) are verified with pass/fail per gate."
-      - "Given gate AA-01 (Mediated Feedback). When verification runs. Then it is confirmed that analytics has no write path to CG-IR or FSM."
+      - "Given gate AA-01 (Mediated Feedback). When verification runs. Then it is confirmed that findings_application read models have no write path to compiled_rules or the finding FSM."
       - "Given gate AA-04 (Segregation of Duties). When verification runs. Then it is confirmed that finding.waive is denied when actor is in creator_provenance."

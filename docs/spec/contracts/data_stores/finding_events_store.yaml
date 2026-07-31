@@ -148,7 +148,9 @@ chain_hash:
   initial_value: "event_hash of the first event in the stream"
 
 analytics:
-  description: "Read-only analytics over the event stream"
+  description: >
+    Read-only finding aggregates over the event stream, owned by
+    findings_application (not a freestanding analytics engine / C4 peer).
   types:
     - name: "finding_aggregates"
       description: "Pre-computed for context object"
@@ -156,12 +158,12 @@ analytics:
       description: "Finding rates over time (read-only)"
     - name: "compliance_dashboard"
       description: "Real-time posture view"
-  constraint: "Analytics never modify CG-IR or finding FSM state"
+  constraint: "findings_application read models never modify compiled_rules or finding FSM state"
 
 mediated_feedback:
-  description: "How analytics inform directive changes"
-  flow: "Event Stream → Read-only analytics → Human review → Directive Graph change → Recompile"
-  constraint: "No direct finding → CG-IR path"
+  description: "How read-only findings views inform directive changes"
+  flow: "finding_events_store → findings_application read models → Human review → directives change → recompile"
+  constraint: "No direct finding → compiled_rules path"
 
 retention_policy:
   - artifact: "Finding Events"
@@ -192,7 +194,7 @@ invariants:
     enforcement: "finding_events_store"
 
   - id: "INV-ES-005"
-    statement: "Analytics are read-only; no write path to CG-IR or FSM"
+    statement: "findings_application read models are read-only; no write path to compiled_rules or FSM"
     enforcement: "architectural_audit (AA-01)"
 
   - id: "INV-ES-006"

@@ -19,10 +19,10 @@ Structural ownership of contracts maps to **C4 component IDs**
 | **Compilation** | `contracts/compilation/` | `compilation_application` | Defined |
 | **Inspection** | `contracts/inspection/` | `inspections_application` | Defined |
 | **Finding Lifecycle** | `contracts/finding_lifecycle/` | `findings_application` | Defined |
-| **Conflict Resolution** | `contracts/conflict/` | `compilation_application` / `inspections_application` (uses ResolveConflict domain service) | Defined |
+| **Conflict Resolution** | `contracts/conflict/` | Domain `ResolveConflict` (used by `compilation_application` / `inspections_application`; **not** a C4 peer) | Defined |
 | **Authorization** | `contracts/authorization/` | `api` | Defined |
 | **Data Stores** | `contracts/data_stores/` | `*_repository` adapters + matching `*_store` | Defined |
-| **Certification** | `contracts/certification/` | `api` (delegates to external certification_tool) | Defined |
+| **Certification** | `contracts/certification/` | Offline/CI `certification_tool` (**not** in-process C4 peer); results in `artifacts_store` | Defined |
 | **Directive** | `contracts/directive/` | `directives_application` (+ `directives_repository`) | Defined |
 | **Interfaces** | `contracts/interfaces/` | `api` / `clients` | Defined |
 

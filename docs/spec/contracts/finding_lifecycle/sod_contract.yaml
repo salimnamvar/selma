@@ -136,12 +136,12 @@ enforcement_gates:
     failure: "403 CapabilityDenied; no state mutation; audit log entry"
 
   - gate: "directive_mutations"
-    location: "Compilation Engine"
+    location: "api → directives_application"
     description: "directive.* capabilities checked"
     failure: "Reject before write lock acquired"
 
   - gate: "inspection_submit"
-    location: "Pipeline entry"
+    location: "api → inspections_application"
     description: "inspection.submit, inspection.reinspect checked"
     failure: "Reject before target validation"
 

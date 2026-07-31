@@ -108,31 +108,46 @@ endpoint_families:
           - "404 NotFound"
         locking: "fsm_engine"
 
-  - family: "analytics"
-    description: "Read-only analytics"
+  - family: "findings_application_read_models"
+    description: >
+      Read-only aggregates and guidance under findings_application.
+      Not a freestanding analytics or guidance engine (C4).
     operations:
       - method: "GET"
-        action: "View analytics"
+        action: "View finding aggregates / analytics"
         capability: "analytics.view"
-        request: "Analytics query parameters"
-        response: "Aggregated data"
+        request: "Query parameters over finding events"
+        response: "Aggregated data (read-only)"
         errors:
           - "403 CapabilityDenied"
 
-  - family: "conflicts"
-    description: "Conflict resolution"
+      - method: "GET"
+        action: "Get finding guidance"
+        capability: "finding.view"
+        request: "finding_id"
+        response: "Guidance payload from doctrine (guidance_only)"
+        errors:
+          - "404 NotFound"
+
+  - family: "artifacts_store"
+    description: >
+      Write-once artifacts (inspection, conflict, certification, evidence).
+      Conflict human-review and certification results are artifact-backed;
+      ResolveConflict and certification_tool are not freestanding API peers.
     operations:
       - method: "GET"
-        action: "List conflict artifacts"
-        capability: "conflict.resolve"
-        request: "Optional filters"
-        response: "Array of conflict artifacts"
+        action: "List / read artifacts"
+        capability: null
+        request: "Optional kind filter (inspection|conflict|certification|evidence)"
+        response: "Artifact metadata and payload"
+        errors:
+          - "404 NotFound"
 
       - method: "POST"
-        action: "Resolve conflict"
+        action: "Record human resolution on conflict artifact"
         capability: "conflict.resolve"
-        request: "conflict_id + resolution"
-        response: "Resolved conflict artifact"
+        request: "artifact_id + resolution"
+        response: "Updated conflict artifact"
         errors:
           - "403 CapabilityDenied"
           - "404 NotFound"
