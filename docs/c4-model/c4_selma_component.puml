@@ -2,9 +2,10 @@
 ' Title:     Selma -- Component Diagram
 ' Boundary:  Application
 ' Purpose:   Clean Architecture inside Application:
-'            API (driving) → use-case clusters → repositories
-'            (driven). Domain services (e.g. ResolveConflict)
-'            are not peer components.
+'            api (driving) → *_application → *_repository /
+'            *_gateway (driven) → *_store / externals.
+'            Domain services (e.g. ResolveConflict) are not
+'            peer components.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component
@@ -21,19 +22,23 @@ System_Ext(target_sources, $NAME_target_sources, $DESC_target_sources)
 
 Container_Ext(clients, $NAME_clients, $TECH_clients, $DESC_clients)
 
-ContainerDb_Ext(directives, $NAME_directives, $TECH_directives, $DESC_directives, $tags="store")
-ContainerDb_Ext(compiled_rules, $NAME_compiled_rules, $TECH_compiled_rules, $DESC_compiled_rules, $tags="store")
-ContainerDb_Ext(finding_events, $NAME_finding_events, $TECH_finding_events, $DESC_finding_events, $tags="store")
-ContainerDb_Ext(artifacts, $NAME_artifacts, $TECH_artifacts, $DESC_artifacts, $tags="store")
+ContainerDb_Ext(directives_store, $NAME_directives_store, $TECH_directives_store, $DESC_directives_store, $tags="store")
+ContainerDb_Ext(compiled_rules_store, $NAME_compiled_rules_store, $TECH_compiled_rules_store, $DESC_compiled_rules_store, $tags="store")
+ContainerDb_Ext(finding_events_store, $NAME_finding_events_store, $TECH_finding_events_store, $DESC_finding_events_store, $tags="store")
+ContainerDb_Ext(artifacts_store, $NAME_artifacts_store, $TECH_artifacts_store, $DESC_artifacts_store, $tags="store")
 
 Container_Boundary(application, $NAME_application) {
 
+    ' ── Driving adapter (interface) ──
     Component(api, $NAME_api, $TECH_api, $DESC_api, $tags="gate")
 
-    Component(compilation, $NAME_compilation, $TECH_compilation, $DESC_compilation, $tags="hermetic")
-    Component(inspection, $NAME_inspection, $TECH_inspection, $DESC_inspection)
-    Component(findings, $NAME_findings, $TECH_findings, $DESC_findings)
+    ' ── Application use-case clusters (*_application) ──
+    Component(directives_application, $NAME_directives_application, $TECH_directives_application, $DESC_directives_application)
+    Component(compilation_application, $NAME_compilation_application, $TECH_compilation_application, $DESC_compilation_application, $tags="hermetic")
+    Component(inspections_application, $NAME_inspections_application, $TECH_inspections_application, $DESC_inspections_application)
+    Component(findings_application, $NAME_findings_application, $TECH_findings_application, $DESC_findings_application)
 
+    ' ── Driven adapters (infrastructure) ──
     Component(directives_repository, $NAME_directives_repository, $TECH_directives_repository, $DESC_directives_repository)
     Component(compiled_rules_repository, $NAME_compiled_rules_repository, $TECH_compiled_rules_repository, $DESC_compiled_rules_repository)
     Component(finding_events_repository, $NAME_finding_events_repository, $TECH_finding_events_repository, $DESC_finding_events_repository)
@@ -42,41 +47,46 @@ Container_Boundary(application, $NAME_application) {
 
 }
 
-' Driving: clients → api
+' ── Driving: clients → api ──
 Rel(clients, api, "resource-oriented API calls", "REST / HTTPS", $tags="capability_enforced")
 
-' API → use-case clusters
-Rel(api, directives_repository, "directive resource CRUD and lifecycle", "Internal", $tags="capability_enforced")
-Rel(api, compilation, "triggers compile on directive change", "Internal")
-Rel(api, inspection, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
-Rel(api, findings, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
+' ── api → application use-case clusters only ──
+Rel(api, directives_application, "directive resource CRUD and lifecycle", "Internal", $tags="capability_enforced")
+Rel(api, compilation_application, "triggers compile on directive change", "Internal", $tags="capability_enforced")
+Rel(api, inspections_application, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
+Rel(api, findings_application, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
+' Gate side-effect: capability denials are audit, not a domain use case
 Rel(api, finding_events_repository, "appends capability denial events", "Append-Only", $tags="immutable")
 
-' Compilation
-Rel(compilation, directives_repository, "reads executable documents under read-lock", "Read-Only", $tags="compile_only")
-Rel(compilation, compiled_rules_repository, "publishes compiled rule snapshots", "Write-Only", $tags="compile_only")
+' ── Directives Application ──
+Rel(directives_application, directives_repository, "reads and writes dual-document directives", "Internal")
+Rel(directives_application, compilation_application, "requests compile after durable directive change", "Internal")
 
-' Inspection
-Rel(inspection, target_sources_gateway, "fetches remote targets when referenced", "Internal", $tags="mediated")
-Rel(inspection, compiled_rules_repository, "loads frozen compiled rules", "Read-Only", $tags="validation_only")
-Rel(inspection, findings, "opens findings after evaluation", "Write-Only", $tags="immutable")
-Rel(inspection, artifacts_repository, "writes inspection snapshots and traces", "Write-Only", $tags="immutable")
+' ── Compilation Application (hermetic) ──
+Rel(compilation_application, directives_repository, "reads executable documents under read-lock", "Internal", $tags="compile_only")
+Rel(compilation_application, compiled_rules_repository, "publishes compiled rule snapshots", "Internal", $tags="compile_only")
 
-' Findings
-Rel(findings, finding_events_repository, "appends lifecycle and SoD events", "Append-Only", $tags="immutable")
-Rel(findings, finding_events_repository, "loads event stream for state hydration", "Read-Only", $tags="validation_only")
-Rel(findings, compiled_rules_repository, "reads creator provenance for SoD", "Read-Only", $tags="validation_only")
-Rel(findings, directives_repository, "reads policy doctrine for guidance", "Read-Only", $tags="guidance_only")
-Rel(findings, artifacts_repository, "reads and writes conflict and evidence artifacts", "Internal", $tags="immutable")
+' ── Inspections Application ──
+Rel(inspections_application, target_sources_gateway, "fetches remote targets when referenced", "Internal", $tags="mediated")
+Rel(inspections_application, compiled_rules_repository, "loads frozen compiled rules", "Internal", $tags="validation_only")
+Rel(inspections_application, findings_application, "opens findings after evaluation", "Internal")
+Rel(inspections_application, artifacts_repository, "writes inspection snapshots and traces", "Internal", $tags="immutable")
 
-' Optional external
+' ── Findings Application ──
+Rel(findings_application, finding_events_repository, "appends lifecycle and SoD events", "Internal", $tags="immutable")
+Rel(findings_application, finding_events_repository, "loads event stream for state hydration", "Internal", $tags="validation_only")
+Rel(findings_application, compiled_rules_repository, "reads creator provenance for SoD", "Internal", $tags="validation_only")
+Rel(findings_application, directives_repository, "reads policy doctrine for guidance", "Internal", $tags="guidance_only")
+Rel(findings_application, artifacts_repository, "reads and writes conflict and evidence artifacts", "Internal")
+
+' ── Optional external (gateway → system) ──
 Rel(target_sources_gateway, target_sources, "fetches targets by reference", "HTTPS / API", $tags="mediated")
 
-' Repositories → stores
-Rel(directives_repository, directives, "persists dual-document directives", "SQL", $tags="capability_enforced")
-Rel(compiled_rules_repository, compiled_rules, "publishes and loads snapshots", "CAS", $tags="immutable")
-Rel(finding_events_repository, finding_events, "appends events", "Append-Only", $tags="immutable")
-Rel(artifacts_repository, artifacts, "write-once artifacts", "Object Write", $tags="immutable")
+' ── Repositories → stores (frameworks & drivers) ──
+Rel(directives_repository, directives_store, "persists dual-document directives", "SQL")
+Rel(compiled_rules_repository, compiled_rules_store, "publishes and loads snapshots", "CAS", $tags="immutable")
+Rel(finding_events_repository, finding_events_store, "appends events", "Append-Only", $tags="immutable")
+Rel(artifacts_repository, artifacts_store, "write-once artifacts", "Object Write", $tags="immutable")
 
 SHOW_LEGEND()
 @enduml

@@ -52,6 +52,16 @@
 '   Hermetic compile unit: $tags="hermetic"
 '   Capability/SoD gate entry: $tags="gate"
 '
+' ── Clean Architecture component roles (Component diagram) ──
+'   Driving adapter:  api ($tags="gate")
+'   Use-case cluster: *_application
+'                     (directives_application | compilation_application |
+'                      inspections_application | findings_application)
+'   Driven adapter:   *_repository | *_gateway
+'   Data store:       *_store  (ContainerDb + $tags="store")
+'   Dependency rule:  outer → inner only along:
+'                     clients → api → *_application → adapters → *_store
+'
 ' ── Relationship format (locked) ────────────────────────────
 '   Rel(from, to, "description", "technology", $tags="...")
 '   description:
@@ -60,13 +70,17 @@
 '       (lower levels may refine endpoints, not reword intent)
 '   technology (canonical vocabulary — use exactly):
 '     Network:    HTTPS | REST / HTTPS | HTTPS / API | CI/CD
-'     Internal:   Internal
-'     Data I/O:   SQL | CAS | Append-Only | Append-Only / Read-Only
-'                 | Object Write
-'     Semantic:   Compile-Time Only | Append-Only | Mediated / Webhook
-'                 (semantic labels pair with matching $tags)
+'     In-process: Internal
+'     Data I/O (repository → store only):
+'                 SQL | CAS | Append-Only | Object Write
+'     Semantic edge labels pair with matching $tags; do not invent
+'     ad-hoc tech strings (e.g. Read-Only / Write-Only) — express
+'     direction in the description and semantics via $tags.
 '   $tags: apply whenever the edge has that semantic; never leave
 '     a tagged semantic untagged on one diagram and tagged on another
+'   capability_enforced: only on edges that cross the permission
+'     gate (person→clients, clients→api, api→use cases). Never on
+'     repository → store edges.
 ' ============================================================
 
 ' ------------------------------------------------------------

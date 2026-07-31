@@ -5,12 +5,32 @@
 '            Component diagrams. Include after c4_styles.puml.
 '
 ' Naming (Clean Architecture + Resource-Oriented Design):
-'   - IDs: snake_case resource or role tokens, stable across layers
-'   - Resources: plural collection names (directives, findings, …)
-'   - Application use-case clusters named by primary resource
-'   - Infrastructure: *_repository (store ports), *_gateway (externals)
-'   - No Tier-C peers: CI/CD, audit export, remediation notify,
-'     architectural auditor, freestanding conflict/analyzer engines
+'   Every structural ID carries a layer postfix (or role token):
+'
+'   | Kind                         | ID pattern                    | Examples |
+'   |------------------------------|-------------------------------|----------|
+'   | Actor / system / external    | snake_case role               | selma, target_sources |
+'   | Container (process)          | role token                    | clients, application |
+'   | Store (frameworks & drivers) | {resource}_store              | directives_store |
+'   | Use-case cluster (app)       | {resource|process}_application| findings_application |
+'   | Driven store adapter         | {resource}_repository         | directives_repository |
+'   | Driven external adapter      | {external}_gateway            | target_sources_gateway |
+'   | Driving gate                 | api                           | api |
+'
+'   Application use-case clusters:
+'     • directives_application   — directives resource
+'     • compilation_application  — hermetic compile → compiled_rules_store
+'     • inspections_application  — inspections resource
+'     • findings_application     — findings resource (SoR: finding_events_store)
+'
+'   Stores:
+'     • directives_store | compiled_rules_store
+'     • finding_events_store | artifacts_store
+'
+' Clean Architecture dependency rule (Component level):
+'   clients → api → *_application → *_repository/*_gateway → *_store / externals
+'   Domain services (e.g. ResolveConflict) stay inside use cases;
+'   they are not C4 peer components.
 '
 ' Contract:  1.1.0 (docs/spec/contracts/)
 ' ============================================================
@@ -52,69 +72,79 @@
 
 !$NAME_application = "Application"
 !$TECH_application = "REST API / Python / RE2 / JSON Schema / SHA-256"
-!$DESC_application = "Application runtime containing API adapters, use cases, domain execution, and infrastructure adapters. Domain logic remains isolated inside domain packages. Dual-document directives in Directives; evaluation uses Compiled Rules only; guidance loads doctrines from Directives after findings exist."
+!$DESC_application = "Application runtime containing the API gate, use-case clusters (*_application), domain execution, and infrastructure adapters (*_repository, *_gateway). Domain logic remains isolated inside domain packages. Dual-document directives in Directives Store; evaluation uses Compiled Rules Store only; guidance loads doctrines from Directives Store after findings exist."
 
 ' ------------------------------------------------------------
 ' Data stores (resource collections — ContainerDb)
 ' Always $tags="store"
+' IDs: {resource}_store  (frameworks & drivers ring)
 ' ------------------------------------------------------------
-!$NAME_directives = "Directives"
-!$TECH_directives = "PostgreSQL"
-!$DESC_directives = "Resource collection of dual-document directives (executable rule + policy doctrine), co-versioned per revision with lineage/execution identity, paired_policy_ref, and lifecycle. System of record for authoring and guidance prose."
+!$NAME_directives_store = "Directives Store"
+!$TECH_directives_store = "PostgreSQL"
+!$DESC_directives_store = "Resource collection of dual-document directives (executable rule + policy doctrine), co-versioned per revision with lineage/execution identity, paired_policy_ref, and lifecycle. System of record for authoring and guidance prose."
 
-!$NAME_compiled_rules = "Compiled Rules"
-!$TECH_compiled_rules = "Content-Addressed Storage"
-!$DESC_compiled_rules = "Resource collection of immutable CG-IR snapshots (compiled executable rules only), keyed by content hash. Evaluation source at inspection time; never rewritten."
+!$NAME_compiled_rules_store = "Compiled Rules Store"
+!$TECH_compiled_rules_store = "Content-Addressed Storage"
+!$DESC_compiled_rules_store = "Resource collection of immutable CG-IR snapshots (compiled executable rules only), keyed by content hash. Evaluation source at inspection time; never rewritten."
 
-!$NAME_finding_events = "Finding Events"
-!$TECH_finding_events = "PostgreSQL (append-only table)"
-!$DESC_finding_events = "Resource collection of append-only finding lifecycle events and capability denials. System of record for finding state, disposition history, and in-product audit trail."
+!$NAME_finding_events_store = "Finding Events Store"
+!$TECH_finding_events_store = "PostgreSQL (append-only table)"
+!$DESC_finding_events_store = "Resource collection of append-only finding lifecycle events and capability denials. System of record for finding state, disposition history, and in-product audit trail."
 
-!$NAME_artifacts = "Artifacts"
-!$TECH_artifacts = "Object Store"
-!$DESC_artifacts = "Resource collection of write-once evidence: inspection snapshots, execution traces, conflict artifacts, and certification reports. Large immutable blobs separate from the event log."
+!$NAME_artifacts_store = "Artifacts Store"
+!$TECH_artifacts_store = "Object Store"
+!$DESC_artifacts_store = "Resource collection of write-once evidence: inspection snapshots, execution traces, conflict artifacts, and certification reports. Large immutable blobs separate from the event log."
 
 ' ------------------------------------------------------------
 ' Components inside Application
-'   api              — interface adapter / application gate
-'   compilation      — application use-case cluster (compile resource)
-'   inspection       — application use-case cluster (inspections)
-'   findings         — application use-case cluster (findings resource)
-'   *_repository     — infrastructure driven adapters (ports)
-'   target_sources_gateway — optional infrastructure gateway
+'
+' Driving (interface adapters):
+'   api
+'
+' Application use-case clusters (*_application):
+'   directives_application | compilation_application |
+'   inspections_application | findings_application
+'
+' Driven (infrastructure adapters):
+'   *_repository  — store ports
+'   *_gateway     — optional external gateway
 ' ------------------------------------------------------------
 !$NAME_api = "API"
 !$TECH_api = "FastAPI / Pydantic"
-!$DESC_api = "Resource-oriented ingress (Clean Architecture driving side). Authenticates, enforces capabilities, validates request/response resources, and dispatches to compilation, inspection, and findings use cases. Orchestrates directive mutations and compile triggers."
+!$DESC_api = "Resource-oriented ingress and capability/SoD gate (Clean Architecture driving adapter). Authenticates, enforces capabilities, validates request/response resources, and dispatches only to application use-case clusters (*_application). Appends capability-denial events via Finding Events Repository. No domain rules and no direct store I/O except denial audit."
 
-!$NAME_compilation = "Compilation"
-!$TECH_compilation = "Python / JSON Schema / SHA-256"
-!$DESC_compilation = "Application service for the compile use case. Reads executable documents from Directives (repository) under hermetic boundary; validates schema and discriminators; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
+!$NAME_directives_application = "Directives Application"
+!$TECH_directives_application = "Python / Pydantic"
+!$DESC_directives_application = "Application use-case cluster for the directives resource (Create/Get/List/Update and lifecycle). Orchestrates dual-document mutations through Directives Repository; may trigger Compilation Application after durable writes. Does not compile rules or evaluate targets itself."
 
-!$NAME_inspection = "Inspection"
-!$TECH_inspection = "Python / RE2 Regex / SHA-256"
-!$DESC_inspection = "Application service for the inspections resource. Runs the six-stage pipeline against Compiled Rules and a Target (inline body or optional Target Sources). Emits findings into the findings use case; writes inspection evidence to Artifacts. Never reads policy doctrines."
+!$NAME_compilation_application = "Compilation Application"
+!$TECH_compilation_application = "Python / JSON Schema / SHA-256"
+!$DESC_compilation_application = "Hermetic application use-case cluster for the compile process (publishes to Compiled Rules Store). Reads executable documents from Directives Repository under hermetic boundary; validates schema and discriminators; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
 
-!$NAME_findings = "Findings"
-!$TECH_findings = "Python / Pydantic"
-!$DESC_findings = "Application service for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance (doctrine via Directives repository + paired_policy_ref). Appends Finding Events; does not write Compiled Rules or mutate directives from analytics."
+!$NAME_inspections_application = "Inspections Application"
+!$TECH_inspections_application = "Python / RE2 Regex / SHA-256"
+!$DESC_inspections_application = "Application use-case cluster for the inspections resource. Runs the six-stage pipeline against Compiled Rules and a Target (inline body or optional Target Sources). Opens findings via Findings Application; writes inspection evidence to Artifacts Store. Never reads policy doctrines."
+
+!$NAME_findings_application = "Findings Application"
+!$TECH_findings_application = "Python / Pydantic"
+!$DESC_findings_application = "Application use-case cluster for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance (doctrine via Directives Repository + paired_policy_ref). Appends to Finding Events Store; does not write Compiled Rules or mutate directives from analytics."
 
 !$NAME_directives_repository = "Directives Repository"
 !$TECH_directives_repository = "Python / SQLAlchemy / PostgreSQL"
-!$DESC_directives_repository = "Infrastructure adapter implementing DirectiveRepository. Persists dual-document directives; exposes readExecutable (compile) and readPolicyDoctrine (guidance_only)."
+!$DESC_directives_repository = "Infrastructure adapter implementing DirectiveRepository (port owned by application). Persists dual-document directives to Directives Store; exposes readExecutable (compile) and readPolicyDoctrine (guidance_only)."
 
 !$NAME_compiled_rules_repository = "Compiled Rules Repository"
 !$TECH_compiled_rules_repository = "Python / SHA-256 / CAS"
-!$DESC_compiled_rules_repository = "Infrastructure adapter implementing CgIrRepository. Publishes and loads immutable compiled rule snapshots."
+!$DESC_compiled_rules_repository = "Infrastructure adapter implementing CompiledRulesRepository. Publishes and loads immutable compiled rule snapshots in Compiled Rules Store."
 
 !$NAME_finding_events_repository = "Finding Events Repository"
 !$TECH_finding_events_repository = "Python / SHA-256 / Append-Only Log"
-!$DESC_finding_events_repository = "Infrastructure adapter implementing EventStore. Appends finding and denial events with hash-chain integrity."
+!$DESC_finding_events_repository = "Infrastructure adapter implementing FindingEventRepository. Appends finding and denial events to Finding Events Store with hash-chain integrity; supports stream load for state hydration."
 
 !$NAME_artifacts_repository = "Artifacts Repository"
 !$TECH_artifacts_repository = "Python / Object Store"
-!$DESC_artifacts_repository = "Infrastructure adapter implementing ArtifactRepository. Write-once storage of inspection, conflict, and certification artifacts."
+!$DESC_artifacts_repository = "Infrastructure adapter implementing ArtifactRepository. Write-once storage of inspection, conflict, and certification artifacts in Artifacts Store."
 
 !$NAME_target_sources_gateway = "Target Sources Gateway"
 !$TECH_target_sources_gateway = "Python / HTTP Client / Schema Validation"
-!$DESC_target_sources_gateway = "Optional infrastructure gateway for TargetGateway. Fetches and normalizes targets from Target Sources when inspection requests a remote reference instead of an inline body."
+!$DESC_target_sources_gateway = "Optional infrastructure gateway implementing TargetGateway. Fetches and normalizes targets from Target Sources when an inspection requests a remote reference instead of an inline body."

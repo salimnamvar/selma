@@ -1,7 +1,8 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma
-' Purpose:   Clients (driving), Application, four resource stores.
+' Purpose:   Clients (driving), Application, four resource stores
+'            (*_store).
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_container
@@ -25,10 +26,10 @@ System_Boundary(selma, $NAME_selma) {
 
     Container(application, $NAME_application, $TECH_application, $DESC_application)
 
-    ContainerDb(directives, $NAME_directives, $TECH_directives, $DESC_directives, $tags="store")
-    ContainerDb(compiled_rules, $NAME_compiled_rules, $TECH_compiled_rules, $DESC_compiled_rules, $tags="store")
-    ContainerDb(finding_events, $NAME_finding_events, $TECH_finding_events, $DESC_finding_events, $tags="store")
-    ContainerDb(artifacts, $NAME_artifacts, $TECH_artifacts, $DESC_artifacts, $tags="store")
+    ContainerDb(directives_store, $NAME_directives_store, $TECH_directives_store, $DESC_directives_store, $tags="store")
+    ContainerDb(compiled_rules_store, $NAME_compiled_rules_store, $TECH_compiled_rules_store, $DESC_compiled_rules_store, $tags="store")
+    ContainerDb(finding_events_store, $NAME_finding_events_store, $TECH_finding_events_store, $DESC_finding_events_store, $tags="store")
+    ContainerDb(artifacts_store, $NAME_artifacts_store, $TECH_artifacts_store, $DESC_artifacts_store, $tags="store")
 
 }
 
@@ -39,10 +40,10 @@ Rel(clients, application, "resource-oriented API calls", "REST / HTTPS", $tags="
 
 Rel(application, target_sources, "optionally fetches targets by reference", "HTTPS / API", $tags="mediated")
 
-Rel(application, directives, "reads and writes dual-document directives", "SQL")
-Rel(application, compiled_rules, "publishes and loads compiled rule snapshots", "CAS", $tags="immutable")
-Rel(application, finding_events, "appends finding and denial events", "Append-Only", $tags="immutable")
-Rel(application, artifacts, "stores inspection, conflict, and certification artifacts", "Object Write", $tags="immutable")
+Rel(application, directives_store, "reads and writes dual-document directives", "SQL")
+Rel(application, compiled_rules_store, "publishes and loads compiled rule snapshots", "CAS", $tags="immutable")
+Rel(application, finding_events_store, "appends finding and denial events", "Append-Only", $tags="immutable")
+Rel(application, artifacts_store, "stores inspection, conflict, and certification artifacts", "Object Write", $tags="immutable")
 
 SHOW_LEGEND()
 @enduml
