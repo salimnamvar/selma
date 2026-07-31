@@ -1,0 +1,196 @@
+# =============================================================================
+# Selma — Canonical C4 Registry (machine-readable SSoT for structural IDs)
+# =============================================================================
+# Authority: docs/c4-model/ (diagrams) + this file (checkable ID set).
+# All contracts, OpenAPI, PlantUML headers, and prose MUST use these IDs only
+# for product peers. Non-peers are listed separately and must never be
+# presented as C4 Context/Container/Component peers.
+#
+# design_contract_version tracks the structural design freeze line shared by
+# C4 diagrams, API openapi.yaml info.version alignment, and diagram headers.
+# =============================================================================
+
+design_contract_version: "1.1.0"
+schema_version: "1.0.0"
+
+dependency_rule: >
+  clients → api → *_application → *_repository | *_gateway → *_store | externals
+
+layer_postfix:
+  store: "{resource}_store"
+  application: "{resource|process}_application"
+  repository: "{resource}_repository"
+  gateway: "{external}_gateway"
+  gate: "api"
+  package: "{resource}_{domain|application|infrastructure}"
+
+# --- Product peers (may appear as C4 entities) --------------------------------
+peers:
+  actors:
+    - id: regulatory_official
+      display_name: Regulatory Official
+      kind: actor
+    - id: compliance_representative
+      display_name: Compliance Representative
+      kind: actor
+
+  systems:
+    - id: selma
+      display_name: Selma
+      kind: system
+    - id: target_sources
+      display_name: Target Sources
+      kind: external_optional
+
+  containers:
+    - id: clients
+      display_name: Clients
+      kind: container
+      tech: "CLI / Web / Desktop / Mobile"
+    - id: application
+      display_name: Application
+      kind: container
+      tech: "REST API / Python / RE2 / JSON Schema / SHA-256"
+
+  stores:
+    - id: directives_store
+      display_name: Directives Store
+      kind: store
+      tech: PostgreSQL
+      repository: directives_repository
+    - id: compiled_rules_store
+      display_name: Compiled Rules Store
+      kind: store
+      tech: Content-Addressed Storage
+      repository: compiled_rules_repository
+    - id: finding_events_store
+      display_name: Finding Events Store
+      kind: store
+      tech: "PostgreSQL (append-only table)"
+      repository: finding_events_repository
+    - id: artifacts_store
+      display_name: Artifacts Store
+      kind: store
+      tech: Object Store
+      repository: artifacts_repository
+
+  components:
+    - id: api
+      display_name: API
+      kind: gate
+      ca_ring: interface_adapter_driving
+    - id: directives_application
+      display_name: Directives Application
+      kind: application
+      ca_ring: application
+    - id: compilation_application
+      display_name: Compilation Application
+      kind: application
+      ca_ring: application
+      hermetic: true
+    - id: inspections_application
+      display_name: Inspections Application
+      kind: application
+      ca_ring: application
+    - id: findings_application
+      display_name: Findings Application
+      kind: application
+      ca_ring: application
+    - id: directives_repository
+      display_name: Directives Repository
+      kind: repository
+      ca_ring: interface_adapter_driven
+      store: directives_store
+    - id: compiled_rules_repository
+      display_name: Compiled Rules Repository
+      kind: repository
+      ca_ring: interface_adapter_driven
+      store: compiled_rules_store
+    - id: finding_events_repository
+      display_name: Finding Events Repository
+      kind: repository
+      ca_ring: interface_adapter_driven
+      store: finding_events_store
+    - id: artifacts_repository
+      display_name: Artifacts Repository
+      kind: repository
+      ca_ring: interface_adapter_driven
+      store: artifacts_store
+    - id: target_sources_gateway
+      display_name: Target Sources Gateway
+      kind: gateway
+      ca_ring: interface_adapter_driven
+      external: target_sources
+      optional: true
+
+# --- Allowed owner_component values for contracts -----------------------------
+# Peers from components + stores repositories already listed.
+# Plus explicit non-peer owners used only as contract owners, never as C4 peers.
+allowed_owner_components:
+  - api
+  - directives_application
+  - compilation_application
+  - inspections_application
+  - findings_application
+  - directives_repository
+  - compiled_rules_repository
+  - finding_events_repository
+  - artifacts_repository
+  - target_sources_gateway
+  - certification_tool   # offline/CI only — not a C4 peer
+  # meta contracts may set owner_component: null
+
+# --- Non-peers (must not appear as C4 Context/Container/Component) ------------
+non_peers:
+  - id: ResolveConflict
+    kind: domain_service
+    lives_in: "compilation_application / inspections_application (in-process)"
+  - id: certification_tool
+    kind: offline_tool
+    lives_in: "CI / local; may write artifacts_store kind=certification"
+  - id: guidance_read_models
+    kind: findings_read_model
+    lives_in: "findings_application (guidance_only + analytics.view)"
+  - id: cicd_client
+    kind: optional_client
+  - id: audit_export
+    kind: ops_export
+  - id: remediation_ticketing
+    kind: optional_notify
+
+# --- API resource surface (must match docs/api/openapi.yaml) ------------------
+api_resources:
+  - id: R1
+    name: Directive
+    paths: ["/directives/{lineage_id}", "/directives/{lineage_id}/revisions/{revision}"]
+    owner: directives_application
+  - id: R2
+    name: Compilation
+    paths: ["/directives/{lineage_id}/compilations"]
+    owner: compilation_application
+  - id: R3
+    name: Inspection
+    paths: ["/inspections", "/inspections/{inspection_id}"]
+    owner: inspections_application
+  - id: R4
+    name: Finding
+    paths: ["/findings/{finding_id}", "/findings/{finding_id}/events", "/findings/{finding_id}/guidance"]
+    owner: findings_application
+  - id: R5
+    name: Artifact
+    paths: ["/artifacts", "/artifacts/{artifact_id}", "/artifacts/{artifact_id}/resolutions"]
+    owner: artifacts_repository
+
+# --- Forbidden ID aliases (stale names from prior designs) --------------------
+forbidden_ids:
+  - directive_store          # use directives_store
+  - event_store              # use finding_events_store
+  - evidence_store           # use artifacts_store
+  - rule_store               # use compiled_rules_store
+  - governance_contracts     # removed external corpus
+  - PolicyDoctrineReader     # doctrine via directives_repository only
+  - AnalyticsEngine
+  - ConflictEngine
+  - GuidanceEngine
+  - CompilationEngine
+  - DetectionEngine          # evaluators under inspections path only

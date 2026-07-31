@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selma.dev/standards/contract.schema.json",
+  "title": "SelmaSpecContract",
+  "description": "Front-matter schema for every YAML file under docs/spec/contracts/ (except optional nested maps). Ensures investigation-stable ownership and versioning aligned with C4.",
+  "type": "object",
+  "required": ["contract_id", "schema_version", "description"],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "description": "Dotted domain id, e.g. directive.lifecycle, data_stores.directives_store"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "SemVer of this contract document body"
+    },
+    "design_contract_version": {
+      "type": "string",
+      "const": "1.1.0",
+      "description": "Must match docs/standards/c4_registry.yaml design_contract_version"
+    },
+    "owner_component": {
+      "description": "C4 component/repository ID, certification_tool, or null for meta",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "string",
+          "enum": [
+            "api",
+            "directives_application",
+            "compilation_application",
+            "inspections_application",
+            "findings_application",
+            "directives_repository",
+            "compiled_rules_repository",
+            "finding_events_repository",
+            "artifacts_repository",
+            "target_sources_gateway",
+            "certification_tool"
+          ]
+        }
+      ]
+    },
+    "owner": {
+      "description": "Legacy alias for meta contracts only; prefer owner_component",
+      "type": ["string", "null"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 8
+    },
+    "c4_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional list of related C4 IDs for multi-owner concerns"
+    },
+    "acceptance_criteria": {
+      "type": "array"
+    },
+    "stories": {
+      "type": "array"
+    },
+    "invariants": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

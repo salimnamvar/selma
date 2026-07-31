@@ -28,41 +28,55 @@ post-finding guidance.
 | Write-once evidence and certification artifacts | `artifacts_repository` → `artifacts_store` |
 | Capability / SoD gate at the edge | `api` (+ `clients`) |
 
-**Not product peers** (optional clients/exports only): CI/CD, long-term audit
-export, remediation ticketing. Conflict resolution (`ResolveConflict`) and
-guidance are domain / findings concerns, not freestanding engines. Certification
-(AA-01…AA-07) is an offline/CI tool suite.
+**Not product peers:** CI/CD, long-term audit export, remediation ticketing.
+Conflict resolution (`ResolveConflict`) and guidance are domain / findings
+concerns. Certification (AA-01…AA-07) is offline/CI `certification_tool`.
+
+## Design standards (mandatory)
+
+All design work MUST follow [`standards/`](standards/README.md):
+
+| Standard | Purpose | Check |
+| :--- | :--- | :--- |
+| [`standards/c4_registry.yaml`](standards/c4_registry.yaml) | Canonical C4 IDs, non-peers, API resources, forbidden aliases | `python scripts/check_design_alignment.py` |
+| [`standards/contract.schema.json`](standards/contract.schema.json) | Spec contract front-matter | same |
+| [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract: 1.1.0`, C4, Source) | same |
+| [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
+
+**design_contract_version:** `1.1.0` (shared by C4, API `info.version`, contracts, diagram headers).
 
 ## Documentation map
 
 | Area | Path | Role |
 | :--- | :--- | :--- |
+| **Design standards** | [`standards/`](standards/README.md) | Checkable ID/ownership schema |
 | **Specification contracts** | [`spec/`](spec/README.md) | Normative behavior (`contracts/`) |
 | **Schemas** | [`schema/`](schema/) | Rule + policy structure (v1.0.0) |
-| **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Source of truth for structure** (context / container / component) |
+| **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Structural SSoT** (context / container / component) |
 | **State machines** | [`state/`](state/README.md) | FSMs and pipelines |
-| **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index (stories live in contracts) |
+| **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index |
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
-| **Class diagrams** | [`class/`](class/README.md) | Domain / application / infrastructure classes |
-| **Package diagrams** | [`package/`](package/README.md) | Clean Architecture package layout |
-| **ERDs** | [`erd/`](erd/README.md) | Four resource stores (`*_store`) |
+| **Class diagrams** | [`class/`](class/README.md) | Domain / application / infrastructure |
+| **Package diagrams** | [`package/`](package/README.md) | Clean Architecture packages |
+| **ERDs** | [`erd/`](erd/README.md) | Four `*_store` resources |
 | **Activity diagrams** | [`activity/`](activity/README.md) | Procedural swim-lane flows |
-| **API** | [`api/`](api/README.md) | OpenAPI + resource schemas |
+| **API** | [`api/`](api/README.md) | Modular OpenAPI (Redocly) |
 | **Deployment** | [`deployment/`](deployment/README.md) | Topology aligned with C4 containers |
 | **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
 
-## Authority
+## Authority (investigation order)
 
-1. `spec/contracts/` — what the system MUST do
-2. `schema/` — data shapes
-3. **`c4-model/`** — structural architecture (entity IDs, containers, components, stores)
-4. `class/`, `package/` — implementation structure (packages, classes, use cases)
-5. `state/` + other diagrams — behavior and detail views; must not contradict C4 or contracts
+1. **`standards/`** — IDs, owners, version line (how we write design)
+2. **`spec/contracts/`** — what the system MUST do
+3. **`schema/`** — data shapes
+4. **`c4-model/`** — structural architecture (peers only)
+5. **`api/`** — HTTP surface (Redocly-valid)
+6. Behavior views (`state`, `sequence`, `activity`, `usecase`) — must not contradict 2–5
+7. Implementation views (`class`, `package`, `erd`, `deployment`) — map to C4 peers
 
-### Canonical C4 IDs (Clean Architecture layer postfixes)
+### Canonical C4 IDs
 
-Diagrams and design prose use identical IDs from
-[`c4-model/README.md`](c4-model/README.md):
+See full registry: [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
 
 | Kind | Pattern | Examples |
 | :--- | :--- | :--- |
@@ -73,12 +87,12 @@ Diagrams and design prose use identical IDs from
 | Driving gate / clients | role tokens | `api`, `clients` |
 | System / actors | role tokens | `selma`, `regulatory_official`, `compliance_representative` |
 
-Dependency rule:
-
 ```
 clients → api → *_application → *_repository | *_gateway → *_store | externals
 ```
 
 ## Implementation
 
-Do not start coding from archives. Start from State Machines + contracts + C4.
+Do not start coding from archives. Start from **contracts + C4 + standards**, then
+state machines. Run `python scripts/check_design_alignment.py` and Redocly before
+merging design changes.
