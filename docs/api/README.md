@@ -25,17 +25,17 @@ Primary collections match C4 stores / use-case clusters:
 
 | Resource Family     | Path Pattern                                       | Methods                    | C4 owner |
 |---------------------|----------------------------------------------------|----------------------------|----------|
-| Directives          | `/directives/{lineage_id}`                         | GET, PUT, DELETE           | `directives` + `directives_repository` |
+| Directives          | `/directives/{lineage_id}`                         | GET, PUT, DELETE           | `directives_store` + `directives_repository` |
 | Directive Revisions | `/directives/{lineage_id}/revisions/{revision}`    | GET                        | same |
-| Compilations        | `/directives/{lineage_id}/compilations`            | POST, GET                  | `compilation` → `compiled_rules` |
-| Inspections         | `/inspections`                                     | POST, GET                  | `inspection` + `artifacts` |
+| Compilations        | `/directives/{lineage_id}/compilations`            | POST, GET                  | `compilation_application` → `compiled_rules_store` |
+| Inspections         | `/inspections`                                     | POST, GET                  | `inspections_application` + `artifacts_store` |
 | Inspection          | `/inspections/{inspection_id}`                     | GET                        | same |
-| Inspection Findings | `/inspections/{inspection_id}/findings`            | GET                        | `findings` |
-| Findings            | `/findings/{finding_id}`                           | GET, PATCH                 | `findings` + `finding_events` |
-| Finding Events      | `/findings/{finding_id}/events`                    | GET                        | `finding_events` |
-| Finding Guidance    | `/findings/{finding_id}/guidance`                  | GET                        | `findings` + doctrine via `directives_repository` |
-| Artifacts           | `/artifacts` (as exposed)                          | GET                        | `artifacts` |
-| Conflicts           | `/conflicts`                                       | GET                    | `findings` (via `ResolveConflict` domain service) |
+| Inspection Findings | `/inspections/{inspection_id}/findings`            | GET                        | `findings_application` |
+| Findings            | `/findings/{finding_id}`                           | GET, PATCH                 | `findings_application` + `finding_events_store` |
+| Finding Events      | `/findings/{finding_id}/events`                    | GET                        | `finding_events_store` |
+| Finding Guidance    | `/findings/{finding_id}/guidance`                  | GET                        | `findings_application` + doctrine via `directives_repository` |
+| Artifacts           | `/artifacts` (as exposed)                          | GET                        | `artifacts_store` |
+| Conflicts           | `/conflicts`                                       | GET                    | `findings_application` (via `ResolveConflict` domain service) |
 | Conflict Resolutions| `/conflicts/{conflict_id}/resolutions`             | POST                   | same |
 | Certifications      | `/certifications`                                  | POST, GET              | `api` (delegates to external CI tool suite) |
 | Certification       | `/certifications/{certification_id}`               | GET                    | same |

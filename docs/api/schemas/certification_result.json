@@ -137,9 +137,9 @@
                 }
               }
             },
-            "artifacts": {
+            "artifacts_store": {
               "type": "array",
-              "description": "Evidence artifacts (logs, reports, hashes).",
+              "description": "Evidence artifacts_store (logs, reports, hashes).",
               "items": { "type": "string" }
             }
           },

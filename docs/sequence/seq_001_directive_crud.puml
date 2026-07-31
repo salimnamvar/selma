@@ -6,10 +6,11 @@ title SEQ-001 Directive CRUD\nCreate / Modify / Retire / Fork / Merge / Split / 
 actor "User" as user
 participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
 participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
+participant "directives_application\n(Python/Pydantic)" as DIRAPP #A3BE8C
 participant "directives_repository\n(SQLAlchemy/PostgreSQL)" as DA #81A1C1
-database "directives\n(PostgreSQL)" as DS #4C566A
-participant "compilation\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
-participant "compiled_rules_repository\n(Python/SHA-256/CAS)" as CRA #B48EAD
+database "directives_store\n(PostgreSQL)" as DS #4C566A
+participant "compilation_application\n(Python/JSON Schema/SHA-256)" as HC #B48EAD
+participant "compiled_rules_repository\n(Python/SHA-256/CAS)" as CRA #81A1C1
 
 autonumber
 
@@ -28,7 +29,9 @@ group Authorization Gate
 end
 
 group Directive Operation
-    AS -> DA: route operation(type, payload)
+    AS -> DIRAPP: route operation(type, payload)
+    activate DIRAPP
+    DIRAPP -> DA: persist dual-document directive
     activate DA
 
     DA -> DS: acquire write_lock(directive_id)
@@ -48,18 +51,24 @@ group Directive Operation
     DS --> DA: lock released
     deactivate DS
 
-    DA --> AS: operation result
+    DA --> DIRAPP: operation result
     deactivate DA
+    DIRAPP --> AS: operation result
+    deactivate DIRAPP
 end
 
 group Recompilation (on change)
-    AS -> HC: trigger compilation(directive_id)
+    AS -> HC: trigger compilation_application(directive_id)
     activate HC
 
-    HC -> DS: acquire read_lock(directive_id)
+    HC -> DA: read executable documents under read-lock
+    activate DA
+    DA -> DS: acquire read_lock(directive_id)
     activate DS
-    DS --> HC: lock acquired
+    DS --> DA: lock acquired
     deactivate DS
+    DA --> HC: executable documents
+    deactivate DA
 
     HC -> HC: compile directive graph to CG-IR
     HC -> CRA: publish CG-IR snapshot
@@ -67,10 +76,14 @@ group Recompilation (on change)
     CRA --> HC: snapshot published
     deactivate CRA
 
-    HC -> DS: release read_lock(directive_id)
+    HC -> DA: release read_lock(directive_id)
+    activate DA
+    DA -> DS: release read_lock(directive_id)
     activate DS
-    DS --> HC: lock released
+    DS --> DA: lock released
     deactivate DS
+    DA --> HC: done
+    deactivate DA
 
     HC --> AS: compilation complete
     deactivate HC

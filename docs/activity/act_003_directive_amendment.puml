@@ -3,7 +3,7 @@
 ' Selma — ACT-003: Directive Amendment (Activity Diagram)
 ' Source:  docs/spec/contracts/directive/lifecycle.yaml
 '          docs/spec/contracts/compilation/pipeline.yaml
-' C4:      Directives ← api → compilation
+' C4:      Directives ← api → compilation_application
 ' Contract: 1.0.0
 '
 ' Modify directive content/status, then trigger hermetic

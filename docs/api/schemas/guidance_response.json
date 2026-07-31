@@ -13,7 +13,7 @@
     },
     "paired_policy_ref": {
       "type": "string",
-      "description": "Reference resolving to the policy doctrine document in directives (e.g. 'sc101_parameterized_queries').",
+      "description": "Reference resolving to the policy doctrine document in directives_store (e.g. 'sc101_parameterized_queries').",
       "pattern": "^[a-z][a-z0-9_]+$",
       "examples": ["sc101_parameterized_queries", "sc042_no_silent_failures"]
     },

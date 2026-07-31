@@ -2,9 +2,9 @@
 ' ============================================================
 ' Selma — Artifact Lifecycle State Machine
 ' Source:  docs/spec/contracts/data_stores/
-' C4:      artifacts_repository → artifacts
-'          compiled_rules_repository → compiled_rules (CG-IR snapshots)
-'          finding_events_repository → finding_events (events)
+' C4:      artifacts_repository → artifacts_store
+'          compiled_rules_repository → compiled_rules_store (CG-IR snapshots)
+'          finding_events_repository → finding_events_store (events)
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -12,7 +12,7 @@ title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthog
 
 !include ./common/sm_styles.puml
 
-[*] --> Building : <b>ArtifactBuildStarted</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: compilation | inspection |\nResolveConflict | certification_tool | findings
+[*] --> Building : <b>ArtifactBuildStarted</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: compilation_application | inspections_application |\nResolveConflict | certification_tool | findings_application
 
 state "Building" as Building #B9770E : **entry** transient workspace\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
 state "Validated" as Validated #1B7A6E : **entry** integrity checks OK\nhashes computed\n**allowed** CAS put / write-once\n**forbidden** skip integrity
@@ -23,7 +23,7 @@ state "Durable Artifact" as Durable #2C6E49 {
   state "Reference Region" as RefRegion {
     [*] --> Published
     state "Published" as Published #2C6E49 : **entry** content-addressed or write-once committed\n**allowed** pin · consumers\n**forbidden** in-place update · delete CG-IR/events
-    state "Active\nReference" as ActiveReference #3B7DD8 : **entry** referenced by inspections\nor human workflows\n**allowed** supersede selection\n**forbidden** mutate bytes
+    state "Active\nReference" as ActiveReference #3B7DD8 : **entry** referenced by inspections_application\nor human workflows\n**allowed** supersede selection\n**forbidden** mutate bytes
     state "Superseded\nReference" as SupersededReference #4A4A4A : **entry** newer snapshot supersedes selection\nold bytes remain\n**allowed** archive · audit read\n**forbidden** rewrite content
 
     Published --> ActiveReference : <b>ArtifactReferenced</b>\nactor: System | human workflow\ncommand: reference artifact

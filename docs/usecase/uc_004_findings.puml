@@ -1,7 +1,7 @@
 @startuml uc_004_findings
 !include common/uc_styles.puml
 
-title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle · C4: findings)
+title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle · C4: findings_application)
 
 left to right direction
 
@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Finding Lifecycle\n(findings)" as BOUNDED {
+  rectangle "Finding Lifecycle\n(findings_application)" as BOUNDED {
 
     usecase "Create Finding\n(auto from inspection)" as UC1
     usecase "Open Finding"              as UC2
@@ -51,7 +51,7 @@ note right of UC1
   **Pre:** Inspection completed with non-conformances
   **Post:** Finding created; event appended to finding_events
   **Contract:** finding_lifecycle/transitions.yaml (TR-FL-001)
-  **C4:** inspection → findings → finding_events_repository
+  **C4:** inspections_application → findings_application → finding_events_repository
 end note
 
 note right of UC6

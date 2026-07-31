@@ -26,17 +26,23 @@ plantuml -tsvg docs/package/*.puml
 
 ## Alignment with C4
 
-Package structure aligns with C4 components:
-- `directives_*` → `directives_repository`
-- `compiled_rules_*` → `compiled_rules_repository`
-- `inspections_*` → `inspection` component
-- `findings_*` → `findings` component
-- `conflicts_domain` → Domain service (not C4 component)
+Package structure aligns with C4 entities (layer postfixes):
+
+| Package module | C4 entity |
+|----------------|-----------|
+| `directives_application` / `directives_domain` | `directives_application` |
+| `directives_infrastructure` | `directives_repository` → `directives_store` |
+| `compiled_rules_*` (compile path) | `compilation_application` + `compiled_rules_repository` → `compiled_rules_store` |
+| `inspections_*` | `inspections_application` (+ `target_sources_gateway`) |
+| `findings_*` | `findings_application` + `finding_events_repository` → `finding_events_store` |
+| `artifacts_infrastructure` | `artifacts_repository` → `artifacts_store` |
+| `conflicts_domain` | Domain service (not a C4 component) |
+| `rest_interface` / CLI / TUI | `api` + container `clients` |
 
 **Not in core packages:**
 - `certifications` — Offline/CI tool suite (separate directory)
-- `authorization` — Enforced at API gate (cross-cutting concern)
-- `detections` — Part of inspection pipeline
+- `authorization` — Enforced at `api` gate (cross-cutting concern)
+- `detections` — Part of `inspections_application` pipeline
 
 ## Related Documents
 

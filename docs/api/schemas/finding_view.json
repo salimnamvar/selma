@@ -215,7 +215,7 @@
           "type": "object",
           "properties": { "href": { "type": "string" } }
         },
-        "inspection": {
+        "inspections_application": {
           "type": "object",
           "properties": { "href": { "type": "string" } }
         },
@@ -267,7 +267,7 @@
       "updated_at": "2025-01-15T10:30:00Z",
       "_links": {
         "self": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678" },
-        "inspection": { "href": "/inspections/ins-9876-fedc-ba98-7654-3210fedcba98" },
+        "inspections_application": { "href": "/inspections/ins-9876-fedc-ba98-7654-3210fedcba98" },
         "events": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/events" },
         "guidance": { "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance" },
         "directive": { "href": "/directives/SC101" }

@@ -13,7 +13,7 @@ title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · bin
 
 !include ./common/sm_styles.puml
 
-[*] --> DetectPair : <b>ConflictDetectionStarted</b>\nactor: System (compilation | inspection)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nstory: US-CD-001 / US-PR-001
+[*] --> DetectPair : <b>ConflictDetectionStarted</b>\nactor: System (compilation_application | inspections_application)\ncommand: consistency review | multi-rule fire\non frozen CG-IR\nstory: US-CD-001 / US-PR-001
 
 state "Detect\nConflicting Pair" as DetectPair #B9770E : **entry** scan conflicts_with or\noutcome contradiction\n(same lineage, both Fail,\ncontradictory deontics)\n**allowed** pair classify only\n**forbidden** mutate findings
 state "No Conflict" as NoConflict #2C6E49 : **entry** no pair / both Pass\nPass+Fail / same-type Fail\n**allowed** terminal no-op\n**forbidden** artifact creation

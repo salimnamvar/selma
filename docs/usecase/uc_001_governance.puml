@@ -8,7 +8,7 @@ left to right direction
 actor "Regulatory\nOfficial" as RO #E3F2FD
 
 rectangle "Selma Application" as SYS {
-  rectangle "Governance Authoring\n(directives_repository, api)" as BOUNDED {
+  rectangle "Governance Authoring\n(directives_application, api)" as BOUNDED {
 
     usecase "Create Directive"          as UC1
     usecase "Modify Directive"          as UC2

@@ -89,7 +89,7 @@ package "<<application.dto>>\nData Transfer Objects" as DTO_PKG #E8EAF6/3F51B5 {
 ' ═══════════════════════════════════════════════════════════
 '  GOVERNANCE USE CASES
 ' ═══════════════════════════════════════════════════════════
-package "<<use_cases.governance>>\nGovernance" as UC_GOVERNANCE #E8F5E9/2E7D32 {
+package "<<use_cases.directives_application>>\nDirectives Application" as UC_GOVERNANCE #E8F5E9/2E7D32 {
 
   abstract class "**CreateDirective**" as CreateDirective <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
@@ -169,34 +169,34 @@ package "<<use_cases.governance>>\nGovernance" as UC_GOVERNANCE #E8F5E9/2E7D32 {
 ' ═══════════════════════════════════════════════════════════
 '  COMPILATION USE CASES
 ' ═══════════════════════════════════════════════════════════
-package "<<use_cases.compilation>>\nCompilation" as UC_COMPILATION #E8F5E9/2E7D32 {
+package "<<use_cases.compilation_application>>\nCompilation Application" as UC_COMPILATION #E8F5E9/2E7D32 {
 
   abstract class "**CompileDirectives**" as CompileDirectives <<Use Case>> #E8F5E9/2E7D32 {
     - directiveRepo: DirectiveRepository
     - compiledRulesRepo: CompiledRulesRepository
     + CompileDirectives(lineageIds: List~LineageId~): CgIrSnapshot
     --
-    <<module>> compiled_rules_application
+    <<module>> compilation_application
   }
 
   abstract class "**ValidateDirectiveDocuments**" as ValidateDirectiveDocuments <<Use Case>> #E8F5E9/2E7D32 {
     + ValidateDirectiveDocuments(directive: Directive): ValidationResult
     --
-    <<module>> compiled_rules_application
+    <<module>> compilation_application
   }
 
   abstract class "**PublishCompiledRules**" as PublishCompiledRules <<Use Case>> #E8F5E9/2E7D32 {
     - compiledRulesRepo: CompiledRulesRepository
     + PublishCompiledRules(snapshot: CgIrSnapshot): void
     --
-    <<module>> compiled_rules_application
+    <<module>> compilation_application
   }
 }
 
 ' ═══════════════════════════════════════════════════════════
 '  INSPECTION USE CASES
 ' ═══════════════════════════════════════════════════════════
-package "<<use_cases.inspection>>\nInspection" as UC_INSPECTION #E8F5E9/2E7D32 {
+package "<<use_cases.inspections_application>>\nInspections Application" as UC_INSPECTION #E8F5E9/2E7D32 {
 
   abstract class "**CreateInspection**" as CreateInspection <<Use Case>> #E8F5E9/2E7D32 {
     - targetGateway: TargetSourcesGateway
@@ -219,7 +219,7 @@ package "<<use_cases.inspection>>\nInspection" as UC_INSPECTION #E8F5E9/2E7D32 {
 ' ═══════════════════════════════════════════════════════════
 '  FINDING USE CASES
 ' ═══════════════════════════════════════════════════════════
-package "<<use_cases.finding>>\nFinding Lifecycle" as UC_FINDING #E8F5E9/2E7D32 {
+package "<<use_cases.findings_application>>\nFindings Application" as UC_FINDING #E8F5E9/2E7D32 {
 
   abstract class "**CreateFinding**" as CreateFinding <<Use Case>> #E8F5E9/2E7D32 {
     - findingFsm: FindingFsm

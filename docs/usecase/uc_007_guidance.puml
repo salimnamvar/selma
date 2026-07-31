@@ -1,7 +1,7 @@
 @startuml uc_007_guidance
 !include common/uc_styles.puml
 
-title **UC-007 — Guidance**\n(Findings resource reads · C4: findings + directives_repository)
+title **UC-007 — Guidance**\n(Findings resource reads · C4: findings_application + directives_repository)
 
 left to right direction
 

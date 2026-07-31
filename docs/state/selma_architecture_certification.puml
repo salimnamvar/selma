@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — Architectural Certification State Machine
 ' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-07)
-' C4:      certification_tool → artifacts_repository → artifacts
+' C4:      certification_tool → artifacts_repository → artifacts_store
 '          trigger: CI/CD → api
 ' Contract: 1.0.0
 ' ============================================================

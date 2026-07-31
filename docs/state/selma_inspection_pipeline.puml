@@ -3,8 +3,8 @@
 ' Selma — Inspection Execution Pipeline
 ' Source:  docs/spec/contracts/inspection/pipeline.yaml
 '          docs/spec/contracts/inspection/finding_contract.yaml
-' C4:      inspection → artifacts_repository → artifacts
-'          inspection → findings (finding birth)
+' C4:      inspections_application → artifacts_repository → artifacts_store
+'          inspection → findings_application (finding birth)
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -55,10 +55,10 @@ Submitted --> RejectedIngress : <b>InspectionIngressDenied</b>\nactor: System\n/
 
 RejectedIngress --> [*] : <b>Finalized</b>\nactor: System
 
-IngressGranted --> PureStages : <b>InspectionPinned</b>\nactor: System (inspection)\ncommand: pin target_hash + cg_ir + frozen_env + engine\n/ fixSystemStateHashInputs()\n/ excludeEventStreamFromHash()
+IngressGranted --> PureStages : <b>InspectionPinned</b>\nactor: System (inspections_application)\ncommand: pin target_hash + cg_ir + frozen_env + engine\n/ fixSystemStateHashInputs()\n/ excludeEventStreamFromHash()
 
 ' Outcomes after Report completes the composite
-PureStages --> Completed : <b>InspectionCompleted</b>\nactor: System\ncommand: write snapshot + birth findings\n[noSkippedNodesAndNoFatalCorruption]\n/ birthFindingsForFailPartialNeedsReview()
+PureStages --> Completed : <b>InspectionCompleted</b>\nactor: System\ncommand: write snapshot + birth findings_application\n[noSkippedNodesAndNoFatalCorruption]\n/ birthFindingsForFailPartialNeedsReview()
 PureStages --> Partial : <b>InspectionPartial</b>\nactor: System\n[skippedNodesPresent]
 PureStages --> Failed : <b>InspectionFailed</b>\nactor: System
 

@@ -6,7 +6,7 @@ title SEQ-007 Certification Gates\n7-Gate Architectural Certification (offline/C
 actor "Optional CI / local client" as cicd
 participant "certification_tool\n(offline/CI · not C4 peer)" as AA #A3BE8C
 participant "artifacts_repository\n(Object Store)" as SA #81A1C1
-database "artifacts\n(Object Store)" as ART #4C566A
+database "artifacts_store\n(Object Store)" as ART #4C566A
 
 autonumber
 

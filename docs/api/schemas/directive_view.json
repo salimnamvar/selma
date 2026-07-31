@@ -101,7 +101,7 @@
     },
     "policy_doctrine_document": {
       "type": "object",
-      "description": "Paired policy doctrine document. Conforms to policy_doctrine.yaml structure. Stored in directives with the executable document; guidance_only after findings (never evaluation/FSM).",
+      "description": "Paired policy doctrine document. Conforms to policy_doctrine.yaml structure. Stored in directives with the executable document; guidance_only after findings_application (never evaluation/FSM).",
       "additionalProperties": true
     },
     "metadata": {

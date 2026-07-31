@@ -1,14 +1,14 @@
 @startuml uc_003_inspection
 !include common/uc_styles.puml
 
-title **UC-003 — Inspection**\n(Bounded Context: Inspection · C4: inspection)
+title **UC-003 — Inspection**\n(Bounded Context: Inspection · C4: inspections_application)
 
 left to right direction
 
 actor "Compliance\nRepresentative" as CR #E8EAF6
 
 rectangle "Selma Application" as SYS {
-  rectangle "Inspection\n(inspection)" as BOUNDED {
+  rectangle "Inspection\n(inspections_application)" as BOUNDED {
 
     usecase "Submit Target\nfor Inspection"  as UC1
     usecase "Normalize Target"               as UC2

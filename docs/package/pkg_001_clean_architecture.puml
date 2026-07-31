@@ -123,11 +123,15 @@ legend bottom
 
   **Alignment with C4:**
   Packages map to C4 components:
-  - directives_* → directives_repository
-  - compiled_rules_* → compiled_rules_repository
-  - inspections_* → inspection component
-  - findings_* → findings component
+  - directives_application → directives_application
+  - directives_infrastructure → directives_repository
+  - compiled_rules_* (compile) → compilation_application + compiled_rules_repository
+  - inspections_* → inspections_application (+ target_sources_gateway)
+  - findings_* → findings_application + finding_events_repository
+  - artifacts_infrastructure → artifacts_repository
   - conflicts_domain → Domain service (not C4 component)
+  - stores → directives_store | compiled_rules_store |
+             finding_events_store | artifacts_store
 endlegend
 
 footer PKG-001 · {resource}_{layer} · Selma

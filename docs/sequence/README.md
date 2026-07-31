@@ -33,9 +33,10 @@ plantuml -tsvg docs/sequence/*.puml
 |----|------------|------|
 | `clients` | CLI/Web/Desktop/Mobile | Driving adapters |
 | `api` | FastAPI/Pydantic | Resource API gate |
-| `compilation` | Python/JSON Schema/SHA-256 | Compile use cases |
-| `inspection` | Python/RE2/SHA-256 | Inspection use cases |
-| `findings` | Python/Pydantic | Findings lifecycle + guidance reads |
+| `directives_application` | Python/Pydantic | Directive resource use cases |
+| `compilation_application` | Python/JSON Schema/SHA-256 | Compile use cases (hermetic) |
+| `inspections_application` | Python/RE2/SHA-256 | Inspection use cases |
+| `findings_application` | Python/Pydantic | Findings lifecycle + guidance reads |
 | `ResolveConflict` | domain service | Precedence algorithm (not a C4 peer) |
 | `directives_repository` | SQLAlchemy/PostgreSQL | Directives port |
 | `compiled_rules_repository` | CAS | Compiled Rules port |
@@ -48,7 +49,7 @@ plantuml -tsvg docs/sequence/*.puml
 
 | C4 ID | Type | Purpose |
 |-------|------|---------|
-| `directives` | PostgreSQL | Dual-document directives |
-| `compiled_rules` | CAS | Immutable CG-IR snapshots |
-| `finding_events` | Append-Only Log | Finding lifecycle events |
-| `artifacts` | Object Store | Write-once evidence blobs |
+| `directives_store` | PostgreSQL | Dual-document directives |
+| `compiled_rules_store` | CAS | Immutable CG-IR snapshots |
+| `finding_events_store` | Append-Only Log | Finding lifecycle events |
+| `artifacts_store` | Object Store | Write-once evidence blobs |

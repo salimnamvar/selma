@@ -6,12 +6,12 @@ title SEQ-003 Inspection Pipeline\n6-Stage Inspection Pipeline
 actor "User" as user
 participant "clients\n(CLI/Web/Desktop/Mobile)" as SI #EBCB8B
 participant "api\n(FastAPI/Pydantic)" as AS #88C0D0
-participant "inspection\n(Python/RE2/SHA-256)" as RI #A3BE8C
+participant "inspections_application\n(Python/RE2/SHA-256)" as RI #A3BE8C
 participant "compiled_rules_repository\n(Python/SHA-256/CAS)" as CRA #B48EAD
 participant "artifacts_repository\n(Object Store)" as SA #81A1C1
-participant "findings\n(Python/Pydantic)" as LF #B48EAD
+participant "findings_application\n(Python/Pydantic)" as LF #B48EAD
 participant "finding_events_repository\n(Append-Only)" as FAA #D08770
-database "finding_events\n(Append-Only Log)" as ES #4C566A
+database "finding_events_store\n(Append-Only Log)" as ES #4C566A
 
 autonumber
 
@@ -29,7 +29,7 @@ group Authorization Gate
     end
 end
 
-AS -> RI: route inspection(target_ref, snapshot_id)
+AS -> RI: route inspections_application(target_ref, snapshot_id)
 activate RI
 
 group Stage 1: Load Frozen CG-IR
@@ -77,7 +77,7 @@ group Stage 6: Aggregate & Report
 end
 
 group Persist Results
-    RI -> SA: store inspection snapshot
+    RI -> SA: store inspections_application snapshot
     activate SA
     SA --> RI: snapshot stored (snapshot_ref)
     deactivate SA

@@ -1,7 +1,7 @@
 @startuml uc_002_compilation
 !include common/uc_styles.puml
 
-title **UC-002 — Compilation**\n(Bounded Context: Compilation · C4: compilation)
+title **UC-002 — Compilation**\n(Bounded Context: Compilation · C4: compilation_application)
 
 left to right direction
 
@@ -9,7 +9,7 @@ actor "Regulatory\nOfficial" as RO #E3F2FD
 actor "Optional\nCompile Client" as OPT #E8F5E9
 
 rectangle "Selma Application" as SYS {
-  rectangle "Compilation\n(compilation)" as BOUNDED {
+  rectangle "Compilation\n(compilation_application)" as BOUNDED {
 
     usecase "Trigger Compilation"             as UC1
     usecase "Validate Rule Schema"            as UC2
@@ -43,7 +43,7 @@ note right of UC1
   **Pre:** Executable documents in Directives;
   directive change or explicit compile request
   **Post:** Compilation pipeline initiated
-  **C4:** compilation reads via directives_repository;
+  **C4:** compilation_application reads via directives_repository;
   publishes via compiled_rules_repository
 end note
 
@@ -54,7 +54,7 @@ end note
 
 note bottom of UC7
   **Pre:** CG-IR materialized
-  **Post:** Snapshot published to compiled_rules (CAS)
+  **Post:** Snapshot published to compiled_rules_store (CAS)
 end note
 
 @enduml

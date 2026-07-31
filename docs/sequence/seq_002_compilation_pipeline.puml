@@ -4,10 +4,10 @@
 title SEQ-002 Compilation Pipeline\nHermetic Compilation of Directive Graph to CG-IR
 
 actor "Trigger" as trigger
-participant "compilation\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
-database "directives\n(PostgreSQL)" as DS #4C566A
+participant "compilation_application\n(Python/JSON Schema/SHA-256)" as HC #A3BE8C
+database "directives_store\n(PostgreSQL)" as DS #4C566A
 participant "compiled_rules_repository\n(Python/SHA-256/CAS)" as CRA #B48EAD
-database "compiled_rules\n(Content-Addressed Storage)" as CS #4C566A
+database "compiled_rules_store\n(Content-Addressed Storage)" as CS #4C566A
 
 autonumber
 

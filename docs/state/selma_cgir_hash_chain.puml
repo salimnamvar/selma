@@ -2,7 +2,7 @@
 ' ============================================================
 ' Selma — CG-IR Hash Composition & Incremental Reuse
 ' Source:  docs/spec/contracts/compilation/pipeline.yaml
-' C4:      compilation → compiled_rules_repository → compiled_rules
+' C4:      compilation_application → compiled_rules_repository → compiled_rules_store
 ' Contract: 1.0.0
 ' ============================================================
 
@@ -10,7 +10,7 @@ title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Orthogonal dua
 
 !include ./common/sm_styles.puml
 
-[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (compilation)\ncommand: load semantic_body + presentation_body
+[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (compilation_application)\ncommand: load semantic_body + presentation_body
 
 state "Node Body\nLoaded" as NodeBodyLoaded #B9770E : **entry** semantic_body + presentation_body\n**allowed** enter DualHash\n**forbidden** neighbor embedding
 
@@ -44,7 +44,7 @@ state "Compose Snapshot" as ComposeSnapshot #3B7DD8 {
   SnapshotHashComposed --> [*] : <b>ComposeCompleted</b>\nactor: System
 }
 
-state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup compiled_rules\n**allowed** dedup or new write
+state "Check CAS\nExistence" as CheckCAS #B9770E : **entry** lookup compiled_rules_store\n**allowed** dedup or new write
 state "Published\n(Dedup)" as PublishedDedup #2C6E49 : **entry** hash exists · no-op **terminal**\n**allowed** return existing hash\n**forbidden** rewrite bytes
 state "Published\n(New)" as PublishedNew #2C6E49 : **entry** novel snapshot write-once **terminal**\n**allowed** CAS put\n**forbidden** in-place update
 
