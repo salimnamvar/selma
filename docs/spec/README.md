@@ -16,24 +16,24 @@ Structural ownership of contracts maps to **C4 component IDs**
 | Domain | Directory | Owner (C4 / design) | Status |
 | :--- | :--- | :--- | :--- |
 | **Meta** | `contracts/meta/` | — | Defined |
-| **Compilation** | `contracts/compilation/` | `compilation` | Defined |
-| **Inspection** | `contracts/inspection/` | `inspection` | Defined |
-| **Finding Lifecycle** | `contracts/finding_lifecycle/` | `findings` | Defined |
-| **Conflict Resolution** | `contracts/conflict/` | `compilation` / `inspection` (uses ResolveConflict domain service) | Defined |
+| **Compilation** | `contracts/compilation/` | `compilation_application` | Defined |
+| **Inspection** | `contracts/inspection/` | `inspections_application` | Defined |
+| **Finding Lifecycle** | `contracts/finding_lifecycle/` | `findings_application` | Defined |
+| **Conflict Resolution** | `contracts/conflict/` | `compilation_application` / `inspections_application` (uses ResolveConflict domain service) | Defined |
 | **Authorization** | `contracts/authorization/` | `api` | Defined |
-| **Data Stores** | `contracts/data_stores/` | `*_repository` adapters | Defined |
+| **Data Stores** | `contracts/data_stores/` | `*_repository` adapters + matching `*_store` | Defined |
 | **Certification** | `contracts/certification/` | `api` (delegates to external certification_tool) | Defined |
-| **Directive** | `contracts/directive/` | `directives_repository` (+ `api` orchestration) | Defined |
+| **Directive** | `contracts/directive/` | `directives_application` (+ `directives_repository`) | Defined |
 | **Interfaces** | `contracts/interfaces/` | `api` / `clients` | Defined |
 
 ### Data store contract filenames → C4 store IDs
 
 | Contract file | C4 store ID | Repository component |
 | :--- | :--- | :--- |
-| `data_stores/directives.yaml` | `directives` | `directives_repository` |
-| `data_stores/compiled_rules.yaml` | `compiled_rules` | `compiled_rules_repository` |
-| `data_stores/finding_events.yaml` | `finding_events` | `finding_events_repository` |
-| `data_stores/artifacts.yaml` | `artifacts` | `artifacts_repository` |
+| `data_stores/directives_store.yaml` | `directives_store` | `directives_repository` |
+| `data_stores/compiled_rules_store.yaml` | `compiled_rules_store` | `compiled_rules_repository` |
+| `data_stores/finding_events_store.yaml` | `finding_events_store` | `finding_events_repository` |
+| `data_stores/artifacts_store.yaml` | `artifacts_store` | `artifacts_repository` |
 
 ## Schema Contracts (Separate)
 
@@ -44,42 +44,15 @@ Structural ownership of contracts maps to **C4 component IDs**
 
 ## Contract File Structure
 
-Every contract file follows this template:
-
 ```yaml
 contract_id: "domain.subdomain"        # e.g., "compilation.pipeline"
-schema_version: "1.0.0"                # Must match meta/versioning.yaml
-owner_component: "c4_component_id"     # C4 ID from docs/c4-model/
-state_machine_ref: "../state/xxx.puml"  # If applicable
-
-invariants:
-  - id: "INV-XXX-001"
-    statement: "What MUST always be true"
-    enforcement: "how_enforced"
-
-stages: / transitions: / rules:        # Domain-specific structure
-  ...
-
-stories:                                # Acceptance criteria live HERE
-  - story_id: "US-XXX-001"
-    as: "actor_or_component"
-    i_want: "capability"
-    so_that: "benefit"
-    acceptance_criteria:
-      - "Given ... When ... Then ..."
+schema_version: "1.0.0"
+owner_component: "<C4 component ID>"   # e.g., compilation_application
+# ... domain-specific normative content ...
+acceptance_criteria: [...]
 ```
 
-## Cross-References
+## Related
 
-- **C4 Architecture** — [`../c4-model/`](../c4-model/) (structural source of truth)
-- **State Machines** — [`../state/`](../state/) (behavioral FSMs)
-- **Schemas** — [`../schema/`](../schema/) (data structure contracts)
-- **Class Diagrams** — [`../class/`](../class/README.md) (domain model)
-- **Package Diagrams** — [`../package/`](../package/README.md) (Clean Architecture layout)
-- **Use Case Diagrams** — [`../usecase/`](../usecase/README.md) (index only; stories remain in contracts)
-
-## Migration Status
-
-All content from the monolithic specification has been migrated to the
-contract tree. Archives have been deleted. The `contracts/` tree is the
-sole normative source for behavioral contracts.
+- C4 structure: [`../c4-model/README.md`](../c4-model/README.md)
+- State machines: [`../state/`](../state/README.md)

@@ -1,7 +1,7 @@
-@startuml erd_004_artifacts
+@startuml erd_004_artifacts_store
 !include common/erd_styles.puml
 
-title Artifacts (Object Store) — C4 store: artifacts · Write-Once
+title Artifacts Store (Object Store) — C4 store: artifacts_store · Write-Once
 
 package "Artifacts" {
   entity "InspectionSnapshots" as InspectionSnapshots {

@@ -1,23 +1,24 @@
 # Selma — Entity-Relationship Diagrams
 
-PlantUML ERDs for each **C4 resource store**. Store IDs match
-[`../c4-model/README.md`](../c4-model/README.md).
+PlantUML ERDs for each **C4 resource store** (`*_store`). Store IDs and display
+names match [`../c4-model/README.md`](../c4-model/README.md).
 
 | File | C4 store ID | Display name | Storage model | Mutability |
 |------|-------------|--------------|---------------|------------|
-| `erd_001_directives.puml` | `directives` | Directives | PostgreSQL | Mutable, versioned dual documents |
-| `erd_002_compiled_rules.puml` | `compiled_rules` | Compiled Rules | Content-addressed | Immutable CG-IR snapshots |
-| `erd_003_finding_events.puml` | `finding_events` | Finding Events | Append-only log | Immutable |
-| `erd_004_artifacts.puml` | `artifacts` | Artifacts | Object store | Write-once |
+| `erd_001_directives_store.puml` | `directives_store` | Directives Store | PostgreSQL | Mutable, versioned dual documents |
+| `erd_002_compiled_rules_store.puml` | `compiled_rules_store` | Compiled Rules Store | Content-addressed | Immutable CG-IR snapshots |
+| `erd_003_finding_events_store.puml` | `finding_events_store` | Finding Events Store | Append-only log | Immutable |
+| `erd_004_artifacts_store.puml` | `artifacts_store` | Artifacts Store | Object store | Write-once |
 
 Contract filenames under `spec/contracts/data_stores/` match C4 store IDs
-(`directives.yaml`, `compiled_rules.yaml`, `finding_events.yaml`, `artifacts.yaml`).
+(`directives_store.yaml`, `compiled_rules_store.yaml`, `finding_events_store.yaml`,
+`artifacts_store.yaml`).
 
 ## Rendering
 
 ```bash
 # Single file
-plantuml docs/erd/erd_001_directives.puml
+plantuml docs/erd/erd_001_directives_store.puml
 
 # All ERDs
 plantuml docs/erd/erd_00*.puml

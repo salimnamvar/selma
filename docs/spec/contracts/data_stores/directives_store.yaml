@@ -1,5 +1,5 @@
 # directives.yaml
-# Normative source for the Directives resource store contract (C4 ID: directives).
+# Normative source for the Directives resource store contract (C4 ID: directives_store).
 
 contract_id: "data_stores.directives"
 schema_version: "1.0.0"
@@ -78,15 +78,15 @@ operations:
     description: "Read executable rule document only (compile path)"
     locking: "read_lock"
     produces: "executable_document (rule_schema)"
-    consumers: ["compilation"]
+    consumers: ["compilation_application"]
 
   - name: "read_policy_doctrine"
     capability: null
     description: "Read policy doctrine document by paired_policy_ref (guidance path only)"
     locking: "read_lock"
     produces: "policy_doctrine_document / GuidancePayload"
-    consumers: ["findings"]
-    forbidden_consumers: ["inspection"]
+    consumers: ["findings_application"]
+    forbidden_consumers: ["inspections_application"]
 
 concurrency_model:
   description: "Locking semantics for directive store"

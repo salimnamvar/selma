@@ -1,5 +1,5 @@
 # artifacts.yaml
-# Artifacts store (C4 ID: artifacts).
+# Artifacts store (C4 ID: artifacts_store).
 # Normative source for execution artifact storage contract.
 
 contract_id: "data_stores.artifacts"
@@ -136,7 +136,7 @@ invariants:
 stories:
   - story_id: "US-AS-001"
     as: "artifact_adapter"
-    i_want: "to store immutable execution artifacts"
+    i_want: "to store immutable execution artifacts_store"
     so_that: "inspections are reproducible and auditable"
     acceptance_criteria:
       - "Given a completed inspection. When the snapshot is stored. Then it is immutable and contains all required fields."

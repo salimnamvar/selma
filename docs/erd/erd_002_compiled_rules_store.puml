@@ -1,7 +1,7 @@
-@startuml erd_002_compiled_rules
+@startuml erd_002_compiled_rules_store
 !include common/erd_styles.puml
 
-title Compiled Rules (Content-Addressed) — C4 store: compiled_rules · Immutable
+title Compiled Rules Store (Content-Addressed) — C4 store: compiled_rules_store · Immutable
 
 package "Compiled Rules" {
   entity "Snapshots" as Snapshots {
