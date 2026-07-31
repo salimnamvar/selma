@@ -5,7 +5,15 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        JWT encoding actor identity and capability set. Claims include `sub`
-        (actor ID) and `capabilities` (array of capability strings). Capability
-        checks are enforced at the `api` gate per
-        `docs/spec/contracts/authorization/capabilities.yaml`.
+        JWT (RFC 7519) encoding actor identity. Required claims: `sub`, `exp`,
+        `iat`. Recommended: `iss`, `aud`, and either `capabilities` (string array)
+        or `roles` (expanded via `role_matrix.yaml`).
+
+        **Authentication (401):** signature (JWKS), issuer, audience, expiry.
+        Normative: `docs/spec/contracts/authorization/authentication.yaml`.
+
+        **Authorization (403):** capability + SoD at the `api` gate via shared
+        CapabilityEnforcer module. Catalog:
+        `docs/spec/contracts/authorization/capabilities.yaml`. Denials append
+        via application-owned `DenialAuditPort` (implementer:
+        `finding_events_repository`).

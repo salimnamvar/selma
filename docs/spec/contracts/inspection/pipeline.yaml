@@ -222,3 +222,17 @@ stories:
       - "Given an obligation rule with detection outcome Fail. When aggregation runs. Then a finding with severity_default is created."
       - "Given a permission rule with detection outcome Fail. When aggregation runs. Then a finding with severity informational is created (advisory only)."
       - "Given an detection outcome with confidence below threshold. When aggregation runs. Then finding severity is capped at informational."
+
+target_sources_resilience:
+  description: >
+    Optional remote target fetch via target_sources_gateway. Primary path remains
+    inline target body on the inspection resource.
+  owner_component: "target_sources_gateway"
+  rules:
+    - "connect_timeout_ms ≤ 2000; read_timeout_ms ≤ 5000 (configurable, hard caps)"
+    - "Retries: ≤ 2 on idempotent GET only; exponential backoff with jitter"
+    - "Circuit breaker: open after N consecutive failures (default 5); half-open probe after cooldown"
+    - "Bulkhead: dedicated connection pool; never share with PostgreSQL or object-store pools"
+    - "On timeout/open circuit: fail the inspection fetch with structured error; do not hang the request"
+    - "Never mutate Target Sources; pull-only"
+

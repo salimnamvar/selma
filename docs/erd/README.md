@@ -30,3 +30,8 @@ plantuml docs/erd/erd_00*.puml
 ## Shared Styles
 
 `common/erd_styles.puml` contains skinparam configuration included by all diagrams.
+
+## Store notes (audit-aligned)
+
+- **directives_store:** `CompileRequests` outbox table; revision ETags; dual documents.
+- **finding_events_store:** `FindingProjections` hydration cache; per-finding chain locks; idempotency records.

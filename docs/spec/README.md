@@ -29,7 +29,7 @@ python scripts/check_design_alignment.py
 | **Inspection** | `contracts/inspection/` | `inspections_application` | Defined |
 | **Finding Lifecycle** | `contracts/finding_lifecycle/` | `findings_application` | Defined |
 | **Conflict Resolution** | `contracts/conflict/` | Domain `ResolveConflict` (used by `compilation_application` / `inspections_application`; **not** a C4 peer) | Defined |
-| **Authorization** | `contracts/authorization/` | `api` | Defined |
+| **Authorization** | `contracts/authorization/` (capabilities, role_matrix, **authentication**) | `api` | Defined |
 | **Data Stores** | `contracts/data_stores/` | `*_repository` adapters + matching `*_store` | Defined |
 | **Certification** | `contracts/certification/` | Offline/CI `certification_tool` (**not** in-process C4 peer); results in `artifacts_store` | Defined |
 | **Directive** | `contracts/directive/` | `directives_application` (+ `directives_repository`) | Defined |

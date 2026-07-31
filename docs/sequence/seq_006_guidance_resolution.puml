@@ -30,7 +30,8 @@ activate FA
 group Load Finding Projection
     FA -> FA: load finding projection
     note right of FA
-        Extract paired_policy_ref
+        Extract revision-pinned paired_policy_ref
+        (never resolve latest doctrine)
         from finding record.
     end note
 end

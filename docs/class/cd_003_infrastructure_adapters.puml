@@ -10,49 +10,30 @@
 
 title **CLS-003 — Infrastructure Adapters**\nROD port methods · {resource}_infrastructure modules\n
 
-package "<<ports>>\nApplication ports" as PORTS #FCE4EC/C62828 {
-  interface "**DirectiveRepository**" as DirectiveRepository <<Port>> {
-    + GetDirective(lineage_id: LineageId): Directive
-    + ListDirectives(filter: Map): List~Directive~
-    + SaveDirective(directive: Directive): void
-    + AllocateExecutionId(): ExecutionId
-    + GetDirectiveExecutableDocument(id): ExecutableRuleDoc
-    + GetDirectivePolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
-    + ListDirectivePolicyRefs(filter: Map): List~PairedPolicyRef~
-  }
-  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> {
-    + GetCompiledRules(snapshot_hash: String): CgIrSnapshot
-    + GetLatestCompiledRules(): CgIrSnapshot
-    + PublishCompiledRules(snapshot: CgIrSnapshot): void
-  }
-  interface "**FindingEventRepository**" as FindingEventRepository <<Port>> {
-    + AppendFindingEvent(event: DomainEvent): void
-    + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
-    + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
-  }
-  interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
-    + AppendDenial(actor: ActorId, capability: String, action: String, reason: String, timestamp: HlcTimestamp): void
-  }
-  interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {
-    + SaveInspectionArtifact(snapshot: InspectionSnapshot): void
-    + GetInspectionArtifact(id: UUID): InspectionSnapshot
-    + SaveConflictArtifact(artifact: ConflictArtifact): void
-    + GetConflictArtifact(id: UUID): ConflictArtifact
-    + SaveCertificationArtifact(run: CertificationRun): void
-  }
-  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>> {
-    + GetTarget(target_ref: String): Target
-    + HashTarget(target: Target): TargetHash
-  }
+package "<<ports>>\nApplication ports (ISP)" as PORTS #FCE4EC/C62828 {
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
+  interface "**CompilerReadPort**" as CompilerReadPort <<Port>>
+  interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>>
+  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>>
+  interface "**FindingEventRepository**" as FindingEventRepository <<Port>>
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
+  interface "**InspectionArtifactPort**" as InspectionArtifactPort <<Port>>
+  interface "**FindingArtifactPort**" as FindingArtifactPort <<Port>>
+  interface "**CertificationArtifactPort**" as CertificationArtifactPort <<Port>>
+  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>>
 }
 
 package "directives_infrastructure" as INFRA_DIR #FFE0B2/F57C00 {
   class "**SqlDirectiveRepository**" as SqlDirectiveRepository <<Adapter>> {
     + GetDirective(...)
-    + ListDirectives(...)
-    + SaveDirective(...)
+    + SaveDirective(... If-Match)
+    + EnqueueCompileRequest(...)
     + GetDirectiveExecutableDocument(...)
     + GetDirectivePolicyDoctrine(...)
+    --
+    <<implements>> DirectiveRepository
+    <<implements>> CompilerReadPort
+    <<implements>> GuidanceReadPort
   }
 }
 
@@ -66,9 +47,9 @@ package "compiled_rules_infrastructure" as INFRA_CR #FFE0B2/F57C00 {
 
 package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
   class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> {
-    + AppendFindingEvent(...)
+    + AppendFindingEvent(... expected_chain_head)
     + ListFindingEvents(...)
-    + ListFindingEventsSince(...)
+    + GetFindingProjection(...)
     + AppendDenial(...)
     --
     <<implements>> FindingEventRepository
@@ -76,24 +57,54 @@ package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
   }
 }
 
-AppendOnlyFindingEventRepository ..|> FindingEventRepository
-AppendOnlyFindingEventRepository ..|> DenialAuditPort
-
 package "artifacts_infrastructure" as INFRA_ART #FFE0B2/F57C00 {
-  class "**ObjectArtifactRepository**" as ObjectArtifactRepository <<Adapter>> {
+  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> {
+    + PutOnce(...)
+    + Get(...)
+  }
+  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> {
     + SaveInspectionArtifact(...)
     + GetInspectionArtifact(...)
+  }
+  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> {
     + SaveConflictArtifact(...)
+    + SaveEvidenceArtifact(...)
+  }
+  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> {
     + SaveCertificationArtifact(...)
   }
 }
 
 package "inspections_infrastructure" as INFRA_INS #FFE0B2/F57C00 {
   class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> {
-    + GetTarget(...)
+    + GetTarget(... timeout, circuit breaker)
     + HashTarget(...)
   }
 }
+
+package "authorization (api support)" as INFRA_AUTH_MOD #FFE0B2/F57C00 {
+  class "**CapabilityEnforcer**" as CapabilityEnforcer {
+    + Authenticate(jwt): Actor
+    + Authorize(actor, capability): Decision
+    + AuditDenial(decision): void
+    --
+    <<shared>> all driving adapters
+  }
+}
+
+SqlDirectiveRepository ..|> DirectiveRepository
+SqlDirectiveRepository ..|> CompilerReadPort
+SqlDirectiveRepository ..|> GuidanceReadPort
+ContentAddressedCompiledRulesRepository ..|> CompiledRulesRepository
+AppendOnlyFindingEventRepository ..|> FindingEventRepository
+AppendOnlyFindingEventRepository ..|> DenialAuditPort
+InspectionArtifactAdapter ..|> InspectionArtifactPort
+FindingArtifactAdapter ..|> FindingArtifactPort
+CertificationArtifactAdapter ..|> CertificationArtifactPort
+InspectionArtifactAdapter --> ObjectStoreClient
+FindingArtifactAdapter --> ObjectStoreClient
+CertificationArtifactAdapter --> ObjectStoreClient
+HttpTargetSourcesGateway ..|> TargetSourcesGateway
 
 ' Detection evaluators live under inspections path (not a C4 peer engine).
 package "inspections_infrastructure\n(evaluators)" as INFRA_DET #FFE0B2/F57C00 {
@@ -102,14 +113,6 @@ package "inspections_infrastructure\n(evaluators)" as INFRA_DET #FFE0B2/F57C00 {
     + EvaluateControls(...)
     --
     <<pure>> no I/O · no randomness (AA-03)
-  }
-}
-
-' Capability checks enforced at api gate (cross-cutting, not a store peer).
-package "authorization (api support)" as INFRA_AUTH #FFE0B2/F57C00 {
-  class "**CapabilitySource**" as CapabilitySource {
-    + ListActorCapabilities(actor_id): Set~CapabilityId~
-    + HasCapability(actor_id, capability): boolean
   }
 }
 
@@ -124,19 +127,14 @@ package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
   }
 }
 
-DirectiveRepository <|.. SqlDirectiveRepository
-CompiledRulesRepository <|.. ContentAddressedCompiledRulesRepository
-FindingEventRepository <|.. AppendOnlyFindingEventRepository
-ArtifactRepository <|.. ObjectArtifactRepository
-TargetSourcesGateway <|.. HttpTargetSourcesGateway
-
 legend bottom
-  |= Module |= Implements |
-  | directives_infrastructure | DirectiveRepository |
+  |= Module |= Implements (ISP ports) |
+  | directives_infrastructure | DirectiveRepository + CompilerReadPort + GuidanceReadPort |
   | compiled_rules_infrastructure | CompiledRulesRepository |
-  | findings_infrastructure | FindingEventRepository |
-  | artifacts_infrastructure | ArtifactRepository |
-  | inspections_infrastructure | TargetSourcesGateway |
+  | findings_infrastructure | FindingEventRepository + DenialAuditPort |
+  | artifacts_infrastructure | InspectionArtifactPort + FindingArtifactPort + CertificationArtifactPort (shared ObjectStoreClient) |
+  | inspections_infrastructure | TargetSourcesGateway (resilient HTTP) |
+  | authorization (api support) | CapabilityEnforcer (shared by all driving adapters) |
 endlegend
 
 @enduml

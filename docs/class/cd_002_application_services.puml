@@ -22,11 +22,25 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>> {
     + GetDirective(lineage_id: LineageId): Directive
     + ListDirectives(filter: Map): List~Directive~
-    + SaveDirective(directive: Directive): void
+    + SaveDirective(directive: Directive, if_match: ETag): void
     + AllocateExecutionId(): ExecutionId
+    + EnqueueCompileRequest(lineage_id: LineageId, revision: int): void
+    --
+    <<owner>> directives_application
+  }
+
+  interface "**CompilerReadPort**" as CompilerReadPort <<Port>> {
     + GetDirectiveExecutableDocument(id: LineageId | ExecutionId): ExecutableRuleDoc
+    --
+    <<owner>> compiled_rules_application (C4: compilation_application)
+    <<ISP>> compile path only; no doctrine
+  }
+
+  interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>> {
     + GetDirectivePolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
-    + ListDirectivePolicyRefs(filter: Map): List~PairedPolicyRef~
+    --
+    <<owner>> findings_application
+    <<ISP>> guidance_only; revision-pinned ref
   }
 
   interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> {
@@ -36,9 +50,10 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
   }
 
   interface "**FindingEventRepository**" as FindingEventRepository <<Port>> {
-    + AppendFindingEvent(event: DomainEvent): void
+    + AppendFindingEvent(event: DomainEvent, expected_chain_head: String?): void
     + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
     + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
+    + GetFindingProjection(finding_id: FindingId): FindingProjection
   }
 
   interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
@@ -49,17 +64,32 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
     <<implementer>> findings_infrastructure / finding_events_repository
   }
 
-  interface "**ArtifactRepository**" as ArtifactRepository <<Port>> {
+  interface "**InspectionArtifactPort**" as InspectionArtifactPort <<Port>> {
     + SaveInspectionArtifact(snapshot: InspectionSnapshot): void
     + GetInspectionArtifact(id: UUID): InspectionSnapshot
+    --
+    <<owner>> inspections_application
+  }
+
+  interface "**FindingArtifactPort**" as FindingArtifactPort <<Port>> {
     + SaveConflictArtifact(artifact: ConflictArtifact): void
     + GetConflictArtifact(id: UUID): ConflictArtifact
+    + SaveEvidenceArtifact(artifact: EvidenceArtifact): void
+    --
+    <<owner>> findings_application
+  }
+
+  interface "**CertificationArtifactPort**" as CertificationArtifactPort <<Port>> {
     + SaveCertificationArtifact(run: CertificationRun): void
+    --
+    <<owner>> certification_tool (offline)
   }
 
   interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>> {
     + GetTarget(target_ref: String): Target
     + HashTarget(target: Target): TargetHash
+    --
+    <<resilience>> timeout ≤5s; retries ≤2; circuit breaker; bulkhead pool
   }
 
 }

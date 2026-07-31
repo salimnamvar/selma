@@ -88,9 +88,10 @@ Prefer **separate database names / roles** (or resource groups) for Directives v
 
 ### Encryption at rest and secrets
 
-- **At rest:** PostgreSQL volumes and object-store buckets MUST use provider-managed or customer-managed encryption at rest in production
-- **Secrets:** DB credentials, object-store keys, and JWT signing material MUST come from a secrets manager or sealed mount (not image env baked into layers). Rotation procedure is environment-owned; Application reads secrets at process start or via sidecar
-- **JWT:** Bearer tokens per [`../api/components/security.yaml`](../api/components/security.yaml); capability set in claims; enforcement only at `api`
+- **At rest:** PostgreSQL volumes and object-store buckets MUST use encryption at rest in production (**AES-256** or cloud equivalent CMK/PMK). Document the KMS key ID in the environment runbook
+- **In transit:** TLS 1.2+ (TLS 1.3 preferred) on all production hops (see TLS table)
+- **Secrets:** DB credentials, object-store keys, and JWT validation material MUST come from a secrets manager or sealed mount (not image env baked into layers; not plaintext in compose files committed to git). Rotation procedure is environment-owned; Application reads secrets at process start or via sidecar
+- **JWT:** Bearer tokens per [`../api/components/security.yaml`](../api/components/security.yaml) and [`../spec/contracts/authorization/authentication.yaml`](../spec/contracts/authorization/authentication.yaml); enforcement only at `api` via shared CapabilityEnforcer
 
 ### Connection pooling
 
@@ -120,7 +121,17 @@ Runbooks MUST use the composed figures when more than one store is unavailable. 
 
 ### Horizontal scaling
 
-Application replicas behind the load balancer; state externalized to the four stores. Load balancer MUST be highly available (managed multi-AZ or active/standby) so the edge is not a single node SPOF.
+Application replicas behind the load balancer; state externalized to the four stores.
+
+### Load balancer high availability
+
+| Mode | When |
+|:-----|:-----|
+| Cloud-managed LB (multi-AZ) | Preferred in public cloud |
+| Active/standby (keepalived / VRRP) | Self-hosted |
+| DNS active-active | Only with health-checked endpoints |
+
+A single non-HA LB node is **not** a production topology. DEP-001 shows the logical LB role; production MUST deploy it as an HA pair or managed service.
 
 ### Target Sources gateway resilience
 

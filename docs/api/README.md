@@ -88,3 +88,13 @@ npx @redocly/cli bundle openapi.yaml -o /tmp/selma-api.bundle.yaml
 | REST behavior | `docs/spec/contracts/interfaces/rest_api.yaml` |
 | Certification gates | `docs/spec/contracts/certification/gates.yaml` |
 | Stores | `docs/spec/contracts/data_stores/` |
+
+## Cross-cutting headers
+
+| Header | Use |
+|--------|-----|
+| `Authorization: Bearer` | JWT authN (required) |
+| `Idempotency-Key` | Safe retries on mutating POSTs |
+| `If-Match` | Directive optimistic concurrency (ETag) |
+
+See `components/security.yaml` and `spec/contracts/interfaces/rest_api.yaml`.

@@ -56,3 +56,7 @@ Shared styles: `common/sm_styles.puml`.
 - [Schema Contracts](../schema/) — data structure contracts
 - [Class Diagrams](../class/README.md) — domain model
 - [Package Diagrams](../package/README.md) — Clean Architecture layout
+
+## Authz state
+
+`selma_authorization.puml` models capability deny → DenialAudited. Wire path: `api` → DenialAuditPort → finding_events_store.

@@ -143,3 +143,22 @@ stories:
       - "Given a completed inspection. When the snapshot is stored. Then it is immutable and contains all required fields."
       - "Given a historical inspection. When all five dimensions are pinned. Then the inspection is exactly reproducible."
       - "Given a pipeline trace. When stored. Then entries preserve chronological order."
+
+port_segregation:
+  description: >
+    Application packages own narrow artifact ports; a single object-store client
+    may back multiple adapters (shared infrastructure, segregated interfaces).
+  ports:
+    - name: InspectionArtifactPort
+      owner: inspections_application
+      methods: ["SaveInspectionArtifact", "GetInspectionArtifact"]
+    - name: FindingArtifactPort
+      owner: findings_application
+      methods: ["SaveConflictArtifact", "GetConflictArtifact", "SaveEvidenceArtifact"]
+    - name: CertificationArtifactPort
+      owner: certification_tool
+      methods: ["SaveCertificationArtifact"]
+  rules:
+    - "Do not inject a single god ArtifactRepository into unrelated use cases"
+    - "Shared ObjectStoreClient is allowed as a framework driver"
+

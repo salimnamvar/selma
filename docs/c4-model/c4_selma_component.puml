@@ -60,12 +60,12 @@ Rel(api, findings_application, "finding transitions, evidence, guidance reads", 
 Rel(api, finding_events_repository, "DenialAuditPort: append capability denial events", "Append-Only", $tags="immutable")
 
 ' ── Directives Application ──
-Rel(directives_application, directives_repository, "reads and writes dual-document directives", "Internal")
-' v1: in-process synchronous compile after durable write (same process as api)
-Rel(directives_application, compilation_application, "requests compile after durable directive change (sync v1)", "Internal")
+Rel(directives_application, directives_repository, "reads and writes dual-document directives; enqueues compile_request outbox", "Internal")
+' Outbox: durable compile_request in directives_store; drained by compilation_application (same process v1)
+Rel(directives_application, compilation_application, "compile_request outbox (eventual; dedupe lineage+revision)", "Internal", $tags="async")
 
 ' ── Compilation Application (hermetic) ──
-Rel(compilation_application, directives_repository, "reads executable documents under read-lock", "Internal", $tags="compile_only")
+Rel(compilation_application, directives_repository, "CompilerReadPort: read executables under short read-lock", "Internal", $tags="compile_only")
 Rel(compilation_application, compiled_rules_repository, "publishes compiled rule snapshots", "Internal", $tags="compile_only")
 
 ' ── Inspections Application ──
@@ -78,7 +78,7 @@ Rel(inspections_application, artifacts_repository, "writes inspection snapshots 
 Rel(findings_application, finding_events_repository, "appends lifecycle and SoD events", "Internal", $tags="immutable")
 Rel(findings_application, finding_events_repository, "loads event stream for state hydration", "Internal", $tags="validation_only")
 Rel(findings_application, compiled_rules_repository, "reads creator provenance for SoD", "Internal", $tags="validation_only")
-Rel(findings_application, directives_repository, "reads policy doctrine for guidance", "Internal", $tags="guidance_only")
+Rel(findings_application, directives_repository, "GuidanceReadPort: doctrine by paired_policy_ref revision", "Internal", $tags="guidance_only")
 Rel(findings_application, artifacts_repository, "reads and writes conflict and evidence artifacts", "Internal")
 
 ' ── Optional external (gateway → system) ──

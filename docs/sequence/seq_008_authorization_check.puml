@@ -2,7 +2,7 @@
 ' ============================================================
 ' Title:     SEQ-008 Authorization Check
 ' Source:    docs/spec/contracts/authorization/
-' C4:        api gate → finding_events_repository (denials)
+' C4:        api gate → DenialAuditPort → finding_events_repository
 ' Contract:  1.1.0
 ' ============================================================
 !include common/seq_styles.puml
@@ -24,35 +24,42 @@ SI -> AS: REST request (with auth token)
 activate AS
 
 group Authentication
-    AS -> AS: authenticate (extract actor identity)
-    note right of AS
-        Verify token signature.
-        Extract actor_id and roles.
+    AS -> CE: Authenticate(JWT)
+    activate CE
+    note right of CE
+        Verify signature (JWKS), iss, aud, exp.
+        Extract sub + capabilities/roles.
+        See authorization.authentication.
     end note
+    CE --> AS: Actor + effective capabilities
+    deactivate CE
 end
 
 group Capability Check
-    AS -> AS: load actor capabilities
-    AS -> AS: check required capability
+    AS -> CE: Authorize(actor, required_capability)
 
     alt Capability Denied
-        AS -> FAA: append CapabilityDenied event
+        AS -> DAP: AppendDenial(...)
+        activate DAP
+        DAP -> FAA: implement DenialAuditPort
         activate FAA
-        FAA -> ES: write audit record
+        FAA -> ES: write CapabilityDenied
         activate ES
         ES --> FAA: acknowledged
         deactivate ES
-        FAA --> AS: committed
+        FAA --> DAP: committed
         deactivate FAA
+        DAP --> AS: audited
+        deactivate DAP
 
-        AS --> SI: 403 Forbidden
+        AS --> SI: 403 CapabilityDenied
         SI --> user: access denied
     end
 end
 
 group Segregation of Duties Check
-    AS -> AS: check SoD constraints
-    note right of AS
+    AS -> CE: check SoD constraints
+    note right of CE
         Verify no SoD violations:
         - creator cannot approve own work
         - author cannot waive own findings
@@ -60,16 +67,20 @@ group Segregation of Duties Check
     end note
 
     alt SoD Violation
-        AS -> FAA: append SoDDenied event
+        AS -> DAP: AppendDenial(... SoD)
+        activate DAP
+        DAP -> FAA: implement DenialAuditPort
         activate FAA
-        FAA -> ES: write audit record
+        FAA -> ES: write SoDDenied
         activate ES
         ES --> FAA: acknowledged
         deactivate ES
-        FAA --> AS: committed
+        FAA --> DAP: committed
         deactivate FAA
+        DAP --> AS: audited
+        deactivate DAP
 
-        AS --> SI: 403 Forbidden
+        AS --> SI: 403 CapabilityDenied
         SI --> user: access denied
     end
 end

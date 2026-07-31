@@ -63,35 +63,34 @@ group Directive Operation
     deactivate DIRAPP
 end
 
-group Recompilation (on change)
-    AS -> HC: trigger compilation_application(directive_id)
+group Recompilation (outbox drain)
+    note over AS, DS
+      compile_request was inserted in the same DB transaction
+      as the durable directive mutation (transactional outbox).
+    end note
+    HC -> DA: DrainOutbox / claim compile_request (lineage, revision)
     activate HC
-
-    HC -> DA: read executable documents under read-lock
+    DA -> DS: UPDATE compile_request status=in_progress
+    HC -> DA: CompilerReadPort: read executables under short read-lock
     activate DA
-    DA -> DS: acquire read_lock(directive_id)
+    DA -> DS: acquire read_lock / SELECT FOR SHARE
     activate DS
     DS --> DA: lock acquired
     deactivate DS
-    DA --> HC: executable documents
+    DA --> HC: executable documents (materialized)
+    DA -> DS: release read_lock
+    activate DS
+    DS --> DA: lock released
+    deactivate DS
     deactivate DA
 
-    HC -> HC: compile directive graph to CG-IR
+    HC -> HC: hermetic compile (lock-free CPU)
     HC -> CRA: publish CG-IR snapshot
     activate CRA
     CRA --> HC: snapshot published
     deactivate CRA
-
-    HC -> DA: release read_lock(directive_id)
-    activate DA
-    DA -> DS: release read_lock(directive_id)
-    activate DS
-    DS --> DA: lock released
-    deactivate DS
-    DA --> HC: done
-    deactivate DA
-
-    HC --> AS: compilation complete
+    HC -> DA: mark compile_request completed
+    HC --> AS: compilation complete (or async poll via /compilations)
     deactivate HC
 end
 

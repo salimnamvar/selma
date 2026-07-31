@@ -138,3 +138,47 @@ stories:
       - "Given a compilation in progress. When a directive modification is attempted. Then the modification waits until compilation releases read lock."
       - "Given two concurrent compilations. When both run. Then both succeed (read locks are compatible)."
       - "Given a write lock held. When a new compilation is attempted. Then the compilation waits until write lock is released."
+
+optimistic_concurrency:
+  description: >
+    Concurrent writers MUST NOT silently overwrite revisions. API and repository
+    use revision-based optimistic concurrency in addition to store write locks.
+  rules:
+    - "Each directive revision has a monotonically increasing revision integer"
+    - "Mutating API requests SHOULD send If-Match with ETag = W/\"{lineage_id}:{revision}\""
+    - "When If-Match is present and does not match current head revision → 409 Conflict (no write)"
+    - "When If-Match is absent, write_lock still serializes writers; last committed wins only within lock order"
+    - "ETag is returned on every successful GET/PUT of a directive view"
+  etag_format: 'W/"{lineage_id}:{revision}"'
+
+compile_coordination:
+  description: >
+    Cross-store consistency between directives_store and compiled_rules_store.
+    Stores are independent systems; there is no distributed XA transaction.
+  model: "transactional_outbox_then_compile"
+  rules:
+    - >
+      After a durable directive mutation (same DB transaction as the new revision),
+      directives_repository MUST insert a compile_request outbox row keyed by
+      (lineage_id, revision) with status=pending.
+    - >
+      compilation_application drains the outbox (same Application process in v1;
+      optional dedicated worker later). Deduplicate by (lineage_id, revision).
+    - >
+      Temporary inconsistency is allowed: a new revision may exist before its CG-IR
+      snapshot is published. Inspections use the latest published snapshot; clients
+      MAY poll /directives/{lineage_id}/compilations for status.
+    - >
+      Outbox rows transition pending → in_progress → completed | failed. Failed
+      rows are retriable; reconciliation job requeues stuck pending/in_progress.
+    - "Direct API compile triggers also enqueue the same outbox (idempotent key)"
+  consistency: "eventual between directive head and compiled snapshot; bounded by compile RTO"
+
+lock_timing:
+  description: "Avoid holding DB locks during hermetic CPU compile"
+  rules:
+    - "read_lock / SELECT ... FOR SHARE covers only the durable read of executable documents"
+    - "After materializing executable documents in memory, release read locks before hermetic compile CPU work"
+    - "Do not hold write_lock while awaiting compilation completion"
+    - "Implementation mapping: PostgreSQL REPEATABLE READ or SELECT ... FOR SHARE for compile reads; exclusive row/advisory lock for writes"
+

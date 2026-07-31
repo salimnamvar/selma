@@ -9,10 +9,13 @@
     tags: [Compilations]
     summary: Trigger compilation
     description: |
-      Triggers hermetic CG-IR compilation for the directive's executable document.
+      Enqueues hermetic CG-IR compilation for the directive's executable document
+      via the compile_request outbox (drained by `compilation_application`).
       Requires compile capability as defined in authorization contracts.
-      Compilation is idempotent for identical directive content (content-addressed
-      publish to `compiled_rules_store`). Policy doctrines are not loaded for evaluation.
+      Content-addressed publish is idempotent for identical directive content.
+      Policy doctrines are not loaded for evaluation. Prefer `Idempotency-Key`.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:
       required: false
       content:

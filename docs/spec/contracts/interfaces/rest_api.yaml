@@ -29,13 +29,15 @@ endpoint_families:
       - method: "PUT"
         action: "Modify directive (new revision)"
         capability: "directive.modify"
-        request: "Directive execution_id + changes"
-        response: "New revision with same lineage_id"
+        request: "Directive execution_id + changes; optional If-Match ETag"
+        response: "New revision with same lineage_id; ETag header"
         errors:
           - "400 SchemaError: invalid changes"
           - "403 CapabilityDenied"
           - "404 NotFound: execution_id does not exist"
+          - "409 Conflict: If-Match / revision mismatch"
         locking: "write_lock"
+        optimistic_concurrency: "If-Match ETag = W/\"{lineage_id}:{revision}\""
 
       - method: "GET"
         action: "Read directive"
@@ -64,12 +66,15 @@ endpoint_families:
       - method: "POST"
         action: "Submit target for inspection"
         capability: "inspection.submit"
-        request: "Target (conforming to target schema)"
+        request: "Target (conforming to target schema); Idempotency-Key RECOMMENDED"
         response: "Inspection snapshot with findings"
         errors:
           - "400 SchemaError: invalid target"
           - "403 CapabilityDenied"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
+          - "504 UpstreamTimeout: target_sources_gateway failure after retries"
         locking: "read_lock (compilation_application)"
+        idempotency: "required_recommended"
 
       - method: "GET"
         action: "Read inspection results"
@@ -100,14 +105,16 @@ endpoint_families:
       - method: "POST"
         action: "FSM transition (acknowledge/dismiss/waive/approve/reject/reopen)"
         capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation"
-        request: "finding_id + transition-specific payload"
+        request: "finding_id + transition-specific payload; Idempotency-Key RECOMMENDED"
         response: "Updated finding"
         errors:
           - "400 FSMError: invalid transition"
           - "403 CapabilityDenied"
           - "403 CapabilityDenied: SoD violation"
           - "404 NotFound"
+          - "409 Conflict: concurrent transition / chain head mismatch"
         locking: "fsm_engine"
+        idempotency: "required_recommended"
 
   - family: "findings_application_read_models"
     description: >
@@ -157,9 +164,41 @@ error_semantics:
   description: "Uniform error behavior across all endpoints"
   rules:
     - "All errors return structured JSON with error code, message, and details"
+    - "401 Unauthorized for authentication failures (no DenialAuditPort write)"
     - "403 CapabilityDenied includes denial reason for audit"
     - "No partial state mutation on any error"
-    - "All denials produce audit log entry"
+    - "All capability/SoD denials produce audit log entry via DenialAuditPort"
+
+authentication:
+  description: "See authorization.authentication contract"
+  rules:
+    - "Bearer JWT required on all routes except explicit health/readiness probes"
+    - "Token validation and capability resolution use shared authorization module"
+
+idempotency:
+  description: "Client retries for mutating operations"
+  header: "Idempotency-Key"
+  rules:
+    - "RECOMMENDED on POST inspections, finding transitions, compile triggers, conflict resolutions"
+    - "Same key + same actor + same body → return original response (no second side effect)"
+    - "Same key + different body → 409 Conflict"
+    - "Keys retained ≥ 24h (configurable)"
+
+optimistic_concurrency:
+  description: "Directive mutations"
+  rules:
+    - "GET directive returns ETag W/\"{lineage_id}:{revision}\""
+    - "PUT/lifecycle SHOULD send If-Match; mismatch → 409"
+    - "Finding transitions use per-finding chain serialization (see finding_events_store)"
+
+denial_audit:
+  description: "Capability/SoD denials at the gate"
+  port: "DenialAuditPort"
+  rules:
+    - "api depends on application-owned DenialAuditPort only (not raw store I/O)"
+    - "Implementer is finding_events_repository / findings_infrastructure"
+    - "Append is best-effort synchronous with bounded timeout; on audit store outage return 503 after deny decision is still enforced (deny wins even if audit write fails — log locally and alert)"
+    - "Bulkhead: denial append uses a dedicated connection pool separate from domain writes"
 
 invariants:
   - id: "INV-RA-001"
@@ -168,6 +207,14 @@ invariants:
 
   - id: "INV-RA-002"
     statement: "Error responses MUST NOT leak internal state"
+    enforcement: "api_gateway"
+
+  - id: "INV-RA-003"
+    statement: "Mutating endpoints MUST honor Idempotency-Key when provided"
+    enforcement: "api_gateway"
+
+  - id: "INV-RA-004"
+    statement: "Capability denials MUST go through DenialAuditPort"
     enforcement: "api_gateway"
 
 stories:

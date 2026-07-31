@@ -13,8 +13,8 @@ package "Finding Events" {
   entity "Events" as Events {
     * event_id : UUID <<PK>>
     --
-    finding_id : UUID <<indexed>>
-    event_type : ENUM(FindingCreated, DispositionChanged, FindingClosed)
+    finding_id : UUID <<indexed, nullable for global denials>>
+    event_type : ENUM(FindingCreated, DispositionChanged, FindingClosed,\nCapabilityDenied, SoDDenied, ConflictResolved, ResolutionDecided)
     timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
     physical_time : TIMESTAMPTZ <<HLC wall clock>>
     logical_counter : INTEGER <<HLC counter>>
@@ -24,8 +24,31 @@ package "Finding Events" {
     event_hash : CHAR(64) <<SHA-256>>
     prev_event_hash : CHAR(64) <<SHA-256, nullable>>
     chain_hash : CHAR(64) <<SHA-256>>
+    idempotency_key : TEXT <<nullable, unique per actor>>
+  }
+
+  entity "FindingProjections" as FindingProjections {
+    * finding_id : UUID <<PK>>
+    --
+    fsm_state : TEXT
+    paired_policy_ref : TEXT
+    chain_head_hash : CHAR(64)
+    event_count : INTEGER
+    updated_at : TIMESTAMPTZ
+  }
+
+  entity "IdempotencyRecords" as IdempotencyRecords {
+    * actor : TEXT
+    * idempotency_key : TEXT
+    --
+    event_id : UUID <<FK>>
+    request_hash : CHAR(64)
+    created_at : TIMESTAMPTZ
   }
 }
+
+Events ||--o| FindingProjections : "finding_id"
+Events ||--o| IdempotencyRecords : "event_id"
 
 note bottom of Events
   **Hybrid Logical Clock (HLC)**
@@ -34,14 +57,20 @@ note bottom of Events
   **Tamper-Evidence Chain**
   • event_hash = SHA-256(event_id ‖ payload ‖ prev_event_hash)
   • chain_hash = SHA-256(event_hash ‖ prev_chain_hash)
-  • prev_event_hash is NULL for the first event in the stream
-  • chain_hash enables detection of deleted or reordered events
+  • Append serializes per finding_id (advisory lock or expected chain head)
 
   **Invariants**
   • Events are immutable once written
   • No duplicate event_ids
   • HLC is monotonically non-decreasing
   • chain_hash forms a contiguous hash chain from first event
+end note
+
+note bottom of FindingProjections
+  **State hydration**
+  • Materialized snapshot updated with each append
+  • Event stream remains system of record
+  • paired_policy_ref pins guidance doctrine revision
 end note
 
 @enduml

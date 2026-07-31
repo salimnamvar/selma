@@ -163,6 +163,13 @@ concurrency_model:
     - "No circular wait: dependency is strictly read_lock → optional write_lock"
     - "Engines MUST NOT hold write lock while awaiting compilation"
     - "Queue position and lock holder identity MUST be observable"
+  lock_implementation:
+    - "PostgreSQL: SELECT ... FOR SHARE (or REPEATABLE READ snapshot) while loading executable documents"
+    - "Release locks after documents are fully read into the hermetic boundary; compile CPU work is lock-free"
+    - "Directive writers use exclusive locks / write_lock; writer-preference FIFO as above"
+  outbox:
+    - "Compile work is enqueued via directives_store compile_request outbox (see data_stores.directives compile_coordination)"
+    - "Worker deduplicates by (lineage_id, revision)"
 
 invariants:
   - id: "INV-CP-060"

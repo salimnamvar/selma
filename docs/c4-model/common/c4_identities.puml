@@ -115,11 +115,11 @@
 
 !$NAME_directives_application = "Directives Application"
 !$TECH_directives_application = "Python / Pydantic"
-!$DESC_directives_application = "Application use-case cluster for the directives resource (Create/Get/List/Update and lifecycle). Orchestrates dual-document mutations through Directives Repository; may trigger Compilation Application after durable writes. Does not compile rules or evaluate targets itself."
+!$DESC_directives_application = "Application use-case cluster for the directives resource (Create/Get/List/Update and lifecycle). Orchestrates dual-document mutations through Directives Repository with revision ETags; enqueues compile_request outbox rows after durable writes for Compilation Application to drain. Does not compile rules or evaluate targets itself."
 
 !$NAME_compilation_application = "Compilation Application"
 !$TECH_compilation_application = "Python / JSON Schema / SHA-256"
-!$DESC_compilation_application = "Hermetic application use-case cluster for the compile process (publishes to Compiled Rules Store). Reads executable documents from Directives Repository under hermetic boundary; validates schema and discriminators; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
+!$DESC_compilation_application = "Hermetic application use-case cluster for the compile process (publishes to Compiled Rules Store). Drains compile_request outbox; reads executables via CompilerReadPort under short read-lock then releases before CPU compile; validates schema and discriminators; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
 
 !$NAME_inspections_application = "Inspections Application"
 !$TECH_inspections_application = "Python / RE2 Regex / SHA-256"
@@ -131,7 +131,7 @@
 
 !$NAME_directives_repository = "Directives Repository"
 !$TECH_directives_repository = "Python / SQLAlchemy / PostgreSQL"
-!$DESC_directives_repository = "Infrastructure adapter implementing DirectiveRepository (port owned by application). Persists dual-document directives to Directives Store; exposes readExecutable (compile) and readPolicyDoctrine (guidance_only)."
+!$DESC_directives_repository = "Infrastructure adapter implementing DirectiveRepository, CompilerReadPort, and GuidanceReadPort (ISP). Persists dual-document directives and compile_request outbox to Directives Store; compile reads executables only; guidance reads doctrine by paired_policy_ref only."
 
 !$NAME_compiled_rules_repository = "Compiled Rules Repository"
 !$TECH_compiled_rules_repository = "Python / SHA-256 / CAS"
@@ -139,7 +139,7 @@
 
 !$NAME_finding_events_repository = "Finding Events Repository"
 !$TECH_finding_events_repository = "Python / SHA-256 / Append-Only Log"
-!$DESC_finding_events_repository = "Infrastructure adapter implementing FindingEventRepository. Appends finding and denial events to Finding Events Store with hash-chain integrity; supports stream load for state hydration."
+!$DESC_finding_events_repository = "Infrastructure adapter implementing FindingEventRepository and DenialAuditPort. Appends finding and denial events with per-finding chain serialization and hash-chain integrity; maintains finding_projection for bounded hydration; supports stream load as system of record."
 
 !$NAME_artifacts_repository = "Artifacts Repository"
 !$TECH_artifacts_repository = "Python / Object Store"
@@ -147,4 +147,4 @@
 
 !$NAME_target_sources_gateway = "Target Sources Gateway"
 !$TECH_target_sources_gateway = "Python / HTTP Client / Schema Validation"
-!$DESC_target_sources_gateway = "Optional infrastructure gateway implementing TargetGateway. Fetches and normalizes targets from Target Sources when an inspection requests a remote reference instead of an inline body."
+!$DESC_target_sources_gateway = "Optional infrastructure gateway implementing TargetSourcesGateway. Fetches and normalizes targets from Target Sources when an inspection requests a remote reference instead of an inline body. Enforces connect/read timeouts, limited retries, circuit breaker, and bulkhead pool; pull-only never mutates sources."

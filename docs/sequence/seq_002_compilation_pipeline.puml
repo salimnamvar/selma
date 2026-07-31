@@ -22,6 +22,8 @@ activate HC
 
 group Ingestion Phase
     HC -> DS: acquire read_lock(directive_set)
+    note right of HC: Short read lock; release after
+    materializing executables (lock-free CPU)
     activate DS
     DS --> HC: lock acquired
     deactivate DS

@@ -52,6 +52,16 @@ Package structure aligns with C4 entities (layer postfixes):
 
 Do not introduce a C4 peer ID `compiled_rules_application`. Do not rename packages to `compilation_*` without a design_contract_version bump.
 
+### Application ports (ISP)
+
+| Port | Owner package | Implementer package |
+|------|---------------|---------------------|
+| `DirectiveRepository` | `directives_application` | `directives_infrastructure` |
+| `CompilerReadPort` | `compiled_rules_application` | `directives_infrastructure` |
+| `GuidanceReadPort` | `findings_application` | `directives_infrastructure` |
+| `DenialAuditPort` | `findings_application` | `findings_infrastructure` |
+| `InspectionArtifactPort` / `FindingArtifactPort` | inspections / findings | `artifacts_infrastructure` (shared client) |
+
 ### Dependency notes (PKG-001)
 
 - `rest_interface` → `DenialAuditPort` for capability-denial audit only (not full findings use cases)

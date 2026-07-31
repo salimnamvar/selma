@@ -29,11 +29,14 @@
     description: |
       Triggers an FSM state transition. Gated by capability checks and SoD per
       `finding_lifecycle/transitions.yaml` and `sod_contract.yaml`. Each success
-      appends an immutable event to `finding_events_store`.
+      appends an immutable event to `finding_events_store` under per-finding
+      chain serialization. Prefer `Idempotency-Key` for safe retries.
 
       Valid examples: Open → acknowledge | dismiss | waive;
       Pending Verification → approve_remediation | reject_remediation;
       Rejected → reopen.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:
       required: true
       content:
@@ -55,6 +58,8 @@
         $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
       "404":
         $ref: ../components/responses.yaml#/components/responses/NotFound
+      "409":
+        $ref: ../components/responses.yaml#/components/responses/Conflict
 
 /findings/{finding_id}/events:
   parameters:
@@ -89,9 +94,10 @@
     tags: [Guidance]
     summary: Get finding guidance
     description: |
-      Returns remediation guidance resolved from the paired policy doctrine via
-      `directives_repository` (`guidance_only`). Never used for evaluation or FSM
-      transitions (gate AA-02). Not a freestanding guidance engine.
+      Returns remediation guidance resolved from the policy doctrine revision
+      pinned by the finding's `paired_policy_ref` (not the latest lineage head)
+      via `directives_repository` (`guidance_only`). Never used for evaluation or
+      FSM transitions (gate AA-02). Not a freestanding guidance engine.
     responses:
       "200":
         description: Guidance payload

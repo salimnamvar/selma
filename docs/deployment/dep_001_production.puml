@@ -19,7 +19,7 @@ package "External User Zone" as USER_ZONE #F3E5F5/E1BEE7 {
 }
 
 package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
-    node "Load Balancer\n(Nginx / Traefik)" as LOAD_BALANCER
+    node "Load Balancer HA\n(managed multi-AZ or\nactive/standby pair)" as LOAD_BALANCER
 }
 
 package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {

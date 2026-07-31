@@ -43,15 +43,30 @@ package "Directives" {
     target_ids : JSONB
     created_at : TIMESTAMPTZ
   }
+
+  entity "CompileRequests" as CompileRequests {
+    * request_id : UUID <<PK>>
+    --
+    o lineage_id : UUID <<FK>>
+    revision_number : INTEGER
+    status : ENUM(pending, in_progress, completed, failed)
+    idempotency_key : TEXT <<nullable>>
+    enqueued_at : TIMESTAMPTZ
+    completed_at : TIMESTAMPTZ <<nullable>>
+    last_error : TEXT <<nullable>>
+  }
 }
 
 Directives ||--o{ DirectiveRevisions : "lineage_id"
 Directives ||--o{ LineageOperations : "lineage_id"
+Directives ||--o{ CompileRequests : "lineage_id"
 
 note bottom of Directives
   **Locking Model**
-  • read_lock  → concurrent reads
+  • read_lock  → concurrent reads (FOR SHARE / RR)
   • write_lock → exclusive writes, FIFO queue
+  • Release read locks before hermetic CPU compile
+  • Optimistic concurrency: ETag W/"{lineage}:{rev}"
 end note
 
 note bottom of DirectiveRevisions
@@ -63,6 +78,14 @@ note bottom of DirectiveRevisions
     + policy_doctrine_document (policy_doctrine)
   • paired_policy_ref links guidance to this revision
   • Compiler reads executable only; guidance reads doctrine only
+end note
+
+note bottom of CompileRequests
+  **Transactional outbox**
+  • Inserted in same TX as directive mutation
+  • Unique (lineage_id, revision_number)
+  • Drained by compilation_application
+  • Temporary CG-IR lag is allowed
 end note
 
 note bottom of LineageOperations

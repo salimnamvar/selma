@@ -128,8 +128,8 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 - **Four stores by mutability**: mutable directives · immutable CG-IR · append-only events · write-once artifacts
 - **Primary target path is inline**; Target Sources is optional pull
 - **Application layer is mandatory**: resource mutations go through `*_application`. The only gate→driven path is `DenialAuditPort` (above)
-- **Compile trigger coupling (v1)**: `directives_application` → `compilation_application` is **in-process and synchronous** after a durable directive write. Clients may also trigger compile via `/directives/.../compilations`. Future scale-out may introduce an async worker boundary without changing C4 peer IDs; until then treat the edge as same-process
-- **Compile concurrency**: compilation acquires **read locks** on directive rows; mutations take write locks. Normative rules: [`../spec/contracts/compilation/pipeline.yaml`](../spec/contracts/compilation/pipeline.yaml) `concurrency_model`, [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml)
+- **Compile trigger coupling**: after durable directive mutation, insert **`compile_request` outbox** row (same DB TX); `compilation_application` drains outbox (same Application process in v1; optional separate worker later without changing C4 peer IDs). Edge tagged async on the Component diagram. Clients may also enqueue via `/directives/.../compilations`
+- **Compile concurrency**: short **read locks** only while loading executables (then release); mutations take write locks. Normative: [`../spec/contracts/compilation/pipeline.yaml`](../spec/contracts/compilation/pipeline.yaml), [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml)
 
 **Finding vs Finding Events**
 
@@ -159,17 +159,63 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 | `rest_interface` / CLI / TUI | `api` + container `clients` |
 | `conflicts_domain` (`ResolveConflict`) | in-process only; used by compile + inspect packages (not a C4 component) |
 
+## Security architecture (at the gate)
+
+| Concern | Decision |
+| :--- | :--- |
+| Authentication | Bearer JWT (OIDC/OAuth2 preferred). Normative: [`../spec/contracts/authorization/authentication.yaml`](../spec/contracts/authorization/authentication.yaml) |
+| Authorization | Capability catalog + SoD; enforced only at `api` before use-case dispatch |
+| Enforcement module | Shared **CapabilityEnforcer** library used by REST/CLI/TUI — not reimplemented per adapter |
+| Denial audit | **DenialAuditPort** → `finding_events_repository` (see above) |
+| Wire schemes | [`../api/components/security.yaml`](../api/components/security.yaml) |
+
+### Internal structure of `api` (not separate C4 peers)
+
+Within the driving gate, treat these as **logical sub-responsibilities** of `api` (class/package detail, not Component peers):
+
+1. **Routing** — map HTTP/CLI intent to use-case entry points  
+2. **Authentication** — JWT validate (`sub`, `exp`, signature/JWKS)  
+3. **CapabilityEnforcer** — capability + SoD checks  
+4. **DenialAuditPort client** — append on deny  
+5. **Idempotency + ETag filters** — `Idempotency-Key`, `If-Match`
+
+## Distributed coordination decisions
+
+| Path | Decision | Normative ref |
+| :--- | :--- | :--- |
+| Directive → compile | **Transactional outbox** `compile_request` in `directives_store`; worker = `compilation_application` (same process v1). Eventual consistency until snapshot publish. | [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml) `compile_coordination` |
+| Compile locks | Read lock only while loading executables; **release before** hermetic CPU; no write lock during compile. | compilation `concurrency_model` + `lock_implementation` |
+| Finding transitions | Per-`finding_id` serialization (advisory lock or expected chain head) + optional `Idempotency-Key`. | finding_events `append_concurrency` |
+| Finding state read | Materialized `finding_projection` cache; stream is SoR. | finding_events `state_hydration` |
+| Target Sources | Timeouts, retries, circuit breaker, bulkhead on gateway. | inspection `target_sources_resilience` |
+
+## Interface segregation (application ports)
+
+Ports are owned by application packages (class diagrams). Implementers may be one adapter class:
+
+| Port | Owner package | Implementer |
+| :--- | :--- | :--- |
+| `DirectiveRepository` (write/lifecycle) | `directives_application` | `directives_infrastructure` |
+| `CompilerReadPort` / `read_executable` | `compiled_rules_application` (C4: compilation) | `directives_infrastructure` |
+| `GuidanceReadPort` / `read_policy_doctrine` | `findings_application` | `directives_infrastructure` |
+| `CompiledRulesRepository` | compile + inspect apps | `compiled_rules_infrastructure` |
+| `FindingEventRepository` | `findings_application` | `findings_infrastructure` |
+| `DenialAuditPort` | `findings_application` | `findings_infrastructure` |
+| `InspectionArtifactPort` / `FindingArtifactPort` | inspections / findings | shared `artifacts_infrastructure` client |
+| `TargetSourcesGateway` | `inspections_application` | `inspections_infrastructure` |
+
 ## Normative cross-references (behavior not re-specified here)
 
 Structural docs define *what exists and how it depends*. Behavior is owned by contracts:
 
 | Concern | Authority |
 | :--- | :--- |
+| Authentication (JWT/OIDC) | [`../spec/contracts/authorization/authentication.yaml`](../spec/contracts/authorization/authentication.yaml) |
 | Capability catalog, role matrix | [`../spec/contracts/authorization/`](../spec/contracts/authorization/) |
-| Hermetic compile + lock model | [`../spec/contracts/compilation/`](../spec/contracts/compilation/) |
+| Hermetic compile + lock model + outbox drain | [`../spec/contracts/compilation/`](../spec/contracts/compilation/) |
 | Finding FSM / SoD / denial audit fields | [`../spec/contracts/finding_lifecycle/`](../spec/contracts/finding_lifecycle/) |
-| REST surface + error semantics | [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml), [`../api/`](../api/README.md) |
-| Store mutability & ops | [`../spec/contracts/data_stores/`](../spec/contracts/data_stores/) |
+| REST surface + idempotency + ETag | [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml), [`../api/`](../api/README.md) |
+| Store mutability, outbox, projections | [`../spec/contracts/data_stores/`](../spec/contracts/data_stores/) |
 | Deployment RPO/RTO, TLS, zones | [`../deployment/`](../deployment/README.md) |
 
 ## Canonical registry

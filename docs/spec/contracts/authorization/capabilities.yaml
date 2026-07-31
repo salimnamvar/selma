@@ -133,9 +133,11 @@ enforcement_gates:
 failure_semantics:
   rules:
     - "Deny = hard reject; no partial writes, no compensating events"
-    - "All denials produce append-only audit record: {actor, capability, action, outcome: denied, timestamp, reason}"
+    - "All denials produce append-only audit record via DenialAuditPort: {actor, capability, action, outcome: denied, timestamp, reason}"
+    - "DenialAuditPort is application-owned; implementer finding_events_repository; consumer api only"
     - "Escalation is NOT automatic on denial; caller receives error and decides next action"
     - "Delegation model: not supported in v8.2.2; capabilities bind directly to actor identity"
+    - "CapabilityEnforcer is a reusable module used by all driving adapters (not HTTP-only ad-hoc checks)"
 
 invariants:
   - id: "INV-CA-001"

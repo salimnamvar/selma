@@ -211,3 +211,40 @@ stories:
       - "Given any FSM transition. When an event is written. Then the event is immutable and has a valid event_hash."
       - "Given two events from the same node. When ordering is checked. Then the HLC tuple is strictly non-decreasing."
       - "Given wall clock regression. When hlc_send is called. Then logical_counter increments (monotonicity preserved)."
+
+append_concurrency:
+  description: >
+    Concurrent appends to the same finding_id MUST preserve a single hash chain
+    without lost updates.
+  strategy: "per_finding_serialization"
+  rules:
+    - "Append acquires an advisory lock or row lock on finding_id (or chain head) before computing prev_event_hash/chain_hash"
+    - "Alternatively: optimistic append with expected_chain_head; on mismatch retry once (HTTP 409 to client if exhausted)"
+    - "Cross-finding appends MAY proceed in parallel"
+    - "CapabilityDenied events without finding_id use a global denial stream key or actor-scoped chain"
+
+idempotency:
+  description: "Duplicate client retries MUST NOT double-append equivalent domain events"
+  rules:
+    - "Mutating API may supply Idempotency-Key; store records (actor, key, event_id) uniqueness"
+    - "FindingCreated uniqueness: (inspection_id, control_id / directive_id, target_hash) MUST NOT create two open findings"
+    - "Disposition transitions: identical transition with same Idempotency-Key returns prior result"
+    - "event_id uniqueness remains absolute (INV-ES-004)"
+
+state_hydration:
+  description: "Finding current state is derived from the event stream with bounded cost"
+  rules:
+    - >
+      findings_application MAY maintain a finding_projection (materialized snapshot)
+      table updated in the same transaction as each successful append for that finding_id.
+    - "Projection is a performance cache; event stream remains system of record"
+    - "On cache miss or rebuild: fold events for finding_id ordered by HLC; optional snapshot every N events"
+    - "Read models for guidance/analytics MUST NOT mutate FSM state (INV-ES-005)"
+
+guidance_pinning:
+  description: "Doctrine used for guidance is revision-pinned"
+  rules:
+    - "FindingCreated payload MUST store paired_policy_ref of the doctrine revision at evaluation/create time"
+    - "GetFindingGuidance resolves doctrine by that ref only — never latest revision of the lineage"
+    - "If doctrine document is missing (retention edge case), return 404 GuidanceUnavailable with explicit error — do not substitute"
+

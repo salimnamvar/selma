@@ -1,0 +1,93 @@
+# authentication.yaml
+# Normative authentication and token-to-capability mapping for the api gate.
+
+contract_id: "authorization.authentication"
+schema_version: "1.0.0"
+design_contract_version: "1.1.0"
+owner_component: "api"
+description: >
+  Defines how actors authenticate to Selma and how authenticated identity is
+  mapped to capabilities. Authorization (capability/SoD) is separate and
+  enforced only after successful authentication. See capabilities.yaml and
+  role_matrix.yaml for the capability catalog.
+
+authentication:
+  protocol: "OAuth 2.0 / OIDC preferred for interactive and service actors"
+  token_format: "JWT (RFC 7519) carried as HTTP Bearer"
+  wire_scheme: "Authorization: Bearer <jwt>"
+  openapi_ref: "docs/api/components/security.yaml#/components/securitySchemes/BearerAuth"
+
+jwt_claims:
+  required:
+    - claim: "sub"
+      description: "Stable actor identifier (human, AI agent, or service principal)"
+    - claim: "exp"
+      description: "Expiration (unix seconds); expired tokens MUST be rejected"
+    - claim: "iat"
+      description: "Issued-at; used for clock-skew and replay windows"
+  recommended:
+    - claim: "iss"
+      description: "Issuer; MUST match configured trusted IdP issuer list"
+    - claim: "aud"
+      description: "Audience; MUST include the Selma API audience value"
+    - claim: "capabilities"
+      type: "array of string"
+      description: >
+        Explicit capability IDs from authorization.capabilities. When present,
+        the api gate uses this set (intersected with any server-side role
+        expansion). When absent, capabilities are resolved from roles via
+        role_matrix.yaml.
+    - claim: "roles"
+      type: "array of string"
+      description: "Role names expanded via role_matrix.yaml when capabilities claim is absent"
+
+token_lifecycle:
+  issuance: "External IdP or platform identity service; Selma does not mint user passwords"
+  validation: >
+    api MUST verify signature (asymmetric preferred; JWKS from IdP), iss, aud,
+    exp (with ≤60s clock skew), and that the token is not on a local deny list
+    if revocation is configured.
+  refresh: "Client-driven via IdP; Selma does not issue refresh tokens"
+  revocation: >
+    Optional deny-list or short-lived access tokens (≤1h recommended). On
+    revocation signal, subsequent requests with that jti/sub+iat window fail 401.
+
+capability_resolution:
+  steps:
+    - "Authenticate JWT → actor_id (sub)"
+    - "If capabilities claim present: use as effective set"
+    - "Else expand roles claim via role_matrix.yaml → effective capability set"
+    - "Intersect with any environment deny-list (e.g. retired capabilities)"
+    - "Pass effective set to capability enforcement gates (capabilities.yaml)"
+  module: >
+    Capability resolution and enforcement MUST live in a reusable
+    authorization library (package authorization under api support), not
+    duplicated in rest_interface / cli_interface / tui_interface. Every driving
+    adapter reuses the same module.
+
+failure_semantics:
+  - "Missing/invalid token → 401 Unauthorized; no capability check; no domain mutation"
+  - "Valid token, missing capability → 403 CapabilityDenied; DenialAuditPort append"
+  - "Valid token, SoD violation → 403 CapabilityDenied (SoD); DenialAuditPort append"
+  - "Authentication failures MUST NOT write domain events; optional security telemetry only"
+
+invariants:
+  - id: "INV-AUTH-001"
+    statement: "Unauthenticated requests MUST NOT reach application use-case clusters"
+    enforcement: "api"
+  - id: "INV-AUTH-002"
+    statement: "Capability enforcement uses a single shared authorization module for all driving adapters"
+    enforcement: "architectural_audit"
+  - id: "INV-AUTH-003"
+    statement: "Tokens without verifiable signature MUST be rejected (401)"
+    enforcement: "api"
+
+stories:
+  - story_id: "US-AUTH-001"
+    as: "api"
+    i_want: "to authenticate JWT bearers and resolve capabilities"
+    so_that: "only known actors with explicit capabilities enter use cases"
+    acceptance_criteria:
+      - "Given a missing Authorization header. When any protected route is called. Then 401 is returned and no use case runs."
+      - "Given a valid JWT lacking directive.modify. When PUT /directives/{id} is called. Then 403 is returned and DenialAuditPort records CapabilityDenied."
+      - "Given roles claim without capabilities claim. When authentication succeeds. Then capabilities are expanded from role_matrix.yaml."
