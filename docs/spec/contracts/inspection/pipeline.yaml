@@ -103,9 +103,19 @@ pipeline:
         behavior: "Node → NeedsReview finding"
         retry: true
         max_retries: 3
+        notes: >
+          NeedsReview is not a Pass. Severity is informational for prioritization
+          only; it MUST NOT be treated as compliance success by gates that
+          require a clean inspection. CI/CD consumers MUST fail closed on any
+          NeedsReview (or open) finding unless an explicit waiver policy exists
+          outside Selma. Infrastructure timeouts (target_sources_gateway) that
+          prevent evaluation are inspection fetch errors when the whole target
+          cannot be loaded; per-node timeout after successful target load yields
+          NeedsReview for that node only.
       - fault: "resource_exhaustion"
         behavior: "Node → NeedsReview finding"
         retry: false
+        notes: "Same fail-closed consumer semantics as timeout → NeedsReview."
       - fault: "schema_violation"
         behavior: "Pipeline → SchemaError"
         retry: false

@@ -100,7 +100,12 @@ outcome_to_finding_mapping:
     - outcome: "NeedsReview"
       finding_created: true
       default_severity: "informational"
-      notes: "Always informational — cannot escalate without human review"
+      notes: >
+        Always informational for prioritization — cannot escalate without human
+        review. Informational severity MUST NOT be interpreted as Pass or as
+        certification success. Automated consumers (CI gates, release checkers)
+        MUST treat any NeedsReview finding as fail-closed unless an external
+        waiver policy explicitly accepts residual risk.
 
 deontic_type_semantics:
   description: "How deontic modality affects finding creation"
