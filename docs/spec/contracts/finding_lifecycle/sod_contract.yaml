@@ -37,6 +37,17 @@ sod_test_matrix:
     transitions and verify SoD / capability gates. Approximate size: 5 source
     states × 3 disposition actions = 15 RO disposition cases, plus approve_remediation
     SoD from Pending Verification.
+  scope_rationale: >
+    The 5 source states {Open, Acknowledged, Evidence Submitted, Pending
+    Verification, Rejected} are exactly the states from which a Regulatory
+    Official can perform a disposition action under transitions.yaml
+    (TR-FL-003/004/012). Created is system-only (TR-FL-001) with no human
+    disposition; Verified and Waived auto-close to Closed via system events
+    (TR-FL-010/011); Closed, Dismissed, and Superseded are terminal. SoD is
+    therefore only enforceable from these 5 states, and AA-04 coverage of
+    exactly this matrix is complete. finding.dismiss has no SoD predicate
+    (capability-only); waive/supersede carry SOD-001/SOD-003, and
+    approve_remediation carries SOD-002 from Pending Verification.
   source_states_for_ro_disposition:
     - "Open"
     - "Acknowledged"
