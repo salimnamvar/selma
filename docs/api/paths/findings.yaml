@@ -32,8 +32,8 @@
       appends an immutable event to `finding_events_store` under per-finding
       chain serialization. System-automatic transitions resulting from the human
       transition (e.g. Waived→Closed, Verified→Closed) are appended atomically
-      in the same DB transaction (INV-FL-020). Require `Idempotency-Key` (mutating POST; INV-RA-003).for
-      safe retries.
+      in the same DB transaction (INV-FL-020). Require `Idempotency-Key`
+      (mutating POST; INV-RA-003) for safe retries.
 
       Valid examples: Open → acknowledge | dismiss | waive | supersede;
       Acknowledged | Evidence Submitted | Pending Verification | Rejected →
