@@ -227,8 +227,19 @@ denial_audit:
   rules:
     - "api depends on application-owned DenialAuditPort only (not raw store I/O)"
     - "Implementer is finding_events_repository / findings_infrastructure"
-    - "Append is best-effort synchronous with bounded timeout; on audit store outage return 503 after deny decision is still enforced (deny wins even if audit write fails — log locally and alert)"
+    - >
+      Append is synchronous with a bounded timeout; on audit store outage the
+      deny decision is still enforced (deny wins even if the audit write
+      fails). Implementations MUST additionally spool the denial to a local
+      disk-backed fallback buffer (DLQ) and replay it to finding_events_store
+      after recovery so SOC denial telemetry is reconciled, not dropped.
+    - >
+      Fallback buffer is bounded (environment-owned, production default
+      10,000 entries); when full, oldest entries are dropped and counted in
+      denial_audit_dropped_total. Replay MUST be idempotent (dedupe by
+      denial event natural key or stored event_id).
     - "Bulkhead: denial append uses a dedicated connection pool separate from domain writes"
+    - "While the store is unavailable, denial latency must remain bounded (the gate must not hang on audit)"
 
 invariants:
   - id: "INV-RA-001"

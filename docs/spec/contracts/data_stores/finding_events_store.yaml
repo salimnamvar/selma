@@ -294,6 +294,17 @@ append_concurrency:
       - >
         Authentication failures (401) MUST NOT write CapabilityDenied events
         (INV-AUTH path); only authenticated capability/SoD denials use DenialAuditPort.
+    outage_resilience:
+      description: >
+        When finding_events_store is unavailable, the gate still enforces the
+        deny decision. Denial records MUST NOT be silently lost: the api /
+        DenialAuditPort implementation MUST spool to a local disk-backed
+        fallback buffer and replay after recovery (see interfaces.rest_api
+        denial_audit).
+      rules:
+        - "Replay MUST be idempotent and ordered per (actor_id, capability) within the buffer"
+        - "Entries dropped due to buffer overflow MUST increment denial_audit_dropped_total"
+        - "denied_actions_view MUST include replayed entries with their original HLC timestamps or a replay_marker when HLC was unavailable"
 
 idempotency:
   description: "Duplicate client retries MUST NOT double-append equivalent domain events"
