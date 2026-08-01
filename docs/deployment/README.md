@@ -176,6 +176,20 @@ When inspections use remote references (`target_sources_gateway`):
 
 Normative inspection pipeline: [`../spec/contracts/inspection/pipeline.yaml`](../spec/contracts/inspection/pipeline.yaml). Primary path remains **inline target body** on the inspection resource.
 
+### Edge admission control (global rate limiting)
+
+Per-actor limits (`directive.modify`/`directive.create`, 429) are the first
+application-tier backpressure signal, but they are keyed by JWT identity and
+cannot stop a botnet of unique actors or an unauthenticated flood. The Load
+Balancer / edge gateway MUST therefore enforce a **global, identity-independent
+admission limit** in production — e.g. Nginx `limit_req`, Traefik RateLimit
+middleware, or a managed WAF/CDN rule — keyed by IP/network and per-endpoint.
+The edge limit MUST be configured below the Application's write-queue bounds so
+it trips before store 503s, and MUST return 429 with `Retry-After` without
+reaching the Application (no `DenialAuditPort` write for edge-level rejection).
+Thresholds are environment-owned; production MUST document chosen values and
+alert on edge-limit rejections.
+
 ### Idempotency (mutating APIs)
 
 All mutating POST operations (directive creation and lifecycle, inspections, finding transitions, conflict resolutions, compile triggers) **MUST require** a client `Idempotency-Key` scoped to `(actor, key)` so network retries cannot double-append finding events, double-open findings, or double-create directives. Store-level uniqueness constraints (e.g. `(inspection_id, control_id, target_hash)` for `FindingCreated`) remain mandatory fallbacks — the key is the primary mechanism, not a substitute. Event append uniqueness and FSM guards are normative in finding-lifecycle contracts; REST behavior is normative in [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml) (`idempotency`).
