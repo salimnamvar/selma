@@ -39,6 +39,9 @@
       `lineage_id`. Requires `directive.modify`. Write lock acquired before
       processing. After durable write, enqueues compile via transactional outbox
       (`compile_request`) drained by `compilation_application`.
+
+      **INV-DL-004:** `status=deprecated` or `status=superseded` directives MUST
+      NOT accept content modify. Return 409 Conflict (no revision, no outbox).
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/IfMatch
       - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey

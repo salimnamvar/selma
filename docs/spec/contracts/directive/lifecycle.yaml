@@ -25,12 +25,19 @@ lifecycle_states:
   - name: "deprecated"
     description: "Directive is retired; audit trail preserved"
     transitions_to: []
-    notes: "CG-IR nodes marked deprecated; no new compilations"
+    notes: >
+      CG-IR nodes marked deprecated; no new compilations.
+      Content mutations (directive.modify / revision operation) are FORBIDDEN
+      while status=deprecated (INV-DL-004). Restore (if re-activation is offered)
+      is a separate lifecycle path and is not content amend on a deprecated body.
 
   - name: "superseded"
     description: "Directive replaced by another rule"
     transitions_to: []
-    notes: "metadata.migration.superseded_by MUST reference successor"
+    notes: >
+      metadata.migration.superseded_by MUST reference successor.
+      Content mutations (directive.modify) are FORBIDDEN while status=superseded
+      (INV-DL-004).
 
 lifecycle_operations:
   - operation: "revision"
@@ -89,6 +96,16 @@ invariants:
     statement: "superseded_by MUST reference an active or draft rule"
     enforcement: "compile_time_validation"
 
+  - id: "INV-DL-004"
+    statement: >
+      Directives with status=deprecated or status=superseded MUST NOT accept
+      directive.modify (content revision on the same identity). The API MUST
+      reject with 409 Conflict (or 400 FSMError) and MUST NOT create a new
+      revision, acquire write_lock for content change, or enqueue compile.
+      Operators who need a new body MUST author a successor directive (or
+      restore to active via an explicit restore capability path if provided).
+    enforcement: "directives_application (before write_lock)"
+
 stories:
   - story_id: "US-DL-001"
     as: "directives_repository"
@@ -97,4 +114,5 @@ stories:
     acceptance_criteria:
       - "Given a draft directive. When activation occurs. Then the directive transitions to active."
       - "Given an active directive. When retirement occurs. Then the directive transitions to deprecated and CG-IR nodes are marked deprecated."
+      - "Given a deprecated directive. When directive.modify is attempted. Then the request is rejected (INV-DL-004) with no new revision."
       - "Given a fork operation. When completed. Then two new execution_ids exist sharing the parent lineage_id."

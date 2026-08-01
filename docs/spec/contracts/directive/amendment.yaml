@@ -71,6 +71,14 @@ parameters_field:
       strategy: "structural"
       structural_spec: {"field": "coverage", "operator": "gte", "threshold": 95}
 
+preconditions:
+  status_gate:
+    description: "Content amendment is only legal on draft or active directives"
+    rules:
+      - "status MUST be draft or active before directive.modify / revision"
+      - "status=deprecated or superseded → reject (lifecycle INV-DL-004)"
+      - "Amendment contracts do not override lifecycle status gates"
+
 invariants:
   - id: "INV-AM-001"
     statement: "Metadata MUST NOT contain executable hints or runtime flags"

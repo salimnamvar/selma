@@ -20,6 +20,14 @@ start
 
 :Authenticate & Check Capability\n<color:#1B7A6E><b>directive.modify</b></color>;
 
+:Load status for target lineage;
+
+if (status deprecated or superseded?) then (yes)
+  #A93226:Reject 409 Conflict\nINV-DL-004 no content modify;
+  stop
+else (no — draft or active)
+endif
+
 |#ECEFF4|Concurrency Control|
 :Acquire Write Lock\non Directive Graph;
 
