@@ -83,13 +83,19 @@ command_families:
       - name: "dismiss"
         capability: "finding.dismiss"
         args: "Finding ID + reason"
-        behavior: "Transition Open → Dismissed"
+        behavior: "Transition Open|Acknowledged|Evidence Submitted|Pending Verification|Rejected → Dismissed (INV-FL-006)"
         output: "Updated finding"
 
       - name: "waive"
         capability: "finding.waive"
         args: "Finding ID + justification"
-        behavior: "Transition Open → Waived (with SoD check)"
+        behavior: "Transition Open|Acknowledged|Evidence Submitted|Pending Verification|Rejected → Waived (SoD; INV-FL-006)"
+        output: "Updated finding"
+
+      - name: "supersede"
+        capability: "finding.supersede"
+        args: "Finding ID + reason"
+        behavior: "Transition Open|Acknowledged|Evidence Submitted|Pending Verification|Rejected → Superseded (SoD; INV-FL-006)"
         output: "Updated finding"
 
       - name: "approve"

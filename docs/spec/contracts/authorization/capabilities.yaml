@@ -58,11 +58,15 @@ capabilities:
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
     - cap_id: "finding.dismiss"
-      description: "Dismiss a finding as invalid (Open → Dismissed)"
+      description: >
+        Dismiss a finding as invalid (Open | Acknowledged | Evidence Submitted |
+        Pending Verification | Rejected → Dismissed)
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
     - cap_id: "finding.waive"
-      description: "Waive a finding as accepted risk (Open → Waived)"
+      description: >
+        Waive a finding as accepted risk (Open | Acknowledged | Evidence Submitted |
+        Pending Verification | Rejected → Waived)
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
       sod_check: "creator_cannot_waive"
@@ -76,7 +80,9 @@ capabilities:
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
     - cap_id: "finding.supersede"
-      description: "Mark finding as superseded (Open → Superseded)"
+      description: >
+        Mark finding as superseded (Open | Acknowledged | Evidence Submitted |
+        Pending Verification | Rejected → Superseded)
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
       sod_check: "creator_cannot_supersede"

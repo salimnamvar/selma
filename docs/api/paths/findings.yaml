@@ -32,7 +32,9 @@
       appends an immutable event to `finding_events_store` under per-finding
       chain serialization. Prefer `Idempotency-Key` for safe retries.
 
-      Valid examples: Open → acknowledge | dismiss | waive;
+      Valid examples: Open → acknowledge | dismiss | waive | supersede;
+      Acknowledged | Evidence Submitted | Pending Verification | Rejected →
+      dismiss | waive | supersede (RO disposition; INV-FL-006);
       Pending Verification → approve_remediation | reject_remediation;
       Rejected → reopen.
     parameters:

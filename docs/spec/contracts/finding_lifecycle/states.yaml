@@ -25,34 +25,45 @@ states:
   - name: "Open"
     terminal: false
     description: "Finding is active and awaiting action"
-    transitions_out: ["Acknowledged", "Dismissed", "Waived"]
+    transitions_out: ["Acknowledged", "Dismissed", "Waived", "Superseded"]
     transitions_in: ["Created", "Rejected"]
     disposition: "valid"
-    notes: "Entry point for human interaction; all human transitions originate here"
+    notes: >
+      Primary decision hub for human interaction. RO disposition
+      (dismiss/waive/supersede) is also allowed from later non-terminal
+      remediation states (see TR-FL-003/004/012) so acknowledgment cannot
+      permanently block closure.
 
   - name: "Acknowledged"
     terminal: false
     description: "Compliance Representative has accepted the finding and begun remediation"
-    transitions_out: ["Evidence Submitted"]
+    transitions_out: ["Evidence Submitted", "Dismissed", "Waived", "Superseded"]
     transitions_in: ["Open"]
     disposition: "valid"
-    notes: "Also known as 'In Remedy' in some UIs"
+    notes: >
+      Also known as 'In Remedy' in some UIs. Evidence path continues via
+      evidence.submit; Regulatory Official may still dismiss, waive, or
+      supersede without waiting for evidence (stale-acknowledgment closure).
 
   - name: "Evidence Submitted"
     terminal: false
     description: "Remediation evidence has been attached to the finding"
-    transitions_out: ["Pending Verification"]
+    transitions_out: ["Pending Verification", "Dismissed", "Waived", "Superseded"]
     transitions_in: ["Acknowledged"]
     disposition: "valid"
-    notes: "System-automatic transition to Pending Verification on evidence receipt"
+    notes: >
+      System-automatic transition to Pending Verification on evidence receipt
+      unless an RO disposition transition races first (per-finding serialization).
 
   - name: "Pending Verification"
     terminal: false
     description: "Evidence is awaiting review by a Regulatory Official"
-    transitions_out: ["Verified", "Rejected"]
+    transitions_out: ["Verified", "Rejected", "Dismissed", "Waived", "Superseded"]
     transitions_in: ["Evidence Submitted"]
     disposition: "valid"
-    notes: "Requires Regulatory Official action — no system-automatic transitions"
+    notes: >
+      Requires Regulatory Official action — no system-automatic transitions.
+      RO may approve/reject evidence or take a terminal disposition.
 
   - name: "Verified"
     terminal: false
@@ -65,16 +76,23 @@ states:
   - name: "Rejected"
     terminal: false
     description: "Regulatory Official has rejected the remediation evidence"
-    transitions_out: ["Open"]
+    transitions_out: ["Open", "Dismissed", "Waived", "Superseded"]
     transitions_in: ["Pending Verification"]
     disposition: "valid"
-    notes: "Requires comments on reopen; transitions back to Open for re-remediation"
+    notes: >
+      Reopen (finding.reopen) returns to Open for re-remediation and requires
+      comments. RO may instead take a terminal disposition without reopening.
 
   - name: "Dismissed"
     terminal: true
     description: "Finding was determined to be invalid — no action needed"
     transitions_out: []
-    transitions_in: ["Open"]
+    transitions_in:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     disposition: "invalid"
     notes: "Terminal state; no outgoing transitions; remains in Finding Event Stream for audit"
 
@@ -82,7 +100,12 @@ states:
     terminal: false
     description: "Finding is legitimate but risk is accepted by Regulatory Official"
     transitions_out: ["Closed"]
-    transitions_in: ["Open"]
+    transitions_in:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     disposition: "waived"
     notes: "System-automatic transition to Closed after waive; requires SoD check"
 
@@ -90,7 +113,12 @@ states:
     terminal: true
     description: "Finding is superseded by a newer finding or directive update"
     transitions_out: []
-    transitions_in: ["Open"]
+    transitions_in:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     disposition: "superseded"
     notes: "Terminal state; finding replaced by newer rule or finding"
 
@@ -98,9 +126,11 @@ states:
     terminal: true
     description: "Finding lifecycle is complete"
     transitions_out: []
-    transitions_in: ["Verified", "Waived", "Dismissed"]
+    transitions_in: ["Verified", "Waived"]
     disposition: null
-    notes: "Terminal state; disposition inherited from preceding state"
+    notes: >
+      Terminal sink for Verified and Waived paths only. Dismissed and Superseded
+      are independently terminal (they do not transit through Closed).
 
 invariants:
   - id: "INV-FL-001"
@@ -108,7 +138,15 @@ invariants:
     enforcement: "fsm_engine"
 
   - id: "INV-FL-002"
-    statement: "Dismissed and Closed are terminal states with no outgoing transitions"
+    statement: "Dismissed, Superseded, and Closed are terminal states with no outgoing transitions"
+    enforcement: "fsm_engine"
+
+  - id: "INV-FL-006"
+    statement: >
+      Regulatory Official disposition transitions (dismiss, waive, supersede) MUST be
+      allowed from Open, Acknowledged, Evidence Submitted, Pending Verification, and
+      Rejected so that Compliance Representative acknowledgment cannot permanently
+      block finding closure
     enforcement: "fsm_engine"
 
   - id: "INV-FL-003"

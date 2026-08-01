@@ -106,7 +106,7 @@ group SoD Policy Check (SOD-001)
     end
 end
 
-LF -> LF: FindingFsm: Open -> Waived
+LF -> LF: FindingFsm: Open|Ack|Evidence|Pending|Rejected -> Waived\n(TR-FL-004 multi-from; INV-FL-006)
 LF -> LF: FindingFsm: Waived -> Closed
 LF -> FAA: append FindingClosed event
 activate FAA
@@ -125,6 +125,13 @@ deactivate AS
 
 SI --> user: confirmation
 deactivate SI
+
+note right of LF
+  INV-FL-006: dismiss/waive/supersede
+  from Open and all non-terminal
+  remediation states so Acknowledged
+  cannot permanently block closure.
+end note
 
 note right of LF
     Finding FSM States (11):

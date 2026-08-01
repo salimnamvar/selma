@@ -34,17 +34,31 @@ transitions:
     notes: "Compliance Representative accepts finding and begins remediation"
 
   - id: "TR-FL-003"
-    from: "Open"
+    from:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     to: "Dismissed"
     trigger: "finding.dismiss"
     actor: "regulatory_official"
     capability: "finding.dismiss"
     sod_check: null
     story_ref: "US-FL-001"
-    notes: "Regulatory Official determines finding is invalid"
+    notes: >
+      Regulatory Official determines finding is invalid. Allowed from any
+      non-terminal remediation state so a stalled acknowledgment cannot block
+      disposition (stale-acknowledgment closure). Not allowed from Created
+      (system-only) or Verified/Waived (system auto-close paths).
 
   - id: "TR-FL-004"
-    from: "Open"
+    from:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     to: "Waived"
     trigger: "finding.waive"
     actor: "regulatory_official"
@@ -59,7 +73,9 @@ transitions:
       denial_code: "403 CapabilityDenied"
       denial_reason: "segregation of duties violation"
     story_ref: "US-SD-001"
-    notes: "Regulatory Official accepts risk; SoD check required before transition"
+    notes: >
+      Regulatory Official accepts risk; SoD check required before transition.
+      Same multi-state source set as TR-FL-003 (stale-acknowledgment closure).
 
   - id: "TR-FL-005"
     from: "Acknowledged"
@@ -143,7 +159,12 @@ transitions:
     notes: "Immediate after waive; disposition inherited as 'waived'"
 
   - id: "TR-FL-012"
-    from: "Open"
+    from:
+      - "Open"
+      - "Acknowledged"
+      - "Evidence Submitted"
+      - "Pending Verification"
+      - "Rejected"
     to: "Superseded"
     trigger: "finding.supersede"
     actor: "regulatory_official"
@@ -158,7 +179,9 @@ transitions:
       denial_code: "403 CapabilityDenied"
       denial_reason: "segregation of duties violation"
     story_ref: "US-FL-012"
-    notes: "Regulatory Official supersedes finding; requires SoD check"
+    notes: >
+      Regulatory Official supersedes finding; requires SoD check.
+      Same multi-state source set as TR-FL-003 (stale-acknowledgment closure).
 
 event_schema:
   description: "Each transition produces a Finding Event Stream event"

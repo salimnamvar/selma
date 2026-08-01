@@ -56,16 +56,22 @@ elseif (Regulatory Official) then
       Segregation of Duties (SOD-001):
       creator ≠ waiving official.
     end note
-    :Transition: Open → Waived;
+    :Transition: {Open|Ack|Evidence|Pending|Rejected}\n→ Waived (TR-FL-004);
     :Auto-transition: Waived → Closed;
     :Append DispositionChanged\n+ FindingClosed Events;
+    note right
+      INV-FL-006: RO disposition allowed
+      from any non-terminal remediation
+      state (stale-ack closure).
+    end note
   elseif (Dismiss) then
     :Check Capability\n<color:#1B7A6E><b>finding.dismiss</b></color>;
     note right
       No SoD check per TR-FL-003.
       Capability gate only.
+      Multi-from sources per INV-FL-006.
     end note
-    :Transition: Open → Dismissed;
+    :Transition: {Open|Ack|Evidence|Pending|Rejected}\n→ Dismissed (TR-FL-003);
     :Append DispositionChanged Event;
   elseif (Supersede) then
     :Check Capability\n<color:#1B7A6E><b>finding.supersede</b></color>;
@@ -74,8 +80,9 @@ elseif (Regulatory Official) then
       Segregation of Duties (SOD-003):
       creator ≠ superseding official.
       Actor MUST NOT be in creator_provenance.
+      Multi-from sources per INV-FL-006.
     end note
-    :Transition: Open → Superseded;
+    :Transition: {Open|Ack|Evidence|Pending|Rejected}\n→ Superseded (TR-FL-012);
     :Append DispositionChanged Event;
   elseif (Verify Evidence) then
     :Check Capability\n<color:#1B7A6E><b>finding.approve_remediation</b></color>;
