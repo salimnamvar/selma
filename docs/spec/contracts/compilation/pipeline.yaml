@@ -179,6 +179,12 @@ concurrency_model:
   outbox:
     - "Compile work is enqueued via directives_store compile_request outbox (see data_stores.directives compile_coordination)"
     - "Worker deduplicates by (lineage_id, revision)"
+  concurrency_bounds:
+    - "Maximum concurrent in-process compile workers per Application replica: 2 (recommended default, environment-configurable; see deployment/README.md concurrency notes)"
+    - "Compile workers MUST use a fixed-size worker pool/semaphore (no unbounded goroutine/thread fan-out on outbox drain)"
+    - "When the pool is saturated, outbox drain MUST NOT block the API thread; requests remain pending and are claimed by the next free worker or a later reconciliation pass"
+    - "Compile CPU work MAY be pinned to a CPU subset (taskset/cgroup) in production to isolate from API request handling"
+    - "lock_wait_timeout: write-lock acquisition MUST time out (default 5s, max 30s, environment-configurable); on timeout the mutation returns 503 UpstreamTimeout without partial state change"
 
 invariants:
   - id: "INV-CP-060"
