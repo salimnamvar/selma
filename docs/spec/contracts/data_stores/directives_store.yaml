@@ -366,6 +366,40 @@ compile_coordination:
         Inspections that request "latest rules" resolve via this pointer (or the
         mirrored compiled_rules lineage_heads index); they MUST NOT scan CAS
         by compiled_at wall clock.
+  head_pointer_crash_atomicity:
+    description: >
+      Guarantees for the crash window between CAS publish and head pointer
+      advance (worker crashes after storing the snapshot but before updating
+      head_snapshot_hash / transitioning the outbox row).
+    rules:
+      - >
+        The snapshot in CAS and the head pointer are in different stores and
+        cannot be one atomic transaction; the outbox row transition
+        (in_progress → completed + head_snapshot_hash advance) MUST be a
+        single DB transaction, so the pointer and row state cannot diverge.
+      - >
+        A crash before that transaction commits leaves the row in_progress with
+        an expired lease; reconciliation reclaims the row and re-runs the
+        compile. CAS publish is idempotent by content hash (same snapshot
+        hash ⇒ same content, no duplicate), so re-publish is safe; the
+        duplicate CPU work is bounded by the lease/heartbeat window
+        (compile_coordination.claim_lease) and counted via
+        compile_outbox_lease_steal_total.
+      - >
+        A crash AFTER the transaction commits is impossible to observe from
+        the stores: the pointer advanced and the row completed atomically;
+        snapshot presence in CAS without a completed outbox row is always
+        reconcilable by the above re-run path.
+      - >
+        head_snapshot_hash MUST NOT be advanced on a snapshot that is not
+        durably present in CAS (verify existence by content hash before
+        committing the outbox transition).
+      - >
+        Mirror reconciliation: the compiled_rules lineage_heads index mirrors
+        Directives.head_snapshot_hash; if the mirror diverges (e.g. only one
+        side committed), reconciliation MUST converge to the directives_store
+        value within the compile RTO, and readers MUST treat the pointer as
+        authoritative only after the commit record (outbox completed) exists.
   consistency: "eventual between directive head and compiled snapshot; bounded by compile RTO"
 
 lock_timing:
