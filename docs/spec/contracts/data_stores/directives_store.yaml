@@ -175,11 +175,19 @@ retention_policy:
       retention: "Configurable (default: 90 days after completed)"
       pruning: "Safe to prune completed/failed history after retention; permanently_failed MAY be retained longer for ops forensics"
   invariants:
-    - id: "INV-DS-007"
-      statement: >
-        A directive revision whose paired_policy_ref is referenced by any
-        finding MUST remain readable for guidance_only resolution indefinitely
+  - id: "INV-DS-007"
+    statement: >
+      A directive revision whose paired_policy_ref is referenced by any
+      finding MUST remain readable for guidance_only resolution indefinitely
       enforcement: "retention_policy + guidance_resolution"
+
+  - id: "INV-DS-010"
+    statement: >
+      Compile outbox state transitions MUST be atomic and auditable: each
+      transition commits status, worker_id, and timestamps in a single DB
+      transaction; the transition history (or equivalent audit trail) MUST be
+      retained per compile_request
+    enforcement: "directives_repository (outbox_state_machine)"
 
 stories:
   - story_id: "US-DS-001"
@@ -231,6 +239,47 @@ compile_coordination:
       compile_outbox_failed_total{reason} metric (see deployment observability)
       to distinguish schema-error poison rows from other terminal failures.
     - "Direct API compile triggers also enqueue the same outbox (idempotent key)"
+  outbox_state_machine:
+    description: >
+      Formal state machine for compile_request rows. Every transition MUST be
+      atomic (single DB transaction: status change, worker_id, and timestamps)
+      and auditable (INV-DS-010).
+    states:
+      - state: "pending"
+        description: "Compile request enqueued with the directive revision; not yet claimed"
+        transitions:
+          - to: "in_progress"
+            trigger: "Worker lease claim (SELECT ... FOR UPDATE SKIP LOCKED)"
+          - to: "failed"
+            trigger: "Retry budget exhausted after transient failures (reconciliation)"
+      - state: "in_progress"
+        description: "Claimed by worker_id with lease_expires_at; heartbeat keeps lease alive"
+        transitions:
+          - to: "completed"
+            trigger: "CG-IR snapshot published and head_snapshot_hash advanced"
+          - to: "failed"
+            trigger: "Compile error classified as retriable (lease released or expiry)"
+          - to: "permanently_failed"
+            trigger: "Schema error / poison row (non-retriable)"
+      - state: "completed"
+        description: "Snapshot published and head pointer advanced"
+        transitions: []
+      - state: "failed"
+        description: "Retriable failure; eligible for requeue"
+        transitions:
+          - to: "pending"
+            trigger: "Retry after backoff (reconciliation), within retry budget"
+          - to: "permanently_failed"
+            trigger: "Retry budget exhausted (default 5 consecutive identical failures)"
+      - state: "permanently_failed"
+        description: "Schema-error poison row; requires manual intervention or corrective directive revision"
+        transitions: []
+    deduplication:
+      key: "(lineage_id, revision)"
+      behavior: >
+        Concurrent identical requests collapse to one row (upsert on the
+        natural key); a duplicate claim by a second worker is impossible via
+        SKIP LOCKED. CAS publish remains idempotent by content hash.
   claim_lease:
     description: >
       Multi-replica and multi-worker drain MUST claim rows transactionally so two
