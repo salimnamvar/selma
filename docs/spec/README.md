@@ -51,7 +51,7 @@ python scripts/check_design_alignment.py
 | [`rule_schema.json`](../schema/rule_schema.json) | Executable rule structure | 1.0.0 |
 | [`policy_doctrine.yaml`](../schema/policy_doctrine.yaml) | Guidance and reasoning structure | 1.0.0 |
 
-Design authority is **`docs/schema/`** only. Repository root `schema/` is a legacy/product path that may lag; see [`../schema/README.md`](../schema/README.md).
+Design SSoT is **`docs/schema/`**. Repository root `schema/` is a synced mirror for product/runtime references; keep both aligned — see [`../schema/README.md`](../schema/README.md).
 
 ## Contract File Structure
 

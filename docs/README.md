@@ -64,7 +64,7 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | :--- | :--- | :--- |
 | **Design standards** | [`standards/`](standards/README.md) | Checkable ID/ownership schema |
 | **Specification contracts** | [`spec/`](spec/README.md) | Normative behavior (`contracts/`) |
-| **Schemas** | [`schema/`](schema/) | Design SSoT for rule + policy structure (v1.0.0). Not the root `schema/` tree (legacy product corpus). |
+| **Schemas** | [`schema/`](schema/) | Design SSoT for rule + policy structure (v1.0.0). Root `schema/` is a synced mirror for runtime paths. |
 | **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Structural SSoT** — *what* peers exist and how they depend |
 | **State machines** | [`state/`](state/README.md) | FSMs and pipelines |
 | **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index |
@@ -91,7 +91,7 @@ Join key across all three: **C4 peer IDs** from [`standards/c4_registry.yaml`](s
 
 1. **`standards/`** — IDs, owners, version line (how we write design)
 2. **`spec/contracts/`** — what the system MUST do (behavior, locks, SoD, authz)
-3. **`docs/schema/`** — data shapes (design SSoT; root `schema/` may lag)
+3. **`docs/schema/`** — data shapes (SSoT; root `schema/` mirror for product/runtime)
 4. **`c4-model/`** — structural architecture (peers only)
 5. **`api/`** — HTTP surface (Redocly-valid)
 6. Behavior views (`state`, `sequence`, `activity`, `usecase`) — must not contradict 2–5

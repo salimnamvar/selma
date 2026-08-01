@@ -231,6 +231,27 @@ def main() -> int:
                         )
                         break
 
+    # --- docs/schema SSoT mirrored at repo root schema/ -----------------------
+    docs_schema = DOCS / "schema"
+    root_schema = ROOT / "schema"
+    for name in ("rule_schema.json", "policy_doctrine.yaml"):
+        dpath = docs_schema / name
+        rpath = root_schema / name
+        if not dpath.is_file():
+            errors.append(f"docs/schema/{name}: missing (design SSoT)")
+            continue
+        if not rpath.is_file():
+            errors.append(
+                f"schema/{name}: missing mirror of docs/schema/{name} "
+                f"(copy from docs/schema after edits)"
+            )
+            continue
+        if dpath.read_bytes() != rpath.read_bytes():
+            errors.append(
+                f"schema/{name}: out of sync with docs/schema/{name} "
+                f"(docs/schema is SSoT — copy to schema/ in the same change)"
+            )
+
     # --- API openapi version --------------------------------------------------
     openapi = API_DIR / "openapi.yaml"
     if openapi.exists():

@@ -15,10 +15,10 @@
 
 | Path | Role |
 | :--- | :--- |
-| **`docs/schema/`** (this dir) | Design contracts for Selma architecture / compile-inspect. Audit and implementation design work **MUST** use these files. |
-| **Repository root `schema/`** | Legacy / product-side copies (historically 8.2.4 lineage). May be **outdated** relative to design. Do **not** treat root `schema/` as the design SSoT; migrate or re-pin runtime tooling when product catch-up is intentional. |
+| **`docs/schema/`** (this dir) | **Single source of truth** for the latest rule + policy schema versions. Edit here first. |
+| **Repository root `schema/`** | **Mirror** for runtime / product paths (`pyproject.toml`, `directive/policy/*`). MUST stay byte-aligned with this directory after any design schema change. |
 
-`pyproject.toml` and some `directive/policy/*` files still point at root `schema/` for the product rule corpus — that is a separate migration, not a design authority statement.
+Workflow: change `docs/schema/` → copy to root `schema/` (or a future sync script) in the same commit. Never edit root `schema/` alone.
 
 ## Cross-layer binding
 
