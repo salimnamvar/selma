@@ -182,7 +182,11 @@ error_semantics:
     - "retryable field: true for transient errors (RateLimited, UpstreamTimeout, InternalError); false for all others"
     - "401 Unauthorized for authentication failures (no DenialAuditPort write)"
     - "403 CapabilityDenied / SoDDenied includes denial reason for audit"
-    - "429 RateLimited for per-actor rate limit exceeded (directive.modify)"
+    - >
+      429 RateLimited for per-actor rate limit exceeded on mutating directive
+      endpoints — both directive.modify and directive.create (INV-CA-004):
+      e.g. POST /directives returning 429 RateLimited before write lock when
+      the actor exceeds the 30/60s per-actor quota (mirrors INV-CA-004 exactly)
     - "429 edge_rejected: global edge admission limit exceeded (identity-independent, set below app-tier bounds; returned at the LB/edge WITHOUT DenialAuditPort write; per-actor 429 by contrast always writes a denial event)"
     - "No partial state mutation on any error"
     - "All capability/SoD denials produce audit log entry via DenialAuditPort"
