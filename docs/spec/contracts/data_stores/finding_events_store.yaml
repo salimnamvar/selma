@@ -172,8 +172,15 @@ hlc:
         - "HLC state MUST be durably advanced (fsync-batched) as events are appended; lossy in-memory-only counters are non-conformant"
 
 event_hash:
-  formula: "SHA-256(canonical_json(event_id ‖ payload ‖ prev_event_hash))"
-  notes: "Covers all event fields including logical_clock and payload; links to previous event for chain integrity"
+  formula: "SHA-256(canonical_json(event excluding event_hash and chain_hash fields))"
+  notes: >
+    The canonical JSON input MUST include every event field — event_id,
+    finding_id, event_type, timestamp, logical_clock (physical_time,
+    logical_counter, node_id), actor, payload, and prev_event_hash — so
+    mutation of any of them invalidates the hash. Excludes only event_hash
+    and chain_hash themselves. Canonicalization per INV-HB-002.
+  acceptance:
+    - "Mutation-resistance test (US-ES-001): altering any single field of a stored event MUST change its recomputed event_hash and break chain verification"
 
 chain_hash:
   formula: "SHA-256(event_hash ‖ prev_chain_hash)"
@@ -215,7 +222,10 @@ invariants:
     enforcement: "finding_events_store"
 
   - id: "INV-ES-002"
-    statement: "event_hash ensures integrity of all event fields"
+    statement: >
+      event_hash is SHA-256 over the canonical JSON of the event excluding
+      event_hash and chain_hash only; it MUST cover every other field
+      including logical_clock, timestamp, actor, finding_id, and event_type
     enforcement: "finding_events_store"
 
   - id: "INV-ES-003"
@@ -253,6 +263,7 @@ stories:
       - "Given any FSM transition. When an event is written. Then the event is immutable and has a valid event_hash."
       - "Given two events from the same node. When ordering is checked. Then the HLC tuple is strictly non-decreasing."
       - "Given wall clock regression. When hlc_send is called. Then logical_counter increments (monotonicity preserved)."
+      - "Given a stored event with one field mutated (e.g. actor or timestamp). When event_hash is recomputed. Then the recomputed hash differs and chain verification fails (mutation resistance)."
 
 append_concurrency:
   description: >
