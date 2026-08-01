@@ -76,6 +76,7 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 - Concurrent compilations allowed (shared read locks); directive mutations take exclusive write locks (writer-preference FIFO)
 - Policy doctrines are not loaded for evaluation
 - **v1 process model:** compile runs **in-process** with the Application container after durable directive writes (same C4 `application` container). Scale-out to a dedicated compile worker is a future deployment option and does not change C4 peer IDs
+- **Split compile/inspect deployables (DEP-001):** If/when compilation and inspection run in separate processes or images, both deployables MUST load the **same versioned** `conflicts_domain` library artifact (`ResolveConflict`) from a single release train. Forking private copies of conflict-resolution code is non-conformant (`INV-PR-002` / conflict determinism). Normative structural note: [`../c4-model/README.md`](../c4-model/README.md) "Not C4 peers"; package edges: [`../package/README.md`](../package/README.md)
 
 ### TLS and transport
 
