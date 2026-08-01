@@ -176,6 +176,7 @@ Application logs MUST include `lineage_id`, `revision`, `finding_id`, `event_id`
 5. Capability denials append via **DenialAuditPort** (see [`../c4-model/README.md`](../c4-model/README.md)); never skip audit on deny; rate-limit/aggregate per finding_events_store
 6. TLS on all production hops (see above); encryption at rest for all stores
 7. Offline `certification_tool` is not network-exposed as a product peer
+8. Production JWT revocation: deny-list and/or short-lived tokens per authentication.yaml
 
 ## Related Documents
 

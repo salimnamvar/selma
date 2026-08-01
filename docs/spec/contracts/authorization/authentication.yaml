@@ -45,12 +45,20 @@ token_lifecycle:
   issuance: "External IdP or platform identity service; Selma does not mint user passwords"
   validation: >
     api MUST verify signature (asymmetric preferred; JWKS from IdP), iss, aud,
-    exp (with ≤60s clock skew), and that the token is not on a local deny list
-    if revocation is configured.
+    exp (with ≤60s clock skew), and that the token is not on the production
+    deny-list (see revocation).
   refresh: "Client-driven via IdP; Selma does not issue refresh tokens"
   revocation: >
-    Optional deny-list or short-lived access tokens (≤1h recommended). On
-    revocation signal, subsequent requests with that jti/sub+iat window fail 401.
+    Production MUST implement at least one of: (1) short-lived access tokens
+    with a configured maximum lifetime, or (2) a deny-list (jti and/or
+    sub+iat window) checked on every authenticated request. Non-production
+    environments MAY omit deny-list when tokens are short-lived by policy.
+    On revocation signal, subsequent requests with that jti/sub+iat window
+    fail 401. Exact max lifetime and deny-list TTL are environment-owned
+    (not fixed in this contract); operators MUST document chosen bounds.
+  production_requirement: >
+    Relying solely on exp without a deny-list or short-lived token policy is
+    non-conformant for production deployments.
 
 capability_resolution:
   steps:
