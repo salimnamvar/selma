@@ -91,7 +91,7 @@ Join key across all three: **C4 peer IDs** from [`standards/c4_registry.yaml`](s
 
 1. **`standards/`** — IDs, owners, version line (how we write design)
 2. **`spec/contracts/`** — what the system MUST do (behavior, locks, SoD, authz)
-3. **`schema/`** — data shapes
+3. **`docs/schema/`** — data shapes (design SSoT; root `schema/` may lag)
 4. **`c4-model/`** — structural architecture (peers only)
 5. **`api/`** — HTTP surface (Redocly-valid)
 6. Behavior views (`state`, `sequence`, `activity`, `usecase`) — must not contradict 2–5
