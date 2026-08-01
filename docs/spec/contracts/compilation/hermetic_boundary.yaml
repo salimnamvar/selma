@@ -27,6 +27,23 @@ frozen_environment:
             type: "string"
           - field: "os_runtime_hash"
             type: "sha256"
+            description: >
+              Digest over OS image/runtime identity inputs used at compile time
+              (container image digest and/or uname + libc identity as documented
+              by the implementation). Opaque single field is allowed only when
+              its preimage inputs are listed in toolchain.runtime_preimage.
+          - field: "runtime_preimage"
+            type: "array of string"
+            description: "Explicit list of inputs folded into os_runtime_hash"
+          - field: "re2_engine_version"
+            type: "string"
+            description: "RE2 / regex engine version (AA-07 canary-aligned)"
+          - field: "json_canonicalization_lib"
+            type: "string"
+            description: "Library+version used for canonical JSON (hash inputs)"
+          - field: "hash_algorithm"
+            type: "string"
+            description: "Must be SHA-256 for design_contract_version 1.1.0"
       - field: "confidence_severity_cap_threshold"
         type: "number"
         default: 0.5
@@ -39,6 +56,17 @@ frozen_environment:
     frozen_env_hash = SHA-256(canonical_json(frozen_env minus frozen_env_hash field))
     The hash input is the frozen environment object with the frozen_env_hash key excluded.
     Implementations MUST NOT include frozen_env_hash in its own computation.
+    Missing required toolchain pins MUST fail compile_time_validation (HERM-001),
+    not be silently absorbed into an opaque os_runtime_hash alone.
+
+runtime_enforcement:
+  description: >
+    Hermeticity is a compile-time property of inputs and environment pins.
+    Runtime MUST also prevent network and ambient IO during hermetic compile.
+  rules:
+    - "Hermetic compile CPU work MUST run with network egress denied (sandbox, netns, or equivalent)"
+    - "Evaluators and compile stages MUST NOT perform network IO; AA-03/AA-07 validate purity"
+    - "Doctrine files MUST NOT be loaded at compile time (INV-CP-062)"
 
 hermeticity_rules:
   - id: "HERM-001"
