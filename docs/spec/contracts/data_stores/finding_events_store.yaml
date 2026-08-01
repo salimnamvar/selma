@@ -223,6 +223,15 @@ invariants:
     statement: "chain_hash forms a contiguous hash chain; deletion or reordering of events breaks the chain"
     enforcement: "finding_events_store"
 
+  - id: "INV-ES-007"
+    statement: >
+      The sole intended write path for finding lifecycle and SoD/capability denial
+      events is findings_application / FindingFsm (domain) via
+      finding_events_repository, plus api DenialAuditPort → finding_events_repository
+      for CapabilityDenied only. Direct store mutation bypassing FindingFsm for
+      FSM transitions is forbidden; chain_hash verification MUST detect unauthorized
+      stream edits
+    enforcement: "architectural_audit + finding_events_store"
 
 stories:
   - story_id: "US-ES-001"
