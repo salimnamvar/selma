@@ -34,9 +34,11 @@ jwt_claims:
       type: "array of string"
       description: >
         Explicit capability IDs from authorization.capabilities. When present,
-        the api gate uses this set (intersected with any server-side role
-        expansion). When absent, capabilities are resolved from roles via
-        role_matrix.yaml.
+        the api gate validates each claimed ID against the server-side
+        capability catalog (capabilities.yaml) and the actor's role-expanded
+        set; unrecognized or retired IDs are dropped (never honored) and the
+        event is logged as audit telemetry. When absent, capabilities are
+        resolved from roles via role_matrix.yaml.
     - claim: "roles"
       type: "array of string"
       description: "Role names expanded via role_matrix.yaml when capabilities claim is absent"
@@ -63,7 +65,12 @@ token_lifecycle:
 capability_resolution:
   steps:
     - "Authenticate JWT → actor_id (sub)"
-    - "If capabilities claim present: use as effective set"
+    - >
+      If capabilities claim present: intersect with the server-side capability
+      catalog (capabilities.yaml) and role-expanded capability set
+      (role_matrix.yaml). Claimed IDs absent from the catalog, retired, or
+      inconsistent with the actor's assigned role are DROPPED — never
+      honored — and recorded as audit telemetry (capability_claim_unknown_total).
     - "Else expand roles claim via role_matrix.yaml → effective capability set"
     - "Intersect with any environment deny-list (e.g. retired capabilities)"
     - "Pass effective set to capability enforcement gates (capabilities.yaml)"
@@ -89,6 +96,12 @@ invariants:
   - id: "INV-AUTH-003"
     statement: "Tokens without verifiable signature MUST be rejected (401)"
     enforcement: "api"
+  - id: "INV-AUTH-004"
+    statement: >
+      Capability claims MUST be intersected with the server-side capability
+      catalog and role expansion; unrecognized, retired, or role-inconsistent
+      capability IDs MUST NOT be honored and MUST be logged as audit telemetry
+    enforcement: "api + shared CapabilityEnforcer module"
 
 stories:
   - story_id: "US-AUTH-001"
@@ -99,3 +112,4 @@ stories:
       - "Given a missing Authorization header. When any protected route is called. Then 401 is returned and no use case runs."
       - "Given a valid JWT lacking directive.modify. When PUT /directives/{id} is called. Then 403 is returned and DenialAuditPort records CapabilityDenied."
       - "Given roles claim without capabilities claim. When authentication succeeds. Then capabilities are expanded from role_matrix.yaml."
+      - "Given a JWT claiming a capability ID absent from the server-side catalog. When authentication succeeds. Then the claimed ID is dropped, not honored, and audit telemetry is recorded."
