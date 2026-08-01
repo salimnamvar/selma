@@ -309,6 +309,15 @@ guidance_pinning:
     - "GetFindingGuidance resolves doctrine by that ref only — never latest revision of the lineage"
     - "If doctrine document is missing (retention edge case), return 404 GuidanceUnavailable with explicit error — do not substitute"
 
+replay_validation:
+  description: "How historical event streams are validated against the current FSM"
+  rules:
+    - >
+      Replay MUST accept legacy Dismissed→Closed and Superseded→Closed events
+      recorded under older contracts (states.yaml legacy_event_migration).
+    - "Replay MUST reject new emissions of those transitions under design_contract_version 1.1.0"
+    - "Hash-chain integrity checks still apply to legacy events (event_hash / prev_event_hash)"
+
 denied_actions_view:
   description: >
     SOC reconciliation view over the two-channel denial model (INV-ES-007).

@@ -66,6 +66,12 @@ Waived --> Closed : <b>FindingClosed</b>\nactor: System\ncommand: auto-close\nst
 
 ' Terminal business states → Final pseudostate (STM-015 / STM-024)
 Dismissed --> [*] : <b>Finalized</b>\nactor: System
+note right of Dismissed
+  Legacy streams may contain
+  Dismissed→Closed (accepted on
+  replay only; never newly emitted).
+  See states.yaml legacy_event_migration.
+end note
 Closed --> [*] : <b>Finalized</b>\nactor: System
 Superseded --> [*] : <b>Finalized</b>\nactor: System
 

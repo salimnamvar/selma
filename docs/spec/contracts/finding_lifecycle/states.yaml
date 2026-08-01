@@ -132,6 +132,25 @@ states:
       Terminal sink for Verified and Waived paths only. Dismissed and Superseded
       are independently terminal (they do not transit through Closed).
 
+legacy_event_migration:
+  description: >
+    Historical event streams may contain Dismissed→Closed or Superseded→Closed
+    transitions from earlier design revisions. Current design_contract_version
+    1.1.0 does not emit those transitions (Dismissed and Superseded are terminal).
+  rules:
+    - >
+      On replay/validation of historical streams: events with from_state in
+      {Dismissed, Superseded} and to_state=Closed MUST be accepted as valid
+      legacy records (do not fail certification replay tests solely for this).
+    - >
+      New emissions MUST NEVER produce Dismissed→Closed or Superseded→Closed.
+      FindingFsm and API paths MUST treat Dismissed and Superseded as terminal.
+    - >
+      Projection rebuild MAY map a legacy Dismissed→Closed chain head to
+      terminal state Dismissed (or Closed with disposition=invalid) for UI
+      consistency; the raw event stream remains immutable.
+    - "Implementations MUST document which projection mapping they use in runbooks"
+
 invariants:
   - id: "INV-FL-001"
     statement: "A finding MUST be in exactly one state at any time"
