@@ -223,6 +223,7 @@ invariants:
     statement: "chain_hash forms a contiguous hash chain; deletion or reordering of events breaks the chain"
     enforcement: "finding_events_store"
 
+
 stories:
   - story_id: "US-ES-001"
     as: "event_adapter"
@@ -243,6 +244,27 @@ append_concurrency:
     - "Alternatively: optimistic append with expected_chain_head; on mismatch retry once (HTTP 409 to client if exhausted)"
     - "Cross-finding appends MAY proceed in parallel"
     - "CapabilityDenied events without finding_id use a global denial stream key or actor-scoped chain"
+  denial_audit_amplification:
+    description: >
+      CapabilityDenied / SoDDenied appends share finding_events_store. Unbounded
+      one-event-per-denial writes can contend with legitimate finding lifecycle
+      appends (denial-audit write amplification).
+    rules:
+      - >
+        api / DenialAuditPort MUST rate-limit or aggregate denial audit writes
+        per (actor_id, capability) within a configurable time window rather than
+        requiring one durable chain append per rejected request under flood.
+      - >
+        Aggregation MAY collapse N identical denials in the window into one
+        event with payload.count and first/last timestamps; clients still receive
+        403 per request.
+      - >
+        Rate-limit / aggregation parameters are environment-owned (no universal
+        numeric default in this contract); production MUST configure a bound and
+        expose denial-append rate metrics (see deployment observability).
+      - >
+        Authentication failures (401) MUST NOT write CapabilityDenied events
+        (INV-AUTH path); only authenticated capability/SoD denials use DenialAuditPort.
 
 idempotency:
   description: "Duplicate client retries MUST NOT double-append equivalent domain events"
