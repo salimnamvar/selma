@@ -91,6 +91,8 @@ pipeline:
       - "Apply conflict resolution mapping"
       - "Compute node_hash (dual hash: semantic_hash + presentation_hash)"
       - "Compute edge_hash for each dependency"
+      - "Validate frozen_environment pins (HERM-008): python_hash_seed, locale, datetime_wall_clock_policy, ordered_collection_policy"
+      - "Assert ordered iteration for all collections that participate in hash computation (sorted keys / sorted set members)"
       - "Pin frozen environment hash"
       - "Compute cg_ir_snapshot_hash"
       - "Store in content-addressed store"
@@ -105,6 +107,12 @@ pipeline:
         statement: "compiled_at MUST NOT be included in snapshot hash"
       - id: "INV-CP-034"
         statement: "DAG MUST be acyclic (cycle detection at compile time)"
+      - id: "INV-CP-035"
+        statement: >
+          Compile path MUST pin python_hash_seed and locale, forbid wall-clock
+          reads (datetime_wall_clock_policy=forbidden), and use ordered
+          collection iteration for every value folded into cg_ir_snapshot_hash
+          (extends INV-CP-032; see hermetic_boundary HERM-008)
     error_handling: "abort_with_detailed_reason"
     story_refs: ["US-CP-001"]
 

@@ -44,6 +44,33 @@ frozen_environment:
           - field: "hash_algorithm"
             type: "string"
             description: "Must be SHA-256 for design_contract_version 1.1.0"
+      - field: "python_hash_seed"
+        type: "integer"
+        description: >
+          Pin Python HASHSEED to a fixed value (0 or a deterministic constant)
+          to guarantee set/dict iteration order across processes and runs.
+          Absence or null means uncontrolled hash randomization (non-conformant).
+      - field: "locale"
+        type: "string"
+        default: "C.UTF-8"
+        description: >
+          Locale pinned to C.UTF-8 (or equivalent POSIX locale) to prevent
+          locale-dependent string comparisons and formatting in the compile path.
+      - field: "datetime_wall_clock_policy"
+        type: "string"
+        enum: ["forbidden", "pinned"]
+        default: "forbidden"
+        description: >
+          Compile path MUST NOT call datetime.now() or read wall clock.
+          Pinned mode allows a single fixed timestamp injected at compile start.
+      - field: "ordered_collection_policy"
+        type: "string"
+        enum: ["sorted", "insertion_order"]
+        default: "sorted"
+        description: >
+          Compile path MUST use sorted iteration for all set/dict values that
+          participate in hash computation (INV-CP-032 already requires sorted
+          depends_on). This policy extends the guarantee to all collections.
       - field: "confidence_severity_cap_threshold"
         type: "number"
         default: 0.5
@@ -93,6 +120,14 @@ hermeticity_rules:
     statement: "Given identical directive graph content, engine version, and frozen environment, the snapshot hash is identical regardless of wall clock time"
     enforcement: "determinism_guarantee"
 
+  - id: "HERM-008"
+    statement: >
+      frozen_environment MUST pin python_hash_seed (non-null integer),
+      locale (C.UTF-8 or equivalent), datetime_wall_clock_policy (forbidden),
+      and ordered_collection_policy (sorted). Absence of any required pin
+      is non-conformant and MUST fail compile_time_validation.
+    enforcement: "compile_time_validation (AA-08)"
+
 version_incompatibility:
   description: "How version mismatches are handled"
   rules:
@@ -141,6 +176,21 @@ invariants:
   - id: "INV-HB-004"
     statement: "confidence_severity_cap_threshold defaults to 0.5 if not specified"
     enforcement: "frozen_environment_schema"
+
+  - id: "INV-HB-005"
+    statement: >
+      Compile path MUST NOT rely on unordered set/dict iteration for any
+      value that participates in hash computation; implementations MUST
+      sort keys/members (or use insertion-order containers with a fixed
+      construction order) under ordered_collection_policy
+    enforcement: "compile_time_validation (HERM-008)"
+
+  - id: "INV-HB-006"
+    statement: >
+      runtime_preimage MUST enumerate every input folded into os_runtime_hash;
+      an opaque os_runtime_hash without an exhaustive preimage list is
+      non-conformant (AA-08)
+    enforcement: "compile_time_validation (AA-08)"
 
 stories:
   - story_id: "US-HB-001"
