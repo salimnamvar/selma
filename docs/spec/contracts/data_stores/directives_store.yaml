@@ -170,8 +170,29 @@ compile_coordination:
       MAY poll /directives/{lineage_id}/compilations for status.
     - >
       Outbox rows transition pending → in_progress → completed | failed. Failed
-      rows are retriable; reconciliation job requeues stuck pending/in_progress.
+      rows are retriable; reconciliation job requeues stuck pending/in_progress
+      only after lease expiry (see claim_lease).
     - "Direct API compile triggers also enqueue the same outbox (idempotent key)"
+  claim_lease:
+    description: >
+      Multi-replica and multi-worker drain MUST claim rows transactionally so two
+      workers never process the same (lineage_id, revision) concurrently.
+    rules:
+      - >
+        Claim MUST use a lease: SELECT … FOR UPDATE SKIP LOCKED (or equivalent)
+        that atomically sets status=in_progress, worker_id, lease_expires_at.
+      - >
+        Only the lease holder may transition the row to completed or failed.
+        Other workers skip locked rows.
+      - >
+        Stuck in_progress rows (lease_expires_at < now) MAY be reclaimed by
+        reconciliation; completed rows MUST NOT be re-enqueued.
+      - >
+        Manual API compile triggers MUST upsert the same outbox natural key
+        (lineage_id, revision) rather than insert a duplicate pending row.
+      - >
+        CAS publish remains idempotent by content hash; lease correctness is
+        about compute waste and crash recovery, not snapshot identity.
   consistency: "eventual between directive head and compiled snapshot; bounded by compile RTO"
 
 lock_timing:
