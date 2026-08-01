@@ -148,6 +148,39 @@ invariants:
     statement: "read_policy_doctrine MUST NOT be used for evaluation, inspection, or finding FSM transitions"
     enforcement: "certification_tool (AA-02)"
 
+retention_policy:
+  description: >
+    Directive revisions are the system of record for executable + doctrine
+    documents. Unbounded growth is operational; aggressive GC breaks guidance
+    replay when findings pin paired_policy_ref to a specific revision.
+  rules:
+    - artifact: "Directive head row (Directives)"
+      retention: "Indefinite while lineage exists"
+      pruning: "Never prune active/draft heads; retired lineages kept for audit"
+    - artifact: "DirectiveRevisions referenced by any finding paired_policy_ref"
+      retention: "Indefinite"
+      pruning: >
+        MUST NOT be garbage-collected while any finding_events FindingCreated
+        (or projection) still references that paired_policy_ref. Guidance
+        resolution depends on the pinned revision (see finding_events_store
+        guidance_resolution and c4-model guidance temporal integrity).
+    - artifact: "DirectiveRevisions not referenced by any finding or outbox"
+      retention: "Configurable (environment-owned; default retain ≥ 7 years or match audit policy)"
+      pruning: >
+        MAY be pruned only after: (1) no finding references the revision's
+        paired_policy_ref, (2) no pending/in_progress compile_request for that
+        revision, and (3) operator policy allows. Pruning MUST be offline/admin
+        and audit-logged.
+    - artifact: "CompileRequests outbox completed rows"
+      retention: "Configurable (default: 90 days after completed)"
+      pruning: "Safe to prune completed/failed history after retention; permanently_failed MAY be retained longer for ops forensics"
+  invariants:
+    - id: "INV-DS-007"
+      statement: >
+        A directive revision whose paired_policy_ref is referenced by any
+        finding MUST remain readable for guidance_only resolution indefinitely
+      enforcement: "retention_policy + guidance_resolution"
+
 stories:
   - story_id: "US-DS-001"
     as: "directives_repository"

@@ -162,6 +162,14 @@ invariants:
     statement: "Confidence below threshold caps severity at informational"
     enforcement: "aggregate_stage"
 
+  - id: "INV-FC-007"
+    statement: >
+      FindingCreated MUST pin paired_policy_ref to the doctrine revision used
+      at evaluation/create time. Guidance replay requires that revision to
+      remain available under directives_store retention_policy (INV-DS-007);
+      implementations MUST NOT resolve "latest doctrine" for historical findings
+    enforcement: "finding_events_store + directives_store retention_policy"
+
 stories:
   - story_id: "US-FC-001"
     as: "inspections_application"

@@ -95,12 +95,18 @@ lineage_head_index:
     - "CAS blob identity remains content-addressed; this index is the only mutable head map"
 
 retention_policy:
-  - artifact: "CG-IR Snapshots"
-    retention: "Indefinite (immutable)"
-    pruning: "Never pruned"
-  - artifact: "Node Objects"
-    retention: "Indefinite (shared)"
-    pruning: "Never pruned"
+  description: >
+    CG-IR snapshots are independent of directive revision GC. Directive
+    revision retention (directives_store retention_policy) protects
+    paired_policy_ref guidance replay, not snapshot identity. Snapshots
+    referenced by inspection history remain available via CAS hash forever.
+  artifacts:
+    - artifact: "CG-IR Snapshots"
+      retention: "Indefinite (immutable)"
+      pruning: "Never pruned"
+    - artifact: "Node Objects"
+      retention: "Indefinite (shared)"
+      pruning: "Never pruned"
 
 invariants:
   - id: "INV-CS-001"

@@ -52,10 +52,12 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 
 | C4 store | Storage type | Scaling |
 |:---------|:-------------|:--------|
-| Directives | PostgreSQL | Vertical + read replicas |
-| Compiled Rules | Filesystem or S3 CAS | Horizontal object store |
-| Finding Events | PostgreSQL (append-only table) | Partition by time |
+| Directives | PostgreSQL | Vertical + read replicas; revisions referenced by `paired_policy_ref` retained indefinitely (INV-DS-007) |
+| Compiled Rules | Filesystem or S3 CAS | Horizontal object store; snapshots indefinite |
+| Finding Events | PostgreSQL (append-only table) | Partition by time; events indefinite |
 | Artifacts | S3-compatible object store | Horizontal |
+
+**Directive revision retention:** Unreferenced historical revisions MAY be GC'd under environment policy; any revision still referenced by a finding's `paired_policy_ref` MUST be retained indefinitely so guidance resolution remains valid. See `directives_store.yaml` `retention_policy`.
 
 **Note:** Finding Events uses PostgreSQL with append-only semantics. This provides:
 - Consistent technology stack with Directives
