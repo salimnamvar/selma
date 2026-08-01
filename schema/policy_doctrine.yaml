@@ -3,71 +3,42 @@
 # Contains NO machine-executable logic. Priority hierarchy and conflict
 # resolution are DECLARATIVE DESCRIPTIONS of governance intent, not
 # executable algorithms. The machine implementation lives in the
-# compilation_application, not here.
+# Compilation Engine, not here.
 #
-# NORMATIVE BEHAVIORAL SOURCE: docs/spec/contracts/
+# NORMATIVE SOURCE: SPECIFICATION.md 8.2.4
 # This file is a governance intent layer, not a structural or behavioral source.
-#
-# BREAKING CHANGE: Version 1.0.0 introduces universal vocabulary abstraction.
-# All policy text MUST use canonical vocabulary terms, never domain-specific terms.
-# Migration required from 8.2.4: domain-specific terms must be moved to
-# vocabulary.domain_mappings.
 
 doctrine:
   name: universal-policy-doctrine
-  version: "1.0.0"
+  version: "8.2.4"
   description: >
-    Policy doctrine schema for the paired guidance document of each directive.
-
-    RUNTIME ROLE:
-    - READ for guidance AFTER a finding is created by the executable rule
-    - READ by humans to understand why a violation matters
-    - READ by AI agents to generate remediation suggestions
-    - READ by compliance reviewers for governance context
-
-    NOT USED FOR:
-    - Determining whether an artifact violates a rule (that's the JSON rule's job)
-    - Evaluation, inspection, or finding FSM transitions
-
-    STRUCTURE:
-    - vocabulary: Maps abstract concepts to domain-specific terms (enables AI
-      agents to understand the policy regardless of the target language/domain)
-    - directive: The normative statement (deontic + subject + predicate)
-    - guidance: Reasoning, remediation steps, and multi-domain examples
-  spec_version: "1.0.0"
-  schema_version: "1.0.0"
+    Defines how to structure and write a rule document.
+    Describes governance intent, not executable logic.
+  spec_version: "8.2.4"
+  schema_version: "8.2.4"
   schema_id: "universal-rule-schema"
 
 # ─── CROSS-LAYER BINDING RULE ──────────────────────────────────
 # This policy is the governance intent layer.
-# docs/spec/contracts/ is the normative behavioral source.
-# rule_schema.json is the structural projection of contract invariants.
+# SPECIFICATION.md is the normative behavioral source.
+# rule_schema.json is the structural projection of spec invariants.
 # Policy MUST NOT contain elements that contradict spec invariants.
 cross_layer_binding:
-  normative_source: "docs/spec/contracts/"
+  normative_source: "SPECIFICATION.md"
   policy_purpose: "Governance intent description"
   schema_purpose: "Structural projection of spec invariants"
   enforcement: "Governance intent is enforced indirectly: compile-time validators check schema field legality against spec invariants"
   conflict_resolution_binding:
     policy_layer: "Declares computed-factor intent (priority, specificity, recency). No override fields."
     schema_layer: "Optional conflict_resolution field is structural override data only."
-    spec_layer: "Normative resolve_conflict algorithm defined in docs/spec/contracts/conflict/"
+    spec_layer: "Normative resolve_conflict algorithm defined in SPECIFICATION.md §2.15"
     precedence: "explicit override → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
-  runtime_role: >
-    Instance documents conforming to this schema are stored in directives
-    alongside the paired executable rule document (dual-document Directive).
-    They ARE read at runtime ONLY AFTER evaluation produces a finding, via
-    directives_repository (DirectiveRepository.readPolicyDoctrine) and
-    paired_policy_ref. They are NOT used for evaluation, inspection, or FSM
-    transitions. No separate filesystem PolicyDoctrineReader. Policy influences
-    evaluation only indirectly: authors use it when writing directives, and
-    compile-time validators check pairing/version legality — never by
-    interpreting policy prose as executable logic.
-  storage: >
-    System of record: directives_store (PostgreSQL), co-versioned with
-    executable_document under the same lineage/execution revision.
-    Each doctrine instance MUST carry a revision identifier co-versioned with
-    the paired executable revision so paired_policy_ref can pin guidance.
+  runtime_prohibition: >
+    This file MUST NOT be read during inspection, evaluation, finding FSM
+    transitions, or conflict resolution at runtime. Policy influences execution
+    only indirectly: authors use it when writing directives, and compile-time
+    validators check schema field legality against spec — never by interpreting
+    policy prose as executable logic.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
@@ -100,39 +71,29 @@ identity_resolution:
       because governance processes (amendments, sanctions, reviews) depend
       on stable identity references. Implementation mapping to
       rule.lineage_id and compile-time binding details are defined in
-      docs/spec/contracts/directive/identity.yaml.
-  uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z]{2,5}-\\d{3}[A-Z]?$"
-  taxonomy_prefixes:
-    GOV: "Cross-cutting governance"
-    COD: "Coding rules"
-    SEC: "Security rules"
-    INF: "Infrastructure rules"
-    AIG: "AI governance rules"
-    PROC: "Process rules"
-    DAT: "Data governance rules"
-    ACC: "Access control rules"
-    DOC: "Documentation rules"
+      SPECIFICATION.md §2.3.
+  uniqueness: "Lineage IDs must be unique within a domain. Pattern: ^[A-Z][A-Z0-9]+-[0-9]+$"
   lifecycle_reference: >
     Identity lifecycle operations (fork, merge, split) are defined in
-    docs/spec/contracts/directive/identity.yaml and encoded in rule_schema.json lineage field.
+    SPECIFICATION.md Section 2.2 and encoded in rule_schema.json lineage field.
     This policy describes governance intent for when to use each operation.
 
 # ─── IDENTITY LIFECYCLE INTENT ──────────────────────────────────
 # Describes WHEN to use each lifecycle operation. Implementation details
-# are in docs/spec/contracts/directive/ and rule_schema.json.
+# are in SPECIFICATION.md and rule_schema.json.
 lifecycle_definition:
-  revision: "Use when changing description, parameters, scope, or detection within same semantic intent."
+  revision: "Use when changing description, parameters, scope, or evaluator within same semantic intent."
   fork: "Use when one directive must become two distinct directives with separate semantic intent."
   merge: >
     Use when two directives combine into one with unified semantic intent.
     The governing body intends that the lexicographically smaller parent
-    Machine ID becomes the merged lineage root (see docs/spec/contracts/directive/identity.yaml).
+    Machine ID becomes the merged lineage root (see SPECIFICATION.md §2.2.2).
     NOTE: The lexicographic minimum approach is deterministic but
     semantically lossy — e.g. merging PAY-800 and AUTH-001 produces
     AUTH-001 as root, which loses the PAY-800 provenance. A future
     MERGE-NN namespace (e.g. MGR-18) could preserve provenance explicitly.
     Current approach is accepted with mandatory mitigations per
-    docs/spec/contracts/directive/identity.yaml (provenance surfacing, parent_lineage_ids
+    SPECIFICATION.md §2.2.2 (provenance surfacing, parent_lineage_ids
     display, non-surviving parent tracing).
   split: "Use when one directive restructured into multiple independent directives."
   rename: "Use when display name changes but semantic intent is unchanged."
@@ -140,463 +101,39 @@ lifecycle_definition:
   dag_intent: >
     Lineage ancestry MUST form a directed acyclic graph. Cycles and excessive
     depth (>64 operations) are prohibited. Implementation invariants are
-    defined in docs/spec/contracts/directive/identity.yaml.
-
-# ─── VOCABULARY ─────────────────────────────────────────────────
-# Domain vocabulary makes this policy applicable across languages and domains.
-# Each term has a canonical (abstract) name and optional domain-specific mappings.
-# Policy text MUST use canonical names, never domain-specific terms directly.
-vocabulary:
-  description: >
-    Domain vocabulary makes this policy applicable across languages and domains.
-    Each term has a canonical (abstract) name and optional domain-specific mappings.
-    Policy text MUST use canonical names, never domain-specific terms directly.
-  terms:
-    - canonical_name: "operation"
-      definition: "A discrete unit of executable behavior that transforms inputs to outputs or produces side effects"
-      domain_mappings:
-        - domain: python
-          local_term: "function"
-          local_notes: "Also includes methods, coroutines, and generators"
-        - domain: javascript
-          local_term: "function"
-          local_notes: "Includes arrow functions, async functions, and methods"
-        - domain: typescript
-          local_term: "function"
-          local_notes: "Includes arrow functions, async functions, methods, and typed overloads"
-        - domain: rust
-          local_term: "fn"
-          local_notes: "Includes associated functions and closures"
-        - domain: go
-          local_term: "func"
-          local_notes: "Includes methods with receiver parameters"
-        - domain: java
-          local_term: "method"
-          local_notes: "Includes constructors and static methods"
-        - domain: csharp
-          local_term: "method"
-          local_notes: "Includes constructors, extension methods, and local functions"
-        - domain: terraform
-          local_term: "resource block"
-          local_notes: "Also includes data sources and module calls"
-        - domain: kubernetes
-          local_term: "controller reconciliation"
-          local_notes: "The control loop operation that reconciles desired state"
-        - domain: workflow
-          local_term: "step"
-          local_notes: "A discrete step in a workflow or pipeline"
-
-    - canonical_name: "component"
-      definition: "A cohesive assembly of operations and state that provides a defined capability"
-      domain_mappings:
-        - domain: python
-          local_term: "module"
-          local_notes: "A .py file or package containing related operations"
-        - domain: javascript
-          local_term: "module"
-          local_notes: "An ES module or CommonJS module"
-        - domain: rust
-          local_term: "crate"
-          local_notes: "A compilation unit containing modules"
-        - domain: go
-          local_term: "package"
-          local_notes: "A Go package providing related functionality"
-        - domain: java
-          local_term: "class"
-          local_notes: "A class or interface providing cohesive behavior"
-        - domain: kubernetes
-          local_term: "controller"
-          local_notes: "A controller or operator that manages resources"
-        - domain: terraform
-          local_term: "module"
-          local_notes: "A Terraform module encapsulating resources"
-
-    - canonical_name: "failure-signal"
-      definition: "An indication that an operation could not complete its intended purpose"
-      domain_mappings:
-        - domain: python
-          local_term: "exception"
-          local_notes: "Raised via 'raise' statement; includes Exception hierarchy"
-        - domain: javascript
-          local_term: "Error"
-          local_notes: "Thrown via 'throw' statement; includes Error hierarchy"
-        - domain: rust
-          local_term: "Result::Err"
-          local_notes: "Returned via Result type; also panic! for unrecoverable errors"
-        - domain: go
-          local_term: "error"
-          local_notes: "Returned as second value from operations; also panic/recover"
-        - domain: java
-          local_term: "Exception"
-          local_notes: "Thrown via 'throw'; includes checked and unchecked exceptions"
-        - domain: csharp
-          local_term: "Exception"
-          local_notes: "Thrown via 'throw'; includes structured exception handling"
-
-    - canonical_name: "structured-output"
-      definition: "A deterministic, machine-parseable result that encodes success or failure with optional data"
-      domain_mappings:
-        - domain: python
-          local_term: "Result"
-          local_notes: "Custom Result type or dataclass encoding success/failure"
-        - domain: rust
-          local_term: "Result<T, E>"
-          local_notes: "Standard library Result type for error handling"
-        - domain: go
-          local_term: "error interface"
-          local_notes: "The error interface combined with return values"
-
-    - canonical_name: "resource-handle"
-      definition: "A reference to an external resource that requires explicit lifecycle management"
-      domain_mappings:
-        - domain: python
-          local_term: "context manager"
-          local_notes: "Objects implementing __enter__/__exit__ protocol"
-        - domain: rust
-          local_term: "RAII guard"
-          local_notes: "Types implementing Drop trait for automatic cleanup"
-        - domain: java
-          local_term: "AutoCloseable"
-          local_notes: "Types implementing AutoCloseable for try-with-resources"
-        - domain: go
-          local_term: "io.Closer"
-          local_notes: "Types implementing Closer interface for defer-based cleanup"
-
-    - canonical_name: "configuration-artifact"
-      definition: "A file or structure that defines system behavior without containing executable logic"
-      domain_mappings:
-        - domain: terraform
-          local_term: "HCL configuration"
-          local_notes: "Terraform .tf files defining infrastructure"
-        - domain: kubernetes
-          local_term: "manifest"
-          local_notes: "YAML/JSON resource definitions"
-        - domain: yaml-config
-          local_term: "YAML configuration"
-          local_notes: "YAML files defining application or infrastructure settings"
-        - domain: json-config
-          local_term: "JSON configuration"
-          local_notes: "JSON files defining application settings"
-
-    - canonical_name: "control-flow-exit"
-      definition: "A point where execution leaves the normal sequential flow of an operation"
-      domain_mappings:
-        - domain: python
-          local_term: "return statement"
-          local_notes: "Also includes yield, raise, and sys.exit()"
-        - domain: javascript
-          local_term: "return statement"
-          local_notes: "Also includes throw, break, continue"
-        - domain: rust
-          local_term: "return expression"
-          local_notes: "Also includes ?, break, continue, panic!"
-        - domain: go
-          local_term: "return statement"
-          local_notes: "Also includes panic, os.Exit"
-
-    - canonical_name: "state-mutation"
-      definition: "A change to the observable state of a component, resource, or data structure"
-      domain_mappings:
-        - domain: python
-          local_term: "assignment"
-          local_notes: "Variable assignment, attribute mutation, collection modification"
-        - domain: rust
-          local_term: "mutable borrow"
-          local_notes: "Requires &mut reference; enforced at compile time"
-        - domain: functional
-          local_term: "side effect"
-          local_notes: "Discouraged in pure functional contexts; use monadic patterns"
-
-    - canonical_name: "artifact"
-      definition: "A discrete unit of work product that can be inspected, validated, or governed"
-      domain_mappings:
-        - domain: coding
-          local_term: "source file"
-          local_notes: "A file containing source code"
-        - domain: infrastructure
-          local_term: "infrastructure definition"
-          local_notes: "Files defining infrastructure (Terraform, CloudFormation, etc.)"
-        - domain: documentation
-          local_term: "document"
-          local_notes: "A file containing documentation, specifications, or policies"
-        - domain: ai-governance
-          local_term: "prompt template"
-          local_notes: "A template or configuration for AI model interactions"
-
-# ─── DIRECTIVE (NORMATIVE STATEMENT) ────────────────────────────
-# The normative statement — mirrors the executable rule in human-readable form.
-# This is the core governance claim that humans and AI agents reason about.
-# Each directive in this doctrine MUST use canonical vocabulary terms.
-directive:
-  description: >
-    The normative statement — mirrors the executable rule but in human-readable form.
-    This is the core governance claim that humans and AI agents reason about.
-    Each directive MUST use canonical vocabulary terms, not domain-specific terms.
-  structure:
-    deontic:
-      type: string
-      enum: [obligation, prohibition, permission, recommendation]
-      description: "Must match the paired executable rule's deontic field exactly"
-    subject:
-      type: string
-      description: >
-        What the rule governs — MUST use a canonical vocabulary term,
-        not a domain-specific term. For example: use 'operation', not an implementation-specific term.
-    predicate:
-      type: string
-      description: >
-        What must/must not be true — the normative claim. Uses canonical vocabulary.
-    context_conditions:
-      type: string
-      description: >
-        Conditions under which the directive applies. MUST use canonical vocabulary
-        terms and universal pattern categories, not project-specific lists.
-    exclusions:
-      description: "Universal exclusions using pattern categories"
-      structure:
-        pattern_category:
-          type: string
-          enum:
-            - protocol-implementation
-            - entry-point
-            - generated-code
-            - test-infrastructure
-            - interoperability-bridge
-            - language-pragma
-            - framework-convention
-        description: "What this exclusion covers in universal terms"
-        rationale: "Why this exclusion exists — important for AI agents to avoid suggesting fixes for excluded code"
-
-# ─── GUIDANCE (RUNTIME VALUE) ────────────────────────────────────
-# This section is the PRIMARY reason policy doctrine is read at runtime.
-# It provides the intelligence that turns a raw finding into actionable guidance.
-guidance:
-  description: >
-    This section is the PRIMARY reason policy doctrine is read at runtime.
-    It provides the intelligence that turns a raw finding into actionable guidance.
-
-    Consumers:
-    - CLI/TUI: Renders reasoning + remediation + relevant examples for the user
-    - AI Agents: Uses reasoning + domain_examples to generate automated fixes
-    - Compliance UI: Shows reasoning + principles for audit documentation
-  structure:
-    reasoning:
-      type: string
-      description: >
-        WHY this directive exists and WHY violations matter. This is the
-        governance rationale that helps humans and AI agents understand the
-        importance of compliance. Should reference universal principles.
-
-    remediation_strategy:
-      type: string
-      description: >
-        HOW to fix violations in abstract terms. Uses canonical vocabulary.
-        AI agents combine this with domain_examples to generate concrete fixes.
-
-    remediation_steps:
-      description: >
-        Ordered steps for remediation. AI agents can execute these step-by-step.
-      structure:
-        step_number:
-          type: integer
-        action:
-          type: string
-          description: "What to do — uses canonical vocabulary"
-        rationale:
-          type: string
-          description: "Why this step is necessary"
-        verification:
-          type: string
-          description: "How to verify this step was done correctly"
-
-    universal_description:
-      type: string
-      description: >
-        Language/domain-agnostic description of what compliant artifacts look like.
-        AI agents use this as the target state when generating fixes.
-
-    domain_examples:
-      description: >
-        Examples mapped to specific domains/languages. AI agents select the
-        relevant examples based on the target artifact's language/domain.
-        This is how one universal policy provides accurate guidance for 10+ languages.
-      structure:
-        domain:
-          type: string
-          description: "Target domain (coding, security, infrastructure, etc.)"
-        language:
-          type: string
-          description: "Specific language if domain is coding (e.g., python, rust)"
-        compliant_behavior:
-          type: string
-          description: >
-            What compliant artifacts look like in this domain/language.
-            Uses domain_mappings from vocabulary to translate canonical concepts.
-        non_compliant_behavior:
-          type: string
-          description: >
-            What non-compliant artifacts look like in this domain/language.
-            AI agents use this to recognize the violation pattern.
-        notes:
-          type: string
-          description: "Domain-specific nuances for AI agents"
-        compliant_example:
-          type: string
-          description: "Actual code/config example — for human reading and AI few-shot learning"
-        non_compliant_example:
-          type: string
-          description: "Actual code/config example — for human reading and AI few-shot learning"
-
-    common_mistakes:
-      description: >
-        Mistakes humans and AI agents commonly make when trying to fix this violation.
-        Helps AI agents avoid generating bad fixes.
-      structure:
-        mistake:
-          type: string
-          description: "Description of the common mistake"
-        why_wrong:
-          type: string
-          description: "Why this approach is incorrect"
-        correct_approach:
-          type: string
-          description: "What to do instead"
-
-    related_lineage_ids:
-      type: array
-      items:
-        type: string
-      description: >
-        Related directives for context. When showing guidance, Selma can suggest
-        these as additional reading. Helps humans and AI agents understand the
-        broader governance landscape.
-
-# ─── PRINCIPLES ──────────────────────────────────────────────────
-# Universal principles this directive operationalizes.
-principles:
-  description: >
-    Universal principles this directive operationalizes. Used to explain
-    WHY the directive exists at a governance level.
-  structure:
-    primary_principle:
-      type: string
-      description: "The main principle this directive enforces"
-    supporting_principles:
-      type: array
-      items:
-        type: string
-      description: "Additional principles that relate to this directive"
-    principle_explanations:
-      type: object
-      description: "Map principle names to explanations of how this directive enforces them"
-
-# ─── RUNTIME USAGE ───────────────────────────────────────────────
-# Documents how Selma's components consume this policy doctrine at runtime.
-# This is meta-documentation, not executable logic.
-runtime_usage:
-  description: >
-    Documents how Selma's components use this policy doctrine at runtime.
-    This is meta-documentation, not executable logic. Instance documents
-    are stored in directives with the paired executable rule.
-  storage: >
-    System of record: directives via directives_repository. No separate
-    MUST NOT use a filesystem doctrine path or PolicyDoctrineReader component.
-  guidance_resolution: >
-    After inspection creates a finding, paired_policy_ref on the finding
-    is resolved by findings through directives_repository
-    (DirectiveRepository.readPolicyDoctrine). The doctrine document is loaded
-    from directives only for guidance fields.
-  ai_agent_consumption: >
-    AI agents receive the full guidance section via the query API. They use:
-    1. vocabulary to understand canonical terms
-    2. reasoning to explain why the violation matters
-    3. remediation_strategy + remediation_steps to generate fixes
-    4. domain_examples[language == target_language] for few-shot examples
-    5. common_mistakes to avoid generating bad fixes
-  human_consumption: >
-    Humans see guidance in CLI/TUI output. The renderer selects:
-    1. reasoning (always shown)
-    2. domain_examples matching the file's language (if available)
-    3. remediation_steps (shown when --guide flag is used)
-    4. related_lineage_ids as 'see also' suggestions
-  query_api_endpoints:
-    - endpoint: "GET /api/v1/rules/{lineage_id}/guidance"
-      purpose: "Retrieve full guidance for a specific rule"
-      sections_read: [reasoning, remediation_strategy, remediation_steps, domain_examples, common_mistakes]
-    - endpoint: "GET /api/v1/findings/{finding_id}/guidance"
-      purpose: "Retrieve guidance for a specific finding (includes paired policy)"
-      sections_read: [reasoning, remediation_strategy, remediation_steps, domain_examples]
-    - endpoint: "GET /api/v1/rules/{lineage_id}/vocabulary"
-      purpose: "Retrieve vocabulary mappings for AI agent comprehension"
-      sections_read: [vocabulary]
+    defined in SPECIFICATION.md §2.2.3.
 
 # ─── CONTAMINATION GUARD ─────────────────────────────────────────
-# This document MUST NOT contain machine-executable evaluation logic.
-# It IS read at runtime for GUIDANCE after evaluation produces a finding.
+# This document MUST NOT contain machine-executable logic.
+# PROHIBITED: parameters, conditions, evaluator_hint, evaluator_type,
+# evaluator_config, weight, depends_on, conflicts_with, status,
+# created_at, expires_at, remediation, target, lineage.
+# ALLOWED: Machine ID columns (cross-reference labels only).
 contamination_guard:
-  note: >
-    This document MUST NOT contain machine-executable evaluation logic.
-
-    PROHIBITED (these belong in the executable JSON rule, not here):
-    - evaluator_type, evaluator_config, evaluator_hint
-    - adapter_id, adapter_config
-    - detection strategy, structural_spec, pattern_spec
-    - weight, depends_on, conflicts_with (machine conflict resolution)
-    - status, created_at, expires_at (lifecycle fields)
-
-    PROHIBITED (these must use vocabulary, not be hardcoded):
-    - Domain-specific terms used outside vocabulary.domain_mappings
-      (e.g., using an implementation-specific term in policy text instead of the canonical vocabulary term)
-    - Language-specific code patterns in reasoning/remediation
-      (those go in domain_examples, not in the abstract guidance)
-    - Project-specific file paths, executable identifiers, or exclusions
-      (those go in adapter_config overrides, not here)
-
-    ALLOWED:
-    - Machine ID cross-reference to rule.lineage_id
-    - References to universal principles
-    - Abstract reasoning using canonical vocabulary
-    - Domain examples using domain_mappings terms
-    - Guidance, remediation, and reasoning for human/AI consumption
+  # NOTE: If adding new schema fields, evaluate contamination risk before
+  # allowing them in policy. The fields below are machine-executable and
+  # MUST NOT appear in governance prose.
   prohibited_fields:
     - parameters
     - conditions
     - evaluator_hint
     - evaluator_type
     - evaluator_config
-    - detection_spec
-    - detection
-    - adapters
-    - adapter_id
-    - adapter_config
     - weight
     - depends_on
     - conflicts_with
     - status
     - created_at
     - expires_at
+    - remediation
     - target
     - lineage
   allowed_machine_references:
     - "Machine ID columns in directive tables (cross-reference labels only)"
-    - "lineage_id cross-reference to rule.lineage_id"
-  allowed_guidance_content:
-    - "reasoning (WHY violations matter)"
-    - "remediation_strategy (HOW to fix in abstract terms)"
-    - "remediation_steps (ordered steps for AI agent execution)"
-    - "domain_examples (language-specific examples for few-shot learning)"
-    - "common_mistakes (helps AI agents avoid generating bad fixes)"
-    - "principles (governance context)"
-    - "vocabulary (canonical-to-domain term mappings)"
   metadata_constraints: >
     Schema metadata fields are informational only. They MUST NOT contain
     executable hints, evaluator configuration, or runtime flags. Use
-    declared namespaces (audit, vendor, author, migration) per docs/spec/contracts/directive/amendment.yaml.
-  vocabulary_enforcement: >
-    Prohibited also: any domain-specific term used outside of vocabulary.domain_mappings
-    (e.g., using an implementation-specific term in policy text instead of the canonical vocabulary term; using a direct imperative-action term instead of the failure-signal canonical term). All policy prose MUST use canonical vocabulary terms.
-    Domain-specific terms are permitted ONLY within vocabulary.terms[].domain_mappings[]
-    entries, never in directive text, guidance, or definitions.
+    declared namespaces (audit, vendor, author, migration) per SPECIFICATION.md §7.1.
 
 # ─── WRITING PRINCIPLES ──────────────────────────────────────────
 writing_principles:
@@ -615,17 +152,11 @@ writing_principles:
   - id: WP-005
     title: "Hierarchy of Authority"
     description: "Declare how conflicts are resolved (e.g., 'Newer rules override older', 'General rules defer to specific rules')."
-  - id: WP-006
-    title: "Vocabulary Discipline"
-    description: "Use canonical vocabulary terms from the vocabulary section. Never use domain-specific terms in policy prose. Map domain concepts to canonical names via vocabulary.domain_mappings."
-  - id: WP-007
-    title: "Universal Exclusions"
-    description: "Use pattern_category enums for exclusions, not project-specific lists. Exclusions must be expressible across all target domains."
 
 # ─── PRIORITY HIERARCHY (DECLARATIVE) ────────────────────────────
 # This is a DESCRIPTION of governance intent, not an executable algorithm.
 # The compilation engine translates this into CG-IR conflict resolution logic
-# via the Conflict Resolution Mapping in docs/spec/contracts/conflict/.
+# via the Conflict Resolution Mapping in SPECIFICATION.md Section 2.15.
 priority_hierarchy:
   description: >
     Rules exist at different authority levels. The governing body declares
@@ -664,12 +195,12 @@ priority_hierarchy:
     conflict_resolution field) → compatible_overrides (symmetric pairs)
     → priority → specificity → recency → Conflict Artifact.
     This is governance intent only — not executable logic in this file.
-    The compilation engine implements this via docs/spec/contracts/conflict/
+    The compilation engine implements this via SPECIFICATION.md
     Section 2.15. Optional explicit override (conflict_resolution field in
     rule_schema.json) is a structural data carrier checked FIRST by the engine
     before any computed factor. Policy MUST NOT define override fields.
   cross_layer_precedence:
-    precedence_algorithm: "docs/spec/contracts/conflict/precedence.yaml resolve_conflict"
+    precedence_algorithm: "SPECIFICATION.md Section 2.15 resolve_conflict"
     structural_override: "rule_schema.json conflict_resolution field (optional)"
     policy_role: "Declarative intent for computed factors only"
     order: "explicit override (schema) → compatible_overrides (symmetric pairs) → priority → specificity → recency → Conflict Artifact"
@@ -696,7 +227,7 @@ version_strategy:
     All three documents MUST share the same MAJOR version. MINOR and PATCH
     versions MAY differ independently within the same MAJOR family.
     MAJOR mismatch is incompatible. This is a compatibility matrix, not
-    strict version equality. See docs/spec/contracts/meta/versioning.yaml for the normative
+    strict version equality. See SPECIFICATION.md §5 for the normative
     compatibility matrix and formal compatibility rule.
 
 # ─── UNIVERSAL DOCUMENT SECTIONS ────────────────────────────────
@@ -705,7 +236,7 @@ sections:
     title: "Preamble"
     required: true
     content_type: prose
-    guidance: "Explain the existential need for these rules. Use canonical vocabulary terms only."
+    guidance: "Explain the existential need for these rules."
 
   - id: governance
     title: "Governance & Amendment"
@@ -718,7 +249,7 @@ sections:
     required: true
     content_type: table
     columns: ["Term", "Definition (What it IS)", "Exclusion (What it IS NOT)"]
-    guidance: "All terms used in the document must be defined here. Use canonical vocabulary terms from the vocabulary section."
+    guidance: "All terms used in the document must be defined here."
 
   - id: principles
     title: "Foundational Principles"
@@ -730,38 +261,20 @@ sections:
     title: "Directives (Rules & Standards)"
     required: true
     content_type: mixed
-    guidance: >
-      List all specific obligations, prohibitions, permissions, and flexible guidelines.
-      All directive text MUST use canonical vocabulary terms. Exclusions MUST use
-      pattern_category enums, not project-specific lists.
+    guidance: "List all specific obligations, prohibitions, permissions, and flexible guidelines."
     children:
       - id: specific_directives
         title: "Specific Directives"
         content_type: table
         columns: ["Type (Obligation/Prohibition/Permission)", "Description", "Machine ID", "Context / Conditions"]
-        exclusions:
-          description: "Universal exclusions using pattern categories, not project-specific lists"
-          structure:
-            pattern_category:
-              type: string
-              enum:
-                - protocol-implementation
-                - entry-point
-                - generated-code
-                - test-infrastructure
-                - interoperability-bridge
-                - language-pragma
-                - framework-convention
-            description: "What this exclusion covers in universal terms"
-            rationale: "Why this exclusion exists"
       - id: flexible_standards
         title: "Flexible Standards"
         content_type: table
         columns: ["Description", "Machine ID", "Factors to Consider", "Examples"]
         schema_encoding: >
           Flexible standards have no dedicated schema type. Encode in rule_schema.json
-          as deontic=obligation with weight=informational and priority=advisory.
-          Detection failure produces an informational finding only — advisory, not a
+          as type=obligation with weight=informational and priority=advisory.
+          Evaluator Fail produces an informational finding only — advisory, not a
           violation. This preserves deontic clarity (obligation/prohibition/permission)
           while giving policy authors a legitimate home for soft goals.
 

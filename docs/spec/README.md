@@ -44,12 +44,14 @@ python scripts/check_design_alignment.py
 | `data_stores/finding_events_store.yaml` | `finding_events_store` | `finding_events_repository` |
 | `data_stores/artifacts_store.yaml` | `artifacts_store` | `artifacts_repository` |
 
-## Schema Contracts (Separate)
+## Schema Contracts (Separate — design SSoT under `docs/schema/`)
 
 | File | Role | Version |
 | :--- | :--- | :--- |
 | [`rule_schema.json`](../schema/rule_schema.json) | Executable rule structure | 1.0.0 |
 | [`policy_doctrine.yaml`](../schema/policy_doctrine.yaml) | Guidance and reasoning structure | 1.0.0 |
+
+Design authority is **`docs/schema/`** only. Repository root `schema/` is a legacy/product path that may lag; see [`../schema/README.md`](../schema/README.md).
 
 ## Contract File Structure
 
