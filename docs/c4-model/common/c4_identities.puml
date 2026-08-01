@@ -115,11 +115,11 @@
 
 !$NAME_directives_application = "Directives Application"
 !$TECH_directives_application = "Python / Pydantic"
-!$DESC_directives_application = "Application use-case cluster for the directives resource (Create/Get/List/Update and lifecycle). Orchestrates dual-document mutations through Directives Repository with revision ETags; enqueues compile_request outbox rows after durable writes for Compilation Application to drain. Does not compile rules or evaluate targets itself."
+!$DESC_directives_application = "Application use-case cluster for the directives resource (Create/Get/List/Update and lifecycle). Orchestrates dual-document mutations through Directives Repository with revision ETags; enqueues compile_request outbox rows after durable writes (store-mediated; Compilation Application drains outbox — no direct app→app edge). Does not compile rules or evaluate targets itself."
 
 !$NAME_compilation_application = "Compilation Application"
 !$TECH_compilation_application = "Python / JSON Schema / SHA-256"
-!$DESC_compilation_application = "Hermetic application use-case cluster for the compile process (publishes to Compiled Rules Store). Drains compile_request outbox; reads executables via CompilerReadPort under short read-lock then releases before CPU compile; validates schema and discriminators; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
+!$DESC_compilation_application = "Hermetic application use-case cluster for the compile process (publishes to Compiled Rules Store; package prefix compiled_rules_*). Drains compile_request outbox via directives_repository; reads executables via CompilerReadPort under short read-lock then releases before CPU compile; validates schema and discriminators; pins conflicts_domain_version in frozen_env; publishes Compiled Rules snapshots. Does not load policy doctrines for evaluation. Uses ResolveConflict as an in-process domain service, not a peer component."
 
 !$NAME_inspections_application = "Inspections Application"
 !$TECH_inspections_application = "Python / RE2 Regex / SHA-256"
@@ -127,7 +127,7 @@
 
 !$NAME_findings_application = "Findings Application"
 !$TECH_findings_application = "Python / Pydantic"
-!$DESC_findings_application = "Application use-case cluster for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance. Guidance resolves policy doctrine by the finding's revision-pinned paired_policy_ref (not latest doctrine). Appends to Finding Events Store; does not write Compiled Rules or mutate directives from analytics. Declares DenialAuditPort for the api gate (implemented by Finding Events Repository)."
+!$DESC_findings_application = "Application use-case cluster for the findings resource: 11-state lifecycle, SoD, dispositions, evidence, and read models including guidance. Owns FindingOpenPort (atomic FindingCreated+Open for inspections) and Declares DenialAuditPort for the api gate (DenialAuditAdapter ISP-split). Guidance resolves policy doctrine by the finding's revision-pinned paired_policy_ref (not latest doctrine). Appends to Finding Events Store; does not write Compiled Rules or mutate directives from analytics."
 
 !$NAME_directives_repository = "Directives Repository"
 !$TECH_directives_repository = "Python / SQLAlchemy / PostgreSQL"
@@ -139,7 +139,7 @@
 
 !$NAME_finding_events_repository = "Finding Events Repository"
 !$TECH_finding_events_repository = "Python / SHA-256 / Append-Only Log"
-!$DESC_finding_events_repository = "Infrastructure adapter implementing FindingEventRepository and DenialAuditPort. Appends finding and denial events with per-finding chain serialization and hash-chain integrity; maintains finding_projection for bounded hydration; supports stream load as system of record."
+!$DESC_finding_events_repository = "Infrastructure adapter peer: FindingEventRepositoryAdapter implements FindingEventRepository; DenialAuditAdapter implements DenialAuditPort only (ISP). Appends finding and denial events with per-finding chain serialization and hash-chain integrity; maintains finding_projection for bounded hydration; supports stream load as system of record. Spools denials (CapabilityDenied and SoDDenied) to disk DLQ on store outage."
 
 !$NAME_artifacts_repository = "Artifacts Repository"
 !$TECH_artifacts_repository = "Python / Object Store"

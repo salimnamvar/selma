@@ -14,7 +14,11 @@ design_contract_version: "1.1.0"
 schema_version: "1.0.0"
 
 dependency_rule: >
-  clients → api → *_application → *_repository | *_gateway → *_store | externals
+  clients → api → *_application → *_repository | *_gateway | peer application ports → *_store | externals.
+  Narrow gate exception: api → DenialAuditPort.AppendDenial only (implemented by findings_infrastructure;
+  MUST NOT expose FindingEventRepository mutation methods to api).
+  Peer use-case coupling is port-mediated: inspections_application → FindingOpenPort (owned by findings_application).
+  Compile coupling is store-mediated: directives_application enqueues compile_request outbox; compilation_application drains it — no direct app→app compile edge.
 
 layer_postfix:
   store: "{resource}_store"
@@ -147,7 +151,13 @@ non_peers:
     lives_in: "compilation_application / inspections_application (in-process); package conflicts_domain"
   - id: DenialAuditPort
     kind: application_port
-    lives_in: "application-owned port; consumer api; implementer finding_events_repository"
+    lives_in: "application-owned port; consumer api; implementer DenialAuditAdapter in findings_infrastructure (ISP-split from FindingEventRepository)"
+  - id: FindingOpenPort
+    kind: application_port
+    lives_in: "findings_application-owned; consumer inspections_application; opens findings (FindingCreated+Open atomic batch)"
+  - id: DenialAuditAdapter
+    kind: infrastructure_adapter
+    lives_in: "findings_infrastructure; implements DenialAuditPort only; may share connection pool with FindingEventRepository adapter but MUST NOT expose full repository surface to api"
   - id: certification_tool
     kind: offline_tool
     lives_in: "CI / local; may write artifacts_store kind=certification"
@@ -207,3 +217,9 @@ forbidden_ids:
   - GuidanceEngine
   - CompilationEngine
   - DetectionEngine          # evaluators under inspections path only
+
+# Package-resource names that are valid package prefixes but MUST NEVER appear
+# as C4 peer IDs / Component() entities (naming dual guardrail).
+forbidden_c4_peer_ids:
+  - compiled_rules_application    # C4 peer is compilation_application
+  - compiled_rules_infrastructure # C4 peer is compiled_rules_repository

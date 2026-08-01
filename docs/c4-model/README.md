@@ -74,7 +74,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 ### Naming notes
 
-- **`compilation_application` (C4 ID)** — hermetic compile process; publishes `compiled_rules_store`. **Package prefix is `compiled_rules_*`** (e.g. `compiled_rules_application`, `compiled_rules_infrastructure`) so the resource that is written stays explicit. These are **one concept, two names by design**: C4 emphasizes the hermetic process; packages emphasize the compiled-rules resource. Never invent a C4 peer ID `compiled_rules_application`.
+- **`compilation_application` (C4 ID)** — hermetic compile process; publishes `compiled_rules_store`. **Package prefix is `compiled_rules_*`** (e.g. `compiled_rules_application`, `compiled_rules_infrastructure`) so the resource that is written stays explicit. These are **one concept, two names by design**: C4 emphasizes the hermetic process; packages emphasize the compiled-rules resource. Never invent a C4 peer ID `compiled_rules_application` — it is listed under `forbidden_ids` in [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml) and enforced by `scripts/check_design_alignment.py`.
 - **`findings_application` vs `finding_events_store`** — findings is the resource/use-case projection; finding events is the append-only system of record.
 - **`{resource}_repository`** pairs with `{resource}_store` (e.g. `directives_repository` → `directives_store`).
 
@@ -92,21 +92,32 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 1. `clients` → `api` only  
 2. `api` → `*_application` only  
-3. **Capability-denial audit (narrow exception):** `api` may append denials only through application-owned **`DenialAuditPort`** (not via store I/O and not via full findings use cases). On the Component diagram this is drawn as `api` → `finding_events_repository` because that adapter is the sole implementer of `DenialAuditPort`. Package/class diagrams show the port as an application-owned interface implemented by `findings_infrastructure`.  
-4. `*_application` → `*_repository` / `*_gateway` (and peer use cases when needed, e.g. `inspections_application` → `findings_application`)  
-5. `*_repository` → `*_store`; `*_gateway` → external system  
-6. Never: `api` → `*_store`; never: repository → use case; never: store → component; never: `api` → arbitrary repository methods beyond `DenialAuditPort.AppendDenial(...)`
+3. **Capability-denial audit (narrow exception):** `api` may append denials only through application-owned **`DenialAuditPort`** (not via store I/O and not via full findings use cases). On the Component diagram this is drawn as `api` → `finding_events_repository` because `DenialAuditAdapter` (ISP-split implementer in `findings_infrastructure`) is co-located with that C4 peer. Package/class diagrams show the port as an application-owned interface; composition injects only `DenialAuditPort` into `api`.  
+4. `*_application` → `*_repository` / `*_gateway` / **peer application ports** when needed (e.g. `inspections_application` → **`FindingOpenPort`** on `findings_application` for atomic FindingCreated+Open).  
+5. **Compile coupling is store-mediated:** `directives_application` enqueues `compile_request` outbox via `directives_repository`; `compilation_application` drains it. There is **no** direct `directives_application` → `compilation_application` Component edge.  
+6. `*_repository` → `*_store`; `*_gateway` → external system  
+7. Never: `api` → `*_store`; never: repository → use case; never: store → component; never: `api` → arbitrary repository methods beyond `DenialAuditPort.AppendDenial(...)`
 
 ### DenialAuditPort (gate side-effect)
 
 | Item | Rule |
 | :--- | :--- |
 | Owner | Application layer (declared next to findings ports; see [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml)) |
-| Implementer | `finding_events_repository` / `findings_infrastructure` |
+| Implementer | `DenialAuditAdapter` in `findings_infrastructure` (C4 peer still `finding_events_repository`; ISP-split from `FindingEventRepository`) |
 | Consumer | `api` only (capability gate) |
 | Surface | Single write method: append capability-denial event (actor, capability, action, reason, timestamp) |
 | Why not full findings use cases | Avoid circular dependency: gate must audit denials even when the denied action would have entered `findings_application` |
+| Store outage | Spool to disk DLQ; replay with HLC-at-replay-time + optional `original_denied_at` / `replay_marker` |
 | Normative audit content | [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml), [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml) |
+
+### FindingOpenPort (inspection → findings)
+
+| Item | Rule |
+| :--- | :--- |
+| Owner | `findings_application` |
+| Consumer | `inspections_application` only |
+| Surface | Open findings after evaluation: atomic `FindingCreated` + `Open` batch (INV-FL-020); idempotent on `(inspection_id, control_id, target_hash)` |
+| Why a port | Keeps finding lifecycle ownership in findings; avoids tight coupling to internal transition use-case classes |
 
 ## Not C4 peers (by design)
 
@@ -191,13 +202,14 @@ resources, store rows, JWT claims, or idempotency keys.
 If multi-tenancy is required later, it is a **contract-breaking** change: add
 `tenant_id` to stores, scope `Idempotency-Key` to `(actor, tenant, key)`, and
 extend capability resolution. Until then, implementors MUST NOT invent a
-tenant dimension.
+tenant dimension. Actor namespaces and `denied_actions_view` aggregations are
+**per deployment instance**, not global multi-tenant dimensions.
 
 ## Distributed coordination decisions
 
 | Path | Decision | Normative ref |
 | :--- | :--- | :--- |
-| Directive → compile | **Transactional outbox** `compile_request` in `directives_store`; worker = `compilation_application` (same process v1). Eventual consistency until snapshot publish. Failed rows are retriable; **permanently_failed** rows (schema-error poison) require manual intervention or corrective revision. | [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml) `compile_coordination` |
+| Directive → compile | **Transactional outbox** `compile_request` in `directives_store`; worker = `compilation_application` drains via repository (no direct app→app edge). Lease + heartbeat + depth backpressure (503 CompileQueueFull). Failed rows retriable; **permanently_failed** → admin retry or corrective revision. | [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml) `compile_coordination` |
 | Compile locks | Read lock only while loading executables; **release before** hermetic CPU; no write lock during compile. | compilation `concurrency_model` + `lock_implementation` |
 | Latest CG-IR per lineage | **`head_snapshot_hash`** on `Directives` + mirrored `LineageHeads` index in `compiled_rules_store`; advanced atomically when outbox → completed. Inspections/`GetLatestCompiledRules` MUST use this pointer — not `compiled_at`. | directives `head_snapshot_pointer`; compiled_rules `lineage_head_index` (INV-CS-006) |
 | SOC denial reconciliation | **`denied_actions` view** joins CapabilityDenied (DenialAuditPort) + SoDDenied (FSM chain); volume = sum of `payload.count`. | finding_events_store `denied_actions_view` |

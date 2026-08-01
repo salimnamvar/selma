@@ -205,6 +205,32 @@ def main() -> int:
         if "event_store.yaml" in text:
             errors.append(f"{rel}: stale source event_store.yaml → finding_events_store.yaml")
 
+    # --- Package aliases must not appear as C4 peer IDs -----------------------
+    # e.g. compiled_rules_application is a package prefix; C4 peer is compilation_application
+    forbidden_c4 = set(reg.get("forbidden_c4_peer_ids") or [])
+    c4_dir = DOCS / "c4-model"
+    if c4_dir.exists() and forbidden_c4:
+        for path in c4_dir.rglob("*.puml"):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            rel = path.relative_to(ROOT)
+            for bad in forbidden_c4:
+                # Component(id, ...) or Container(id, ...) or bare peer-style Rel endpoints
+                patterns = [
+                    rf"\bComponent\(\s*{re.escape(bad)}\b",
+                    rf"\bContainer\(\s*{re.escape(bad)}\b",
+                    rf"\bContainerDb\(\s*{re.escape(bad)}\b",
+                    rf"\bSystem\(\s*{re.escape(bad)}\b",
+                    rf"\bRel\(\s*{re.escape(bad)}\b",
+                    rf",\s*{re.escape(bad)}\s*,",
+                ]
+                for pat in patterns:
+                    if re.search(pat, text):
+                        errors.append(
+                            f"{rel}: forbidden C4 peer id {bad!r} "
+                            f"(use package alias mapping in c4_registry package_aliases)"
+                        )
+                        break
+
     # --- API openapi version --------------------------------------------------
     openapi = API_DIR / "openapi.yaml"
     if openapi.exists():

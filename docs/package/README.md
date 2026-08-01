@@ -97,16 +97,23 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden IDs: registry `for
 
 | Port | Owner package | Implementer package | C4 adapter peer |
 |------|---------------|---------------------|-----------------|
-| `DirectiveRepository` | `directives_application` | `directives_infrastructure` | `directives_repository` |
-| `CompilerReadPort` | `compiled_rules_application` | `directives_infrastructure` | `directives_repository` |
-| `GuidanceReadPort` | `findings_application` | `directives_infrastructure` | `directives_repository` |
+| `DirectiveRepository` | `directives_application` | `directives_infrastructure` (`SqlDirectiveWriter` or equivalent) | `directives_repository` |
+| `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader`) | `directives_repository` |
+| `GuidanceReadPort` | `findings_application` | `directives_infrastructure` (`SqlGuidanceReader`) | `directives_repository` |
 | `CompiledRulesRepository` | compile + inspect (+ findings SoD) | `compiled_rules_infrastructure` | `compiled_rules_repository` |
-| `FindingEventRepository` | `findings_application` | `findings_infrastructure` | `finding_events_repository` |
-| `DenialAuditPort` | `findings_application` | `findings_infrastructure` | `finding_events_repository` |
+| `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`FindingEventRepositoryAdapter`) | `finding_events_repository` |
+| `DenialAuditPort` | `findings_application` | `findings_infrastructure` (`DenialAuditAdapter` only) | `finding_events_repository` |
+| `FindingOpenPort` | `findings_application` | `findings_application` (use-case facade) | n/a — peer port for `inspections_application` |
 | `InspectionArtifactPort` | `inspections_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `FindingArtifactPort` | `findings_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `TargetSourcesGateway` | `inspections_application` | `inspections_infrastructure` | `target_sources_gateway` |
-| `CertificationArtifactPort` | `certification_tool` (offline) | `artifacts_infrastructure` | non-peer write path |
+| `CertificationArtifactPort` | `certification_tool` / API system capability | `artifacts_infrastructure` | `artifacts_repository` (prod via API; offline local only) |
+
+**ISP hardening:** One physical connection pool MAY back multiple adapters, but
+each port MUST be a **separate adapter class** (or narrow façade) so
+`compiled_rules_application` cannot call mutating `DirectiveRepository` methods
+via a `CompilerReadPort` reference, and `api` cannot call full
+`FindingEventRepository` methods via `DenialAuditPort`.
 
 Port method shapes: [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml).  
 Gate denial path semantics: [`../c4-model/`](../c4-model/README.md) DenialAuditPort + finding-lifecycle SoD contract.

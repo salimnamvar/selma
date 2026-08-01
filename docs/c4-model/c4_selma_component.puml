@@ -62,17 +62,18 @@ Rel(api, findings_application, "finding transitions, evidence, guidance reads", 
 Rel(api, finding_events_repository, "DenialAuditPort: append capability denial events", "Append-Only", $tags="immutable")
 
 ' ── Directives Application ──
+' Compile coupling is store-mediated (compile_request outbox in directives_store).
+' No direct directives_application → compilation_application edge (audit hardening).
 Rel(directives_application, directives_repository, "reads and writes dual-document directives; enqueues compile_request outbox", "Internal")
-Rel(directives_application, compilation_application, "compile_request outbox (eventual; dedupe lineage+revision)", "Internal", $tags="async")
 
 ' ── Compilation Application (hermetic) ──
-Rel(compilation_application, directives_repository, "CompilerReadPort: read executables under short read-lock", "Internal", $tags="compile_only")
+Rel(compilation_application, directives_repository, "CompilerReadPort: read executables; drain compile_request outbox under short read-lock", "Internal", $tags="compile_only")
 Rel(compilation_application, compiled_rules_repository, "publishes compiled rule snapshots", "Internal", $tags="compile_only")
 
 ' ── Inspections Application ──
 Rel(inspections_application, target_sources_gateway, "fetches remote targets when referenced", "Internal", $tags="mediated")
 Rel(inspections_application, compiled_rules_repository, "loads frozen compiled rules", "Internal", $tags="validation_only")
-Rel(inspections_application, findings_application, "opens findings after evaluation", "Internal")
+Rel(inspections_application, findings_application, "FindingOpenPort: open findings after evaluation", "Internal")
 Rel(inspections_application, artifacts_repository, "writes inspection snapshots and traces", "Internal", $tags="immutable")
 
 ' ── Findings Application ──

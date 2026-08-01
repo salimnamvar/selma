@@ -56,6 +56,12 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
     + GetFindingProjection(finding_id: FindingId): FindingProjection
   }
 
+  interface "**FindingOpenPort**" as FindingOpenPort <<Port>> {
+    + open_findings(inspection_id, findings[]) : Result
+    .. atomic FindingCreated + Open (INV-FL-020) ..
+    .. idempotent (inspection_id, control_id, target_hash) ..
+  }
+
   interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
     + AppendDenial(actor: ActorId, capability: String, action: String, reason: String, timestamp: HlcTimestamp): void
     --
@@ -246,6 +252,7 @@ package "<<use_cases.inspections_application>>\nInspections Application" as UC_I
     - targetGateway: TargetSourcesGateway
     - compiledRulesRepo: CompiledRulesRepository
     - artifactRepo: ArtifactRepository
+    - findingOpen: FindingOpenPort
     + CreateInspection(req: InspectRequest): InspectResponse
     --
     <<module>> inspections_application
@@ -269,8 +276,11 @@ package "<<use_cases.findings_application>>\nFindings Application" as UC_FINDING
     - findingFsm: FindingFsm
     - events: FindingEventRepository
     + CreateFinding(inspection_id: UUID, outcome: DetectionOutcome): Finding
+    + OpenFindingsBatch(inspection_id: UUID, outcomes: List~DetectionOutcome~): List~Finding~
     --
+    <<implements>> FindingOpenPort
     <<module>> findings_application
+    <<atomic>> FindingCreated + Open (INV-FL-020)
   }
 
   abstract class "**AcknowledgeFinding**" as AcknowledgeFinding <<Use Case>> #E8F5E9/2E7D32 {
@@ -401,6 +411,8 @@ CreateInspection ..> ArtifactRepository : uses >
 GetInspection ..> ArtifactRepository : uses >
 
 ' ── Findings ──────────────────────────────────────────────
+CreateInspection ..> FindingOpenPort : uses >
+CreateFinding ..|> FindingOpenPort
 CreateFinding ..> FindingEventRepository : uses >
 AcknowledgeFinding ..> FindingEventRepository : uses >
 SubmitFindingEvidence ..> ArtifactRepository : uses >
