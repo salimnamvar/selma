@@ -52,7 +52,7 @@ package "Artifacts" {
     * cert_id : UUID <<PK>>
     --
     run_id : UUID
-    gate_id : TEXT <<AA-01 .. AA-07>>
+    gate_id : TEXT <<AA-01 .. AA-08>>
     pass_fail : BOOLEAN
     evidence_ref : TEXT
     created_at : TIMESTAMPTZ
@@ -76,7 +76,7 @@ note bottom of PipelineTraces
 end note
 
 note bottom of CertificationArtifacts
-  **Gate IDs**: AA-01 through AA-07
+  **Gate IDs**: AA-01 through AA-08
   • pass_fail = true → gate satisfied
   • evidence_ref points to supporting artifact
 end note

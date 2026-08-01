@@ -102,7 +102,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 | :--- | :--- |
 | Conflict resolution algorithm | Domain service `ResolveConflict` in `conflicts_domain`; invoked **in-process** by `compilation_application` and `inspections_application` (package edges required; not a C4 component). When compile and inspect deployables are split, both MUST load the **same versioned** `conflicts_domain` library artifact (shared package / single release train); forking a private copy is non-conformant |
 | Guidance & analytics | Findings Application → doctrine via `directives_repository` (`guidance_only`); revision pinned by `paired_policy_ref` (see Design principles) |
-| AA-01…AA-07 certification | Offline/CI **`certification_tool`** (registry non-peer); may write `artifacts_store` kind=certification only when run — not drawn as Context/Container peer |
+| AA-01…AA-08 certification | Offline/CI **`certification_tool`** (registry non-peer); may write `artifacts_store` kind=certification only when run — not drawn as Context/Container peer |
 | Capability catalog / SoD | Enforced at `api`; normative in [`../spec/contracts/authorization/`](../spec/contracts/authorization/) and OpenAPI [`../api/components/security.yaml`](../api/components/security.yaml) |
 | CI/CD | Optional client of API / certify tool |
 | Long-term audit export | Ops export from Finding Events / Artifacts stores (not a product peer) |

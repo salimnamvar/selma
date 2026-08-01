@@ -55,7 +55,7 @@ docs/api/
 | Conflict detection | Domain `ResolveConflict` during compile/inspect; conflict **artifacts** under R5 |
 | Human conflict resolve | `POST /artifacts/{id}/resolutions` (`conflict.resolve`) |
 | Guidance / aggregates | R4 guidance sub-resource + findings read models (`analytics.view`) |
-| Certification AA-01…AA-07 | Offline/CI `certification_tool`; results as artifacts `kind=certification` |
+| Certification AA-01…AA-08 | Offline/CI `certification_tool`; results as artifacts `kind=certification` |
 
 ## Conventions
 

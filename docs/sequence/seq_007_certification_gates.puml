@@ -7,7 +7,7 @@
 ' ============================================================
 !include common/seq_styles.puml
 
-title SEQ-007 Certification Gates\n7-Gate Architectural Certification (offline/CI tool)
+title SEQ-007 Certification Gates\n8-Gate Architectural Certification (offline/CI tool)
 
 actor "Optional CI / local client" as cicd
 participant "certification_tool\n(offline/CI · not C4 peer)" as AA #A3BE8C
@@ -81,6 +81,16 @@ group AA-07: Portability
     end note
 end
 
+group AA-08: Hermeticity Completeness
+    AA -> AA: check frozen_env pins + preimage
+    note right of AA
+        python_hash_seed, locale,
+        wall-clock policy, ordered
+        collections, exhaustive
+        runtime_preimage (HERM-008).
+    end note
+end
+
 group Store Certification Artifact
     AA -> SA: store certification artifact
     activate SA
@@ -102,7 +112,7 @@ AA --> cicd: CertificationResult
 deactivate AA
 
 note right of AA
-    All 7 gates must pass
+    All 8 gates must pass
     for certification to succeed.
     Partial pass is not valid.
     Tool is not an in-process C4 peer.

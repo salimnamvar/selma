@@ -1,6 +1,6 @@
 {
   "title": "CertificationResult",
-  "description": "Result of an architectural audit certification run produced by offline/CI certification_tool (not an in-process C4 peer). Stored as artifacts_store kind=certification. All 7 gates (AA-01 through AA-07) must pass for production-grade certification. Schema: docs/spec/contracts/certification/gates.yaml.",
+  "description": "Result of an architectural audit certification run produced by offline/CI certification_tool (not an in-process C4 peer). Stored as artifacts_store kind=certification. All 8 gates (AA-01 through AA-08) must pass for production-grade certification. Schema: docs/spec/contracts/certification/gates.yaml.",
   "type": "object",
   "required": [
     "certification_id",
@@ -23,7 +23,7 @@
     },
     "status": {
       "type": "string",
-      "description": "Overall certification status. Pass requires all 7 gates to pass.",
+      "description": "Overall certification status. Pass requires all 8 gates to pass.",
       "enum": [
         "pass",
         "fail",
@@ -33,12 +33,12 @@
     },
     "gates": {
       "type": "array",
-      "description": "Results for each of the 7 architectural audit gates.",
+      "description": "Results for each of the 8 architectural audit gates.",
       "items": {
         "$ref": "#/$defs/gate_result"
       },
-      "minItems": 7,
-      "maxItems": 7
+      "minItems": 8,
+      "maxItems": 8
     },
     "started_at": {
       "type": "string",
@@ -118,7 +118,8 @@
             "AA-04",
             "AA-05",
             "AA-06",
-            "AA-07"
+            "AA-07",
+            "AA-08"
           ]
         },
         "name": {
@@ -131,7 +132,8 @@
             "Segregation of Duties",
             "Conflict Resolution Determinism",
             "Discriminator Completeness",
-            "Portable Serialization"
+            "Portable Serialization",
+            "Hermeticity Completeness"
           ]
         },
         "pass_fail": {
@@ -283,6 +285,15 @@
           "validation_method": "RE2 canary test vectors + UTC/NaN rejection tests"
         },
         "duration_ms": 420
+      },
+      {
+        "gate_id": "AA-08",
+        "name": "Hermeticity Completeness",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Compile-time pin assertion + static analysis of compile path"
+        },
+        "duration_ms": 980
       }
     ],
     "started_at": "2025-01-15T10:00:00Z",

@@ -283,7 +283,7 @@ package "<<domain>>\nDomain Layer" as DOMAIN #FFFFFF/DDDDDD {
     }
 
     class "**GateResult**" as GateResult <<Value Object>> #E8EAF6/3F51B5 {
-      + gate_id: String {AA-01..AA-07}
+      + gate_id: String {AA-01..AA-08}
       + passed: boolean
       + evidence_ref: String
       + checked_at: DateTime

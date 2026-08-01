@@ -26,7 +26,7 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 
 **Note:** Clients are external to Selma. They are not part of the Selma deployment. The network flow is: Clients → Load Balancer → Application.
 
-CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-07) is not a deploy peer; when run it may write `artifacts_store` only.
+CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer; when run it may write `artifacts_store` only.
 
 ## Environment Requirements
 

@@ -7,7 +7,7 @@ schema_version: "1.0.0"
 design_contract_version: "1.1.0"
 owner_component: "certification_tool"
 description: >
-  Defines the 7 architectural audit gates required for production-grade
+  Defines the 8 architectural audit gates required for production-grade
   reference implementation certification. Gates are non-blocking for spec
   conformance of the document suite but MUST be satisfied for implementation
   certification.
@@ -95,17 +95,38 @@ gates:
       - "Regex flags whitelist validation passes"
       - "NFC string normalization (warning)"
 
+  - gate_id: "AA-08"
+    name: "Hermeticity Completeness"
+    invariant: >
+      frozen_environment pins (python_hash_seed, locale, datetime_wall_clock_policy,
+      ordered_collection_policy) and exhaustive runtime_preimage are verified;
+      compile path has no unordered set/dict hash inputs and no wall-clock reads
+    validation_method: >
+      Compile-time pin assertion + static analysis of compile path for
+      datetime.now/wall-clock and unordered collection iteration; preimage
+      exhaustiveness check against hermetic_boundary.schema
+    story_refs: ["US-HB-001", "US-CP-001"]
+    criteria:
+      - "python_hash_seed is present and non-null integer in frozen_environment"
+      - "locale is pinned to C.UTF-8 (or equivalent POSIX locale)"
+      - "datetime_wall_clock_policy is forbidden (or a single pinned compile-start timestamp)"
+      - "ordered_collection_policy is sorted (or insertion_order with fixed construction)"
+      - "runtime_preimage enumerates every input folded into os_runtime_hash"
+      - "Static analysis finds no datetime.now()/wall-clock reads in the compile path"
+      - "Static analysis finds no unordered set/dict iteration folded into snapshot hash"
+      - "Missing any required pin fails compile_time_validation (HERM-008)"
+
 certification_requirements:
   description: "Requirements for production-grade certification"
   rules:
-    - "All 7 gates (AA-01 through AA-07) MUST pass"
+    - "All 8 gates (AA-01 through AA-08) MUST pass"
     - "Gates are non-blocking for document suite conformance"
     - "Gates are REQUIRED for production-grade reference implementation certification"
     - "Gate results MUST be recorded with pass/fail per gate and explicit gate-ID traceability"
 
 invariants:
   - id: "INV-GA-001"
-    statement: "All 7 gates MUST pass for production certification"
+    statement: "All 8 gates MUST pass for production certification"
     enforcement: "certification_process"
 
   - id: "INV-GA-002"
@@ -118,6 +139,7 @@ stories:
     i_want: "to verify architectural audit gates before production certification"
     so_that: "reference implementations are production-grade"
     acceptance_criteria:
-      - "Given a reference implementation. When architectural audit runs. Then all 7 gates (AA-01 through AA-07) are verified with pass/fail per gate."
+      - "Given a reference implementation. When architectural audit runs. Then all 8 gates (AA-01 through AA-08) are verified with pass/fail per gate."
       - "Given gate AA-01 (Mediated Feedback). When verification runs. Then it is confirmed that findings_application read models have no write path to compiled_rules or the finding FSM."
       - "Given gate AA-04 (Segregation of Duties). When verification runs. Then it is confirmed that finding.waive is denied when actor is in creator_provenance."
+      - "Given gate AA-08 (Hermeticity Completeness). When verification runs. Then python_hash_seed, locale, wall-clock policy, ordered collections, and exhaustive runtime_preimage are confirmed."

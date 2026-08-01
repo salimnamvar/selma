@@ -37,7 +37,7 @@ plantuml docs/usecase/uc_*.puml
 | Concern | How it appears |
 |---------|----------------|
 | CI/CD | Optional **client** of API / `certification_tool` (not a product actor) |
-| Certification runner | Offline/CI tool suite (AA-01…AA-07); writes Artifacts when run |
+| Certification runner | Offline/CI tool suite (AA-01…AA-08); writes Artifacts when run |
 | Target Sources | Optional external pull for inspection targets (primary path is inline) |
 | Audit export / remediation ticketing | Ops exports / optional notify — not product peers |
 

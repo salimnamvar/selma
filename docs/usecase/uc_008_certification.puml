@@ -23,6 +23,7 @@ rectangle "Certification Tool Suite\n(certification_tool · offline/CI)" as TOOL
   usecase "Validate Conflict\nDeterminism"            as UC5
   usecase "Validate Discriminator\nCompleteness"      as UC6
   usecase "Validate Portability"                      as UC7
+  usecase "Validate Hermeticity\nCompleteness"        as UC8
 }
 
 ' ---- associations ----
@@ -35,6 +36,7 @@ UC0 ..> UC4 : <<include>>
 UC0 ..> UC5 : <<include>>
 UC0 ..> UC6 : <<include>>
 UC0 ..> UC7 : <<include>>
+UC0 ..> UC8 : <<include>>
 
 ' ---- notes ----
 note right of UC0
@@ -57,6 +59,13 @@ note bottom of UC7
   **Pre:** CG-IR snapshot available
   **Post:** Portability validated
   **Contract:** certification/gates.yaml (AA-07)
+end note
+
+note bottom of UC8
+  **Pre:** frozen_environment + compile path available
+  **Post:** Hermetic pins and runtime_preimage validated
+  **Contract:** certification/gates.yaml (AA-08);
+  hermetic_boundary HERM-008
 end note
 
 @enduml
