@@ -128,6 +128,31 @@ Runbooks MUST use the composed figures when more than one store is unavailable. 
 
 Application replicas behind the load balancer; state externalized to the four stores.
 
+#### HLC node state persistence (required)
+
+The Application appends to `finding_events_store` under Hybrid Logical Clock
+ordering (`INV-ES-003`). Causal monotonicity across restarts requires each
+replica to persist its `(node_id, physical_time, logical_counter)` state —
+a stateless restart that reuses a `node_id` without its HLC state breaks the
+total-order and `chain_hash` guarantees (see `finding_events_store.yaml`
+`hlc.node_identity`).
+
+Production MUST adopt **at least one** of these conformant mechanisms:
+
+1. **StatefulSet with PVCs (preferred):** one replica identity per StatefulSet
+   ordinal; `node_id` (UUID) and HLC state live on the replica's persistent
+   volume and are reloaded on restart. Pod rescheduling keeps both.
+2. **Database-backed state:** a dedicated `hlc_state` table in
+   `finding_events_store` keyed by `node_id`; the Application loads the last
+   persisted `(physical_time, logical_counter)` for its `node_id` on startup
+   and durably advances it (batched fsync) as it appends.
+
+A stateless `Deployment` that regenerates a fresh `node_id` on every start is
+conformant **only if** no events from the previous `node_id` remain in the
+stream (fence-and-retire); it MUST NOT reuse a previously retired `node_id`.
+Monitor `hlc_counter_reset_total` / node_id restarts (observability catalog)
+to detect unpersisted restarts.
+
 ### Load balancer high availability
 
 | Mode | When |

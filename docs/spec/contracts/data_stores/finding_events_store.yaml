@@ -159,6 +159,17 @@ hlc:
         Total order remains well-defined even without persistence; persistence
         is required so post-restart events continue causal monotonicity relative
         to that replica's pre-crash stream.
+    persistence_mechanism:
+      description: >
+        Deployment topology MUST provide one of the conformant persistence
+        backends (deployment/README.md "HLC node state persistence"):
+        (1) per-replica persistent volume (StatefulSet/PVC) holding node_id
+        and HLC state, or (2) an hlc_state table in finding_events_store
+        keyed by node_id.
+      rules:
+        - "A stateless replica with a fresh node_id that has no prior events in the stream is conformant (fence-and-retire)"
+        - "Reusing a retired node_id without its persisted HLC state is non-conformant (breaks INV-ES-003)"
+        - "HLC state MUST be durably advanced (fsync-batched) as events are appended; lossy in-memory-only counters are non-conformant"
 
 event_hash:
   formula: "SHA-256(canonical_json(event_id ‖ payload ‖ prev_event_hash))"
