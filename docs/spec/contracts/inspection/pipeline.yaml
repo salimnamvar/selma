@@ -52,7 +52,11 @@ pipeline:
     input: "Classification metadata + CG-IR Snapshot"
     output: "Applicable control nodes"
     operations:
-      - "Load CG-IR snapshot by cg_ir_snapshot_hash"
+      - >
+        Load CG-IR snapshot by cg_ir_snapshot_hash. When the client requests
+        "latest" rules, resolve head_snapshot_hash via compiled_rules
+        lineage_head_index (or Directives.head_snapshot_hash) — never by
+        compiled_at wall clock (INV-CS-006 / directives head_snapshot_pointer)
       - "For each node: evaluate scope against target metadata"
       - "Filter nodes where scope matches target (target_type, domain, jurisdiction, filters)"
       - "Include nodes with scope.target_type = 'any'"

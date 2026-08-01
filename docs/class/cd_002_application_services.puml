@@ -45,7 +45,7 @@ package "<<application.ports>>\nRepository & Gateway Ports" as PORTS #FCE4EC/C62
 
   interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> {
     + GetCompiledRules(snapshot_hash: String): CgIrSnapshot
-    + GetLatestCompiledRules(): CgIrSnapshot
+    + GetLatestCompiledRules(lineage_id): CgIrSnapshot
     + PublishCompiledRules(snapshot: CgIrSnapshot): void
   }
 

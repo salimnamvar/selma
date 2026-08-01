@@ -538,7 +538,7 @@ package "<<ports>>\nRepository Interfaces" as PORT_PKG #FCE4EC/C62828 {
 
   interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> #FCE4EC/C62828 {
     + GetCompiledRules(snapshot_hash: String): CgIrSnapshot
-    + GetLatestCompiledRules(): CgIrSnapshot
+    + GetLatestCompiledRules(lineage_id): CgIrSnapshot
     + PublishCompiledRules(snapshot: CgIrSnapshot): void
   }
 

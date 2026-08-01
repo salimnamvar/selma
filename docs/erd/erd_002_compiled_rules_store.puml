@@ -41,12 +41,21 @@ package "Compiled Rules" {
     --
     o node_hash : CHAR(64) <<FK>>
   }
+
+  entity "LineageHeads" as LineageHeads {
+    * lineage_id : UUID <<PK>>
+    --
+    head_snapshot_hash : CHAR(64) <<FK, SHA-256>>
+    head_revision : INTEGER
+    updated_at : TIMESTAMPTZ
+  }
 }
 
 Snapshots ||--o{ SnapshotNodes : "cg_ir_snapshot_hash"
 Nodes ||--o{ SnapshotNodes : "node_hash"
 Nodes ||--o{ Edges : "source_node_hash"
 Nodes ||--o{ Edges : "target_node_hash"
+LineageHeads }o--|| Snapshots : "head_snapshot_hash"
 
 note bottom of Nodes
   **Deduplication**
@@ -59,6 +68,14 @@ note bottom of Snapshots
   • Immutable after publish
   • cg_ir_snapshot_hash is deterministic
   • frozen_env_hash captures the build environment
+end note
+
+note bottom of LineageHeads
+  **head_snapshot_hash index (INV-CS-006)**
+  • lineage_id → latest published snapshot
+  • Mirrors Directives.head_snapshot_hash
+  • GetLatestCompiledRules uses this — not compiled_at
+  • Updated atomically with outbox completed
 end note
 
 @enduml

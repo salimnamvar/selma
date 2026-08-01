@@ -39,9 +39,12 @@ package "directives_infrastructure" as INFRA_DIR #FFE0B2/F57C00 {
 
 package "compiled_rules_infrastructure" as INFRA_CR #FFE0B2/F57C00 {
   class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> {
-    + GetCompiledRules(...)
-    + GetLatestCompiledRules(...)
-    + PublishCompiledRules(...)
+    + GetCompiledRules(snapshot_hash)
+    + GetLatestCompiledRules(lineage_id)
+    + PublishCompiledRules(... updates lineage_heads)
+    --
+    GetLatest resolves head_snapshot_hash
+    via lineage_head_index (not compiled_at)
   }
 }
 

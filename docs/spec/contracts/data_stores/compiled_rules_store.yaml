@@ -61,6 +61,14 @@ operations:
     behavior: "Return immutable snapshot"
     locking: "none (immutable)"
 
+  - name: "read_latest"
+    description: "Read latest published snapshot for a lineage (GetLatestCompiledRules)"
+    behavior: >
+      Resolve lineage_id → head_snapshot_hash via lineage_head_index (or the
+      mirrored Directives.head_snapshot_hash), then read_snapshot. MUST NOT
+      choose "latest" by compiled_at wall clock.
+    locking: "none (immutable snapshot body; head pointer is mutable elsewhere)"
+
   - name: "read_node"
     description: "Read individual node by node_hash"
     behavior: "Return node object from shared store"
@@ -69,6 +77,22 @@ operations:
   - name: "verify_integrity"
     description: "Verify snapshot integrity by recomputing hashes"
     behavior: "Recompute all node/edge/snapshot hashes and compare"
+
+lineage_head_index:
+  description: >
+    Secondary index mapping lineage_id → head_snapshot_hash so CAS clients can
+    resolve "latest CG-IR for lineage" without scanning snapshots. Mirrors
+    Directives.head_snapshot_hash (directives_store head_snapshot_pointer).
+  structure:
+    - key: "lineage_id"
+      value: "head_snapshot_hash (cg_ir_snapshot_hash)"
+      optional_fields: ["head_revision", "updated_at"]
+  rules:
+    - "Updated atomically with publish when outbox row → completed"
+    - "head_snapshot_hash advances revision-monotonically (highest completed revision wins)"
+    - "GetLatestCompiledRules(lineage_id) MUST use this index (or directives head pointer)"
+    - "Index is authoritative for inspection 'latest rules' resolution across replicas"
+    - "CAS blob identity remains content-addressed; this index is the only mutable head map"
 
 retention_policy:
   - artifact: "CG-IR Snapshots"
@@ -98,6 +122,12 @@ invariants:
   - id: "INV-CS-005"
     statement: "compiled_at is NOT included in snapshot hash"
     enforcement: "hash_computation"
+
+  - id: "INV-CS-006"
+    statement: >
+      GetLatestCompiledRules / inspection "latest rules" MUST resolve via
+      lineage_head_index (head_snapshot_hash), not by scanning compiled_at
+    enforcement: "lineage_head_index"
 
 stories:
   - story_id: "US-CS-001"

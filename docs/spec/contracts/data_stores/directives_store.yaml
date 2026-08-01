@@ -218,6 +218,35 @@ compile_coordination:
       - >
         CAS publish remains idempotent by content hash; lease correctness is
         about compute waste and crash recovery, not snapshot identity.
+  head_snapshot_pointer:
+    description: >
+      Mutable pointer from directive lineage to the latest successfully published
+      CG-IR snapshot. CAS is content-addressed only; this column is the normative
+      "latest for lineage" secondary index used by inspections and GetLatestCompiledRules.
+    column: "head_snapshot_hash"
+    type: "sha256 | null"
+    location: "Directives row (per lineage_id)"
+    rules:
+      - >
+        Directives.head_snapshot_hash holds the cg_ir_snapshot_hash of the most
+        recent successful compile for that lineage (null until first completed compile).
+      - >
+        When an outbox row transitions to completed, the same DB transaction
+        (or a single atomic update pair spanning directives_store and the
+        compiled_rules lineage_heads index — see compiled_rules_store
+        lineage_head_index) MUST set Directives.head_snapshot_hash =
+        published cg_ir_snapshot_hash for that lineage.
+      - >
+        head_snapshot_hash MUST only advance for completed publishes; failed and
+        permanently_failed outbox rows MUST NOT change the pointer.
+      - >
+        If a later revision's compile completes after an earlier one (out-of-order
+        drain), head_snapshot_hash MUST reflect the compile for the highest
+        completed revision number (revision-monotonic head).
+      - >
+        Inspections that request "latest rules" resolve via this pointer (or the
+        mirrored compiled_rules lineage_heads index); they MUST NOT scan CAS
+        by compiled_at wall clock.
   consistency: "eventual between directive head and compiled snapshot; bounded by compile RTO"
 
 lock_timing:

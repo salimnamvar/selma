@@ -16,6 +16,7 @@ package "Directives" {
     execution_id : UUID
     status : ENUM(active, deprecated, draft, superseded)
     revision : INTEGER
+    head_snapshot_hash : CHAR(64) <<nullable, SHA-256>>
     metadata : JSONB
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ
@@ -49,7 +50,7 @@ package "Directives" {
     --
     o lineage_id : UUID <<FK>>
     revision_number : INTEGER
-    status : ENUM(pending, in_progress, completed, failed)
+    status : ENUM(pending, in_progress, completed, failed, permanently_failed)
     idempotency_key : TEXT <<nullable>>
     enqueued_at : TIMESTAMPTZ
     completed_at : TIMESTAMPTZ <<nullable>>
@@ -67,6 +68,10 @@ note bottom of Directives
   • write_lock → exclusive writes, FIFO queue
   • Release read locks before hermetic CPU compile
   • Optimistic concurrency: ETag W/"{lineage}:{rev}"
+  **head_snapshot_hash**
+  • Latest published cg_ir_snapshot_hash for lineage
+  • Set atomically when outbox → completed
+  • null until first successful compile
 end note
 
 note bottom of DirectiveRevisions
