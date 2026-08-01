@@ -11,6 +11,13 @@
 @startuml c4_selma_component
 title Selma -- Component Diagram
 
+note as CLARITY_NOTE
+  Boundary semantics: stores are drawn external to the Application
+  process boundary here, but are internal to the Selma system boundary
+  (see Container Diagram). The Application owns no store technology;
+  adapters (*_repository) are the only store access path.
+end note
+
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !theme plain
 !include ./common/c4_styles.puml
