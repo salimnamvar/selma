@@ -309,3 +309,41 @@ guidance_pinning:
     - "GetFindingGuidance resolves doctrine by that ref only — never latest revision of the lineage"
     - "If doctrine document is missing (retention edge case), return 404 GuidanceUnavailable with explicit error — do not substitute"
 
+denied_actions_view:
+  description: >
+    SOC reconciliation view over the two-channel denial model (INV-ES-007).
+    Channel A: CapabilityDenied via DenialAuditPort (api gate; may lack finding_id).
+    Channel B: SoDDenied via FindingFsm on the per-finding chain.
+    Reporting that only reads one channel under-reports denial volume.
+  purpose: "SOC denial volume, self-waiver attempts, capability-abuse forensics"
+  definition: >
+    A read-only projection (SQL view, materialized view, or query API) that
+    UNION ALL's CapabilityDenied and SoDDenied events from finding_events_store
+    into a single logical stream for operators.
+  columns:
+    - "event_id"
+    - "event_type (CapabilityDenied | SoDDenied)"
+    - "channel (denial_audit_port | finding_fsm)"
+    - "actor"
+    - "capability (nullable for SoD-only)"
+    - "finding_id (nullable for gate-only CapabilityDenied)"
+    - "timestamp / HLC tuple"
+    - "payload.count (when denial_audit_amplification aggregated N identical denials)"
+    - "reason / sod_rule_id when present"
+  aggregation_semantics:
+    description: >
+      When denial_audit_amplification collapses N identical denials into one
+      event with payload.count, SOC volume metrics MUST sum payload.count
+      (default 1 when absent), not event row count alone.
+    rules:
+      - "denied_actions_count = SUM(COALESCE(payload.count, 1)) over the window"
+      - "Break out by event_type and channel so SoDDenied is never omitted from SOC reports"
+      - "Rate-limited aggregation does not change 403 client responses (still one deny per request)"
+  consumers:
+    - "SOC / security operations (read-only)"
+    - "Optional analytics.view aggregates (guidance_only; no FSM write path)"
+  non_requirements:
+    - "Not a C4 peer; not a separate store"
+    - "Not required on the public REST surface in v1 (may be operator SQL / internal admin API)"
+    - "MUST NOT provide a write path to findings or directives (AA-01)"
+

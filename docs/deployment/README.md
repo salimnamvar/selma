@@ -165,6 +165,7 @@ Monitoring tools named in DEP-001 (Prometheus/Grafana, ELK/Loki, Jaeger) MUST ex
 | `compile_duration_seconds` / in-process compile concurrency | v1 API vs compile CPU contention |
 | `finding_fsm_transition_total` / denial rate by capability | SoD friction and authorization health |
 | `finding_events_append_latency` / denial_append_rate | Denial-audit amplification vs lifecycle appends |
+| `denied_actions` volume (sum of payload.count by channel) | SOC reconciliation of CapabilityDenied + SoDDenied two-channel model |
 | `hlc_counter_reset_total` / node_id restart | HLC persistence health |
 | Per-endpoint request rate & error ratio | Incident triage for REST surface |
 | `directive_modify_rate_limited_total` / per-actor quota remaining | Backpressure for `directive.modify` (INV-CA-004); 429 before write-queue 503 |
