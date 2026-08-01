@@ -68,6 +68,7 @@ Do not introduce a C4 peer ID `compiled_rules_application`. Do not rename packag
 - `rest_interface` → `DenialAuditPort` for capability-denial audit only (not full findings use cases)
 - `findings_infrastructure` implements both `FindingEventRepository` and `DenialAuditPort`
 - `compiled_rules_application` and `inspections_application` both depend on `conflicts_domain` for `ResolveConflict`
+- `findings_application` depends on `findings_domain.FindingFsm` (`finding_fsm_engine`) for all lifecycle transitions and SoD
 - `artifacts_infrastructure` implements ports owned by both findings and inspections applications (shared object-store adapter)
 
 **Not in core packages:**
