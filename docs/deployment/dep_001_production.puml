@@ -42,9 +42,11 @@ package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
   node "Load Balancer HA\nmanaged multi-AZ or active/standby" as LOAD_BALANCER
 }
 
-' ── Application Zone (C4: application — one process; internals = C4 component) ──
+' ── Application Zone (C4: application — StatefulSet; internals = C4 component) ──
 package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {
-  node "application\nPython 3.11+ / Docker\nC4: application container\n(api · *_application ·\n*_repository · *_gateway\nin-process v1)" as APP
+  node "application (StatefulSet)\nPython 3.11+ / Docker\nC4: application container\n(api · compilation_application\n(package: compiled_rules_*) ·\n*_application · *_repository\nvia adapters · *_gateway)\nHLC state on PVC\nCPU cgroup: api vs compile" as APP
+  database "PVC\nnode_id + hlc_state" as HLC_PVC
+  APP --> HLC_PVC : persist HLC
 }
 
 ' ── Data Zone (C4: four *_store · production failure domains) ──
@@ -77,11 +79,17 @@ package "Monitoring Zone" as MON #E8EAF6/C5CAE9 {
 CLIENTS --> LOAD_BALANCER : HTTPS
 LOAD_BALANCER --> APP : HTTPS / REST
 
-APP --> DIRECTIVES : SQL / TLS
-APP --> EVENTS : Append-Only / TLS
-APP --> COMPILED : CAS / TLS
-APP --> ARTIFACTS : Object Write / TLS
-APP --> TARGETS : HTTPS optional
+note right of APP
+  All store I/O via *_repository adapters
+  (C4 interface adapters — not direct api→store).
+  Data Zone hosts C4 *_store peers (frameworks & drivers).
+end note
+
+APP --> DIRECTIVES : SQL / TLS\n(via *_repository)
+APP --> EVENTS : Append-Only / TLS\n(via finding_events_repository)
+APP --> COMPILED : CAS / TLS\n(via compiled_rules_repository)
+APP --> ARTIFACTS : Object Write / TLS\n(via artifacts_repository)
+APP --> TARGETS : HTTPS optional\n(via target_sources_gateway)
 
 APP ..> PROM
 APP ..> ELK

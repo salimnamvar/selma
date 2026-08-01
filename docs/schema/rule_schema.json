@@ -83,11 +83,11 @@
   "x-cg-ir-hashing": {
     "normative_status": "informative",
     "node_hash_scope": "local",
-    "dual_hash_model": "semantic_hash (detection, scope, depends_on, priority, conflict_resolution, status, created_at) + presentation_hash (message, directive_revision, control_version) compose node_hash per docs/spec/contracts/compilation/pipeline.yaml",
-    "semantic_body_fields": ["directive_id", "lineage_id", "deontic", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
+    "dual_hash_model": "semantic_hash (detection post-parameters-merge, scope, depends_on, priority, conflict_resolution, status, created_at, paired_policy_ref) + presentation_hash (message, directive_revision, control_version) compose node_hash per docs/spec/contracts/compilation/pipeline.yaml",
+    "semantic_body_fields": ["directive_id", "lineage_id", "deontic", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at", "paired_policy_ref"],
     "presentation_body_fields": ["message", "directive_revision", "control_version"],
-    "node_body_fields": ["directive_id", "lineage_id", "deontic", "directive_revision", "control_version", "message", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at"],
-    "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest"],
+    "node_body_fields": ["directive_id", "lineage_id", "deontic", "directive_revision", "control_version", "message", "detection", "scope", "severity_default", "depends_on", "priority", "conflict_resolution", "status", "created_at", "paired_policy_ref"],
+    "excluded_from_node_hash": ["graph position", "neighbor content", "snapshot manifest", "creator_provenance"],
     "edge_hash": "SHA-256 of sorted {source: directive_id, target: directive_id}",
     "snapshot_hash": "SHA-256 of sorted node_hashes + sorted edge_hashes + provenance",
     "incremental_reuse": "unchanged node_body produces identical node_hash across snapshots"
@@ -358,17 +358,18 @@
     },
     "paired_policy_ref": {
       "type": "string",
-      "description": "Reference to the paired policy doctrine document that provides guidance, reasoning, and examples for this rule. Used AFTER evaluation to generate human/AI-facing guidance."
+      "minLength": 1,
+      "description": "Required dual-document envelope pin: reference to the paired policy doctrine revision that provides guidance for this rule. Compiler maps this into CG-IR node_body (included in node_hash). Used AFTER evaluation for guidance only — never for evaluation/FSM. Guidance resolution MUST load this exact revision (not latest doctrine head)."
     },
     "detection_spec": {
       "type": "object",
       "required": ["strategy"],
-      "description": "Declarative detection specification - implementation agnostic",
+      "description": "Declarative detection specification - implementation agnostic. strategy is the JSON Schema discriminator key; AST-walking validation remains normative for active *_spec presence (INV-CP-021).",
       "properties": {
         "strategy": {
           "type": "string",
           "enum": ["structural", "semantic", "pattern", "composite", "external", "manual"],
-          "description": "High-level detection approach"
+          "description": "High-level detection approach (discriminator for which *_spec object is active)"
         },
         "structural_spec": {
           "type": "object",

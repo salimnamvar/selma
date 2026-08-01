@@ -27,12 +27,12 @@ Internals of Application are defined by [C4 Component](../c4-model/c4_selma_comp
 |:-----|:--------|:-----------|
 | **External User** | Driving adapters outside Selma deployables | `clients` |
 | **Public** | Edge entry | Load balancer (managed multi-AZ or active/standby) |
-| **Application** | C4 `application` process (v1 single replica set) | One runtime: all C4 components co-located |
-| **Data** | Four C4 `*_store` | PG cluster A: `directives_store`; PG cluster B: `finding_events_store`; object store: `compiled_rules_store` + `artifacts_store` |
+| **Application** | C4 `application` process (v1 **StatefulSet** replica set) | One runtime: all C4 components co-located (`api`, `compilation_application` / package `compiled_rules_*`, inspections, findings, repositories). HLC node state on PVC. |
+| **Data** | Four C4 `*_store` (frameworks & drivers ring) | PG cluster A: `directives_store`; PG cluster B: `finding_events_store`; object store: `compiled_rules_store` + `artifacts_store`. Store I/O only via `*_repository` adapters — never direct `api` → store. |
 | **External** | Optional pull only | `target_sources` |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
 
-CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer; when run it may write `artifacts_store` only.
+CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer. Production CI MUST upload certification results via the authenticated API (`CertificationArtifactPort` / artifacts resource with a system capability) — **not** by opening direct network ingress from CI into the Data Zone object store. Local/dev offline write to `artifacts_store` kind=certification remains allowed when the tool runs co-located with store credentials under operator control.
 
 ## Environment Requirements
 
@@ -53,6 +53,18 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 | CPU | 2 cores | 4 cores |
 | RAM | 4 GB | 8 GB |
 | Disk | 20 GB | 50 GB (local Compiled Rules / Artifacts cache) |
+
+#### CPU isolation and compile backpressure (production MUST)
+
+v1 co-locates `api` and `compilation_application` in one process. Production
+MUST prevent compile CPU from starving REST handlers:
+
+| Control | Requirement |
+|:--------|:------------|
+| Process/cgroup CPU | **MUST** pin or cgroup-limit hermetic compile workers (e.g. 50% of container CPU to compile pool, remainder to API event loop). `taskset` / cgroup v2 `cpu.max` are conformant. |
+| Worker pool | Fixed-size compile pool (default 2 concurrent in-process workers per replica; environment-configurable). No unbounded fan-out. |
+| Outbox depth backpressure | When `compile_outbox_depth` exceeds the configured soft limit (default **1000** pending+in_progress rows), new directive mutations that would enqueue a compile_request MUST fail fast with **503 CompileQueueFull** (Retry-After). See `directives_store.yaml` `compile_coordination.backpressure`. |
+| Metrics | Alert on `compile_outbox_depth`, `compile_duration_seconds` p99 vs lease duration, and API p99 latency during compile bursts. |
 
 ### Data Store Sizing
 
@@ -83,8 +95,9 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 - Executable documents read from **Directives** under **read-lock** before hermetic boundary (normative: [`../spec/contracts/compilation/pipeline.yaml`](../spec/contracts/compilation/pipeline.yaml) `concurrency_model`)
 - Concurrent compilations allowed (shared read locks); directive mutations take exclusive write locks (writer-preference FIFO)
 - Policy doctrines are not loaded for evaluation
-- **v1 process model:** compile runs **in-process** with the Application container after durable directive writes (same C4 `application` container). Scale-out to a dedicated compile worker is a future deployment option and does not change C4 peer IDs
-- **Split compile/inspect deployables (DEP-001):** If/when compilation and inspection run in separate processes or images, both deployables MUST load the **same versioned** `conflicts_domain` library artifact (`ResolveConflict`) from a single release train. Forking private copies of conflict-resolution code is non-conformant (`INV-PR-002` / conflict determinism). Normative structural note: [`../c4-model/README.md`](../c4-model/README.md) "Not C4 peers"; package edges: [`../package/README.md`](../package/README.md)
+- **v1 process model:** compile runs **in-process** with the Application container after durable directive writes (same C4 `application` container; package prefix `compiled_rules_*`). Scale-out to a dedicated compile worker (same image, different entrypoint) is a future deployment option and does not change C4 peer IDs
+- **CPU isolation:** production MUST apply the CPU isolation table above; "MAY pin" is non-conformant for production
+- **Split compile/inspect deployables (DEP-001):** If/when compilation and inspection run in separate processes or images, both deployables MUST load the **same versioned** `conflicts_domain` library artifact (`ResolveConflict`) from a single release train, and `conflicts_domain_version` MUST be pinned in `frozen_environment` / `frozen_env_hash` ([`../spec/contracts/compilation/hermetic_boundary.yaml`](../spec/contracts/compilation/hermetic_boundary.yaml)). Forking private copies of conflict-resolution code is non-conformant (`INV-PR-002` / conflict determinism). Normative structural note: [`../c4-model/README.md`](../c4-model/README.md) "Not C4 peers"; package edges: [`../package/README.md`](../package/README.md)
 
 ### TLS and transport
 
@@ -145,21 +158,33 @@ a stateless restart that reuses a `node_id` without its HLC state breaks the
 total-order and `chain_hash` guarantees (see `finding_events_store.yaml`
 `hlc.node_identity`).
 
-Production MUST adopt **at least one** of these conformant mechanisms:
+**Production mandate:** Application replicas MUST be deployed as a **Kubernetes
+StatefulSet (or equivalent) with a PVC per ordinal** for HLC node state:
 
-1. **StatefulSet with PVCs (preferred):** one replica identity per StatefulSet
-   ordinal; `node_id` (UUID) and HLC state live on the replica's persistent
-   volume and are reloaded on restart. Pod rescheduling keeps both.
-2. **Database-backed state:** a dedicated `hlc_state` table in
-   `finding_events_store` keyed by `node_id`; the Application loads the last
-   persisted `(physical_time, logical_counter)` for its `node_id` on startup
-   and durably advances it (batched fsync) as it appends.
+1. **StatefulSet with PVCs (required production):** one replica identity per
+   StatefulSet ordinal; `node_id` (UUID) and HLC `(physical_time, logical_counter)`
+   live on the replica's persistent volume and are reloaded on restart before
+   accepting appends. Pod rescheduling reattaches the PVC. DEP-001 shows the PVC.
+2. **Database-backed `hlc_state` (non-production / emergency only):** a dedicated
+   table in `finding_events_store` keyed by `node_id`. **Not** a production
+   default: it couples process bootstrap to DB availability (circular dependency
+   during store outage) and is unsafe under PITR rollback of the same store
+   (stale logical counters can collide with externally observed chain hashes).
+   Environments that use it MUST document risk acceptance and a fence-and-retire
+   procedure after any PITR.
 
 A stateless `Deployment` that regenerates a fresh `node_id` on every start is
 conformant **only if** no events from the previous `node_id` remain in the
 stream (fence-and-retire); it MUST NOT reuse a previously retired `node_id`.
+If a PVC is lost, treat the ordinal as a **new** node (retire old `node_id`).
 Monitor `hlc_counter_reset_total` / node_id restarts (observability catalog)
 to detect unpersisted restarts.
+
+**Replay of spooled denials:** CapabilityDenied / SoDDenied events spooled to
+disk during store outage MUST be replayed with HLC timestamps assigned at
+**replay time** (monotonic with current node state) and MAY carry
+`original_denied_at` / `replay_marker` in payload so SOC can reconcile wall
+time without violating INV-ES-003 non-decreasing HLC order.
 
 ### Load balancer high availability
 
@@ -192,11 +217,13 @@ cannot stop a botnet of unique actors or an unauthenticated flood. The Load
 Balancer / edge gateway MUST therefore enforce a **global, identity-independent
 admission limit** in production — e.g. Nginx `limit_req`, Traefik RateLimit
 middleware, or a managed WAF/CDN rule — keyed by IP/network and per-endpoint.
+**Production default starting point:** 200 requests/second per client IP
+(environment-owned; tune below Application write-queue and outbox depth bounds).
 The edge limit MUST be configured below the Application's write-queue bounds so
-it trips before store 503s, and MUST return 429 with `Retry-After` without
-reaching the Application (no `DenialAuditPort` write for edge-level rejection).
-Thresholds are environment-owned; production MUST document chosen values and
-alert on edge-limit rejections.
+it trips before store 503s / CompileQueueFull, and MUST return 429 with
+`Retry-After` without reaching the Application (no `DenialAuditPort` write for
+edge-level rejection). Production MUST document chosen values and alert on
+edge-limit rejections.
 
 ### Idempotency (mutating APIs)
 

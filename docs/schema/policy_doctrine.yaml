@@ -66,6 +66,8 @@ cross_layer_binding:
   storage: >
     System of record: directives_store (PostgreSQL), co-versioned with
     executable_document under the same lineage/execution revision.
+    Each doctrine instance MUST carry a revision identifier co-versioned with
+    the paired executable revision so paired_policy_ref can pin guidance.
   field_legality:
     policy_layer: "Descriptive only. No executable fields."
     schema_layer: "Executable fields only. No prose governance."
