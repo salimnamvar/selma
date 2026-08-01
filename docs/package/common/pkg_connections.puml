@@ -1,0 +1,225 @@
+' ============================================================
+' Title:     Package diagram connections (all edges)
+' Purpose:   Every package + leaf has ≥1 edge. Edit edges here
+'            without touching section structure.
+' Contract:  1.1.0
+'
+' Include AFTER all pkg_section_*.puml files.
+' ============================================================
+
+' ── Layer packages (Clean Architecture dependency rule) ─────
+INTERFACES ..> APPLICATION : <<uses>>
+COMPOSITION ..> INTERFACES : <<wires>>
+COMPOSITION ..> APPLICATION : <<wires>>
+COMPOSITION ..> INFRASTRUCTURE : <<wires>>
+COMPOSITION ..> DOMAIN : <<wires>>
+APPLICATION ..> DOMAIN : <<depends>>
+APPLICATION ..> INFRASTRUCTURE : <<depends via ports>>
+INFRASTRUCTURE ..> STORES : <<persists>>
+INFRASTRUCTURE ..> EXT : <<optional pull>>
+
+' ── Nested resource package layout pins ─────────────────────
+IF_REST -[hidden]right- IF_CLI
+IF_CLI -[hidden]right- IF_TUI
+APP_DIR -[hidden]right- APP_CR
+APP_CR -[hidden]right- APP_INS
+APP_INS -[hidden]right- APP_FIND
+DOM_DIR -[hidden]right- DOM_CR
+DOM_CR -[hidden]right- DOM_INS
+DOM_INS -[hidden]right- DOM_FIND
+DOM_FIND -[hidden]right- DOM_CON
+DOM_CON -[hidden]down- DOM_SHARED
+INFRA_DIR -[hidden]right- INFRA_CR
+INFRA_CR -[hidden]right- INFRA_FE
+INFRA_FE -[hidden]right- INFRA_ART
+INFRA_ART -[hidden]right- INFRA_INS
+INFRA_INS -[hidden]right- INFRA_PLAT
+
+' ── Driving: REST gate pipeline ─────────────────────────────
+REST_DIR --> REST_AUTHN
+REST_CMP --> REST_AUTHN
+REST_INS --> REST_AUTHN
+REST_FIND --> REST_AUTHN
+REST_ART --> REST_AUTHN
+REST_AUTHN --> REST_CAP
+REST_CAP --> REST_IDEM
+REST_CAP --> REST_ETAG
+REST_CAP --> REST_DENY
+REST_DENY ..> P_FIND_DENY : AppendDenial
+
+' ── Driving: REST routers → use cases ───────────────────────
+REST_DIR --> UC_DIR_CREATE
+REST_DIR --> UC_DIR_GET
+REST_DIR --> UC_DIR_LIST
+REST_DIR --> UC_DIR_UPD
+REST_DIR --> UC_DIR_LIFE
+REST_CMP --> UC_CR_COMPILE
+REST_CMP --> UC_CR_PUB
+REST_INS --> UC_INS_CREATE
+REST_INS --> UC_INS_GET
+REST_FIND --> UC_FIND_GET
+REST_FIND --> UC_FIND_LIST
+REST_FIND --> UC_FIND_TRANS
+REST_FIND --> UC_FIND_GUIDE
+REST_FIND --> UC_FIND_EVID
+REST_ART --> UC_INS_GET
+REST_ART --> UC_FIND_EVID
+
+' ── Driving: CLI ────────────────────────────────────────────
+CLI_DIR --> CLI_CAP
+CLI_INS --> CLI_CAP
+CLI_FIND --> CLI_CAP
+CLI_CAP ..> P_FIND_DENY : AppendDenial
+CLI_DIR --> UC_DIR_CREATE
+CLI_DIR --> UC_DIR_GET
+CLI_DIR --> UC_DIR_LIST
+CLI_INS --> UC_INS_CREATE
+CLI_INS --> UC_INS_GET
+CLI_FIND --> UC_FIND_GET
+CLI_FIND --> UC_FIND_LIST
+CLI_FIND --> UC_FIND_TRANS
+
+' ── Driving: TUI ────────────────────────────────────────────
+TUI_DIR --> TUI_CAP
+TUI_FIND --> TUI_CAP
+TUI_CAP ..> P_FIND_DENY : AppendDenial
+TUI_DIR --> UC_DIR_GET
+TUI_DIR --> UC_DIR_LIST
+TUI_FIND --> UC_FIND_GET
+TUI_FIND --> UC_FIND_LIST
+TUI_FIND --> UC_FIND_GUIDE
+
+' ── Composition wiring ──────────────────────────────────────
+WIRE_APP --> WIRE_PORTS
+WIRE_APP --> WIRE_OUTBOX
+WIRE_PORTS --> REST_CAP
+WIRE_PORTS --> CLI_CAP
+WIRE_PORTS --> TUI_CAP
+WIRE_PORTS --> SQL_DIR
+WIRE_PORTS --> CAS_CR
+WIRE_PORTS --> EVT_REPO
+WIRE_PORTS --> ART_INS
+WIRE_PORTS --> ART_FIND
+WIRE_PORTS --> ART_CERT
+WIRE_PORTS --> TGT_GW
+WIRE_PORTS --> DET_EVAL
+WIRE_PORTS --> PLAT_HASH
+WIRE_PORTS --> PLAT_HLC
+WIRE_PORTS --> P_DIR_REPO
+WIRE_PORTS --> P_CR_READ
+WIRE_PORTS --> P_CR_REPO
+WIRE_PORTS --> P_INS_ART
+WIRE_PORTS --> P_INS_TGT
+WIRE_PORTS --> P_FIND_EVT
+WIRE_PORTS --> P_FIND_DENY
+WIRE_PORTS --> P_FIND_GUIDE
+WIRE_PORTS --> P_FIND_ART
+WIRE_OUTBOX --> UC_CR_DRAIN
+
+' ── Directives use cases ────────────────────────────────────
+UC_DIR_CREATE --> P_DIR_REPO
+UC_DIR_GET --> P_DIR_REPO
+UC_DIR_LIST --> P_DIR_REPO
+UC_DIR_UPD --> P_DIR_REPO
+UC_DIR_LIFE --> P_DIR_REPO
+UC_DIR_CREATE ..> AGG_DIR
+UC_DIR_GET ..> AGG_DIR
+UC_DIR_LIST ..> AGG_DIR
+UC_DIR_UPD ..> AGG_DIR
+UC_DIR_LIFE ..> AGG_DIR
+UC_DIR_CREATE ..> UC_CR_DRAIN : compile_request
+UC_DIR_UPD ..> UC_CR_DRAIN : compile_request
+UC_DIR_LIFE ..> UC_CR_DRAIN : compile_request
+
+' ── Compilation use cases ───────────────────────────────────
+UC_CR_COMPILE --> P_CR_READ
+UC_CR_COMPILE --> P_CR_REPO
+UC_CR_COMPILE ..> AGG_CGIR
+UC_CR_COMPILE ..> SVC_CONFLICT
+UC_CR_PUB --> P_CR_REPO
+UC_CR_PUB ..> AGG_CGIR
+UC_CR_PUB ..> AGG_HEAD
+UC_CR_DRAIN --> UC_CR_COMPILE
+
+' ── Inspections use cases ───────────────────────────────────
+UC_INS_CREATE --> P_INS_TGT
+UC_INS_CREATE --> P_CR_REPO
+UC_INS_CREATE --> P_INS_ART
+UC_INS_CREATE --> UC_INS_PIPE
+UC_INS_GET --> P_INS_ART
+UC_INS_PIPE --> P_CR_REPO
+UC_INS_PIPE --> DET_EVAL
+UC_INS_PIPE --> P_INS_ART
+UC_INS_PIPE ..> AGG_INS
+UC_INS_PIPE ..> AGG_TGT
+UC_INS_PIPE ..> AGG_DET
+UC_INS_PIPE ..> SVC_CONFLICT
+UC_INS_PIPE ..> UC_FIND_TRANS : opens findings
+UC_INS_CREATE ..> AGG_INS
+
+' ── Findings use cases ──────────────────────────────────────
+UC_FIND_GET --> P_FIND_EVT
+UC_FIND_LIST --> P_FIND_EVT
+UC_FIND_TRANS --> P_FIND_EVT
+UC_FIND_TRANS --> SVC_FSM
+UC_FIND_TRANS --> P_CR_REPO : SoD provenance
+UC_FIND_GUIDE --> P_FIND_GUIDE
+UC_FIND_GUIDE --> P_FIND_EVT
+UC_FIND_EVID --> P_FIND_ART
+UC_FIND_EVID --> P_FIND_EVT
+UC_FIND_GET ..> AGG_FIND
+UC_FIND_GET ..> AGG_PROJ
+UC_FIND_LIST ..> AGG_PROJ
+UC_FIND_TRANS ..> AGG_FIND
+UC_FIND_GUIDE ..> AGG_DOC
+UC_FIND_EVID ..> AGG_FIND
+
+' ── Domain structure ────────────────────────────────────────
+AGG_DIR --> AGG_EXEC
+AGG_DIR --> AGG_DOC
+AGG_DIR ..> VO_LINEAGE
+AGG_DIR ..> VO_REV
+AGG_DIR ..> VO_EXEC
+AGG_DIR ..> VO_PPR
+AGG_DOC ..> VO_PPR
+AGG_CGIR ..> VO_LINEAGE
+AGG_HEAD ..> VO_LINEAGE
+AGG_HEAD --> AGG_CGIR
+AGG_INS ..> VO_LINEAGE
+AGG_INS --> AGG_TGT
+AGG_INS --> AGG_DET
+AGG_FIND ..> VO_FIND
+AGG_FIND ..> VO_ACTOR
+AGG_FIND ..> VO_PPR
+AGG_FIND ..> VO_HLC
+AGG_PROJ ..> VO_FIND
+SVC_FSM ..> AGG_FIND
+SVC_CONFLICT ..> AGG_CGIR
+
+' ── Infrastructure implements ports (ISP) ───────────────────
+SQL_DIR ..|> P_DIR_REPO
+SQL_DIR ..|> P_CR_READ
+SQL_DIR ..|> P_FIND_GUIDE
+CAS_CR ..|> P_CR_REPO
+EVT_REPO ..|> P_FIND_EVT
+EVT_REPO ..|> P_FIND_DENY
+ART_INS ..|> P_INS_ART
+ART_FIND ..|> P_FIND_ART
+TGT_GW ..|> P_INS_TGT
+
+' ── Adapters → shared client / platform ─────────────────────
+ART_INS --> OBJ_CLI
+ART_FIND --> OBJ_CLI
+ART_CERT --> OBJ_CLI
+SQL_DIR --> PLAT_HASH
+CAS_CR --> PLAT_HASH
+EVT_REPO --> PLAT_HASH
+EVT_REPO --> PLAT_HLC
+PLAT_HLC ..> VO_HLC
+
+' ── Repositories → stores / external ────────────────────────
+SQL_DIR --> ST_DIR : SQL
+CAS_CR --> ST_CR : CAS
+EVT_REPO --> ST_FE : append-only
+OBJ_CLI --> ST_ART : object write-once
+TGT_GW --> ST_TGT : HTTPS

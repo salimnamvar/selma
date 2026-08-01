@@ -1,0 +1,74 @@
+' ============================================================
+' Section: APPLICATION (C4: *_application)
+' Use cases + owned <<port>> components in the same package.
+' Aliases: APPLICATION, APP_*, UC_*, P_*
+' ============================================================
+
+package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
+
+  package "$TITLE_APP_DIR" as APP_DIR #C8E6C9/388E3C {
+    together {
+      [CreateDirective] as UC_DIR_CREATE
+      [GetDirective] as UC_DIR_GET
+      [ListDirectives] as UC_DIR_LIST
+      [UpdateDirective] as UC_DIR_UPD
+      [LifecycleTransitions] as UC_DIR_LIFE
+      ["$PORT_DIR_REPO"] as P_DIR_REPO <<port>>
+    }
+    UC_DIR_CREATE -[hidden]right- UC_DIR_GET
+    UC_DIR_GET -[hidden]right- UC_DIR_LIST
+    UC_DIR_LIST -[hidden]right- UC_DIR_UPD
+    UC_DIR_UPD -[hidden]right- UC_DIR_LIFE
+    UC_DIR_LIFE -[hidden]down- P_DIR_REPO
+  }
+
+  package "$TITLE_APP_CR" as APP_CR #C8E6C9/388E3C {
+    together {
+      [CompileDirectives] as UC_CR_COMPILE
+      [PublishCompiledRules] as UC_CR_PUB
+      [DrainOutbox] as UC_CR_DRAIN
+      ["$PORT_CR_READ"] as P_CR_READ <<port>>
+      ["$PORT_CR_REPO"] as P_CR_REPO <<port>>
+    }
+    UC_CR_COMPILE -[hidden]right- UC_CR_PUB
+    UC_CR_PUB -[hidden]right- UC_CR_DRAIN
+    UC_CR_DRAIN -[hidden]down- P_CR_READ
+    P_CR_READ -[hidden]right- P_CR_REPO
+  }
+
+  package "$TITLE_APP_INS" as APP_INS #C8E6C9/388E3C {
+    together {
+      [CreateInspection] as UC_INS_CREATE
+      [GetInspection] as UC_INS_GET
+      [RunInspectionPipeline] as UC_INS_PIPE
+      ["$PORT_INS_ART"] as P_INS_ART <<port>>
+      ["$PORT_INS_TGT"] as P_INS_TGT <<port>>
+    }
+    UC_INS_CREATE -[hidden]right- UC_INS_GET
+    UC_INS_GET -[hidden]right- UC_INS_PIPE
+    UC_INS_PIPE -[hidden]down- P_INS_ART
+    P_INS_ART -[hidden]right- P_INS_TGT
+  }
+
+  package "$TITLE_APP_FIND" as APP_FIND #C8E6C9/388E3C {
+    together {
+      [GetFinding] as UC_FIND_GET
+      [ListFindings] as UC_FIND_LIST
+      [TransitionFinding] as UC_FIND_TRANS
+      [GetFindingGuidance] as UC_FIND_GUIDE
+      [AttachEvidence] as UC_FIND_EVID
+      ["$PORT_FIND_EVT"] as P_FIND_EVT <<port>>
+      ["$PORT_FIND_DENY"] as P_FIND_DENY <<port>>
+      ["$PORT_FIND_GUIDE"] as P_FIND_GUIDE <<port>>
+      ["$PORT_FIND_ART"] as P_FIND_ART <<port>>
+    }
+    UC_FIND_GET -[hidden]right- UC_FIND_LIST
+    UC_FIND_LIST -[hidden]right- UC_FIND_TRANS
+    UC_FIND_TRANS -[hidden]right- UC_FIND_GUIDE
+    UC_FIND_GUIDE -[hidden]right- UC_FIND_EVID
+    UC_FIND_EVID -[hidden]down- P_FIND_EVT
+    P_FIND_EVT -[hidden]right- P_FIND_DENY
+    P_FIND_DENY -[hidden]right- P_FIND_GUIDE
+    P_FIND_GUIDE -[hidden]right- P_FIND_ART
+  }
+}

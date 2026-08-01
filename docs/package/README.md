@@ -3,7 +3,26 @@
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
-PlantUML package diagrams for Clean Architecture with **`{resource}_{layer}`** modules and nested subpackages (`use_cases` / `ports` / `adapters` / `services`). This section is an **implementation view**: structure and dependencies are drawn on the diagram; behavioral contracts stay in `spec/`. It must **not** invent new product peers, rename C4 IDs, or patch incomplete structure with diagram notes.
+PlantUML package diagrams for Clean Architecture with **`{resource}_{layer}`** modules. This section is an **implementation view**: structure and dependencies are drawn on the diagram; behavioral contracts stay in `spec/`. It must **not** invent new product peers, rename C4 IDs, or patch incomplete structure with diagram notes.
+
+## Source layout (maintainable like C4 `common/`)
+
+Mirrors [`../c4-model/common/`](../c4-model/common/): styles and identities are shared; the main diagram only **imports**.
+
+| Path | Role | Edit when… |
+| :--- | :--- | :--- |
+| [`common/pkg_styles.puml`](common/pkg_styles.puml) | Colours, `packageStyle`, `<<port>>` skin | Visual language changes |
+| [`common/pkg_identities.puml`](common/pkg_identities.puml) | Display titles, port/store names, alias registry | Rename labels or document new aliases |
+| [`common/pkg_section_interface.puml`](common/pkg_section_interface.puml) | `*_interface` packages + leaves | REST/CLI/TUI modules |
+| [`common/pkg_section_composition.puml`](common/pkg_section_composition.puml) | `composition_root` | DI / outbox scheduler |
+| [`common/pkg_section_application.puml`](common/pkg_section_application.puml) | `*_application` use cases + ports | Use cases or ISP ports |
+| [`common/pkg_section_domain.puml`](common/pkg_section_domain.puml) | `*_domain` | Aggregates / domain services |
+| [`common/pkg_section_infrastructure.puml`](common/pkg_section_infrastructure.puml) | `*_infrastructure` adapters | Repositories / gateways / platform |
+| [`common/pkg_section_stores.puml`](common/pkg_section_stores.puml) | C4 `*_store` + `target_sources` | Store topology symbols |
+| [`common/pkg_connections.puml`](common/pkg_connections.puml) | **All** edges | Wiring, implements, cross-app |
+| [`pkg_001_clean_architecture.puml`](pkg_001_clean_architecture.puml) | Orchestrator (`!include` only) | New section include order |
+
+**Include order** (fixed, see `pkg_001`): `cd_styles` → `pkg_styles` → `pkg_identities` → sections (interface → composition → application → domain → infrastructure → stores) → `pkg_connections`.
 
 ## Role in authority order
 
@@ -26,22 +45,20 @@ plantuml -tsvg docs/package/*.puml
 
 | ID | File | Description |
 |----|------|-------------|
-| PKG-001 | [pkg_001_clean_architecture.puml](pkg_001_clean_architecture.puml) | Nested `{resource}_{layer}` packages → subpackages → types; C4 peer tags; ports; stores; cross-app edges |
+| PKG-001 | [pkg_001_clean_architecture.puml](pkg_001_clean_architecture.puml) | Orchestrator; renders full CA package map via `common/` includes |
 
-## Nested package layout (PKG-001)
+## Package layout (PKG-001)
 
-Every resource package is a **container with subpackages**, not a single flat component:
+| Layer package | Contents (all leaf entities wired) | Source section |
+|---------------|-------------------------------------|----------------|
+| `rest_interface` / `cli_interface` / `tui_interface` | Routers or commands/screens + gate | `pkg_section_interface` |
+| `*_application` | ROD use cases + owned `<<port>>` rectangles | `pkg_section_application` |
+| `*_domain` | Aggregates, `FindingFsm`, `ResolveConflict`, VOs | `pkg_section_domain` |
+| `*_infrastructure` | Adapters, evaluator, Hasher/HLC | `pkg_section_infrastructure` |
+| `composition_root` | Container, PortBindings, OutboxDrainScheduler | `pkg_section_composition` |
+| frameworks & drivers | Four C4 `*_store` + optional `target_sources` | `pkg_section_stores` |
 
-| Layer package | Required subpackages | Typical contents |
-|---------------|----------------------|------------------|
-| `*_interface` | `routing` or `commands` / `screens`, `gate` | Routers, `CapabilityEnforcer`, `DenialAuditClient` |
-| `*_application` | `use_cases`, `ports` | ROD use cases; owned port interfaces |
-| `*_domain` | `aggregates` and/or `services` (plus `shared_domain` id/time) | Aggregates, `FindingFsm`, `ResolveConflict` |
-| `*_infrastructure` | `adapters` (+ `evaluators` / `client` / platform slices) | Repository/gateway adapters, `DetectionEvaluator`, HLC/Hasher |
-| `composition_root` | `wiring`, `scheduling` | DI, outbox drain schedule |
-| stores | one package per C4 `*_store` | Database symbols only (frameworks & drivers) |
-
-Empty packages are non-conformant: if a module exists, show its subpackages and at least one representative type.
+**Rules:** every package and leaf has at least one edge (defined only in `pkg_connections.puml`); no decorative subpackages; ports are pink `[Name] <<port>>` components, never circle `interface` symbols.
 
 ## Module naming
 

@@ -1,0 +1,52 @@
+' ============================================================
+' Section: INTERFACE (C4: clients + api)
+' Aliases: INTERFACES, IF_REST, IF_CLI, IF_TUI, REST_*, CLI_*, TUI_*
+' ============================================================
+
+package "$TITLE_INTERFACES" as INTERFACES #E3F2FD/1565C0 {
+
+  package "$TITLE_IF_REST" as IF_REST #BBDEFB/1976D2 {
+    together {
+      [DirectiveRouter] as REST_DIR
+      [CompilationRouter] as REST_CMP
+      [InspectionRouter] as REST_INS
+      [FindingRouter] as REST_FIND
+      [ArtifactRouter] as REST_ART
+      [JwtAuthenticator] as REST_AUTHN
+      [CapabilityEnforcer] as REST_CAP
+      [IdempotencyFilter] as REST_IDEM
+      [ETagFilter] as REST_ETAG
+      [DenialAuditClient] as REST_DENY
+    }
+    REST_DIR -[hidden]right- REST_CMP
+    REST_CMP -[hidden]right- REST_INS
+    REST_INS -[hidden]right- REST_FIND
+    REST_FIND -[hidden]right- REST_ART
+    REST_AUTHN -[hidden]right- REST_CAP
+    REST_CAP -[hidden]right- REST_IDEM
+    REST_IDEM -[hidden]right- REST_ETAG
+    REST_ETAG -[hidden]right- REST_DENY
+  }
+
+  package "$TITLE_IF_CLI" as IF_CLI #BBDEFB/1976D2 {
+    together {
+      [DirectiveCommands] as CLI_DIR
+      [InspectionCommands] as CLI_INS
+      [FindingCommands] as CLI_FIND
+      [CapabilityEnforcer] as CLI_CAP
+    }
+    CLI_DIR -[hidden]right- CLI_INS
+    CLI_INS -[hidden]right- CLI_FIND
+    CLI_FIND -[hidden]right- CLI_CAP
+  }
+
+  package "$TITLE_IF_TUI" as IF_TUI #BBDEFB/1976D2 {
+    together {
+      [DirectiveScreens] as TUI_DIR
+      [FindingScreens] as TUI_FIND
+      [CapabilityEnforcer] as TUI_CAP
+    }
+    TUI_DIR -[hidden]right- TUI_FIND
+    TUI_FIND -[hidden]right- TUI_CAP
+  }
+}

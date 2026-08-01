@@ -1,0 +1,18 @@
+' ============================================================
+' Section: FRAMEWORKS & DRIVERS (C4: *_store + optional external)
+' Aliases: STORES, EXT, ST_DIR, ST_CR, ST_FE, ST_ART, ST_TGT
+' ============================================================
+
+package "$TITLE_STORES" as STORES #ECEFF1/546E7A {
+  database "$STORE_DIR" as ST_DIR
+  database "$STORE_CR" as ST_CR
+  database "$STORE_FE" as ST_FE
+  database "$STORE_ART" as ST_ART
+  ST_DIR -[hidden]right- ST_CR
+  ST_CR -[hidden]right- ST_FE
+  ST_FE -[hidden]right- ST_ART
+}
+
+package "$TITLE_EXTERNAL" as EXT #FCE4EC/C62828 {
+  cloud "$STORE_TGT" as ST_TGT
+}

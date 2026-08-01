@@ -1,0 +1,14 @@
+' ============================================================
+' Section: COMPOSITION ROOT (v1 single Application process)
+' Aliases: COMPOSITION, WIRE_APP, WIRE_PORTS, WIRE_OUTBOX
+' ============================================================
+
+package "$TITLE_COMPOSITION" as COMPOSITION #E8EAF6/3F51B5 {
+  together {
+    [ApplicationContainer] as WIRE_APP
+    [PortBindings] as WIRE_PORTS
+    [OutboxDrainScheduler] as WIRE_OUTBOX
+  }
+  WIRE_APP -[hidden]right- WIRE_PORTS
+  WIRE_PORTS -[hidden]right- WIRE_OUTBOX
+}

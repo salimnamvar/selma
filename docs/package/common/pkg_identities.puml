@@ -1,0 +1,80 @@
+' ============================================================
+' Title:     Selma -- Package Diagram Identities (canonical aliases)
+' Purpose:   Stable alias registry for package diagrams — same role
+'            as c4_identities.puml for C4. Display titles + C4 peer map.
+'            Sections MUST use these aliases only (do not invent IDs).
+' Contract:  1.1.0
+'
+' Naming dual (intentional):
+'   C4 peer: compilation_application
+'   Package: compiled_rules_application / APP_CR / P_CR_*
+'
+' Alias prefixes:
+'   IF_* / REST_* / CLI_* / TUI_*  — interface
+'   WIRE_*                          — composition
+'   APP_* / UC_* / P_*              — application + use cases + ports
+'   DOM_* / AGG_* / VO_* / SVC_*    — domain
+'   INFRA_* / SQL_* / CAS_* / …     — infrastructure adapters
+'   ST_* / EXT                      — stores + external
+' ============================================================
+
+' ── Layer package display titles ────────────────────────────
+!$TITLE_INTERFACES = "<<interface>> *_interface"
+!$TITLE_COMPOSITION = "<<composition>> composition_root"
+!$TITLE_APPLICATION = "<<application>> *_application"
+!$TITLE_DOMAIN = "<<domain>> *_domain"
+!$TITLE_INFRASTRUCTURE = "<<infrastructure>> *_infrastructure"
+!$TITLE_STORES = "<<frameworks & drivers>> C4 stores"
+!$TITLE_EXTERNAL = "<<external>> target_sources"
+
+' ── Resource package titles (C4 peer in subtitle where dual) ─
+!$TITLE_IF_REST = "rest_interface (C4: api)"
+!$TITLE_IF_CLI = "cli_interface (C4: clients)"
+!$TITLE_IF_TUI = "tui_interface (C4: clients)"
+
+!$TITLE_APP_DIR = "directives_application\n(C4: directives_application)"
+!$TITLE_APP_CR = "compiled_rules_application\n(C4: compilation_application)"
+!$TITLE_APP_INS = "inspections_application\n(C4: inspections_application)"
+!$TITLE_APP_FIND = "findings_application\n(C4: findings_application)"
+
+!$TITLE_INFRA_DIR = "directives_infrastructure\n(C4: directives_repository)"
+!$TITLE_INFRA_CR = "compiled_rules_infrastructure\n(C4: compiled_rules_repository)"
+!$TITLE_INFRA_FE = "findings_infrastructure\n(C4: finding_events_repository)"
+!$TITLE_INFRA_ART = "artifacts_infrastructure\n(C4: artifacts_repository)"
+!$TITLE_INFRA_INS = "inspections_infrastructure\n(C4: target_sources_gateway)"
+!$TITLE_INFRA_PLAT = "platform_infrastructure"
+
+' ── Port display names (ISP; owned by application packages) ─
+!$PORT_DIR_REPO = "DirectiveRepository"
+!$PORT_CR_READ = "CompilerReadPort"
+!$PORT_CR_REPO = "CompiledRulesRepository"
+!$PORT_INS_ART = "InspectionArtifactPort"
+!$PORT_INS_TGT = "TargetSourcesGateway"
+!$PORT_FIND_EVT = "FindingEventRepository"
+!$PORT_FIND_DENY = "DenialAuditPort"
+!$PORT_FIND_GUIDE = "GuidanceReadPort"
+!$PORT_FIND_ART = "FindingArtifactPort"
+
+' ── Store display names (C4 store peers) ────────────────────
+!$STORE_DIR = "directives_store"
+!$STORE_CR = "compiled_rules_store"
+!$STORE_FE = "finding_events_store"
+!$STORE_ART = "artifacts_store"
+!$STORE_TGT = "target_sources"
+
+' ── Stable leaf aliases (documentation; sections bind them) ─
+' Interface: REST_DIR REST_CMP REST_INS REST_FIND REST_ART
+'            REST_AUTHN REST_CAP REST_IDEM REST_ETAG REST_DENY
+'            CLI_DIR CLI_INS CLI_FIND CLI_CAP
+'            TUI_DIR TUI_FIND TUI_CAP
+' Composition: WIRE_APP WIRE_PORTS WIRE_OUTBOX
+' Directives UC: UC_DIR_CREATE UC_DIR_GET UC_DIR_LIST UC_DIR_UPD UC_DIR_LIFE
+' Compile UC: UC_CR_COMPILE UC_CR_PUB UC_CR_DRAIN
+' Inspect UC: UC_INS_CREATE UC_INS_GET UC_INS_PIPE
+' Findings UC: UC_FIND_GET UC_FIND_LIST UC_FIND_TRANS UC_FIND_GUIDE UC_FIND_EVID
+' Ports: P_DIR_REPO P_CR_READ P_CR_REPO P_INS_ART P_INS_TGT
+'        P_FIND_EVT P_FIND_DENY P_FIND_GUIDE P_FIND_ART
+' Domain: AGG_* VO_* SVC_FSM SVC_CONFLICT
+' Infra: SQL_DIR CAS_CR EVT_REPO OBJ_CLI ART_INS ART_FIND ART_CERT
+'        TGT_GW DET_EVAL PLAT_HASH PLAT_HLC
+' Stores: ST_DIR ST_CR ST_FE ST_ART ST_TGT

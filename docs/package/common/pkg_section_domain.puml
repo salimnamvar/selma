@@ -1,0 +1,67 @@
+' ============================================================
+' Section: DOMAIN (not C4 component peers)
+' Aliases: DOMAIN, DOM_*, AGG_*, VO_*, SVC_*
+' ============================================================
+
+package "$TITLE_DOMAIN" as DOMAIN #FFFFFF/78909C {
+
+  package "shared_domain" as DOM_SHARED #ECEFF1 {
+    together {
+      [LineageId] as VO_LINEAGE
+      [Revision] as VO_REV
+      [ExecutionId] as VO_EXEC
+      [FindingId] as VO_FIND
+      [ActorId] as VO_ACTOR
+      [HlcTimestamp] as VO_HLC
+      [PairedPolicyRef] as VO_PPR
+    }
+    VO_LINEAGE -[hidden]right- VO_REV
+    VO_REV -[hidden]right- VO_EXEC
+    VO_EXEC -[hidden]right- VO_FIND
+    VO_FIND -[hidden]right- VO_ACTOR
+    VO_ACTOR -[hidden]right- VO_HLC
+    VO_HLC -[hidden]right- VO_PPR
+  }
+
+  package "directives_domain" as DOM_DIR #ECEFF1 {
+    together {
+      [Directive] as AGG_DIR
+      [ExecutableRuleDoc] as AGG_EXEC
+      [PolicyDoctrineDoc] as AGG_DOC
+    }
+    AGG_DIR -[hidden]right- AGG_EXEC
+    AGG_EXEC -[hidden]right- AGG_DOC
+  }
+
+  package "compiled_rules_domain" as DOM_CR #ECEFF1 {
+    together {
+      [CgIrSnapshot] as AGG_CGIR
+      [LineageHead] as AGG_HEAD
+    }
+    AGG_CGIR -[hidden]right- AGG_HEAD
+  }
+
+  package "inspections_domain" as DOM_INS #ECEFF1 {
+    together {
+      [Inspection] as AGG_INS
+      [Target] as AGG_TGT
+      [DetectionSpec] as AGG_DET
+    }
+    AGG_INS -[hidden]right- AGG_TGT
+    AGG_TGT -[hidden]right- AGG_DET
+  }
+
+  package "findings_domain" as DOM_FIND #ECEFF1 {
+    together {
+      [Finding] as AGG_FIND
+      [FindingProjection] as AGG_PROJ
+      [FindingFsm] as SVC_FSM
+    }
+    AGG_FIND -[hidden]right- AGG_PROJ
+    AGG_PROJ -[hidden]right- SVC_FSM
+  }
+
+  package "conflicts_domain" as DOM_CON #ECEFF1 {
+    [ResolveConflict] as SVC_CONFLICT
+  }
+}

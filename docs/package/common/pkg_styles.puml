@@ -1,0 +1,40 @@
+' ============================================================
+' Title:     Selma -- Package Diagram Styles (shared)
+' Purpose:   ONE visual language for package diagrams.
+' Contract:  1.1.0
+'
+' Include AFTER base class styles from the orchestrator:
+'   !include ../class/common/cd_styles.puml
+'   !include common/pkg_styles.puml
+' ============================================================
+
+top to bottom direction
+skinparam packageStyle rectangle
+skinparam linetype polyline
+skinparam nodesep 20
+skinparam ranksep 30
+
+skinparam package {
+  BackgroundColor #F0F4F8
+  BorderColor #5B7BA5
+  FontSize 11
+  FontStyle bold
+}
+
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #7F8C9A
+  FontSize 10
+}
+
+skinparam database {
+  BackgroundColor #ECEFF1
+  BorderColor #546E7A
+}
+
+' Ports are rectangular components (never PlantUML circle interface)
+skinparam component<<port>> {
+  BackgroundColor #FCE4EC
+  BorderColor #C62828
+  FontStyle bold
+}

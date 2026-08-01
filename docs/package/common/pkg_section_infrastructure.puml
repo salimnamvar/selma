@@ -1,0 +1,47 @@
+' ============================================================
+' Section: INFRASTRUCTURE (C4: *_repository / *_gateway)
+' Aliases: INFRASTRUCTURE, INFRA_*, SQL_DIR, CAS_CR, EVT_REPO, …
+' ============================================================
+
+package "$TITLE_INFRASTRUCTURE" as INFRASTRUCTURE #FFF3E0/E65100 {
+
+  package "$TITLE_INFRA_DIR" as INFRA_DIR #FFE0B2/F57C00 {
+    [SqlDirectiveRepository] as SQL_DIR
+  }
+
+  package "$TITLE_INFRA_CR" as INFRA_CR #FFE0B2/F57C00 {
+    [ContentAddressedCompiledRulesRepository] as CAS_CR
+  }
+
+  package "$TITLE_INFRA_FE" as INFRA_FE #FFE0B2/F57C00 {
+    [AppendOnlyFindingEventRepository] as EVT_REPO
+  }
+
+  package "$TITLE_INFRA_ART" as INFRA_ART #FFE0B2/F57C00 {
+    together {
+      [ObjectStoreClient] as OBJ_CLI
+      [InspectionArtifactAdapter] as ART_INS
+      [FindingArtifactAdapter] as ART_FIND
+      [CertificationArtifactAdapter] as ART_CERT
+    }
+    ART_INS -[hidden]right- ART_FIND
+    ART_FIND -[hidden]right- ART_CERT
+    ART_CERT -[hidden]down- OBJ_CLI
+  }
+
+  package "$TITLE_INFRA_INS" as INFRA_INS #FFE0B2/F57C00 {
+    together {
+      [HttpTargetSourcesGateway] as TGT_GW
+      [DetectionEvaluator] as DET_EVAL
+    }
+    TGT_GW -[hidden]right- DET_EVAL
+  }
+
+  package "$TITLE_INFRA_PLAT" as INFRA_PLAT #FFE0B2/F57C00 {
+    together {
+      [Hasher] as PLAT_HASH
+      [HybridLogicalClock] as PLAT_HLC
+    }
+    PLAT_HASH -[hidden]right- PLAT_HLC
+  }
+}
