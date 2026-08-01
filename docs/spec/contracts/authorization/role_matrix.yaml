@@ -14,9 +14,15 @@ description: >
   regulatory_official and compliance_representative stay DISTINCT.
   Merging them would allow rule authors to waive findings on their own
   rules and regulated parties to change the rulebook — breaking SoD
-  (SOD-001/SOD-002) and agent-safe governance. One natural person may
-  hold different roles in different tenants; capability sets must not
+  (SOD-001/SOD-002) and agent-safe governance. Capability sets must not
   collapse into a single super-role.
+
+  TENANT MODEL (v1): Selma is single-tenant per deployment instance
+  (see c4-model/README.md "Tenant model"). Roles and capabilities are
+  scoped to the instance only — there is no tenant_id dimension.
+  Multi-tenant role assignments (one natural person holding different
+  roles in different tenants) are out of scope for v1; operators who need
+  isolation deploy separate instances.
 
   Coding-governance profile aliases (same role_id, product language):
   - regulatory_official ≈ "Governor" / rule-pack author (human or agent)

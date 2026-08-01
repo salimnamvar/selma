@@ -185,11 +185,22 @@ authentication:
 idempotency:
   description: "Client retries for mutating operations"
   header: "Idempotency-Key"
+  scope: "(actor, key) — single-tenant v1; no tenant_id dimension"
   rules:
     - "RECOMMENDED on POST inspections, finding transitions, compile triggers, conflict resolutions"
     - "Same key + same actor + same body → return original response (no second side effect)"
     - "Same key + different body → 409 Conflict"
     - "Keys retained ≥ 24h (configurable)"
+    - "v1 is single-tenant per instance; Idempotency-Key is NOT scoped by tenant_id (see c4-model Tenant model)"
+
+tenant_model:
+  description: "Deployment isolation model (product decision v1)"
+  mode: "single_tenant"
+  rules:
+    - "One Selma deployment instance serves one authority boundary"
+    - "No tenant_id on resources, store rows, or JWT claims in design_contract_version 1.1.0"
+    - "Cross-organization isolation is achieved by separate deployments, not by a tenant dimension"
+
 
 optimistic_concurrency:
   description: "Directive mutations"

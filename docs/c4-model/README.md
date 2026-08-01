@@ -179,6 +179,24 @@ Within the driving gate, treat these as **logical sub-responsibilities** of `api
 4. **DenialAuditPort client** — append on deny  
 5. **Idempotency + ETag filters** — `Idempotency-Key`, `If-Match`
 
+## Tenant model (v1 product decision)
+
+**Selma v1 is single-tenant.** One deployment instance serves one regulatory
+organization (one authority boundary). There is **no** `tenant_id` on API
+resources, store rows, JWT claims, or idempotency keys.
+
+| Concern | v1 behavior |
+| :--- | :--- |
+| Isolation | Network / deployment isolation only (one instance per tenant org) |
+| `Idempotency-Key` scope | `(actor, key)` — not `(actor, tenant, key)` |
+| Capability / roles | Flat actor set within the instance; role matrix is not multi-tenant |
+| Multi-tenancy | **Out of scope** for design_contract_version 1.1.0 |
+
+If multi-tenancy is required later, it is a **contract-breaking** change: add
+`tenant_id` to stores, scope `Idempotency-Key` to `(actor, tenant, key)`, and
+extend capability resolution. Until then, implementors MUST NOT invent a
+tenant dimension.
+
 ## Distributed coordination decisions
 
 | Path | Decision | Normative ref |

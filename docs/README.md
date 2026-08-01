@@ -47,6 +47,9 @@ All design work MUST follow [`standards/`](standards/README.md):
 
 **design_contract_version:** `1.1.0` (shared by C4, API `info.version`, contracts, diagram headers).
 
+**Tenant model (v1):** single-tenant per deployment instance. Multi-tenancy is
+out of scope; see [`c4-model/README.md`](c4-model/README.md) "Tenant model".
+
 ### Naming dual (C4 vs packages)
 
 | Concept | C4 peer ID | Package prefix |

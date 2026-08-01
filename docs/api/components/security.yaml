@@ -17,3 +17,7 @@ components:
         `docs/spec/contracts/authorization/capabilities.yaml`. Denials append
         via application-owned `DenialAuditPort` (implementer:
         `finding_events_repository`).
+
+        **Tenant model (v1):** single-tenant per deployment. JWT claims do not
+        include `tenant_id`. Capability scope is the instance. Multi-tenancy
+        is out of scope (see `docs/c4-model/README.md` "Tenant model").
