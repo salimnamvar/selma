@@ -225,6 +225,23 @@ optimistic_concurrency:
 denial_audit:
   description: "Capability/SoD denials at the gate"
   port: "DenialAuditPort"
+  aggregation:
+    description: >
+      SOC denial telemetry is a time-series aggregate: a burst of identical
+      denials from the same actor+capability+target within one aggregation
+      window is rolled into a single window record with a count, not one event
+      per request. This bounds store write volume while keeping burst
+      visibility via the count. Chain/link semantics: each window record
+      chains to the previous window record of the same (actor, capability,
+      target) so the per-actor denial history remains hash-linked, identical
+      to the finding event chain (prev_event_hash → event_hash), and a burst
+      can be walked as a single logical chain without per-request nodes.
+    window_default: "60 seconds (environment-configurable, min 1s)"
+    aggregation_rules:
+      - "Same actor_id + capability + target + (category, reason) within window ⇒ one record with count"
+      - "Chain per (actor_id, capability, target): window records link via prev_event_hash/event_hash"
+      - "Denial of a single request MUST still be enforced even if aggregated (deny decision is synchronous; aggregation affects only telemetry)"
+      - "Burst count resets at window rollover; a new window opens a new chain node"
   rules:
     - "api depends on application-owned DenialAuditPort only (not raw store I/O)"
     - "Implementer is finding_events_repository / findings_infrastructure"
