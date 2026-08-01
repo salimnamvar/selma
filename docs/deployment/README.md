@@ -63,7 +63,7 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 - Query flexibility for finding lookups
 - Migration path to Kafka if throughput demands it
 
-Prefer **separate database names / roles** (or resource groups) for Directives vs Finding Events even when co-located on one cluster, so OLTP directive writes and append-heavy event traffic do not starve each other.
+**Failure-domain separation (production):** Directives (`directives_store`) and Finding Events (`finding_events_store`) MUST NOT share a single PostgreSQL primary as the only production topology. Prefer separate instances or clusters (independent failover, backup schedules, and connection pools). Separate database names/roles on one cluster is acceptable only for non-production or when an environment runbook explicitly accepts correlated write-path failure and documents compensating controls.
 
 ## Deployment Notes
 
