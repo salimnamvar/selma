@@ -87,7 +87,9 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 | Application → Data zone stores | **TLS required** for PostgreSQL and object-store APIs in production |
 | Application → Target Sources | **HTTPS required** |
 
-**mTLS** between Application and stores is **recommended** for regulated / zero-trust deployments and **optional** only when the data zone is a private network with equivalent controls documented in the environment runbook. Production defaults assume encrypted transport on every hop above; plaintext is never the production default.
+**mTLS** between Application and stores **SHOULD be deployed** in production environments that require a zero-trust data zone (client-certificate verification on both PostgreSQL and object-store APIs). Any production deviation from mTLS — including plain TLS relying only on network isolation — **MUST be explicitly risk-accepted** in the environment runbook with compensating controls documented (e.g. network policy denying all non-Application ingress to the data zone, and per-connection credential checks).
+
+Example (PostgreSQL): `sslmode=verify-full` plus client certificates (`sslcert`/`sslkey` presented by the Application), server certificate pinned via `sslrootcert`; object stores: SigV4/HTTPS with per-deploy short-lived credentials or workload identity. Production defaults assume encrypted, mutually authenticated transport on every Application → Data hop.
 
 ### Encryption at rest and secrets
 
