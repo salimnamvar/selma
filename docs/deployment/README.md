@@ -150,13 +150,30 @@ Normative inspection pipeline: [`../spec/contracts/inspection/pipeline.yaml`](..
 
 State-changing REST operations (directive mutations, inspections, finding transitions, compile triggers) SHOULD accept client `Idempotency-Key` (or resource-natural keys already unique) so retries do not double-append finding events or double-open findings. Event append uniqueness and FSM guards are normative in finding-lifecycle contracts.
 
+### Observability (required signals)
+
+Monitoring tools named in DEP-001 (Prometheus/Grafana, ELK/Loki, Jaeger) MUST export at least the following architecture-owned signals. Thresholds and alert routing are environment-owned (not fixed in this design).
+
+| Signal | Why |
+|:-------|:----|
+| `compile_outbox_depth` / drain lag | Detect stuck outbox rows and compile backlog |
+| `compile_outbox_lease_steal_total` | Detect multi-replica reclaim after lease expiry |
+| `directive_lock_wait_seconds` / write-queue depth | Writer-preference fairness (directives_store concurrency_model) |
+| `compile_duration_seconds` / in-process compile concurrency | v1 API vs compile CPU contention |
+| `finding_fsm_transition_total` / denial rate by capability | SoD friction and authorization health |
+| `finding_events_append_latency` / denial_append_rate | Denial-audit amplification vs lifecycle appends |
+| `hlc_counter_reset_total` / node_id restart | HLC persistence health |
+| Per-endpoint request rate & error ratio | Incident triage for REST surface |
+
+Application logs MUST include `lineage_id`, `revision`, `finding_id`, `event_id`, `actor_id`, and outbox `worker_id` where applicable. Traces SHOULD span `api` → `*_application` → repository calls.
+
 ## Security Considerations
 
 1. Network segmentation: Data zone not reachable from Public without Application
 2. Hermetic boundary during compile
 3. Write-once Artifacts; append-only Finding Events; immutable Compiled Rules
 4. Capability enforcement at `api` only — catalog and SoD: [`../spec/contracts/authorization/`](../spec/contracts/authorization/), [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml)
-5. Capability denials append via **DenialAuditPort** (see [`../c4-model/README.md`](../c4-model/README.md)); never skip audit on deny
+5. Capability denials append via **DenialAuditPort** (see [`../c4-model/README.md`](../c4-model/README.md)); never skip audit on deny; rate-limit/aggregate per finding_events_store
 6. TLS on all production hops (see above); encryption at rest for all stores
 7. Offline `certification_tool` is not network-exposed as a product peer
 
