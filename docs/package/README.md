@@ -41,7 +41,7 @@ Package structure aligns with C4 entities (layer postfixes):
 | `findings_domain.FindingFsm` | Domain service (contract alias `finding_fsm_engine`); SoD + FSM transitions; not a C4 peer |
 | `DenialAuditPort` (in `findings_application`) | Application-owned port; **implementer** = `finding_events_repository`; **consumer** = `api` / `rest_interface` |
 | `artifacts_infrastructure` | `artifacts_repository` → `artifacts_store` |
-| `conflicts_domain` (`ResolveConflict`) | Domain service (not a C4 component); depended on by `compiled_rules_application` and `inspections_application` |
+| `conflicts_domain` (`ResolveConflict`) | Domain service (not a C4 component); depended on by `compiled_rules_application` and `inspections_application`. Single shared library version required if process topology splits compile from inspect |
 | `rest_interface` / CLI / TUI | `api` + container `clients` |
 
 ### Naming dual (intentional)
@@ -67,7 +67,7 @@ Do not introduce a C4 peer ID `compiled_rules_application`. Do not rename packag
 
 - `rest_interface` → `DenialAuditPort` for capability-denial audit only (not full findings use cases)
 - `findings_infrastructure` implements both `FindingEventRepository` and `DenialAuditPort`
-- `compiled_rules_application` and `inspections_application` both depend on `conflicts_domain` for `ResolveConflict`
+- `compiled_rules_application` and `inspections_application` both depend on `conflicts_domain` for `ResolveConflict` (same versioned library when split across processes)
 - `findings_application` depends on `findings_domain.FindingFsm` (`finding_fsm_engine`) for all lifecycle transitions and SoD
 - `artifacts_infrastructure` implements ports owned by both findings and inspections applications (shared object-store adapter)
 
