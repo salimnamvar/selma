@@ -138,6 +138,27 @@ hlc:
     - "logical_counter NEVER decreases"
     - "Counter resets to 0 only when physical_time strictly advances"
     - "Wall clock regression absorbed by incrementing logical_counter"
+  node_identity:
+    description: >
+      node_id is part of the total-order tuple. Correct causal tracking across
+      process restarts requires stable identity and persisted HLC state.
+    rules:
+      - >
+        node_id MUST be a stable per-replica (or per-process-slot) identifier —
+        UUID preferred — assigned at first start and persisted across restarts.
+        It MUST NOT be re-derived solely from hostname or PID.
+      - >
+        On restart, the process MUST load the last persisted HLC state
+        (physical_time, logical_counter) for its node_id before accepting
+        appends; cold start with empty state is allowed only for a brand-new
+        node_id never used for prior events.
+      - >
+        Retiring a replica MUST fence its node_id (no reuse for a different
+        process without a new UUID) so historical tuples remain unambiguous.
+      - >
+        Total order remains well-defined even without persistence; persistence
+        is required so post-restart events continue causal monotonicity relative
+        to that replica's pre-crash stream.
 
 event_hash:
   formula: "SHA-256(canonical_json(event_id ‖ payload ‖ prev_event_hash))"
