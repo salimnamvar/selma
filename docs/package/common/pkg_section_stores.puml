@@ -1,5 +1,6 @@
 ' ============================================================
-' Section: FRAMEWORKS & DRIVERS (C4: *_store + optional external)
+' Section: FRAMEWORKS & DRIVERS — store symbols only
+' (C4 store IDs; deploy tech/zones live in docs/deployment/)
 ' Aliases: STORES, EXT, ST_DIR, ST_CR, ST_FE, ST_ART, ST_TGT
 ' ============================================================
 

@@ -1,8 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Container Diagram
 ' Boundary:  Selma
-' Purpose:   Clients (driving), Application, four resource stores
-'            (*_store).
+' Purpose:   Deployable/process units: clients, application,
+'            four *_store. Runtime zones/TLS: docs/deployment/.
+'            Code modules: docs/package/.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_container

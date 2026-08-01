@@ -19,7 +19,7 @@
 !include common/pkg_styles.puml
 !include common/pkg_identities.puml
 
-title **PKG-001 — Clean Architecture Packages**\nSelma · {resource}_{layer} · C4 1.1.0 peers\n
+title **PKG-001 — Clean Architecture Packages**\nCode modules · {resource}_{layer} · maps to C4 peers\n
 
 !include common/pkg_section_interface.puml
 !include common/pkg_section_composition.puml

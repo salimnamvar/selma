@@ -65,17 +65,27 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **Design standards** | [`standards/`](standards/README.md) | Checkable ID/ownership schema |
 | **Specification contracts** | [`spec/`](spec/README.md) | Normative behavior (`contracts/`) |
 | **Schemas** | [`schema/`](schema/) | Rule + policy structure (v1.0.0) |
-| **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Structural SSoT** (context / container / component) |
+| **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Structural SSoT** — *what* peers exist and how they depend |
 | **State machines** | [`state/`](state/README.md) | FSMs and pipelines |
 | **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index |
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
-| **Class diagrams** | [`class/`](class/README.md) | Domain / application / infrastructure |
-| **Package diagrams** | [`package/`](package/README.md) | Clean Architecture packages |
+| **Class diagrams** | [`class/`](class/README.md) | Types inside packages (domain / app / infra) |
+| **Package diagrams** | [`package/`](package/README.md) | *How* code modules layer (CA rings, ports) |
 | **ERDs** | [`erd/`](erd/README.md) | Four `*_store` resources |
 | **Activity diagrams** | [`activity/`](activity/README.md) | Procedural swim-lane flows |
 | **API** | [`api/`](api/README.md) | Modular OpenAPI (Redocly) |
-| **Deployment** | [`deployment/`](deployment/README.md) | Topology aligned with C4 containers |
+| **Deployment** | [`deployment/`](deployment/README.md) | *Where* it runs (zones, TLS, failure domains, RPO) |
 | **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
+
+### Structural views (no concern overlap)
+
+| Question | Authority | Must not restate |
+| :--- | :--- | :--- |
+| What peers / containers / components exist? | [`c4-model/`](c4-model/README.md) | Package trees, LB/zones, port classes |
+| How are source modules and ports organized? | [`package/`](package/README.md) | Peer inventing, store clusters, monitoring |
+| Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Component use-case graph, domain services |
+
+Join key across all three: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
 
 ## Authority (investigation order)
 

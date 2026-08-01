@@ -1,13 +1,14 @@
 ' ============================================================
 ' Title:     Selma -- Production Deployment Diagram
-' Purpose:   Deploy topology aligned with C4 1.1.0 containers
-'            and package modules (api + *_application +
-'            *_repository/*_gateway in one Application process;
-'            four *_store in data zone with separate PG domains).
+' Purpose:   WHERE Selma runs: network zones, process nodes,
+'            store failure domains, TLS hops, monitoring.
+'            Uses C4 container/store IDs only. Does NOT redraw
+'            component graph or package modules (see c4-model,
+'            package).
 ' Contract:  1.1.0
 ' ============================================================
 @startuml dep_001_production
-title **DEP-001 — Production Deployment**\nSelma · C4 containers · package modules in Application process\n
+title **DEP-001 — Production Deployment**\nZones · nodes · store failure domains · TLS\n
 
 !theme plain
 skinparam linetype ortho
@@ -21,11 +22,6 @@ skinparam package {
   FontSize 11
   FontStyle bold
 }
-skinparam component {
-  BackgroundColor #FFFFFF
-  BorderColor #546E7A
-  FontSize 10
-}
 skinparam node {
   BackgroundColor #FAFBFC
   BorderColor #78909C
@@ -36,66 +32,31 @@ skinparam database {
   BorderColor #F57C00
 }
 
-' ── External User Zone (C4: clients — not part of Selma deploy) ──
+' ── External User Zone (C4: clients — outside Selma deployables) ──
 package "External User Zone" as USER_ZONE #F3E5F5/E1BEE7 {
-  node "clients\n(CLI / Web / Desktop / Mobile)" as CLIENTS <<C4: clients>>
+  node "clients\nCLI / Web / Desktop / Mobile" as CLIENTS
 }
 
 ' ── Public Zone ──
 package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
-  node "Load Balancer HA\n(managed multi-AZ or active/standby)" as LOAD_BALANCER
+  node "Load Balancer HA\nmanaged multi-AZ or active/standby" as LOAD_BALANCER
 }
 
-' ── Application Zone (C4: application container) ──
+' ── Application Zone (C4: application — one process; internals = C4 component) ──
 package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {
-
-  node "application\n(Python 3.11+ / Docker · C4: application)" as APP_NODE <<docker>> {
-
-    package "<<interface>> api + clients adapters" as DEP_IF #BBDEFB {
-      component "api\n(rest_interface + CapabilityEnforcer)" as DEP_API
-      component "cli_interface / tui_interface\n(optional co-located clients)" as DEP_CLIENT_IF
-    }
-
-    package "<<application>> *_application" as DEP_APP #C8E6C9 {
-      component "directives_application" as DEP_DIR_APP
-      component "compilation_application\n(compiled_rules_application package)" as DEP_CMP_APP
-      component "inspections_application" as DEP_INS_APP
-      component "findings_application" as DEP_FIND_APP
-    }
-
-    package "<<infrastructure>> *_repository / *_gateway" as DEP_INFRA #FFE0B2 {
-      component "directives_repository\n(directives_infrastructure)" as DEP_DIR_REPO
-      component "compiled_rules_repository\n(compiled_rules_infrastructure)" as DEP_CR_REPO
-      component "finding_events_repository\n(findings_infrastructure)" as DEP_FE_REPO
-      component "artifacts_repository\n(artifacts_infrastructure)" as DEP_ART_REPO
-      component "target_sources_gateway\n(inspections_infrastructure)" as DEP_TGT_GW
-    }
-
-    package "<<composition>>" as DEP_COMP #C5CAE9 {
-      component "composition_root\n(DI + OutboxDrainScheduler)" as DEP_WIRE
-    }
-
-    package "<<domain libs>>\n(not C4 peers · shared process)" as DEP_DOM #ECEFF1 {
-      component "conflicts_domain\n(ResolveConflict)" as DEP_CONFLICT
-      component "findings_domain\n(FindingFsm)" as DEP_FSM
-      component "shared_domain" as DEP_SHARED
-    }
-  }
+  node "application\nPython 3.11+ / Docker\nC4: application container\n(api · *_application ·\n*_repository · *_gateway\nin-process v1)" as APP
 }
 
-' ── Data Zone (C4: four *_store · separate failure domains) ──
+' ── Data Zone (C4: four *_store · production failure domains) ──
 package "Data Zone" as DATA_ZONE #FFF3E0/FFE0B2 {
-
-  node "PostgreSQL cluster A\n(failure domain A)" as PG_A <<database cluster>> {
+  node "PostgreSQL cluster A\nfailure domain A" as PG_A {
     database "directives_store" as DIRECTIVES
   }
-
-  node "PostgreSQL cluster B\n(failure domain B)" as PG_B <<database cluster>> {
-    database "finding_events_store\n(append-only)" as EVENTS
+  node "PostgreSQL cluster B\nfailure domain B" as PG_B {
+    database "finding_events_store" as EVENTS
   }
-
-  node "S3-compatible object store\n(CAS + artifacts)" as OBJ_STORE <<object store>> {
-    database "compiled_rules_store\n(content-addressed)" as COMPILED
+  node "S3-compatible object store" as OBJ_STORE {
+    database "compiled_rules_store\n(CAS)" as COMPILED
     database "artifacts_store\n(write-once)" as ARTIFACTS
   }
 }
@@ -112,43 +73,20 @@ package "Monitoring Zone" as MON #E8EAF6/C5CAE9 {
   node "Jaeger" as JAEGER
 }
 
-' ── Network flows ──
+' ── Topology edges only (not component use-case graph) ──
 CLIENTS --> LOAD_BALANCER : HTTPS
-LOAD_BALANCER --> DEP_API : HTTPS / REST
+LOAD_BALANCER --> APP : HTTPS / REST
 
-DEP_API --> DEP_DIR_APP
-DEP_API --> DEP_CMP_APP
-DEP_API --> DEP_INS_APP
-DEP_API --> DEP_FIND_APP
-DEP_API --> DEP_FE_REPO : DenialAuditPort
+APP --> DIRECTIVES : SQL / TLS
+APP --> EVENTS : Append-Only / TLS
+APP --> COMPILED : CAS / TLS
+APP --> ARTIFACTS : Object Write / TLS
+APP --> TARGETS : HTTPS optional
 
-DEP_DIR_APP --> DEP_DIR_REPO
-DEP_DIR_APP --> DEP_CMP_APP : outbox
-DEP_CMP_APP --> DEP_DIR_REPO
-DEP_CMP_APP --> DEP_CR_REPO
-DEP_CMP_APP --> DEP_CONFLICT
-DEP_INS_APP --> DEP_TGT_GW
-DEP_INS_APP --> DEP_CR_REPO
-DEP_INS_APP --> DEP_FIND_APP
-DEP_INS_APP --> DEP_ART_REPO
-DEP_INS_APP --> DEP_CONFLICT
-DEP_FIND_APP --> DEP_FE_REPO
-DEP_FIND_APP --> DEP_CR_REPO
-DEP_FIND_APP --> DEP_DIR_REPO
-DEP_FIND_APP --> DEP_ART_REPO
-DEP_FIND_APP --> DEP_FSM
-DEP_WIRE ..> DEP_CMP_APP : DrainOutbox
+APP ..> PROM
+APP ..> ELK
+APP ..> JAEGER
 
-DEP_DIR_REPO --> DIRECTIVES : SQL / TLS
-DEP_CR_REPO --> COMPILED : CAS / TLS
-DEP_FE_REPO --> EVENTS : Append-Only / TLS
-DEP_ART_REPO --> ARTIFACTS : Object Write / TLS
-DEP_TGT_GW --> TARGETS : HTTPS
-
-DEP_API ..> PROM
-DEP_API ..> ELK
-DEP_API ..> JAEGER
-
-footer DEP-001 · Contract 1.1.0 · C4 containers + package modules · Selma
+footer DEP-001 · Contract 1.1.0 · topology only · C4 IDs · Selma
 
 @enduml

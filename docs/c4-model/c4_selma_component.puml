@@ -1,14 +1,11 @@
 ' ============================================================
 ' Title:     Selma -- Component Diagram
 ' Boundary:  Selma system; Application process nested inside
-' Purpose:   Clean Architecture inside Application:
-'            api (driving) → *_application → *_repository /
-'            *_gateway (driven) → *_store / externals.
-'            Domain services (e.g. ResolveConflict) are not
-'            peer components.
-'            Stores are inside the Selma system boundary and
-'            outside the Application process boundary; only
-'            *_repository / *_gateway touch stores or externals.
+' Purpose:   Structural peers inside Application and their
+'            dependencies (product architecture). Code modules:
+'            docs/package/. Runtime topology: docs/deployment/.
+'            Domain services are not C4 peers. Stores sit inside
+'            Selma and outside the Application process boundary.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component

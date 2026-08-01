@@ -3,25 +3,33 @@
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
-Infrastructure and deployment architecture for the Selma Rule Regularity Platform.
+## View concern
+
+| | |
+| :--- | :--- |
+| **Answers** | *Where* does Selma run, and how is it operated in production? |
+| **Owns** | Network zones, nodes, TLS/mTLS hops, store failure domains, sizing, backup/RPO/RTO, observability, HA, edge rate limits |
+| **Does not own** | Peer inventing (C4), component use-case graph (C4 Component), package trees / ports / domain services (package/class) |
+| **Join key** | C4 container IDs (`clients`, `application`) and store IDs (`*_store`); one Application process hosts all C4 components in v1 |
+
+DEP-001 is a **topology** diagram: Clients → LB → Application → stores / optional `target_sources` / monitoring.  
+Internals of Application are defined by [C4 Component](../c4-model/c4_selma_component.puml); code layout by [package](../package/README.md).
 
 ## Diagram Index
 
 | ID | Title | File | Description |
 |:---|:------|:-----|:------------|
-| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Topology aligned with C4 containers, package modules inside Application, four stores with separate PG failure domains |
-
-**Alignment (structure, not notes):** DEP-001 expands the C4 `application` container into the same modules as package/C4 component: `api` (rest_interface + CapabilityEnforcer), four `*_application`, five driven adapters (`*_repository` / `target_sources_gateway`), `composition_root`, and in-process domain libs (`conflicts_domain`, `FindingFsm`). Data zone draws **separate** PostgreSQL clusters for `directives_store` and `finding_events_store`, and S3-compatible storage for `compiled_rules_store` + `artifacts_store`. Clients (`C4: clients`) stay outside Selma: Clients → Load Balancer → `api`.
+| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Zones, nodes, separate PG failure domains, S3-compatible CAS/artifacts, TLS hops |
 
 ## Network Zones
 
-| Zone | Purpose | Components (C4 / package) |
+| Zone | Purpose | Deployed elements (C4 IDs) |
 |:-----|:--------|:-----------|
-| **External User** | Driving adapters outside Selma deploy | `clients` (CLI / Web / Desktop / Mobile) |
-| **Public** | User-facing entry | Load balancer (active/standby or managed multi-AZ) |
-| **Application** | C4 `application` process | `api` + four `*_application` + five `*_repository`/`*_gateway` + `composition_root` + domain libs |
+| **External User** | Driving adapters outside Selma deployables | `clients` |
+| **Public** | Edge entry | Load balancer (managed multi-AZ or active/standby) |
+| **Application** | C4 `application` process (v1 single replica set) | One runtime: all C4 components co-located |
 | **Data** | Four C4 `*_store` | PG cluster A: `directives_store`; PG cluster B: `finding_events_store`; object store: `compiled_rules_store` + `artifacts_store` |
-| **External** | Optional only | `target_sources` (pull by reference via gateway) |
+| **External** | Optional pull only | `target_sources` |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
 
 CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer; when run it may write `artifacts_store` only.

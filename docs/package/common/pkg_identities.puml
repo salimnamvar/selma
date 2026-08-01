@@ -24,8 +24,8 @@
 !$TITLE_APPLICATION = "<<application>> *_application"
 !$TITLE_DOMAIN = "<<domain>> *_domain"
 !$TITLE_INFRASTRUCTURE = "<<infrastructure>> *_infrastructure"
-!$TITLE_STORES = "<<frameworks & drivers>> C4 stores"
-!$TITLE_EXTERNAL = "<<external>> target_sources"
+!$TITLE_STORES = "<<frameworks & drivers>>\nstore symbols (C4 *_store IDs)"
+!$TITLE_EXTERNAL = "<<external>>\ntarget_sources (C4)"
 
 ' ── Resource package titles (C4 peer in subtitle where dual) ─
 !$TITLE_IF_REST = "rest_interface (C4: api)"

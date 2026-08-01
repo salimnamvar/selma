@@ -7,6 +7,16 @@ Three-level C4 model using **Clean Architecture** layering and **resource-orient
 
 **Contract version:** 1.1.0 — IDs MUST match [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml). Diagrams include `Contract: 1.1.0` headers.
 
+## View concerns (do not duplicate)
+
+| View | Answers | Owns | Does **not** own |
+| :--- | :--- | :--- | :--- |
+| **C4** (this dir) | *What* product peers exist and how they depend | Peer IDs, containers, components, dependency rule, boundaries | Python package trees, ports/classes, network zones, TLS, RPO/RTO, LB/HA |
+| **Package** ([`../package/`](../package/README.md)) | *How* source modules are layered (CA rings) | `{resource}_{layer}` packages, ISP ports, use cases, domain libs, adapter classes | Peer inventing, store failure domains, monitoring, load balancers |
+| **Deployment** ([`../deployment/`](../deployment/README.md)) | *Where* it runs and how it is operated | Zones, nodes, TLS hops, PG/object-store failure domains, sizing, observability | Component use-case graph, package modules, domain services |
+
+**Join key:** C4 peer IDs only (`api`, `*_application`, `*_repository`, `*_store`, …). Package and deployment **reference** those IDs; they never redefine them.
+
 ## C4 levels (layer by layer)
 
 | Level | File | What it shows | What it must not show |
@@ -145,21 +155,11 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 - Rationale: consistent with Directives Store, lower operational complexity
 - Migration path: can migrate to Kafka if throughput demands it
 
-## Package alignment (`{resource}_{layer}`)
+## Package alignment (pointer)
 
-| Package module | C4 component |
-| :--- | :--- |
-| `directives_application` / `directives_domain` | `directives_application` (+ domain not drawn) |
-| `compiled_rules_application` / `compiled_rules_domain` | **`compilation_application`** (C4 process name; package keeps resource prefix) |
-| `inspections_application` / `inspections_domain` | `inspections_application` |
-| `findings_application` / `findings_domain` | `findings_application` |
-| `directives_infrastructure` | `directives_repository` |
-| `compiled_rules_infrastructure` | `compiled_rules_repository` |
-| `findings_infrastructure` (events) | `finding_events_repository` (+ implements `DenialAuditPort`) |
-| `artifacts_infrastructure` | `artifacts_repository` |
-| `inspections_infrastructure` (targets) | `target_sources_gateway` |
-| `rest_interface` / CLI / TUI | `api` + container `clients` |
-| `conflicts_domain` (`ResolveConflict`) | in-process only; used by compile + inspect packages (not a C4 component) |
+Module map and ISP port ownership live in **[`../package/`](../package/README.md)** (implementation view).  
+**Naming dual only:** C4 peer `compilation_application` ↔ package prefix `compiled_rules_*`.  
+Domain services (`ResolveConflict`, `FindingFsm`) and ports are **not** C4 peers — drawn on package/class only.
 
 ## Security architecture (at the gate)
 
@@ -173,14 +173,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 ### Internal structure of `api` (not separate C4 peers)
 
-Within the driving gate, treat these as **logical sub-responsibilities** of `api` (class/package detail, not Component peers):
-
-1. **Routing** — map HTTP/CLI intent to use-case entry points  
-2. **Authentication** — JWT validate (`sub`, `exp`, signature/JWKS)  
-3. **CapabilityEnforcer** — capability + SoD checks  
-4. **DenialAuditPort client** — append on deny  
-5. **Idempotency + ETag filters** — `Idempotency-Key`, `If-Match`  
-6. **Per-actor rate limits** — `directive.modify` / `directive.create` (429 before write lock; see capabilities `rate_limits`)
+Gate sub-responsibilities (routing, JWT, CapabilityEnforcer, DenialAuditPort client, Idempotency/ETag, rate limits) are **package/class detail**, not Component peers. See [`../package/`](../package/README.md) `rest_interface` and contracts under authorization / REST.
 
 ## Tenant model (v1 product decision)
 
@@ -214,18 +207,8 @@ tenant dimension.
 
 ## Interface segregation (application ports)
 
-Ports are owned by application packages (class diagrams). Implementers may be one adapter class:
-
-| Port | Owner package | Implementer |
-| :--- | :--- | :--- |
-| `DirectiveRepository` (write/lifecycle) | `directives_application` | `directives_infrastructure` |
-| `CompilerReadPort` / `read_executable` | `compiled_rules_application` (C4: compilation) | `directives_infrastructure` |
-| `GuidanceReadPort` / `read_policy_doctrine` | `findings_application` | `directives_infrastructure` |
-| `CompiledRulesRepository` | compile + inspect apps | `compiled_rules_infrastructure` |
-| `FindingEventRepository` | `findings_application` | `findings_infrastructure` |
-| `DenialAuditPort` | `findings_application` | `findings_infrastructure` |
-| `InspectionArtifactPort` / `FindingArtifactPort` | inspections / findings | shared `artifacts_infrastructure` client |
-| `TargetSourcesGateway` | `inspections_application` | `inspections_infrastructure` |
+Full ISP port ownership table: **[`../package/`](../package/README.md)** and [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml).  
+On the **Component** diagram, ports are not separate peers; only the `DenialAuditPort` *path* is shown as `api` → `finding_events_repository`.
 
 ## Normative cross-references (behavior not re-specified here)
 
