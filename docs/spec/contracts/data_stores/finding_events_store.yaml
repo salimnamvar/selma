@@ -334,6 +334,20 @@ state_hydration:
     - "Projection is a performance cache; event stream remains system of record"
     - "On cache miss or rebuild: fold events for finding_id ordered by HLC; optional snapshot every N events"
     - "Read models for guidance/analytics MUST NOT mutate FSM state (INV-ES-005)"
+  projection_consistency:
+    description: "Eager (same-transaction) materialization means the projection is as fresh as the store commit"
+    materialization: "eager when transactional (recommended default); lazy fold on cache miss otherwise"
+    rebuild_guarantees:
+      - >
+        Rebuild (projection corruption, partial migration, or manual repair) MUST
+        re-fold the full event stream for the finding_id ordered by HLC tuple,
+        applying the current FSM (states.yaml) from the initial state — the
+        rebuilt projection MUST be bit-identical to a live-updated projection
+        for the same event prefix.
+      - "Rebuild is read-only: it MUST NOT emit events and MUST NOT advance chain_hash."
+      - "A finding_projection check marker (e.g. last_applied_event_id / chain position) MUST be compared to the store's highest event_id before serving reads; stale projection reads are non-conformant."
+      - "Rebuild MUST complete within bounded time; progress MUST be observable (projection_rebuild_total / rebuild lag metric)."
+      - "Projection corruption MUST be detectable (checksum or chain position marker per finding_id); detection MUST trigger automatic rebuild, never manual tampering of the event stream."
 
 guidance_pinning:
   description: "Doctrine used for guidance is revision-pinned"
