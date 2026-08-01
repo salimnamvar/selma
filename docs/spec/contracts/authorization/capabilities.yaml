@@ -145,6 +145,39 @@ failure_semantics:
     - "Delegation model: not supported in v8.2.2; capabilities bind directly to actor identity"
     - "CapabilityEnforcer is a reusable module used by all driving adapters (not HTTP-only ad-hoc checks)"
 
+rate_limits:
+  description: >
+    Per-actor admission control for high-amplification mutating capabilities.
+    Complements directives_store write-queue fairness (503 when queue full):
+    rate limits reject before lock acquisition so AI agents cannot flood
+    admissions until the queue bound is hit.
+  rules:
+    - capability: "directive.modify"
+      scope: "per actor identity (JWT sub)"
+      default_quota:
+        max_requests: 30
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true) with Retry-After"
+      notes: >
+        Applies to humans and AI agents identically by default. Operators MAY
+        configure a lower quota for service accounts / AI agents that bulk-edit
+        directives; the default MUST still apply when no agent-specific profile
+        is configured. Rate limit is checked at api after capability allow and
+        before write_lock. Exceeding the limit MUST NOT enqueue compile work
+        and MUST NOT mutate directive revisions.
+    - capability: "directive.create"
+      scope: "per actor identity (JWT sub)"
+      default_quota:
+        max_requests: 30
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+      notes: "Same default as modify; prevents create storms from agents."
+  interaction_with_fairness: >
+    Rate limit (429) is the first backpressure signal. If a request is admitted
+    but the directives_store writer-preference queue is full, the store returns
+    503 (fail-fast). Clients MUST treat 429 as retry-with-backoff and 503 as
+    system-overloaded; do not tight-loop either.
+
 invariants:
   - id: "INV-CA-001"
     statement: "All actions MUST be checked against capability matrix at defined enforcement gates"
@@ -157,6 +190,12 @@ invariants:
   - id: "INV-CA-003"
     statement: "All denials MUST produce append-only audit record"
     enforcement: "audit_log"
+
+  - id: "INV-CA-004"
+    statement: >
+      directive.modify and directive.create MUST enforce per-actor rate limits
+      (rate_limits) before write_lock; excess returns 429 RateLimited
+    enforcement: "api_rate_limiter"
 
 stories:
   - story_id: "US-CA-001"

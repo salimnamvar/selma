@@ -177,7 +177,8 @@ Within the driving gate, treat these as **logical sub-responsibilities** of `api
 2. **Authentication** — JWT validate (`sub`, `exp`, signature/JWKS)  
 3. **CapabilityEnforcer** — capability + SoD checks  
 4. **DenialAuditPort client** — append on deny  
-5. **Idempotency + ETag filters** — `Idempotency-Key`, `If-Match`
+5. **Idempotency + ETag filters** — `Idempotency-Key`, `If-Match`  
+6. **Per-actor rate limits** — `directive.modify` / `directive.create` (429 before write lock; see capabilities `rate_limits`)
 
 ## Tenant model (v1 product decision)
 

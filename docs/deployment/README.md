@@ -165,6 +165,7 @@ Monitoring tools named in DEP-001 (Prometheus/Grafana, ELK/Loki, Jaeger) MUST ex
 | `finding_events_append_latency` / denial_append_rate | Denial-audit amplification vs lifecycle appends |
 | `hlc_counter_reset_total` / node_id restart | HLC persistence health |
 | Per-endpoint request rate & error ratio | Incident triage for REST surface |
+| `directive_modify_rate_limited_total` / per-actor quota remaining | Backpressure for `directive.modify` (INV-CA-004); 429 before write-queue 503 |
 
 Application logs MUST include `lineage_id`, `revision`, `finding_id`, `event_id`, `actor_id`, and outbox `worker_id` where applicable. Traces SHOULD span `api` → `*_application` → repository calls.
 
@@ -175,9 +176,10 @@ Application logs MUST include `lineage_id`, `revision`, `finding_id`, `event_id`
 3. Write-once Artifacts; append-only Finding Events; immutable Compiled Rules
 4. Capability enforcement at `api` only — catalog and SoD: [`../spec/contracts/authorization/`](../spec/contracts/authorization/), [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml)
 5. Capability denials append via **DenialAuditPort** (see [`../c4-model/README.md`](../c4-model/README.md)); never skip audit on deny; rate-limit/aggregate per finding_events_store
-6. TLS on all production hops (see above); encryption at rest for all stores
-7. Offline `certification_tool` is not network-exposed as a product peer
-8. Production JWT revocation: deny-list and/or short-lived tokens per authentication.yaml
+6. Per-actor rate limits on `directive.modify` / `directive.create` (capabilities.yaml `rate_limits`) — 429 before write lock; distinct from store queue 503
+7. TLS on all production hops (see above); encryption at rest for all stores
+8. Offline `certification_tool` is not network-exposed as a product peer
+9. Production JWT revocation: deny-list and/or short-lived tokens per authentication.yaml
 
 ## Related Documents
 
