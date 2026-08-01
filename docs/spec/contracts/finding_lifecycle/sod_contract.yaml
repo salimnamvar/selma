@@ -72,6 +72,11 @@ sod_test_matrix:
   required_assertions_per_case:
     - "Allow when SoD predicate passes (and capability present)"
     - "Deny 403 when SoD predicate fails; FSM state unchanged; SoDDenied or CapabilityDenied audit"
+  denial_audit_spool: >
+    SoDDenied appends use finding_events_repository. On finding_events_store
+    outage, findings_application MUST spool SoDDenied to the same disk-backed
+    DLQ contract as DenialAuditPort (Channel A) so denied_actions_view does not
+    under-report SoD violations. See finding_events_store denial_audit_amplification.outage_resilience.
 
 sod_rules:
   - rule_id: "SOD-001"

@@ -174,20 +174,40 @@ retention_policy:
     - artifact: "CompileRequests outbox completed rows"
       retention: "Configurable (default: 90 days after completed)"
       pruning: "Safe to prune completed/failed history after retention; permanently_failed MAY be retained longer for ops forensics"
+  gc_enforcement:
+    description: >
+      Cross-store referential integrity for paired_policy_ref. directives_store and
+      finding_events_store are separate failure domains — GC MUST NOT assume live
+      queries to finding_events_store always succeed.
+    rules:
+      - >
+        Hard-delete of a directive revision is forbidden in v1 while any unknown
+        reference risk remains. Prefer: never hard-delete revisions that ever had
+        a FindingCreated pin in production (storage is cheaper than compliance loss).
+      - >
+        If environment policy enables GC: use soft-delete (tombstone) first. A
+        reconciliation worker MUST verify reference counts against finding_events_store
+        (or a materialized ref-count projection updated from FindingCreated appends)
+        before hard-delete. If finding_events_store is unreachable, GC MUST skip
+        (fail closed — retain the revision).
+      - >
+        Optional: maintain paired_policy_ref_refcount in directives_store, incremented
+        when FindingCreated pins the ref and never decremented below zero. GC of a
+        revision requires refcount = 0 AND tombstone age ≥ environment grace period.
+      - "All GC actions MUST be audit-logged with operator identity and refcount evidence."
   invariants:
-  - id: "INV-DS-007"
-    statement: >
-      A directive revision whose paired_policy_ref is referenced by any
-      finding MUST remain readable for guidance_only resolution indefinitely
+    - id: "INV-DS-007"
+      statement: >
+        A directive revision whose paired_policy_ref is referenced by any
+        finding MUST remain readable for guidance_only resolution indefinitely
       enforcement: "retention_policy + guidance_resolution"
-
-  - id: "INV-DS-010"
-    statement: >
-      Compile outbox state transitions MUST be atomic and auditable: each
-      transition commits status, worker_id, and timestamps in a single DB
-      transaction; the transition history (or equivalent audit trail) MUST be
-      retained per compile_request
-    enforcement: "directives_repository (outbox_state_machine)"
+    - id: "INV-DS-010"
+      statement: >
+        Compile outbox state transitions MUST be atomic and auditable: each
+        transition commits status, worker_id, and timestamps in a single DB
+        transaction; the transition history (or equivalent audit trail) MUST be
+        retained per compile_request
+      enforcement: "directives_repository (outbox_state_machine)"
 
 stories:
   - story_id: "US-DS-001"
@@ -231,14 +251,42 @@ compile_coordination:
     - >
       Outbox rows transition pending → in_progress → completed | failed | permanently_failed.
       Failed rows are retriable; reconciliation job requeues stuck pending/in_progress
-      only after lease expiry (see claim_lease).      Schema-error rows that fail validation
+      only after lease expiry (see claim_lease). Schema-error rows that fail validation
       on every retry attempt are transitioned to permanently_failed after a configurable
       retry budget is exhausted (default: 5 consecutive failures with identical schema
-      error). Permanently_failed rows MUST NOT be re-enqueued; they require manual
-      intervention or a corrective directive revision to clear. Export
-      compile_outbox_failed_total{reason} metric (see deployment observability)
+      error). Permanently_failed rows MUST NOT be auto-re-enqueued; they require admin
+      retry (see permanently_failed_recovery) or a corrective directive revision.
+      Export compile_outbox_failed_total{reason} metric (see deployment observability)
       to distinguish schema-error poison rows from other terminal failures.
     - "Direct API compile triggers also enqueue the same outbox (idempotent key)"
+    - >
+      Deduplication MUST use upsert on natural key (lineage_id, revision) so a concurrent
+      duplicate enqueue cannot roll back the parent directive mutation transaction
+      (get-or-create; never raw INSERT that aborts the mutation TX on unique violation).
+  backpressure:
+    description: >
+      Bound compile outbox growth so saturated workers cannot exhaust store capacity
+      or starve the API path indefinitely.
+    rules:
+      - >
+        compile_outbox_depth = COUNT of rows with status IN (pending, in_progress).
+      - >
+        soft_limit (default 1000, environment-configurable): when depth ≥ soft_limit,
+        new directive mutations that would insert a compile_request MUST fail fast
+        with HTTP 503 CompileQueueFull and Retry-After; the mutation MUST NOT commit.
+      - >
+        hard_limit (default 5000): operators MUST alert and page when depth exceeds
+        hard_limit; environments MAY refuse all compile-enqueue paths until depth drops.
+      - "Metrics: compile_outbox_depth, compile_outbox_rejected_total{reason=queue_full}"
+  permanently_failed_recovery:
+    description: "Admin path to retry poison outbox rows after schema/tooling fix"
+    rules:
+      - >
+        An admin operation (capability compile.retry_permanently_failed or operator
+        runbook SQL guarded by audit) MAY transition permanently_failed → pending
+        exactly once per operator action, clearing the failure reason and retry budget.
+      - "Transition MUST be atomic and audit-logged (who, when, prior error)."
+      - "A corrective new directive revision that enqueues a new (lineage_id, revision) is preferred when the poison was content-schema."
   outbox_state_machine:
     description: >
       Formal state machine for compile_request rows. Every transition MUST be
@@ -272,8 +320,10 @@ compile_coordination:
           - to: "permanently_failed"
             trigger: "Retry budget exhausted (default 5 consecutive identical failures)"
       - state: "permanently_failed"
-        description: "Schema-error poison row; requires manual intervention or corrective directive revision"
-        transitions: []
+        description: "Schema-error poison row; requires admin retry or corrective directive revision"
+        transitions:
+          - to: "pending"
+            trigger: "Admin permanently_failed_recovery (capability-gated)"
     deduplication:
       key: "(lineage_id, revision)"
       behavior: >

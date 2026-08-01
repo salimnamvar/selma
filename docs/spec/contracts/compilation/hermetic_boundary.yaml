@@ -91,6 +91,13 @@ frozen_environment:
         type: "number"
         default: 0.5
         description: "Confidence threshold below which severity is capped at informational"
+      - field: "conflicts_domain_version"
+        type: "semver | string"
+        description: >
+          Version of the shared conflicts_domain library (ResolveConflict) used
+          at compile time. MUST match the version loaded by inspection deployables
+          when compile and inspect are split (INV-PR-002). Included in
+          frozen_env_hash so snapshot provenance records the conflict algorithm pin.
       - field: "frozen_env_hash"
         type: "sha256"
         description: "SHA-256 of the above object (excluding this field itself)"
@@ -139,13 +146,20 @@ hermeticity_rules:
   - id: "HERM-008"
     statement: >
       frozen_environment MUST pin python_hash_seed (non-null integer),
-      locale (C.UTF-8 or equivalent), datetime_wall_clock_policy, and
-      ordered_collection_policy (sorted). datetime_wall_clock_policy MUST be
-      "forbidden" for all production compilations; "pinned" is allowed only
-      when pinned_compile_start_timestamp is present and excluded from all
-      snapshot hashes. Absence of any required pin is non-conformant and
-      MUST fail compile_time_validation.
+      locale (C.UTF-8 or equivalent), datetime_wall_clock_policy,
+      ordered_collection_policy (sorted), and conflicts_domain_version.
+      datetime_wall_clock_policy MUST be "forbidden" for all production
+      compilations; "pinned" is allowed only when pinned_compile_start_timestamp
+      is present and excluded from all snapshot hashes. Absence of any required
+      pin is non-conformant and MUST fail compile_time_validation.
     enforcement: "compile_time_validation (AA-08)"
+
+  - id: "HERM-009"
+    statement: >
+      conflicts_domain_version MUST be present in frozen_environment and folded
+      into frozen_env_hash. When compilation and inspection are split deployables,
+      both MUST load the same conflicts_domain library version recorded here.
+    enforcement: "compile_time_validation + release_engineering"
 
 version_incompatibility:
   description: "How version mismatches are handled"

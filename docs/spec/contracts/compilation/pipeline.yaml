@@ -87,8 +87,14 @@ pipeline:
     operations:
       - "For each rule: generate control node with pure detection evaluation"
       - "Map rule fields (deontic, subject, predicate, detection, paired_policy_ref) to CG-IR node fields"
+      - >
+        paired_policy_ref is taken from the dual-document directive envelope
+        (not invented at compile). It is included in node_body so node_hash
+        differs when doctrine pin changes even if executable detection is identical.
+        Parameters overrides (amendment.yaml) are merged into detection before hash —
+        the post-merge detection_spec is what enters node_body / node_hash.
       - "Resolve depends_on references (execution IDs, not lineage_ids)"
-      - "Apply conflict resolution mapping"
+      - "Apply conflict resolution mapping (snapshot-bound defer_to; see conflict/precedence.yaml)"
       - "Compute node_hash (dual hash: semantic_hash + presentation_hash)"
       - "Compute edge_hash for each dependency"
       - "Validate frozen_environment pins (HERM-008): python_hash_seed, locale, datetime_wall_clock_policy, ordered_collection_policy"
@@ -183,7 +189,8 @@ concurrency_model:
     - "Maximum concurrent in-process compile workers per Application replica: 2 (recommended default, environment-configurable; see deployment/README.md concurrency notes)"
     - "Compile workers MUST use a fixed-size worker pool/semaphore (no unbounded goroutine/thread fan-out on outbox drain)"
     - "When the pool is saturated, outbox drain MUST NOT block the API thread; requests remain pending and are claimed by the next free worker or a later reconciliation pass"
-    - "Compile CPU work MAY be pinned to a CPU subset (taskset/cgroup) in production to isolate from API request handling"
+    - "Compile CPU work MUST be pinned or cgroup-limited in production to isolate from API request handling (deployment/README.md CPU isolation)"
+    - "Outbox depth backpressure: see data_stores.directives compile_coordination.backpressure (503 CompileQueueFull)"
     - "lock_wait_timeout: write-lock acquisition MUST time out (default 5s, max 30s, environment-configurable); on timeout the mutation returns 503 UpstreamTimeout without partial state change"
 
 invariants:

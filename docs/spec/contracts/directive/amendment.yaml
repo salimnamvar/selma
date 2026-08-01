@@ -59,8 +59,12 @@ parameters_field:
     step_1: "Start with a deep copy of rule.detection (detection_spec)"
     step_2: "For each key in parameters, apply shallow overwrite to the active strategy sub-object or adapters[].adapter_config"
     step_3: "If key does not exist in the target object, add it"
-    step_4: "Merged result becomes CG-IR node's detection payload"
+    step_4: "Merged result becomes CG-IR node's detection payload and is included in node_body for node_hash (semantic_hash)"
   constraint: "parameters MUST NOT change detection.strategy or remove required strategy sub-objects"
+  hash_inclusion: >
+    Post-merge detection_spec is what enters CG-IR node_hash. Two revisions with
+    identical base detection but different parameters produce different node_hash
+    values (INV-CP-031 / compile_cgir).
   example:
     input:
       detection:

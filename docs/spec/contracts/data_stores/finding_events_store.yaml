@@ -307,15 +307,22 @@ append_concurrency:
         (INV-AUTH path); only authenticated capability/SoD denials use DenialAuditPort.
     outage_resilience:
       description: >
-        When finding_events_store is unavailable, the gate still enforces the
-        deny decision. Denial records MUST NOT be silently lost: the api /
-        DenialAuditPort implementation MUST spool to a local disk-backed
-        fallback buffer and replay after recovery (see interfaces.rest_api
-        denial_audit).
+        When finding_events_store is unavailable, deny decisions are still
+        enforced. Denial records MUST NOT be silently lost for either channel:
+        (A) CapabilityDenied via api / DenialAuditPort, and (B) SoDDenied via
+        findings_application / FindingFsm. Both channels MUST spool to a local
+        disk-backed fallback buffer (same DLQ contract) and replay after recovery
+        (see interfaces.rest_api denial_audit). Channel B failures still return
+        403/503 to the client for the FSM mutation, but the SoDDenied audit
+        event is retained for SOC reconciliation.
       rules:
-        - "Replay MUST be idempotent and ordered per (actor_id, capability) within the buffer"
+        - "Replay MUST be idempotent and ordered per (actor_id, capability[, finding_id]) within the buffer"
         - "Entries dropped due to buffer overflow MUST increment denial_audit_dropped_total"
-        - "denied_actions_view MUST include replayed entries with their original HLC timestamps or a replay_marker when HLC was unavailable"
+        - >
+          Replay assigns HLC at replay time (non-decreasing); payload MUST allow
+          original_denied_at and/or replay_marker so denied_actions_view can
+          present both causal order and wall-time of the original denial
+        - "denied_actions_view MUST include both channels after replay (INV-ES SOC model)"
 
 idempotency:
   description: "Duplicate client retries MUST NOT double-append equivalent domain events"

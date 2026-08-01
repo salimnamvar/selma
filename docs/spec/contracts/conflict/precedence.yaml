@@ -72,8 +72,12 @@ specificity_score:
         (1 if target_type != "any" else 0) +
         (1 if domain is non-empty else 0) +
         (1 if jurisdiction is non-empty else 0) +
-        length(filters)
-      notes: "Rules with no scope have score 0"
+        length(normalized_filters)
+      notes: >
+        Rules with no scope have score 0. filters MUST be normalized before
+        counting: sort by canonical JSON key order of each filter object (or
+        sorted unique string keys if map-shaped) so length() is order-insensitive
+        and identical scopes always yield identical scores (INV-PR-002).
     - component: "count_bound_fields"
       formula: >
         Count required evaluator config fields recursively.
@@ -95,20 +99,32 @@ compatible_overrides:
       compatible: false
 
 defer_to_resolution:
-  description: "How defer_to strategy resolves"
+  description: >
+    How defer_to strategy resolves. Resolution is strictly snapshot-bound:
+    ONLY nodes present in the current CG-IR snapshot may be considered.
+    Implementations MUST NOT query directives_store or any mutable store at
+    evaluation or compile-time resolve_conflict time (hermetic AA-02 / INV-PR-002).
   algorithm: >
     1. target_execution_id = strategy.defer_to
     2. If self-reference: ignore override; fall through to computed
-    3. If target exists as active rule: resolve to that rule
-    4. If target is deprecated/superseded:
-       a. Find all active rules with same lineage_id
-       b. If exactly one: resolve to it (lineage chain successor)
+    3. If target_execution_id exists as an active node in the CG-IR snapshot: resolve to that node
+    4. If target_execution_id is present but deprecated/superseded in the snapshot:
+       a. Find all active snapshot nodes with the same lineage_id as the target
+          (snapshot membership only — not "current store active")
+       b. If exactly one: resolve to it (lineage chain successor frozen at compile)
        c. If zero: ignore override; fall through to computed
        d. If multiple: Conflict Artifact (post-fork ambiguity)
-    5. If target not found: ignore override; fall through to computed
+    5. If target_execution_id is not present in the snapshot: ignore override;
+       fall through to computed (do not load successors from directives_store)
+  compile_time_checks: >
+    Compilation SHOULD emit a ConflictArtifact (or compile warning recorded in
+    provenance) when a rule's conflict_resolution.defer_to target is missing from
+    the compiled graph or when post-fork ambiguity is already visible among
+    active snapshot nodes for the target lineage. Detection at compile reduces
+    eval-time surprises; eval algorithm remains the authority for runtime pairs.
   cycle_detection: >
     Before applying any defer_to override, run DFS cycle detection
-    on the defer_to subgraph. If cycle detected, both defer_to
+    on the defer_to subgraph within the snapshot. If cycle detected, both defer_to
     overrides ignored → fall through to computed resolution.
 
 cross_lineage_advisory:
@@ -124,6 +140,15 @@ cross_lineage_advisory:
     - "Advisory outcomes MUST NOT be replayed as automatic resolution"
     - "Identical CG-IR snapshot + identical rule pair → identical advisory output"
     - "binding_status = 'advisory' (requires_human_action = true)"
+  human_resolution_path: >
+    Humans MAY record a resolution decision on an advisory artifact via
+    conflict.resolve (capability-gated) without changing finding FSM state.
+    The decision is stored on the artifact (status → resolved, optional notes,
+    actor, timestamp). There is no "promote to binding" automatic path —
+    binding resolution requires changing directives and recompiling so the
+    next CG-IR snapshot encodes the intended override. Advisory artifacts
+    that remain open after environment SLA MAY be bulk-closed as "acknowledged"
+    for ops hygiene; this still does not mutate findings.
 
 invariants:
   - id: "INV-PR-001"
@@ -150,6 +175,12 @@ invariants:
     statement: "Cross-lineage advisory artifacts MUST NOT auto-modify findings or CG-IR"
     enforcement: "ResolveConflict"
 
+  - id: "INV-PR-007"
+    statement: >
+      defer_to resolution MUST use only CG-IR snapshot nodes; MUST NOT consult
+      directives_store or other mutable state at resolve time
+    enforcement: "ResolveConflict + certification_tool (AA-02)"
+
 stories:
   - story_id: "US-PR-001"
     as: "ResolveConflict"
@@ -168,4 +199,5 @@ stories:
     acceptance_criteria:
       - "Given a defer_to that references its own rule id. When resolution runs. Then the override is ignored and computed resolution applies."
       - "Given two defer_to overrides that form a cycle. When resolution runs. Then both overrides are ignored and computed resolution applies."
-      - "Given a defer_to referencing a deprecated rule with one active successor. When resolution runs. Then the successor is resolved as the target."
+      - "Given a defer_to referencing a deprecated rule with one active successor in the same CG-IR snapshot. When resolution runs. Then the successor is resolved as the target."
+      - "Given a defer_to target absent from the CG-IR snapshot. When resolution runs. Then the override is ignored (no directives_store lookup)."

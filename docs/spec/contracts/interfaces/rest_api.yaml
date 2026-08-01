@@ -177,7 +177,7 @@ error_semantics:
     code, detail, retryable, error_category, and request_id.
   rules:
     - "All errors return structured JSON conforming to the Error schema (RFC 7807-style)"
-    - "Error code enum: Unauthorized, CapabilityDenied, SoDDenied, NotFound, SchemaError, Conflict, FSMError, RateLimited, UpstreamTimeout, InternalError, CompileFailure, CASMiss, HashChainViolation, PairedPolicyRefDangling"
+    - "Error code enum: Unauthorized, CapabilityDenied, SoDDenied, NotFound, SchemaError, Conflict, FSMError, RateLimited, UpstreamTimeout, InternalError, CompileFailure, CompileQueueFull, CASMiss, HashChainViolation, PairedPolicyRefDangling"
     - "Error classification: client_error (401/403/404/400), terminal (409, compile/store errors), transient (429/504/500)"
     - "retryable field: true for transient errors (RateLimited, UpstreamTimeout, InternalError); false for all others"
     - "401 Unauthorized for authentication failures (no DenialAuditPort write)"
@@ -188,6 +188,7 @@ error_semantics:
       e.g. POST /directives returning 429 RateLimited before write lock when
       the actor exceeds the 30/60s per-actor quota (mirrors INV-CA-004 exactly)
     - "429 edge_rejected: global edge admission limit exceeded (identity-independent, set below app-tier bounds; returned at the LB/edge WITHOUT DenialAuditPort write; per-actor 429 by contrast always writes a denial event)"
+    - "503 CompileQueueFull: compile_outbox_depth at soft_limit; directive mutation not committed; Retry-After (see directives_store compile_coordination.backpressure)"
     - "No partial state mutation on any error"
     - "All capability/SoD denials produce audit log entry via DenialAuditPort"
 
@@ -248,7 +249,11 @@ denial_audit:
       - "Burst count resets at window rollover; a new window opens a new chain node"
   rules:
     - "api depends on application-owned DenialAuditPort only (not raw store I/O)"
-    - "Implementer is finding_events_repository / findings_infrastructure"
+    - >
+      Implementer is DenialAuditAdapter in findings_infrastructure (ISP-split).
+      The adapter MAY share a connection pool with FindingEventRepository but
+      api MUST only receive the DenialAuditPort surface (AppendDenial) — never
+      the full FindingEventRepository interface.
     - >
       Append is synchronous with a bounded timeout; on audit store outage the
       deny decision is still enforced (deny wins even if the audit write
@@ -260,6 +265,10 @@ denial_audit:
       10,000 entries); when full, oldest entries are dropped and counted in
       denial_audit_dropped_total. Replay MUST be idempotent (dedupe by
       denial event natural key or stored event_id).
+    - >
+      Replay assigns HLC at replay time (monotonic); payload MAY include
+      original_denied_at and replay_marker for SOC wall-time reconciliation
+      without violating INV-ES-003.
     - "Bulkhead: denial append uses a dedicated connection pool separate from domain writes"
     - "While the store is unavailable, denial latency must remain bounded (the gate must not hang on audit)"
 

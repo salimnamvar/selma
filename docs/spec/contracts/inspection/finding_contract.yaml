@@ -148,10 +148,11 @@ invariants:
 
   - id: "INV-FC-004"
     statement: >
-      fsm_state MUST be 'Open' immediately after creation (Created → Open automatic).
-      This auto-transition is appended atomically with the FindingCreated event
-      per INV-FL-020 — no intermediate state where FindingCreated exists without
-      the corresponding DispositionChanged for the Open transition.
+      fsm_state MUST be 'Open' immediately after successful creation (Created → Open automatic).
+      FindingOpenPort MUST append FindingCreated and the Open DispositionChanged as
+      one atomic batch per INV-FL-020 — no intermediate durable state where
+      FindingCreated exists without Open. INV-FL-021 sweeper is the recovery path
+      if a non-conformant partial write is ever observed.
     enforcement: "fsm_engine"
 
   - id: "INV-FC-005"

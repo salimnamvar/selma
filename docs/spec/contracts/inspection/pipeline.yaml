@@ -165,6 +165,14 @@ pipeline:
       - "Record frozen_env_hash, engine_version, cg_ir_snapshot_hash"
       - "Mark snapshot as immutable"
       - "Note: finding_aggregates in context reflects PREVIOUS inspections only"
+      - >
+        Open findings via findings_application FindingOpenPort: each finding is
+        FindingCreated + Open as one atomic append batch (INV-FL-020). Prefer
+        writing the inspection artifact first, then opening findings with
+        idempotent keys (inspection_id, control_id, target_hash) so retries
+        cannot double-open. If the process crashes after artifact write but
+        before all findings open, a reconciliation job re-reads the immutable
+        inspection snapshot and re-invokes FindingOpenPort (idempotent).
     invariants:
       - id: "INV-IP-050"
         statement: "Inspection snapshot is immutable once completed"
@@ -174,6 +182,10 @@ pipeline:
         statement: "skipped_nodes preserves pipeline execution order"
       - id: "INV-IP-053"
         statement: "finding_aggregates reflects pre-inspection state only (at-least-one-cycle latency)"
+      - id: "INV-IP-054"
+        statement: >
+          Finding creation is retry-safe: partial open after snapshot write MUST be
+          recoverable via FindingOpenPort idempotency + Created sweeper (INV-FL-021)
     error_handling: "abort_with_detailed_reason"
     story_refs: ["US-IP-001"]
 

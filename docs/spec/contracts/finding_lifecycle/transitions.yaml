@@ -225,19 +225,30 @@ invariants:
   - id: "INV-FL-020"
     statement: >
       System-automatic transitions (TR-FL-001 Created→Open, TR-FL-006 Evidence Submitted→Pending Verification,
-      TR-FL-010 Verified→Closed, TR-FL-011 Waived→Closed) MUST be appended atomically with the triggering
-      human transition event in a single DB transaction. The human event and any resulting automatic events
-      MUST be visible to readers as a single consistent write — no intermediate state where the human event
-      exists but the automatic successor does not.
-    enforcement: "finding_events_store"
+      TR-FL-010 Verified→Closed, TR-FL-011 Waived→Closed) MUST be appended atomically with their triggering
+      event in a single DB transaction:
+      (a) Human-triggered autos (TR-FL-006/010/011): same batch as the human disposition event.
+      (b) Inspection-triggered create (TR-FL-001): FindingCreated (fsm_state=Created) and the automatic
+          DispositionChanged Created→Open MUST be a single atomic append batch via FindingOpenPort —
+          no intermediate state where FindingCreated exists without Open.
+    enforcement: "finding_events_store + findings_application"
     failure_chain: >
-      If atomicity is violated: a crash after the human event but before the auto-transition appends
-      the finding becomes stuck in an intermediate state (e.g. Waived without Closed), producing stale
-      UI and ghost findings in audit.
+      If atomicity is violated: a crash after the human/create event but before the auto-transition
+      leaves the finding stuck (e.g. Waived without Closed, or Created without Open — invisible to
+      human workflows), producing stale UI and ghost findings in audit.
     notes: >
       Per-finding serialization (append_concurrency) ensures no interleaving of concurrent appends for
       the same finding_id. The store MUST guarantee that a single API request's FSM transition plus any
       derived automatic transitions appear as one atomic append batch.
+  - id: "INV-FL-021"
+    statement: >
+      findings_application MUST run a Created-state sweeper: any finding whose stream shows
+      FindingCreated without a subsequent Open transition older than created_open_grace
+      (default 30s, environment-configurable) MUST append the missing Open transition idempotently
+      (or compensate by replaying FindingOpenPort for that finding_id). Sweep interval ≤ grace.
+    enforcement: "findings_application"
+    failure_chain: >
+      Without a sweeper, a crash between non-atomic appends permanently strands findings in Created.
 
 stories:
   - story_id: "US-FL-010"

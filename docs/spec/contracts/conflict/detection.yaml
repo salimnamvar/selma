@@ -71,12 +71,13 @@ cross_lineage:
 temporal_binding:
   description: "Guarantee that conflict outcomes are deterministic"
   rule: >
-    The created_at field used in conflict resolution is the directive's
-    authoring timestamp, frozen into node_body at compilation time. It is
-    a static property of the CG-IR node — NOT evaluation time, NOT wall
-    clock time. For a given CG-IR snapshot, conflict resolution outcomes
-    are fully deterministic because all inputs (priority, conflict_resolution,
-    created_at, scope for specificity) are frozen in the immutable snapshot.
+    The created_at field used in conflict resolution is the **directive revision
+    authoring timestamp** (the revision being compiled — not the lineage root
+    create time, not evaluation time, not wall clock at inspect). It is frozen
+    into node_body at compilation time as a static property of the CG-IR node.
+    For a given CG-IR snapshot, conflict resolution outcomes are fully
+    deterministic because all inputs (priority, conflict_resolution, created_at,
+    scope for specificity) are frozen in the immutable snapshot.
 
 invariants:
   - id: "INV-CD-001"
