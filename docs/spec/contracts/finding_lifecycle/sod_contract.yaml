@@ -11,6 +11,23 @@ description: >
   in finding lifecycle operations. These rules are enforced at FSM transition
   gates and capability enforcement points.
 
+# Architectural placement (trusted computing base)
+# `finding_fsm_engine` in enforcement_point fields is the contract alias for the
+# domain service `FindingFsm` in `findings_domain` (class diagram cd_001).
+# SoD checks run inside that domain service before any append to
+# finding_events_repository. Application use cases (findings_application)
+# orchestrate; they MUST NOT reimplement SoD outside FindingFsm.
+enforcement_architecture:
+  engine_alias: "finding_fsm_engine"
+  domain_type: "FindingFsm"
+  domain_package: "findings_domain"
+  application_package: "findings_application"
+  rules:
+    - "SoD predicates (SOD-001…003) execute inside FindingFsm.transition before event append"
+    - "Capability catalog gates remain at api; SoD is an additional domain invariant"
+    - "Package diagrams MAY omit a separate box for FindingFsm; class diagram is normative for type placement"
+    - "See INV-ES-007 for sole write path; chain_hash detects bypass store writes"
+
 sod_rules:
   - rule_id: "SOD-001"
     name: "Creator Cannot Waive Own Findings"

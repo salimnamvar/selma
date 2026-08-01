@@ -38,6 +38,7 @@ Package structure aligns with C4 entities (layer postfixes):
 | `compiled_rules_*` (compile path) | **C4 ID `compilation_application`** + `compiled_rules_repository` → `compiled_rules_store` |
 | `inspections_*` | `inspections_application` (+ `target_sources_gateway`) |
 | `findings_*` | `findings_application` + `finding_events_repository` → `finding_events_store` |
+| `findings_domain.FindingFsm` | Domain service (contract alias `finding_fsm_engine`); SoD + FSM transitions; not a C4 peer |
 | `DenialAuditPort` (in `findings_application`) | Application-owned port; **implementer** = `finding_events_repository`; **consumer** = `api` / `rest_interface` |
 | `artifacts_infrastructure` | `artifacts_repository` → `artifacts_store` |
 | `conflicts_domain` (`ResolveConflict`) | Domain service (not a C4 component); depended on by `compiled_rules_application` and `inspections_application` |
