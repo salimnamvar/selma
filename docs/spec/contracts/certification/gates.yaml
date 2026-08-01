@@ -117,7 +117,11 @@ gates:
     criteria:
       - "python_hash_seed is present and non-null integer in frozen_environment"
       - "locale is pinned to C.UTF-8 (or equivalent POSIX locale)"
-      - "datetime_wall_clock_policy is forbidden (or a single pinned compile-start timestamp)"
+      - >
+        datetime_wall_clock_policy is forbidden for production compilations;
+        pinned is permitted only with a non-null injected
+        pinned_compile_start_timestamp excluded from snapshot hashes (HERM-008,
+        INV-HB-007)
       - "ordered_collection_policy is sorted (or insertion_order with fixed construction)"
       - "runtime_preimage enumerates every input folded into os_runtime_hash"
       - "Static analysis finds no datetime.now()/wall-clock reads in the compile path"

@@ -62,7 +62,23 @@ frozen_environment:
         default: "forbidden"
         description: >
           Compile path MUST NOT call datetime.now() or read wall clock.
-          Pinned mode allows a single fixed timestamp injected at compile start.
+          Production compilations MUST use "forbidden". "pinned" is permitted
+          only for offline/forensic reproduction: the orchestrator injects a
+          single fixed compile-start timestamp in
+          pinned_compile_start_timestamp, the compile path MUST consume that
+          injected value (never the live clock), and the value MUST be
+          excluded from the snapshot hash exactly like compiled_at (HERM-006).
+          A "pinned" environment without pinned_compile_start_timestamp is
+          non-conformant (INV-HB-007).
+      - field: "pinned_compile_start_timestamp"
+        type: "datetime (ISO 8601, UTC) | null"
+        default: null
+        description: >
+          Required (non-null) when datetime_wall_clock_policy = "pinned";
+          MUST be null when policy is "forbidden". Single timestamp injected
+          at compile start; MUST NOT be re-read from the wall clock and MUST
+          NOT be included in frozen_env_hash or cg_ir_snapshot_hash (same
+          treatment as compiled_at per HERM-006 / INV-CP-033).
       - field: "ordered_collection_policy"
         type: "string"
         enum: ["sorted", "insertion_order"]
@@ -123,9 +139,12 @@ hermeticity_rules:
   - id: "HERM-008"
     statement: >
       frozen_environment MUST pin python_hash_seed (non-null integer),
-      locale (C.UTF-8 or equivalent), datetime_wall_clock_policy (forbidden),
-      and ordered_collection_policy (sorted). Absence of any required pin
-      is non-conformant and MUST fail compile_time_validation.
+      locale (C.UTF-8 or equivalent), datetime_wall_clock_policy, and
+      ordered_collection_policy (sorted). datetime_wall_clock_policy MUST be
+      "forbidden" for all production compilations; "pinned" is allowed only
+      when pinned_compile_start_timestamp is present and excluded from all
+      snapshot hashes. Absence of any required pin is non-conformant and
+      MUST fail compile_time_validation.
     enforcement: "compile_time_validation (AA-08)"
 
 version_incompatibility:
@@ -190,6 +209,15 @@ invariants:
       runtime_preimage MUST enumerate every input folded into os_runtime_hash;
       an opaque os_runtime_hash without an exhaustive preimage list is
       non-conformant (AA-08)
+    enforcement: "compile_time_validation (AA-08)"
+
+  - id: "INV-HB-007"
+    statement: >
+      datetime_wall_clock_policy = "pinned" REQUIRES a non-null
+      pinned_compile_start_timestamp injected at compile start; the injected
+      value MUST NOT be re-read from the wall clock and MUST be excluded from
+      frozen_env_hash and cg_ir_snapshot_hash. Production compilations MUST
+      use "forbidden" (HERM-008).
     enforcement: "compile_time_validation (AA-08)"
 
 stories:
