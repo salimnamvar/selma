@@ -1,22 +1,18 @@
 ' ============================================================
 ' Title:     Selma -- Component Diagram
-' Boundary:  Application
+' Boundary:  Selma system; Application process nested inside
 ' Purpose:   Clean Architecture inside Application:
 '            api (driving) → *_application → *_repository /
 '            *_gateway (driven) → *_store / externals.
 '            Domain services (e.g. ResolveConflict) are not
 '            peer components.
+'            Stores are inside the Selma system boundary and
+'            outside the Application process boundary; only
+'            *_repository / *_gateway touch stores or externals.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram
-
-note as CLARITY_NOTE
-  Boundary semantics: stores are drawn external to the Application
-  process boundary here, but are internal to the Selma system boundary
-  (see Container Diagram). The Application owns no store technology;
-  adapters (*_repository) are the only store access path.
-end note
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.13.0/C4_Component.puml
 !theme plain
@@ -26,31 +22,35 @@ end note
 LAYOUT_LEFT_RIGHT()
 
 System_Ext(target_sources, $NAME_target_sources, $DESC_target_sources)
-
 Container_Ext(clients, $NAME_clients, $TECH_clients, $DESC_clients)
 
-ContainerDb_Ext(directives_store, $NAME_directives_store, $TECH_directives_store, $DESC_directives_store, $tags="store")
-ContainerDb_Ext(compiled_rules_store, $NAME_compiled_rules_store, $TECH_compiled_rules_store, $DESC_compiled_rules_store, $tags="store")
-ContainerDb_Ext(finding_events_store, $NAME_finding_events_store, $TECH_finding_events_store, $DESC_finding_events_store, $tags="store")
-ContainerDb_Ext(artifacts_store, $NAME_artifacts_store, $TECH_artifacts_store, $DESC_artifacts_store, $tags="store")
+System_Boundary(selma, $NAME_selma) {
 
-Container_Boundary(application, $NAME_application) {
+    Container_Boundary(application, $NAME_application) {
 
-    ' ── Driving adapter (interface) ──
-    Component(api, $NAME_api, $TECH_api, $DESC_api, $tags="gate")
+        ' ── Driving adapter (interface) ──
+        Component(api, $NAME_api, $TECH_api, $DESC_api, $tags="gate")
 
-    ' ── Application use-case clusters (*_application) ──
-    Component(directives_application, $NAME_directives_application, $TECH_directives_application, $DESC_directives_application)
-    Component(compilation_application, $NAME_compilation_application, $TECH_compilation_application, $DESC_compilation_application, $tags="hermetic")
-    Component(inspections_application, $NAME_inspections_application, $TECH_inspections_application, $DESC_inspections_application)
-    Component(findings_application, $NAME_findings_application, $TECH_findings_application, $DESC_findings_application)
+        ' ── Application use-case clusters (*_application) ──
+        Component(directives_application, $NAME_directives_application, $TECH_directives_application, $DESC_directives_application)
+        Component(compilation_application, $NAME_compilation_application, $TECH_compilation_application, $DESC_compilation_application, $tags="hermetic")
+        Component(inspections_application, $NAME_inspections_application, $TECH_inspections_application, $DESC_inspections_application)
+        Component(findings_application, $NAME_findings_application, $TECH_findings_application, $DESC_findings_application)
 
-    ' ── Driven adapters (infrastructure) ──
-    Component(directives_repository, $NAME_directives_repository, $TECH_directives_repository, $DESC_directives_repository)
-    Component(compiled_rules_repository, $NAME_compiled_rules_repository, $TECH_compiled_rules_repository, $DESC_compiled_rules_repository)
-    Component(finding_events_repository, $NAME_finding_events_repository, $TECH_finding_events_repository, $DESC_finding_events_repository)
-    Component(artifacts_repository, $NAME_artifacts_repository, $TECH_artifacts_repository, $DESC_artifacts_repository)
-    Component(target_sources_gateway, $NAME_target_sources_gateway, $TECH_target_sources_gateway, $DESC_target_sources_gateway)
+        ' ── Driven adapters (infrastructure) ──
+        Component(directives_repository, $NAME_directives_repository, $TECH_directives_repository, $DESC_directives_repository)
+        Component(compiled_rules_repository, $NAME_compiled_rules_repository, $TECH_compiled_rules_repository, $DESC_compiled_rules_repository)
+        Component(finding_events_repository, $NAME_finding_events_repository, $TECH_finding_events_repository, $DESC_finding_events_repository)
+        Component(artifacts_repository, $NAME_artifacts_repository, $TECH_artifacts_repository, $DESC_artifacts_repository)
+        Component(target_sources_gateway, $NAME_target_sources_gateway, $TECH_target_sources_gateway, $DESC_target_sources_gateway)
+
+    }
+
+    ' ── Stores (frameworks & drivers; outside Application process) ──
+    ContainerDb(directives_store, $NAME_directives_store, $TECH_directives_store, $DESC_directives_store, $tags="store")
+    ContainerDb(compiled_rules_store, $NAME_compiled_rules_store, $TECH_compiled_rules_store, $DESC_compiled_rules_store, $tags="store")
+    ContainerDb(finding_events_store, $NAME_finding_events_store, $TECH_finding_events_store, $DESC_finding_events_store, $tags="store")
+    ContainerDb(artifacts_store, $NAME_artifacts_store, $TECH_artifacts_store, $DESC_artifacts_store, $tags="store")
 
 }
 
@@ -62,13 +62,10 @@ Rel(api, directives_application, "directive resource CRUD and lifecycle", "Inter
 Rel(api, compilation_application, "triggers compile on directive change", "Internal", $tags="capability_enforced")
 Rel(api, inspections_application, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
 Rel(api, findings_application, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
-' Gate side-effect via application-owned DenialAuditPort (implemented by
-' finding_events_repository). Not a domain findings use case; not store I/O.
 Rel(api, finding_events_repository, "DenialAuditPort: append capability denial events", "Append-Only", $tags="immutable")
 
 ' ── Directives Application ──
 Rel(directives_application, directives_repository, "reads and writes dual-document directives; enqueues compile_request outbox", "Internal")
-' Outbox: durable compile_request in directives_store; drained by compilation_application (same process v1)
 Rel(directives_application, compilation_application, "compile_request outbox (eventual; dedupe lineage+revision)", "Internal", $tags="async")
 
 ' ── Compilation Application (hermetic) ──

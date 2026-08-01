@@ -9,22 +9,20 @@ Infrastructure and deployment architecture for the Selma Rule Regularity Platfor
 
 | ID | Title | File | Description |
 |:---|:------|:-----|:------------|
-| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Topology aligned with C4 containers and resource stores |
+| **DEP-001** | Production Deployment | [`dep_001_production.puml`](dep_001_production.puml) | Topology aligned with C4 containers, package modules inside Application, four stores with separate PG failure domains |
 
-**Note:** Clients are external to Selma. They are not part of the Selma deployment. The network flow is: Clients → Load Balancer → Application.
+**Alignment (structure, not notes):** DEP-001 expands the C4 `application` container into the same modules as package/C4 component: `api` (rest_interface + CapabilityEnforcer), four `*_application`, five driven adapters (`*_repository` / `target_sources_gateway`), `composition_root`, and in-process domain libs (`conflicts_domain`, `FindingFsm`). Data zone draws **separate** PostgreSQL clusters for `directives_store` and `finding_events_store`, and S3-compatible storage for `compiled_rules_store` + `artifacts_store`. Clients (`C4: clients`) stay outside Selma: Clients → Load Balancer → `api`.
 
 ## Network Zones
 
-| Zone | Purpose | Components |
+| Zone | Purpose | Components (C4 / package) |
 |:-----|:--------|:-----------|
-| **External User** | Client applications | Clients (CLI / Web / Desktop / Mobile) |
+| **External User** | Driving adapters outside Selma deploy | `clients` (CLI / Web / Desktop / Mobile) |
 | **Public** | User-facing entry | Load balancer (active/standby or managed multi-AZ) |
-| **Application** | Core process | Application (`api`, compilation, inspection, findings) |
-| **Data** | Resource stores | Directives, Compiled Rules, Finding Events, Artifacts |
-| **External** | Optional only | Target Sources (pull by reference) |
+| **Application** | C4 `application` process | `api` + four `*_application` + five `*_repository`/`*_gateway` + `composition_root` + domain libs |
+| **Data** | Four C4 `*_store` | PG cluster A: `directives_store`; PG cluster B: `finding_events_store`; object store: `compiled_rules_store` + `artifacts_store` |
+| **External** | Optional only | `target_sources` (pull by reference via gateway) |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
-
-**Note:** Clients are external to Selma. They are not part of the Selma deployment. The network flow is: Clients → Load Balancer → Application.
 
 CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer; when run it may write `artifacts_store` only.
 

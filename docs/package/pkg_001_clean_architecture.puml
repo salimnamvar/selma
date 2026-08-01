@@ -1,166 +1,352 @@
 @startuml pkg_001_clean_architecture
 ' ============================================================
 ' Title:     PKG-001 Clean Architecture Packages
-' Source:    docs/c4-model/README.md package alignment
-' C4:        {resource}_{layer} maps to C4 peers
+' Source:    docs/c4-model/ (structural SSoT) + c4_registry.yaml
+' C4:        {resource}_{layer} maps to C4 peers; stores via repos
 ' Contract:  1.1.0
 ' ============================================================
-' PKG-001 · Clean Architecture — {resource}_{layer} modules
-' Local include (do not use !includeurl for in-repo styles)
 !include ../class/common/cd_styles.puml
 
-title **PKG-001 — Clean Architecture Packages**\nSelma · {resource}_{layer} · Resource-Oriented Design\n
+title **PKG-001 — Clean Architecture Packages**\nSelma · {resource}_{layer} · C4 1.1.0 peers\n
 
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
 skinparam package {
   BackgroundColor #F0F4F8
   BorderColor #5B7BA5
   FontSize 12
   FontStyle bold
 }
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #7F8C9A
+  FontSize 11
+}
+skinparam database {
+  BackgroundColor #ECEFF1
+  BorderColor #546E7A
+}
 
+' ═══════════════════════════════════════════════════════════
+'  INTERFACE (C4: clients + api)
+' ═══════════════════════════════════════════════════════════
 package "<<interface>>\n*_interface" as INTERFACES #E3F2FD/1565C0 {
-  package "rest_interface" as IF_REST #BBDEFB/1976D2 {
-    [Resource routers + capability gate] as REST_ROUTER
+
+  package "rest_interface\n(C4: api)" as IF_REST #BBDEFB/1976D2 {
+    package "routing" as IF_REST_RT #E3F2FD {
+      [DirectiveRouter] as REST_DIR
+      [CompilationRouter] as REST_CMP
+      [InspectionRouter] as REST_INS
+      [FindingRouter] as REST_FIND
+      [ArtifactRouter] as REST_ART
+    }
+    package "gate" as IF_REST_GATE #E3F2FD {
+      [JwtAuthenticator] as REST_AUTHN
+      [CapabilityEnforcer] as REST_CAP
+      [IdempotencyFilter] as REST_IDEM
+      [ETagFilter] as REST_ETAG
+      [DenialAuditClient] as REST_DENY
+    }
   }
-  package "cli_interface" as IF_CLI #BBDEFB/1976D2
-  package "tui_interface" as IF_TUI #BBDEFB/1976D2
+
+  package "cli_interface\n(C4: clients)" as IF_CLI #BBDEFB/1976D2 {
+    package "commands" as IF_CLI_CMD #E3F2FD {
+      [DirectiveCommands] as CLI_DIR
+      [InspectionCommands] as CLI_INS
+      [FindingCommands] as CLI_FIND
+    }
+    package "gate" as IF_CLI_GATE #E3F2FD {
+      [CapabilityEnforcer] as CLI_CAP
+    }
+  }
+
+  package "tui_interface\n(C4: clients)" as IF_TUI #BBDEFB/1976D2 {
+    package "screens" as IF_TUI_SCR #E3F2FD {
+      [DirectiveScreens] as TUI_DIR
+      [FindingScreens] as TUI_FIND
+    }
+    package "gate" as IF_TUI_GATE #E3F2FD {
+      [CapabilityEnforcer] as TUI_CAP
+    }
+  }
 }
 
-package "<<composition>>" as COMPOSITION #E8EAF6/3F51B5 {
-  [DI / Wiring] as WIRING
-}
-
-package "<<infrastructure>>\n*_infrastructure" as INFRASTRUCTURE #FFF3E0/E65100 {
-  package "directives_infrastructure" as INFRA_DIR #FFE0B2/F57C00 {
-    [SqlDirectiveRepository] as SQL_DIR
+' ═══════════════════════════════════════════════════════════
+'  COMPOSITION ROOT (v1: single Application process)
+' ═══════════════════════════════════════════════════════════
+package "<<composition>>\ncomposition_root" as COMPOSITION #E8EAF6/3F51B5 {
+  package "wiring" as COMP_WIRE #C5CAE9 {
+    [ApplicationContainer] as WIRE_APP
+    [PortBindings] as WIRE_PORTS
   }
-  package "compiled_rules_infrastructure" as INFRA_CR #FFE0B2/F57C00 {
-    [ContentAddressedCompiledRulesRepository] as CAS_CR
-  }
-  package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
-    [AppendOnlyFindingEventRepository] as EVT_REPO
-  }
-  package "artifacts_infrastructure" as INFRA_ART #FFE0B2/F57C00 {
-    [ObjectArtifactRepository] as OBJ_ART
-  }
-  package "inspections_infrastructure" as INFRA_INS #FFE0B2/F57C00 {
-    [HttpTargetSourcesGateway] as TGT_GW
+  package "scheduling" as COMP_SCHED #C5CAE9 {
+    [OutboxDrainScheduler] as WIRE_OUTBOX
   }
 }
 
+' ═══════════════════════════════════════════════════════════
+'  APPLICATION (C4: *_application)
+' ═══════════════════════════════════════════════════════════
 package "<<application>>\n*_application" as APPLICATION #E8F5E9/2E7D32 {
-  package "directives_application" as APP_DIR #C8E6C9/388E3C {
-    [CreateDirective / GetDirective / ListDirectives / …] as UC_DIR
-    interface DirectiveRepository
+
+  package "directives_application\n(C4: directives_application)" as APP_DIR #C8E6C9/388E3C {
+    package "use_cases" as APP_DIR_UC #A5D6A7 {
+      [CreateDirective] as UC_DIR_CREATE
+      [GetDirective] as UC_DIR_GET
+      [ListDirectives] as UC_DIR_LIST
+      [UpdateDirective] as UC_DIR_UPD
+      [LifecycleTransitions] as UC_DIR_LIFE
+    }
+    package "ports" as APP_DIR_PORTS #A5D6A7 {
+      interface DirectiveRepository
+    }
   }
+
   package "compiled_rules_application\n(C4: compilation_application)" as APP_CR #C8E6C9/388E3C {
-    [CompileDirectives / PublishCompiledRules / DrainOutbox] as UC_CR
-    interface CompiledRulesRepository
-    interface CompilerReadPort
+    package "use_cases" as APP_CR_UC #A5D6A7 {
+      [CompileDirectives] as UC_CR_COMPILE
+      [PublishCompiledRules] as UC_CR_PUB
+      [DrainOutbox] as UC_CR_DRAIN
+    }
+    package "ports" as APP_CR_PORTS #A5D6A7 {
+      interface CompilerReadPort
+      interface CompiledRulesRepository
+    }
   }
-  package "inspections_application" as APP_INS #C8E6C9/388E3C {
-    [CreateInspection / GetInspection] as UC_INS
-    interface InspectionArtifactPort
+
+  package "inspections_application\n(C4: inspections_application)" as APP_INS #C8E6C9/388E3C {
+    package "use_cases" as APP_INS_UC #A5D6A7 {
+      [CreateInspection] as UC_INS_CREATE
+      [GetInspection] as UC_INS_GET
+      [RunInspectionPipeline] as UC_INS_PIPE
+    }
+    package "ports" as APP_INS_PORTS #A5D6A7 {
+      interface InspectionArtifactPort
+      interface TargetSourcesGateway
+    }
   }
-  package "findings_application" as APP_FIND #C8E6C9/388E3C {
-    [GetFinding / ListFindings / GetFindingGuidance / …] as UC_FIND
-    interface FindingEventRepository
-    interface DenialAuditPort
-    interface GuidanceReadPort
-    interface FindingArtifactPort
+
+  package "findings_application\n(C4: findings_application)" as APP_FIND #C8E6C9/388E3C {
+    package "use_cases" as APP_FIND_UC #A5D6A7 {
+      [GetFinding] as UC_FIND_GET
+      [ListFindings] as UC_FIND_LIST
+      [TransitionFinding] as UC_FIND_TRANS
+      [GetFindingGuidance] as UC_FIND_GUIDE
+      [AttachEvidence] as UC_FIND_EVID
+    }
+    package "ports" as APP_FIND_PORTS #A5D6A7 {
+      interface FindingEventRepository
+      interface DenialAuditPort
+      interface GuidanceReadPort
+      interface FindingArtifactPort
+    }
   }
 }
 
+' ═══════════════════════════════════════════════════════════
+'  DOMAIN (not C4 component peers)
+' ═══════════════════════════════════════════════════════════
 package "<<domain>>\n*_domain" as DOMAIN #FFFFFF/78909C {
-  package "shared_domain" as DOM_SHARED
-  package "directives_domain" as DOM_DIR
-  package "compiled_rules_domain" as DOM_CR
-  package "inspections_domain" as DOM_INS
-  package "findings_domain" as DOM_FIND
-  package "conflicts_domain" as DOM_CON {
-    [ResolveConflict] as RESOLVE
+
+  package "shared_domain" as DOM_SHARED #ECEFF1 {
+    package "identifiers" as DOM_SHARED_ID #CFD8DC {
+      [LineageId] as VO_LINEAGE
+      [Revision] as VO_REV
+      [ExecutionId] as VO_EXEC
+      [FindingId] as VO_FIND
+      [ActorId] as VO_ACTOR
+    }
+    package "time" as DOM_SHARED_TIME #CFD8DC {
+      [HlcTimestamp] as VO_HLC
+      [PairedPolicyRef] as VO_PPR
+    }
+  }
+
+  package "directives_domain" as DOM_DIR #ECEFF1 {
+    package "aggregates" as DOM_DIR_AGG #CFD8DC {
+      [Directive] as AGG_DIR
+      [ExecutableRuleDoc] as AGG_EXEC
+      [PolicyDoctrineDoc] as AGG_DOC
+    }
+  }
+
+  package "compiled_rules_domain" as DOM_CR #ECEFF1 {
+    package "aggregates" as DOM_CR_AGG #CFD8DC {
+      [CgIrSnapshot] as AGG_CGIR
+      [LineageHead] as AGG_HEAD
+    }
+  }
+
+  package "inspections_domain" as DOM_INS #ECEFF1 {
+    package "aggregates" as DOM_INS_AGG #CFD8DC {
+      [Inspection] as AGG_INS
+      [Target] as AGG_TGT
+      [DetectionSpec] as AGG_DET
+    }
+  }
+
+  package "findings_domain" as DOM_FIND #ECEFF1 {
+    package "aggregates" as DOM_FIND_AGG #CFD8DC {
+      [Finding] as AGG_FIND
+      [FindingProjection] as AGG_PROJ
+    }
+    package "services" as DOM_FIND_SVC #CFD8DC {
+      [FindingFsm] as SVC_FSM
+    }
+  }
+
+  package "conflicts_domain" as DOM_CON #ECEFF1 {
+    package "services" as DOM_CON_SVC #CFD8DC {
+      [ResolveConflict] as SVC_CONFLICT
+    }
   }
 }
 
-INTERFACES .down.> APPLICATION : <<uses>>
-IF_REST ..> DenialAuditPort : <<uses>> gate denials
-COMPOSITION .down.> INTERFACES : <<wires>>
-COMPOSITION .down.> INFRASTRUCTURE : <<wires>>
-COMPOSITION .down.> APPLICATION : <<wires>>
-COMPOSITION .down.> DOMAIN : <<wires>>
+' ═══════════════════════════════════════════════════════════
+'  INFRASTRUCTURE (C4: *_repository / *_gateway)
+' ═══════════════════════════════════════════════════════════
+package "<<infrastructure>>\n*_infrastructure" as INFRASTRUCTURE #FFF3E0/E65100 {
 
-INFRA_DIR ..> APP_DIR : <<implements>>
-INFRA_DIR ..> CompilerReadPort : <<implements>>
-INFRA_DIR ..> GuidanceReadPort : <<implements>>
-INFRA_CR ..> APP_CR : <<implements>>
-INFRA_FE ..> APP_FIND : <<implements>>
-INFRA_FE ..> DenialAuditPort : <<implements>>
-INFRA_ART ..> InspectionArtifactPort : <<implements>>
-INFRA_ART ..> FindingArtifactPort : <<implements>>
-INFRA_INS ..> APP_INS : <<implements>>
+  package "directives_infrastructure\n(C4: directives_repository)" as INFRA_DIR #FFE0B2/F57C00 {
+    package "adapters" as INFRA_DIR_AD #FFCC80 {
+      [SqlDirectiveRepository] as SQL_DIR
+    }
+  }
 
-APP_DIR .down.> DOM_DIR : <<depends>>
-APP_CR .down.> DOM_CR : <<depends>>
-APP_CR .down.> DOM_CON : <<depends>> ResolveConflict
-APP_INS .down.> DOM_INS : <<depends>>
-APP_INS .down.> DOM_CON : <<depends>> ResolveConflict
-APP_FIND .down.> DOM_FIND : <<depends>>
+  package "compiled_rules_infrastructure\n(C4: compiled_rules_repository)" as INFRA_CR #FFE0B2/F57C00 {
+    package "adapters" as INFRA_CR_AD #FFCC80 {
+      [ContentAddressedCompiledRulesRepository] as CAS_CR
+    }
+  }
 
-DOM_DIR .down.> DOM_SHARED
-DOM_CR .down.> DOM_SHARED
-DOM_INS .down.> DOM_SHARED
-DOM_FIND .down.> DOM_SHARED
-DOM_CON .down.> DOM_SHARED
+  package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #FFE0B2/F57C00 {
+    package "adapters" as INFRA_FE_AD #FFCC80 {
+      [AppendOnlyFindingEventRepository] as EVT_REPO
+    }
+  }
 
-note right of APPLICATION
-  **ROD operations**
-  Create/Get/List/Update + lifecycle verbs
-  GetFindingGuidance (sub-resource;
-  doctrine by paired_policy_ref revision)
-  No bare execute() as public API
+  package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FFE0B2/F57C00 {
+    package "client" as INFRA_ART_CLI #FFCC80 {
+      [ObjectStoreClient] as OBJ_CLI
+    }
+    package "adapters" as INFRA_ART_AD #FFCC80 {
+      [InspectionArtifactAdapter] as ART_INS
+      [FindingArtifactAdapter] as ART_FIND
+      [CertificationArtifactAdapter] as ART_CERT
+    }
+  }
 
-  **DenialAuditPort**
-  Application-owned; consumed by api/rest_interface;
-  implemented by findings_infrastructure.
-  Single method: AppendDenial(...)
-end note
+  package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FFE0B2/F57C00 {
+    package "adapters" as INFRA_INS_AD #FFCC80 {
+      [HttpTargetSourcesGateway] as TGT_GW
+    }
+    package "evaluators" as INFRA_INS_EVAL #FFCC80 {
+      [DetectionEvaluator] as DET_EVAL
+    }
+  }
 
-note right of INFRASTRUCTURE
-  **C4 repositories**
-  directives_repository
-  compiled_rules_repository
-  finding_events_repository
-  artifacts_repository
-  target_sources_gateway
+  package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
+    package "crypto" as INFRA_PLAT_CRY #FFCC80 {
+      [Hasher] as PLAT_HASH
+    }
+    package "clock" as INFRA_PLAT_CLK #FFCC80 {
+      [HybridLogicalClock] as PLAT_HLC
+    }
+  }
+}
 
-  **Alignment with C4:**
-  Each infrastructure package implements
-  a C4 repository/gateway component.
-  findings_infrastructure also implements
-  DenialAuditPort for the capability gate.
-end note
+' ═══════════════════════════════════════════════════════════
+'  FRAMEWORKS & DRIVERS (C4: *_store + optional external)
+' ═══════════════════════════════════════════════════════════
+package "<<frameworks & drivers>>\nC4 stores · data zone" as STORES #ECEFF1/546E7A {
+  package "directives_store\n(PostgreSQL)" as ST_DIR_PKG #CFD8DC {
+    database "directives_store" as ST_DIR
+  }
+  package "compiled_rules_store\n(CAS · S3-compatible)" as ST_CR_PKG #CFD8DC {
+    database "compiled_rules_store" as ST_CR
+  }
+  package "finding_events_store\n(PostgreSQL append-only)" as ST_FE_PKG #CFD8DC {
+    database "finding_events_store" as ST_FE
+  }
+  package "artifacts_store\n(Object Store)" as ST_ART_PKG #CFD8DC {
+    database "artifacts_store" as ST_ART
+  }
+}
 
-legend bottom
-  |= Pattern |= Example |
-  | {resource}_domain | directives_domain |
-  | {resource}_application | findings_application |
-  | {resource}_infrastructure | directives_infrastructure |
-  | {channel}_interface | rest_interface |
+package "<<external optional>>\ntarget_sources" as EXT #FCE4EC/C62828 {
+  cloud "target_sources" as ST_TGT
+}
 
-  **Alignment with C4:**
-  Packages map to C4 components:
-  - directives_application → directives_application
-  - directives_infrastructure → directives_repository
-  - compiled_rules_* (compile) → compilation_application + compiled_rules_repository
-  - inspections_* → inspections_application (+ target_sources_gateway)
-  - findings_* → findings_application + finding_events_repository
-  - DenialAuditPort → app port; implementer finding_events_repository
-  - artifacts_infrastructure → artifacts_repository
-  - conflicts_domain → ResolveConflict (not C4 component)
-  - stores → directives_store | compiled_rules_store |
-             finding_events_store | artifacts_store
-endlegend
+' ═══════════════════════════════════════════════════════════
+'  DEPENDENCIES — layer rule + C4 component edges
+' ═══════════════════════════════════════════════════════════
 
-footer PKG-001 · {resource}_{layer} · Selma
+' Layer: interface → application
+IF_REST ..> APPLICATION : <<uses>>
+IF_CLI ..> APPLICATION : <<uses>>
+IF_TUI ..> APPLICATION : <<uses>>
+REST_DENY ..> DenialAuditPort : AppendDenial
+REST_CAP ..> DenialAuditPort : on deny
+
+' Composition wires all layers
+COMPOSITION ..> INTERFACES : <<wires>>
+COMPOSITION ..> APPLICATION : <<wires>>
+COMPOSITION ..> INFRASTRUCTURE : <<wires>>
+COMPOSITION ..> DOMAIN : <<wires>>
+WIRE_OUTBOX ..> UC_CR_DRAIN : schedules
+
+' Infrastructure implements ports
+SQL_DIR ..|> DirectiveRepository
+SQL_DIR ..|> CompilerReadPort
+SQL_DIR ..|> GuidanceReadPort
+CAS_CR ..|> CompiledRulesRepository
+EVT_REPO ..|> FindingEventRepository
+EVT_REPO ..|> DenialAuditPort
+ART_INS ..|> InspectionArtifactPort
+ART_FIND ..|> FindingArtifactPort
+TGT_GW ..|> TargetSourcesGateway
+ART_INS --> OBJ_CLI
+ART_FIND --> OBJ_CLI
+ART_CERT --> OBJ_CLI
+
+' C4 cross-application edges
+APP_DIR ..> APP_CR : compile_request outbox
+APP_INS ..> APP_FIND : opens findings
+APP_INS ..> CompiledRulesRepository : load frozen CG-IR
+APP_FIND ..> CompiledRulesRepository : SoD provenance
+APP_CR ..> CompilerReadPort
+APP_FIND ..> GuidanceReadPort
+APP_DIR ..> DirectiveRepository
+APP_CR ..> CompiledRulesRepository : publish
+APP_INS ..> InspectionArtifactPort
+APP_FIND ..> FindingArtifactPort
+APP_FIND ..> FindingEventRepository
+APP_INS ..> TargetSourcesGateway
+
+' Application → domain
+APP_DIR ..> DOM_DIR
+APP_CR ..> DOM_CR
+APP_CR ..> DOM_CON : ResolveConflict
+APP_INS ..> DOM_INS
+APP_INS ..> DOM_CON : ResolveConflict
+APP_FIND ..> DOM_FIND
+UC_FIND_TRANS ..> SVC_FSM
+
+DOM_DIR ..> DOM_SHARED
+DOM_CR ..> DOM_SHARED
+DOM_INS ..> DOM_SHARED
+DOM_FIND ..> DOM_SHARED
+DOM_CON ..> DOM_SHARED
+
+' Repositories → stores
+SQL_DIR --> ST_DIR : SQL
+CAS_CR --> ST_CR : CAS
+EVT_REPO --> ST_FE : append-only
+OBJ_CLI --> ST_ART : object write-once
+TGT_GW --> ST_TGT : HTTPS
+
+footer PKG-001 · Contract 1.1.0 · {resource}_{layer} · Selma
 
 @enduml

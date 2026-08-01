@@ -13,9 +13,11 @@ Three-level C4 model using **Clean Architecture** layering and **resource-orient
 | :--- | :--- | :--- | :--- |
 | **Context** | `c4_selma_context.puml` | People, the Selma system, optional external systems | Containers, components, databases, tech stacks |
 | **Container** | `c4_selma_container.puml` | Deployable/process units inside Selma: Clients, Application, four `*_store` | Internal classes, use-case wiring, repository adapters |
-| **Component** | `c4_selma_component.puml` | Clean Architecture inside **Application**: `api` → `*_application` → `*_repository` / `*_gateway` | Domain service peers, every class, package modules |
+| **Component** | `c4_selma_component.puml` | Clean Architecture inside **Application**: `api` → `*_application` → `*_repository` / `*_gateway`; four `*_store` inside the **Selma** system boundary and **outside** the Application process boundary | Domain service peers, every class, package modules |
 
 Zoom rule: each level expands one element of the level above without renaming it. IDs and display names for the same entity are identical across levels.
+
+**Boundary encoding (no diagram notes):** Component diagram nests `Container_Boundary(application)` inside `System_Boundary(selma)`. Stores are `ContainerDb` peers of the Application process (same as Container level), not external systems. Only `*_repository` / `*_gateway` connect to stores or `target_sources`.
 
 ## Layer postfix conventions (strict)
 
