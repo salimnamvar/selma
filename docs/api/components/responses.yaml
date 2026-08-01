@@ -8,8 +8,13 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/unauthorized"
+              title: "Unauthorized"
+              status: 401
               code: Unauthorized
-              message: Missing or invalid Bearer token
+              detail: Missing or invalid Bearer token
+              retryable: false
+              error_category: client_error
               details: {}
               request_id: req_auth001
 
@@ -21,8 +26,13 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/capability-denied"
+              title: "Capability Denied"
+              status: 403
               code: CapabilityDenied
-              message: "Actor lacks required capability: finding.waive"
+              detail: "Actor lacks required capability: finding.waive"
+              retryable: false
+              error_category: client_error
               details:
                 required_capability: finding.waive
                 actor_capabilities: [finding.view, finding.acknowledge]
@@ -36,8 +46,13 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/not-found"
+              title: "Not Found"
+              status: 404
               code: NotFound
-              message: Resource not found
+              detail: Resource not found
+              retryable: false
+              error_category: client_error
               details:
                 resource_type: finding
                 resource_id: f8a1b2c3-d4e5-6f78-9abc-def012345678
@@ -51,8 +66,13 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/schema-error"
+              title: "Schema Error"
+              status: 400
               code: SchemaError
-              message: Request body validation failed
+              detail: Request body validation failed
+              retryable: false
+              error_category: client_error
               details:
                 validation_errors:
                   - path: /target_type
@@ -67,8 +87,13 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/conflict"
+              title: "Conflict"
+              status: 409
               code: Conflict
-              message: Compilation already in progress for this lineage
+              detail: Compilation already in progress for this lineage
+              retryable: false
+              error_category: terminal
               details:
                 existing_compilation_id: comp-abc123
               request_id: req_con001
@@ -81,10 +106,94 @@ components:
             $ref: schemas.yaml#/components/schemas/Error
           example:
             error:
+              type: "https://selma.dev/errors/fsm-error"
+              title: "FSM Error"
+              status: 400
               code: FSMError
-              message: "Invalid transition: Dismissed → Acknowledged"
+              detail: "Invalid transition: Dismissed → Acknowledged"
+              retryable: false
+              error_category: client_error
               details:
                 current_state: Dismissed
                 requested_transition: acknowledge
                 allowed_transitions: []
               request_id: req_fsm001
+
+    RateLimited:
+      description: "429 — Per-actor rate limit exceeded for directive.modify"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              type: "https://selma.dev/errors/rate-limited"
+              title: "Rate Limited"
+              status: 429
+              code: RateLimited
+              detail: "Per-actor rate limit exceeded for directive.modify"
+              retryable: true
+              error_category: transient
+              details:
+                retry_after_seconds: 60
+                quota_limit: 30
+                quota_window: 60
+              request_id: req_rat001
+
+    UpstreamTimeout:
+      description: "504 — Target Sources gateway timeout after retries"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              type: "https://selma.dev/errors/upstream-timeout"
+              title: "Upstream Timeout"
+              status: 504
+              code: UpstreamTimeout
+              detail: "Target Sources gateway timeout after 2 retries"
+              retryable: true
+              error_category: transient
+              details:
+                target_ref: src://repo@commit
+                retries_exhausted: 2
+              request_id: req_ups001
+
+    SoDDenied:
+      description: "403 — Segregation of duties violation (creator cannot waive/supersede own findings)"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              type: "https://selma.dev/errors/sod-denied"
+              title: "SoD Violation"
+              status: 403
+              code: SoDDenied
+              detail: "Segregation of duties: creator cannot waive own findings"
+              retryable: false
+              error_category: client_error
+              details:
+                sod_rule: SOD-001
+                required_capability: finding.waive
+              request_id: req_sod001
+
+    InternalError:
+      description: "500 — Unexpected internal error"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              type: "https://selma.dev/errors/internal-error"
+              title: "Internal Error"
+              status: 500
+              code: InternalError
+              detail: An unexpected error occurred
+              retryable: true
+              error_category: transient
+              details: {}
+              request_id: req_int001

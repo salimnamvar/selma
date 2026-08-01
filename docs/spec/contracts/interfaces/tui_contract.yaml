@@ -138,13 +138,24 @@ interaction_patterns:
       description: "All actions are audit-logged"
       implementation: "Actor identity, action, timestamp, and outcome recorded"
 
+error_display:
+  description: >
+    TUI errors follow the same RFC 7807-style Error schema as the REST API.
+    Displayed as formatted error cards with color-coded severity.
+  rules:
+    - "Errors displayed as formatted cards with code, title, detail, and request_id"
+    - "retryable errors shown with retry guidance"
+    - "401 Unauthorized shown as authentication prompt"
+    - "403 CapabilityDenied / SoDDenied shown with denial reason and capability list"
+    - "429 RateLimited shown with countdown timer"
+
 invariants:
   - id: "INV-TU-001"
     statement: "TUI MUST check capability before showing or enabling actions"
     enforcement: "tui_engine"
 
   - id: "INV-TU-002"
-    statement: "TUI MUST show clear SoD violation messages"
+    statement: "TUI MUST show clear SoD violation messages using Error schema error codes"
     enforcement: "tui_engine"
 
   - id: "INV-TU-003"

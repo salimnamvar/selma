@@ -12,32 +12,80 @@ components:
     Error:
       type: object
       required: [error]
-      description: Uniform error envelope for all API failures.
+      description: >
+        Uniform error envelope for all API failures. Modeled on RFC 7807
+        (Problem Details) with extensions for machine-readable taxonomy
+        and retry guidance.
       properties:
         error:
           type: object
-          required: [code, message]
+          required: [type, title, status, code, detail, retryable, request_id]
           properties:
+            type:
+              type: string
+              format: uri
+              description: >
+                RFC 7807 type URI identifying the error class
+                (e.g. 'https://selma.dev/errors/capability-denied')
+            title:
+              type: string
+              description: Short human-readable summary of the error
+            status:
+              type: integer
+              description: HTTP status code
             code:
               type: string
-              description: Machine-readable error code
+              description: >
+                Machine-readable error code. Values: Unauthorized, CapabilityDenied,
+                SoDDenied, NotFound, SchemaError, Conflict, FSMError,
+                RateLimited, UpstreamTimeout, InternalError, CompileFailure,
+                CASMiss, HashChainViolation, PairedPolicyRefDangling
               enum:
                 - Unauthorized
                 - CapabilityDenied
+                - SoDDenied
                 - NotFound
                 - SchemaError
                 - Conflict
                 - FSMError
-            message:
+                - RateLimited
+                - UpstreamTimeout
+                - InternalError
+                - CompileFailure
+                - CASMiss
+                - HashChainViolation
+                - PairedPolicyRefDangling
+            detail:
               type: string
-              description: Human-readable error description
-            details:
-              type: object
-              description: Additional error context
-              additionalProperties: true
+              description: >
+                Human-readable explanation specific to this occurrence
+            retryable:
+              type: boolean
+              description: >
+                true if the client MAY safely retry the same request;
+                false for terminal errors (e.g. CapabilityDenied, SchemaError)
             request_id:
               type: string
               description: Unique request identifier for audit correlation
+            details:
+              type: object
+              description: Additional structured error context
+              additionalProperties: true
+            error_category:
+              type: string
+              description: >
+                Transient or terminal classification for client retry logic
+              enum: [transient, terminal, client_error]
+
+    # ----- Error taxonomy (applies to all Error responses) -----
+    #
+    #  Category    | Codes                                      | retryable
+    #  ------------|--------------------------------------------|----------
+    #  client_error| Unauthorized, CapabilityDenied, SoDDenied, | false
+    #              | NotFound, SchemaError, FSMError             |
+    #  terminal    | Conflict, CompileFailure, CASMiss,          | false
+    #              | HashChainViolation, PairedPolicyRefDangling |
+    #  transient   | RateLimited, UpstreamTimeout, InternalError | true
 
     # ----- Directives (directives_application) --------------------------------
 

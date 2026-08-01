@@ -161,11 +161,18 @@ endpoint_families:
           - "404 NotFound"
 
 error_semantics:
-  description: "Uniform error behavior across all endpoints"
+  description: >
+    Uniform error behavior across all endpoints. Error envelope follows
+    RFC 7807 (Problem Details) with extensions: type URI, title, status,
+    code, detail, retryable, error_category, and request_id.
   rules:
-    - "All errors return structured JSON with error code, message, and details"
+    - "All errors return structured JSON conforming to the Error schema (RFC 7807-style)"
+    - "Error code enum: Unauthorized, CapabilityDenied, SoDDenied, NotFound, SchemaError, Conflict, FSMError, RateLimited, UpstreamTimeout, InternalError, CompileFailure, CASMiss, HashChainViolation, PairedPolicyRefDangling"
+    - "Error classification: client_error (401/403/404/400), terminal (409, compile/store errors), transient (429/504/500)"
+    - "retryable field: true for transient errors (RateLimited, UpstreamTimeout, InternalError); false for all others"
     - "401 Unauthorized for authentication failures (no DenialAuditPort write)"
-    - "403 CapabilityDenied includes denial reason for audit"
+    - "403 CapabilityDenied / SoDDenied includes denial reason for audit"
+    - "429 RateLimited for per-actor rate limit exceeded (directive.modify)"
     - "No partial state mutation on any error"
     - "All capability/SoD denials produce audit log entry via DenialAuditPort"
 

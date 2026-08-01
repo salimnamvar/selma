@@ -126,11 +126,17 @@ command_families:
         output: "Certification results with gate-ID traceability"
 
 error_behavior:
+  description: >
+    CLI errors follow the same RFC 7807-style Error schema as the REST API.
+    Human-readable mode formats the envelope as a structured text table.
+    JSON mode returns the exact wire format.
   rules:
     - "Non-zero exit code on any error"
-    - "Structured error output (JSON or human-readable)"
-    - "403 CapabilityDenied shown as permission error"
-    - "SoD violations shown with specific reason"
+    - "Structured error output (JSON or human-readable) conforming to Error schema"
+    - "401 Unauthorized shown as authentication error (no audit write)"
+    - "403 CapabilityDenied / SoDDenied shown as permission error with denial reason"
+    - "429 RateLimited shown with retry-after guidance"
+    - "retryable and error_category fields present in JSON mode"
     - "No partial state mutation on any error"
 
 invariants:
