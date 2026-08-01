@@ -53,7 +53,9 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 | C4 store | Storage type | Scaling |
 |:---------|:-------------|:--------|
 | Directives | PostgreSQL | Vertical + read replicas; revisions referenced by `paired_policy_ref` retained indefinitely (INV-DS-007) |
-| Compiled Rules | Filesystem or S3 CAS | Horizontal object store; snapshots indefinite |
+| Compiled Rules | Filesystem (single node / dev) or S3-compatible CAS (production) | Horizontal object store; snapshots indefinite |
+
+**CAS backend requirement (production):** `compiled_rules_store` MUST be backed by an S3-compatible object store (S3, MinIO, Ceph RGW, …) — not a single-node filesystem — so snapshots are replicated across failure domains and the head pointer stays recoverable after node loss. A single-node filesystem CAS is a development-only topology (single point of failure). Implementations MUST use the S3-compatible API contract (`compiled_rules_store.yaml`) with CAS semantics (content-addressed keys, idempotent put by content hash); local disk remains only a cache (see Disk row above).
 | Finding Events | PostgreSQL (append-only table) | Partition by time; events indefinite |
 | Artifacts | S3-compatible object store | Horizontal |
 
