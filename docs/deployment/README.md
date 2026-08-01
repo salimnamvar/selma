@@ -36,7 +36,7 @@ CI/CD, long-term audit export, and remediation ticketing are **optional clients/
 |:------------|:--------|:------|
 | Python | 3.11+ | Application runtime |
 | Docker | 24+ | Container runtime |
-| PostgreSQL | 15+ | Directives + Finding Events (separate logical DBs / roles recommended) |
+| PostgreSQL | 15+ | Directives + Finding Events (**production MUST use separate instances or clusters**; see Data Store Sizing) |
 | Nginx / Traefik | latest | TLS termination at edge |
 | Object store | S3-compatible | Artifacts; optional CAS backend for Compiled Rules |
 
