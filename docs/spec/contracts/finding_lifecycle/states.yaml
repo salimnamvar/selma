@@ -165,8 +165,9 @@ invariants:
       Regulatory Official disposition transitions (dismiss, waive, supersede) MUST be
       allowed from Open, Acknowledged, Evidence Submitted, Pending Verification, and
       Rejected so that Compliance Representative acknowledgment cannot permanently
-      block finding closure
-    enforcement: "fsm_engine"
+      block finding closure. Certification AA-04 and sod_contract sod_test_matrix
+      MUST cover SoD on all of these edges (not Open alone).
+    enforcement: "fsm_engine + certification_tool (AA-04)"
 
   - id: "INV-FL-003"
     statement: >

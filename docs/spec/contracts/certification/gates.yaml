@@ -54,13 +54,21 @@ gates:
   - gate_id: "AA-04"
     name: "Segregation of Duties"
     invariant: "SoD enforced at FSM transition gates"
-    validation_method: "Integration test"
-    story_refs: ["US-SD-002", "US-SD-001"]
+    validation_method: "Integration test matrix covering all legal RO-disposition transitions"
+    story_refs: ["US-SD-002", "US-SD-001", "US-SD-003"]
     criteria:
       - "finding.waive denied when actor ∈ creator_provenance"
       - "finding.approve_remediation denied when actor submitted evidence"
+      - "finding.supersede denied when actor ∈ creator_provenance"
       - "Denial produces 403 CapabilityDenied with audit log entry"
       - "No state mutation on denial"
+      - >
+        Test matrix MUST enumerate every legal RO disposition transition under
+        INV-FL-006 (from_state × action): for each of
+        {Open, Acknowledged, Evidence Submitted, Pending Verification, Rejected}
+        × {finding.dismiss, finding.waive, finding.supersede}, assert SoD where
+        applicable (waive/supersede: actor NOT IN creator_provenance) and that
+        deny leaves FSM state unchanged. Coverage of Open-only is non-conformant.
 
   - gate_id: "AA-05"
     name: "Conflict Resolution Determinism"

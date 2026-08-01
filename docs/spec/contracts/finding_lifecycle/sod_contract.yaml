@@ -27,6 +27,40 @@ enforcement_architecture:
     - "Capability catalog gates remain at api; SoD is an additional domain invariant"
     - "Package diagrams MAY omit a separate box for FindingFsm; class diagram is normative for type placement"
     - "See INV-ES-007 for sole write path; chain_hash detects bypass store writes"
+    - >
+      SoD runs at every legal transition, including all INV-FL-006 RO disposition
+      edges (not only Open→*). Certification AA-04 requires the expanded test matrix.
+
+sod_test_matrix:
+  description: >
+    Certification requirement (AA-04): enumerate all legal RO-disposition
+    transitions and verify SoD / capability gates. Approximate size: 5 source
+    states × 3 disposition actions = 15 RO disposition cases, plus approve_remediation
+    SoD from Pending Verification.
+  source_states_for_ro_disposition:
+    - "Open"
+    - "Acknowledged"
+    - "Evidence Submitted"
+    - "Pending Verification"
+    - "Rejected"
+  actions:
+    - action: "finding.dismiss"
+      sod_rule: null
+      note: "Capability only; no creator_provenance SoD"
+    - action: "finding.waive"
+      sod_rule: "SOD-001"
+      check: "actor NOT IN creator_provenance"
+    - action: "finding.supersede"
+      sod_rule: "SOD-003"
+      check: "actor NOT IN creator_provenance"
+  additional:
+    - action: "finding.approve_remediation"
+      from: "Pending Verification"
+      sod_rule: "SOD-002"
+      check: "actor != evidence_submitter"
+  required_assertions_per_case:
+    - "Allow when SoD predicate passes (and capability present)"
+    - "Deny 403 when SoD predicate fails; FSM state unchanged; SoDDenied or CapabilityDenied audit"
 
 sod_rules:
   - rule_id: "SOD-001"
