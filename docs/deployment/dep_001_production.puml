@@ -63,7 +63,8 @@ legend bottom
   | directives_store · compiled_rules_store · finding_events_store · artifacts_store | Data zone stores |
   | target_sources | Optional external pull only |
   | CI/CD · audit export · remediation · certification_tool | Not required deploy peers |
-  | Transport | TLS on all production hops; mTLS recommended for zero-trust data zone |
+  | Transport | TLS on all production hops; mTLS SHOULD be deployed for zero-trust data zone |
+  | PostgreSQL failure domains | Production: directives_store and finding_events_store MUST use separate PostgreSQL instances or clusters — NOT separate databases on one shared cluster |
 endlegend
 
 @enduml
