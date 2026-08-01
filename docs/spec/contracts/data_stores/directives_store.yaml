@@ -251,6 +251,43 @@ compile_coordination:
       - >
         CAS publish remains idempotent by content hash; lease correctness is
         about compute waste and crash recovery, not snapshot identity.
+    lease_duration:
+      description: >
+        Bounds on lease_expires_at so a crashed worker cannot stall a revision
+        for an unbounded window.
+      rules:
+        - "lease_expires_at = claim_time + lease_duration"
+        - "lease_duration is environment-owned with production defaults: minimum 60 s, default 5 min, hard maximum 15 min"
+        - >
+          Deployment validation MUST compare the configured lease duration
+          against the observed compile_duration_seconds distribution (p99);
+          when p99 compile time approaches the lease duration, heartbeat
+          (below) MUST be enabled or the lease raised within the maximum.
+      metrics:
+        - "compile_outbox_lease_steal_total (reclaim after expiry)"
+        - "compile_outbox_depth / drain lag"
+    heartbeat:
+      description: >
+        Hermetic CPU compile can exceed a short lease. The worker MUST keep the
+        lease alive without blocking other workers forever.
+      rules:
+        - >
+          While status=in_progress, the lease holder MUST refresh
+          lease_expires_at at intervals ≤ 1/3 of the lease duration
+          (heartbeat) for as long as compile CPU work continues.
+        - "Heartbeat refresh is a single atomic UPDATE guarded by worker_id + current lease_expires_at"
+        - >
+          A heartbeat MUST fail when the row was reclaimed (lease expired and
+          another worker stole it); the original worker MUST then abort its
+          compile and discard the result (dedupe by content hash makes the
+          duplicate compute safe).
+        - "Reconciliation MUST NOT reclaim a row whose lease was refreshed within the last interval"
+    reconciliation:
+      description: "Periodic reclaim of stale in_progress rows"
+      rules:
+        - "Reconciliation runs at most every 60 s by default (environment-owned, configurable)"
+        - "Rows with lease_expires_at < now are eligible for reclaim via the same SKIP LOCKED claim path"
+        - "Reclaim increments compile_outbox_lease_steal_total"
   head_snapshot_pointer:
     description: >
       Mutable pointer from directive lineage to the latest successfully published
