@@ -98,6 +98,25 @@ concurrency_model:
     - "Write lock blocks compilation; compilation blocks writes"
     - "Write lock uses FIFO queue ordering (writer-preference)"
     - "Read locks never wait on other read locks"
+  fairness:
+    description: >
+      Writer-preference prevents writer starvation under sustained compile
+      reads, but can delay compilations under sustained directive churn.
+      Environments MUST bound compile wait without inventing a universal SLA
+      in this contract.
+    rules:
+      - >
+        Maximum write-queue depth and maximum compile wait for a read-lock
+        acquisition MUST be configurable per environment.
+      - >
+        When a configured bound is exceeded, new write_lock acquisitions
+        MUST fail fast (HTTP 503 / 429 with retry guidance) rather than
+        queue indefinitely, OR the operator MUST accept unbounded wait as
+        an explicit environment policy documented in the runbook.
+      - >
+        Queue position, lock holder identity, write-queue depth, and
+        compile wait time MUST be exported as metrics (see deployment
+        observability catalog).
   deadlock_prevention:
     - "No circular wait: dependency is strictly read_lock → optional write_lock"
     - "Engines MUST NOT hold write lock while awaiting compilation"
