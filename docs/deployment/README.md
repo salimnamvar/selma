@@ -151,7 +151,7 @@ Normative inspection pipeline: [`../spec/contracts/inspection/pipeline.yaml`](..
 
 ### Idempotency (mutating APIs)
 
-State-changing REST operations (directive mutations, inspections, finding transitions, compile triggers) SHOULD accept client `Idempotency-Key` (or resource-natural keys already unique) so retries do not double-append finding events or double-open findings. Event append uniqueness and FSM guards are normative in finding-lifecycle contracts.
+All mutating POST operations (directive creation and lifecycle, inspections, finding transitions, conflict resolutions, compile triggers) **MUST require** a client `Idempotency-Key` scoped to `(actor, key)` so network retries cannot double-append finding events, double-open findings, or double-create directives. Store-level uniqueness constraints (e.g. `(inspection_id, control_id, target_hash)` for `FindingCreated`) remain mandatory fallbacks — the key is the primary mechanism, not a substitute. Event append uniqueness and FSM guards are normative in finding-lifecycle contracts; REST behavior is normative in [`../spec/contracts/interfaces/rest_api.yaml`](../spec/contracts/interfaces/rest_api.yaml) (`idempotency`).
 
 ### Observability (required signals)
 

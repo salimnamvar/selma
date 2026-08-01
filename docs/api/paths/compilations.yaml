@@ -15,7 +15,7 @@
       Content-addressed publish is idempotent for identical directive content.
       Policy doctrines are not loaded for evaluation. Failed outbox rows are
       retriable; schema-error rows that exhaust their retry budget transition
-      to permanently_failed and require manual intervention. Prefer `Idempotency-Key`.
+      to permanently_failed and require manual intervention. Require `Idempotency-Key` (mutating POST; INV-RA-003).
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:

@@ -18,13 +18,15 @@ endpoint_families:
       - method: "POST"
         action: "Create directive"
         capability: "directive.create"
-        request: "Directive document (conforming to rule schema)"
+        request: "Directive document (conforming to rule schema); Idempotency-Key REQUIRED"
         response: "Created directive with lineage_id and execution_id"
         errors:
           - "400 SchemaError: invalid directive structure"
           - "403 CapabilityDenied: actor lacks capability"
           - "409 Conflict: execution_id already exists"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
         locking: "write_lock"
+        idempotency: "required"
 
       - method: "PUT"
         action: "Modify directive (new revision)"
@@ -51,14 +53,16 @@ endpoint_families:
       - method: "POST"
         action: "Lifecycle operation (fork/merge/split/retire)"
         capability: "directive.fork/merge/split/retire"
-        request: "Operation type + target directive(s)"
+        request: "Operation type + target directive(s); Idempotency-Key REQUIRED"
         response: "Resulting directive(s)"
         errors:
           - "400 SchemaError: invalid operation"
           - "403 CapabilityDenied"
           - "404 NotFound"
           - "409 Conflict: invalid lifecycle transition"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
         locking: "write_lock"
+        idempotency: "required"
 
   - family: "inspections_application"
     description: "Inspection submission and results"
@@ -66,15 +70,16 @@ endpoint_families:
       - method: "POST"
         action: "Submit target for inspection"
         capability: "inspection.submit"
-        request: "Target (conforming to target schema); Idempotency-Key RECOMMENDED"
+        request: "Target (conforming to target schema); Idempotency-Key REQUIRED"
         response: "Inspection snapshot with findings"
         errors:
           - "400 SchemaError: invalid target"
           - "403 CapabilityDenied"
           - "409 Conflict: duplicate Idempotency-Key with different body"
+          - "429 RateLimited: per-actor quota exceeded"
           - "504 UpstreamTimeout: target_sources_gateway failure after retries"
         locking: "read_lock (compilation_application)"
-        idempotency: "required_recommended"
+        idempotency: "required"
 
       - method: "GET"
         action: "Read inspection results"
@@ -87,11 +92,13 @@ endpoint_families:
       - method: "POST"
         action: "Reinspect target"
         capability: "inspection.reinspect"
-        request: "target_id"
+        request: "target_id; Idempotency-Key REQUIRED"
         response: "New inspection snapshot"
         errors:
           - "403 CapabilityDenied"
           - "404 NotFound"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
+        idempotency: "required"
 
   - family: "findings_application"
     description: "Finding lifecycle management"
@@ -105,7 +112,7 @@ endpoint_families:
       - method: "POST"
         action: "FSM transition (acknowledge/dismiss/waive/approve/reject/reopen)"
         capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation"
-        request: "finding_id + transition-specific payload; Idempotency-Key RECOMMENDED"
+        request: "finding_id + transition-specific payload; Idempotency-Key REQUIRED"
         response: "Updated finding"
         errors:
           - "400 FSMError: invalid transition"
@@ -113,8 +120,9 @@ endpoint_families:
           - "403 CapabilityDenied: SoD violation"
           - "404 NotFound"
           - "409 Conflict: concurrent transition / chain head mismatch"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
         locking: "fsm_engine"
-        idempotency: "required_recommended"
+        idempotency: "required"
 
   - family: "findings_application_read_models"
     description: >
@@ -154,11 +162,13 @@ endpoint_families:
       - method: "POST"
         action: "Record human resolution on conflict artifact"
         capability: "conflict.resolve"
-        request: "artifact_id + resolution"
+        request: "artifact_id + resolution; Idempotency-Key REQUIRED"
         response: "Updated conflict artifact"
         errors:
           - "403 CapabilityDenied"
           - "404 NotFound"
+          - "409 Conflict: duplicate Idempotency-Key with different body"
+        idempotency: "required"
 
 error_semantics:
   description: >
@@ -187,10 +197,12 @@ idempotency:
   header: "Idempotency-Key"
   scope: "(actor, key) — single-tenant v1; no tenant_id dimension"
   rules:
-    - "RECOMMENDED on POST inspections, finding transitions, compile triggers, conflict resolutions"
+    - "REQUIRED on every mutating POST: directive create, directive lifecycle operations, inspection submit/reinspect, finding transitions, conflict resolutions, and compile triggers"
+    - "Clients MUST generate a fresh Idempotency-Key per logical intent and reuse it on retries of that intent"
     - "Same key + same actor + same body → return original response (no second side effect)"
     - "Same key + different body → 409 Conflict"
     - "Keys retained ≥ 24h (configurable)"
+    - "Store-level uniqueness constraints (e.g. (inspection_id, control_id, target_hash) for FindingCreated) remain a mandatory fallback; the key is the primary idempotency mechanism, not a substitute for those constraints"
     - "v1 is single-tenant per instance; Idempotency-Key is NOT scoped by tenant_id (see c4-model Tenant model)"
 
 tenant_model:
@@ -228,7 +240,9 @@ invariants:
     enforcement: "api_gateway"
 
   - id: "INV-RA-003"
-    statement: "Mutating endpoints MUST honor Idempotency-Key when provided"
+    statement: >
+      Mutating POST endpoints MUST require and honor Idempotency-Key; duplicate
+      retries MUST NOT double-append events or double-create resources
     enforcement: "api_gateway"
 
   - id: "INV-RA-004"

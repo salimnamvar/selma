@@ -69,12 +69,12 @@ components:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
-      required: false
+      required: true
       description: |
         Client-generated key for safe retries of mutating requests. Same actor +
         key + body returns the original result; same key + different body → 409.
-        Recommended on inspections, finding transitions, compile triggers, and
-        conflict resolutions. Retained ≥ 24h.
+        Required on every mutating POST (directive create/lifecycle, inspections,
+        finding transitions, conflict resolutions, compile triggers). Retained ≥ 24h.
       schema:
         type: string
         minLength: 1

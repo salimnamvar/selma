@@ -32,7 +32,7 @@ info:
       and `docs/spec/contracts/authorization/authentication.yaml`.
     - **AuthZ:** Capability + SoD enforced at the `api` gate before use-case
       dispatch; denials via `DenialAuditPort`.
-    - **Idempotency:** `Idempotency-Key` header recommended on mutating POSTs
+    - **Idempotency:** `Idempotency-Key` header required on mutating POSTs
       (inspections, finding transitions, compilations, conflict resolutions).
     - **Optimistic concurrency:** Directive writes accept `If-Match` ETag
       `W/"{lineage_id}:{revision}"`; mismatch → 409.
