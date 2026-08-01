@@ -39,6 +39,11 @@ if (Who is Acting?) then (Compliance Representative)
     :Transition: Acknowledged → Evidence Submitted;
     :Auto-transition: Evidence Submitted → Pending Verification;
     :Append DispositionChanged Events;
+    note right
+      INV-FL-020: Auto-transition appended
+      atomically with the human event
+      in a single DB transaction.
+    end note
   elseif (Request Reinspection) then
     :Check Capability\n<color:#1B7A6E><b>inspection.reinspect</b></color>;
     :Trigger New Inspection;
@@ -63,6 +68,8 @@ elseif (Regulatory Official) then
       INV-FL-006: RO disposition allowed
       from any non-terminal remediation
       state (stale-ack closure).
+      INV-FL-020: Waived→Closed appended
+      atomically with human waive event.
     end note
   elseif (Dismiss) then
     :Check Capability\n<color:#1B7A6E><b>finding.dismiss</b></color>;
@@ -94,6 +101,10 @@ elseif (Regulatory Official) then
     :Transition: Pending Verification → Verified;
     :Auto-transition: Verified → Closed;
     :Append DispositionChanged\n+ FindingClosed Events;
+    note right
+      INV-FL-020: Verified→Closed appended
+      atomically with human approve event.
+    end note
   elseif (Reject Evidence) then
     :Check Capability\n<color:#1B7A6E><b>finding.reject_remediation</b></color>;
     note right

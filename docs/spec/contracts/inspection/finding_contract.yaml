@@ -147,7 +147,11 @@ invariants:
     enforcement: "fsm_engine"
 
   - id: "INV-FC-004"
-    statement: "fsm_state MUST be 'Open' immediately after creation (Created → Open automatic)"
+    statement: >
+      fsm_state MUST be 'Open' immediately after creation (Created → Open automatic).
+      This auto-transition is appended atomically with the FindingCreated event
+      per INV-FL-020 — no intermediate state where FindingCreated exists without
+      the corresponding DispositionChanged for the Open transition.
     enforcement: "fsm_engine"
 
   - id: "INV-FC-005"

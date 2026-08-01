@@ -150,7 +150,10 @@ invariants:
     enforcement: "fsm_engine"
 
   - id: "INV-FL-003"
-    statement: "System-automatic transitions (Created→Open, Evidence Submitted→Pending Verification, Verified→Closed, Waived→Closed) MUST NOT require human actor"
+    statement: >
+      System-automatic transitions (Created→Open, Evidence Submitted→Pending Verification,
+      Verified→Closed, Waived→Closed) MUST NOT require human actor and MUST be appended
+      atomically with the triggering human transition in a single DB transaction (see INV-FL-020)
     enforcement: "fsm_engine"
 
   - id: "INV-FL-004"

@@ -134,6 +134,14 @@ note right of LF
 end note
 
 note right of LF
+  INV-FL-020: Human-triggered FSM
+  transitions and any resulting
+  system-auto transitions (e.g.
+  Waived→Closed) MUST be appended
+  atomically in one DB transaction.
+end note
+
+note right of LF
     Finding FSM States (11):
     Created → Open → Acknowledged →
     EvidenceSubmitted → PendingVerification →

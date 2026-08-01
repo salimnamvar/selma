@@ -248,6 +248,15 @@ append_concurrency:
     Concurrent appends to the same finding_id MUST preserve a single hash chain
     without lost updates.
   strategy: "per_finding_serialization"
+  atomicity_guarantee:
+    description: >
+      A human-initiated FSM transition and any resulting system-automatic transitions
+      (e.g. Waived→Closed, Verified→Closed, Evidence Submitted→Pending Verification,
+      Created→Open) MUST be appended as a single atomic batch in one DB transaction
+      (INV-FL-020). The store MUST guarantee that readers observe either all events
+      in the batch or none — no intermediate state where the human event exists but
+      the automatic successor does not. Crash recovery MUST either replay both events
+      atomically or neither; partial appends break the finding's FSM state consistency.
   rules:
     - "Append acquires an advisory lock or row lock on finding_id (or chain head) before computing prev_event_hash/chain_hash"
     - "Alternatively: optimistic append with expected_chain_head; on mismatch retry once (HTTP 409 to client if exhausted)"

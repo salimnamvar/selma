@@ -222,6 +222,23 @@ invariants:
     statement: "Denied transitions MUST NOT produce partial state mutation or compensating events"
     enforcement: "fsm_engine"
 
+  - id: "INV-FL-020"
+    statement: >
+      System-automatic transitions (TR-FL-001 Created→Open, TR-FL-006 Evidence Submitted→Pending Verification,
+      TR-FL-010 Verified→Closed, TR-FL-011 Waived→Closed) MUST be appended atomically with the triggering
+      human transition event in a single DB transaction. The human event and any resulting automatic events
+      MUST be visible to readers as a single consistent write — no intermediate state where the human event
+      exists but the automatic successor does not.
+    enforcement: "finding_events_store"
+    failure_chain: >
+      If atomicity is violated: a crash after the human event but before the auto-transition appends
+      the finding becomes stuck in an intermediate state (e.g. Waived without Closed), producing stale
+      UI and ghost findings in audit.
+    notes: >
+      Per-finding serialization (append_concurrency) ensures no interleaving of concurrent appends for
+      the same finding_id. The store MUST guarantee that a single API request's FSM transition plus any
+      derived automatic transitions appear as one atomic append batch.
+
 stories:
   - story_id: "US-FL-010"
     as: "finding_fsm_engine"
