@@ -188,9 +188,15 @@ compile_coordination:
       snapshot is published. Inspections use the latest published snapshot; clients
       MAY poll /directives/{lineage_id}/compilations for status.
     - >
-      Outbox rows transition pending → in_progress → completed | failed. Failed
-      rows are retriable; reconciliation job requeues stuck pending/in_progress
-      only after lease expiry (see claim_lease).
+      Outbox rows transition pending → in_progress → completed | failed | permanently_failed.
+      Failed rows are retriable; reconciliation job requeues stuck pending/in_progress
+      only after lease expiry (see claim_lease).      Schema-error rows that fail validation
+      on every retry attempt are transitioned to permanently_failed after a configurable
+      retry budget is exhausted (default: 5 consecutive failures with identical schema
+      error). Permanently_failed rows MUST NOT be re-enqueued; they require manual
+      intervention or a corrective directive revision to clear. Export
+      compile_outbox_failed_total{reason} metric (see deployment observability)
+      to distinguish schema-error poison rows from other terminal failures.
     - "Direct API compile triggers also enqueue the same outbox (idempotent key)"
   claim_lease:
     description: >
@@ -201,8 +207,8 @@ compile_coordination:
         Claim MUST use a lease: SELECT … FOR UPDATE SKIP LOCKED (or equivalent)
         that atomically sets status=in_progress, worker_id, lease_expires_at.
       - >
-        Only the lease holder may transition the row to completed or failed.
-        Other workers skip locked rows.
+        Only the lease holder may transition the row to completed, failed, or
+        permanently_failed. Other workers skip locked rows.
       - >
         Stuck in_progress rows (lease_expires_at < now) MAY be reclaimed by
         reconciliation; completed rows MUST NOT be re-enqueued.

@@ -13,7 +13,9 @@
       via the compile_request outbox (drained by `compilation_application`).
       Requires compile capability as defined in authorization contracts.
       Content-addressed publish is idempotent for identical directive content.
-      Policy doctrines are not loaded for evaluation. Prefer `Idempotency-Key`.
+      Policy doctrines are not loaded for evaluation. Failed outbox rows are
+      retriable; schema-error rows that exhaust their retry budget transition
+      to permanently_failed and require manual intervention. Prefer `Idempotency-Key`.
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:

@@ -183,7 +183,7 @@ Within the driving gate, treat these as **logical sub-responsibilities** of `api
 
 | Path | Decision | Normative ref |
 | :--- | :--- | :--- |
-| Directive → compile | **Transactional outbox** `compile_request` in `directives_store`; worker = `compilation_application` (same process v1). Eventual consistency until snapshot publish. | [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml) `compile_coordination` |
+| Directive → compile | **Transactional outbox** `compile_request` in `directives_store`; worker = `compilation_application` (same process v1). Eventual consistency until snapshot publish. Failed rows are retriable; **permanently_failed** rows (schema-error poison) require manual intervention or corrective revision. | [`../spec/contracts/data_stores/directives_store.yaml`](../spec/contracts/data_stores/directives_store.yaml) `compile_coordination` |
 | Compile locks | Read lock only while loading executables; **release before** hermetic CPU; no write lock during compile. | compilation `concurrency_model` + `lock_implementation` |
 | Finding transitions | Per-`finding_id` serialization (advisory lock or expected chain head) + optional `Idempotency-Key`. | finding_events `append_concurrency` |
 | Finding state read | Materialized `finding_projection` cache; stream is SoR. | finding_events `state_hydration` |

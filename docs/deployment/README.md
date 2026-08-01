@@ -157,6 +157,7 @@ Monitoring tools named in DEP-001 (Prometheus/Grafana, ELK/Loki, Jaeger) MUST ex
 | Signal | Why |
 |:-------|:----|
 | `compile_outbox_depth` / drain lag | Detect stuck outbox rows and compile backlog |
+| `compile_outbox_failed_total{reason}` | Permanently failed outbox rows (schema-error poison rows) |
 | `compile_outbox_lease_steal_total` | Detect multi-replica reclaim after lease expiry |
 | `directive_lock_wait_seconds` / write-queue depth | Writer-preference fairness (directives_store concurrency_model) |
 | `compile_duration_seconds` / in-process compile concurrency | v1 API vs compile CPU contention |
