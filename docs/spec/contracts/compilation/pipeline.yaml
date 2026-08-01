@@ -161,7 +161,8 @@ pipeline:
 concurrency_model:
   description: "Locking semantics for compilation"
   rules:
-    - "Compilation acquires read lock on Directive Graph"
+    - "Compilation acquires read lock via SELECT ... FOR SHARE on Directive Graph rows"
+    - "Outbox drain claims rows via SELECT ... FOR UPDATE SKIP LOCKED (lease claim; see data_stores.directives compile_coordination.claim_lease)"
     - "Concurrent compilations are allowed (read-only)"
     - "Directive modifications acquire write lock (exclusive)"
     - "Write lock blocks compilation; compilation blocks writes"
