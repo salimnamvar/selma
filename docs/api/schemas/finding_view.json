@@ -42,13 +42,13 @@
     },
     "fsm_state": {
       "type": "string",
-      "description": "Current FSM state per finding_lifecycle.states contract. 11 states defined; Created, Dismissed, Superseded, and Closed are terminal.",
+      "description": "Current FSM storage_id per finding_lifecycle.states (identical to domain FindingState / ERD). Display names with spaces are UI-only.",
       "enum": [
         "Created",
         "Open",
         "Acknowledged",
-        "Evidence Submitted",
-        "Pending Verification",
+        "EvidenceSubmitted",
+        "PendingVerification",
         "Verified",
         "Rejected",
         "Dismissed",
@@ -59,13 +59,24 @@
     },
     "disposition": {
       "type": "string",
-      "description": "Resolution status of the finding.",
+      "description": "Domain Disposition enum (findings_domain).",
       "enum": [
         "valid",
         "invalid",
         "waived",
+        "dismissed",
         "superseded"
       ]
+    },
+    "target_hash": {
+      "type": "string",
+      "description": "Target content hash (domain Finding.target_hash / ERD target_hash).",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "chain_head": {
+      "type": "string",
+      "description": "Hash chain head (domain FindingProjection.chain_head / ERD chain_head_hash).",
+      "pattern": "^[a-f0-9]{64}$"
     },
     "severity": {
       "type": "string",
@@ -261,6 +272,24 @@
             }
           }
         },
+        "transitionFinding": {
+          "type": "object",
+          "properties": {
+            "href": {
+              "type": "string",
+              "description": "AIP-136 custom method URI :transitionFinding"
+            }
+          }
+        },
+        "attachEvidence": {
+          "type": "object",
+          "properties": {
+            "href": {
+              "type": "string",
+              "description": "AIP-136 custom method URI :attachEvidence"
+            }
+          }
+        },
         "directive": {
           "type": "object",
           "properties": {
@@ -320,6 +349,12 @@
       },
       "guidance": {
         "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678/guidance"
+      },
+      "transitionFinding": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678:transitionFinding"
+      },
+      "attachEvidence": {
+        "href": "/findings/f8a1b2c3-d4e5-6f78-9abc-def012345678:attachEvidence"
       },
       "directive": {
         "href": "/directives/SC101"

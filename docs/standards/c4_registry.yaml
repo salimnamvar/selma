@@ -182,26 +182,49 @@ package_aliases:
     note: "Implements CompiledRulesRepository port"
 
 # --- API resource surface (must match docs/api/openapi.yaml) ------------------
+# AIP-121 standard methods + AIP-136 custom methods (:verb).
+# Paths identical to class rest_interface routers + ROD use-case surface.
 api_resources:
   - id: R1
     name: Directive
-    paths: ["/directives/{lineage_id}", "/directives/{lineage_id}/revisions/{revision}"]
+    paths:
+      - "/directives"
+      - "/directives/{lineage_id}"
+      - "/directives/{lineage_id}/revisions/{revision}"
+      - "/directives/{lineage_id}:fork"
+      - "/directives/{lineage_id}:merge"
+      - "/directives/{lineage_id}:split"
+      - "/directives/{lineage_id}:restore"
     owner: directives_application
   - id: R2
     name: Compilation
-    paths: ["/directives/{lineage_id}/compilations"]
+    paths:
+      - "/compilations"
+      - "/compilations/{hash}"
     owner: compilation_application
   - id: R3
     name: Inspection
-    paths: ["/inspections", "/inspections/{inspection_id}"]
+    paths:
+      - "/inspections"
+      - "/inspections/{inspection_id}"
     owner: inspections_application
   - id: R4
     name: Finding
-    paths: ["/findings/{finding_id}", "/findings/{finding_id}/events", "/findings/{finding_id}/guidance"]
+    paths:
+      - "/findings"
+      - "/findings:listFindingAggregates"
+      - "/findings/{finding_id}"
+      - "/findings/{finding_id}:transitionFinding"
+      - "/findings/{finding_id}:attachEvidence"
+      - "/findings/{finding_id}/events"
+      - "/findings/{finding_id}/guidance"
     owner: findings_application
   - id: R5
     name: Artifact
-    paths: ["/artifacts", "/artifacts/{artifact_id}", "/artifacts/{artifact_id}/resolutions"]
+    paths:
+      - "/artifacts"
+      - "/artifacts/{artifact_id}"
+      - "/artifacts/{artifact_id}:reviewConflictArtifact"
     owner: artifacts_repository
 
 # --- Forbidden ID aliases (stale names from prior designs) --------------------

@@ -1,36 +1,62 @@
 ' Section: cd_section_iface_rest.puml
+' Paths identical to docs/api (AIP-121 standard + AIP-136 custom methods)
+' operationId ↔ class <<Use Case>> (ROD Verb+Resource)
 
 package "$PKG_REST_INTERFACE" as IF_REST #E1F5FE/0288D1 {
 
   class "**DirectiveRouter**" as DirectiveRouter <<Interface>> #E1F5FE/0288D1 {
     + POST /directives
-    + GET /directives/{lineage_id}
     + GET /directives
+    + GET /directives/{lineage_id}
     + PATCH /directives/{lineage_id}
-    + lifecycle routes
+    + DELETE /directives/{lineage_id}
+    + GET /directives/{lineage_id}/revisions/{revision}
+    + POST /directives/{lineage_id}:fork
+    + POST /directives/{lineage_id}:merge
+    + POST /directives/{lineage_id}:split
+    + POST /directives/{lineage_id}:restore
+    --
+    <<aip>> Create List Get Update Delete
+    <<aip-136>> fork merge split restore
   }
 
   class "**CompilationRouter**" as CompilationRouter <<Interface>> #E1F5FE/0288D1 {
     + POST /compilations
+    + GET /compilations
     + GET /compilations/{hash}
+    --
+    <<aip>> Create List Get
+    <<resource>> Compilation / CgIrSnapshot
   }
 
   class "**InspectionRouter**" as InspectionRouter <<Interface>> #E1F5FE/0288D1 {
     + POST /inspections
-    + GET /inspections/{id}
+    + GET /inspections
+    + GET /inspections/{inspection_id}
+    --
+    <<aip>> Create List Get
   }
 
   class "**FindingRouter**" as FindingRouter <<Interface>> #E1F5FE/0288D1 {
-    + GET /findings/{id}
     + GET /findings
-    + POST /findings/{id}/transitions
-    + GET /findings/{id}/guidance
-    + POST /findings/{id}/evidence
+    + GET /findings/{finding_id}
+    + GET /findings:listFindingAggregates
+    + POST /findings/{finding_id}:transitionFinding
+    + POST /findings/{finding_id}:attachEvidence
+    + GET /findings/{finding_id}/events
+    + GET /findings/{finding_id}/guidance
+    --
+    <<aip>> List Get
+    <<aip-136>> transitionFinding attachEvidence listFindingAggregates
   }
 
   class "**ArtifactRouter**" as ArtifactRouter <<Interface>> #E1F5FE/0288D1 {
     + GET /artifacts
-    + GET /artifacts/{id}
+    + GET /artifacts/{artifact_id}
+    + POST /artifacts/{artifact_id}:reviewConflictArtifact
+    --
+    <<aip>> List Get
+    <<aip-136>> reviewConflictArtifact
   }
 
   class "**JwtAuthenticator**" as JwtAuthenticator <<Interface>> #E1F5FE/0288D1 {
@@ -64,4 +90,3 @@ package "$PKG_REST_INTERFACE" as IF_REST #E1F5FE/0288D1 {
 ' ═══════════════════════════════════════════════════════════
 '  cli_interface (C4: clients)
 ' ═══════════════════════════════════════════════════════════
-

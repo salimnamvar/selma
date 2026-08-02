@@ -17,32 +17,61 @@ package "application.dto" as DTO_PKG #E1F5FE/0288D1 {
     + lineage_id: LineageId
     + if_match: ETag
     + changes: Map
+    --
+    <<wire>> PATCH body.changes · If-Match header
   }
 
   class "**InspectRequest**" as InspectRequest <<DTO>> #E1F5FE/0288D1 {
     + target_id: String
+    + target_type: String
     + target_payload: Map
     + directive_lineage_ids: List~LineageId~
+    --
+    <<wire>> TargetSubmission
   }
 
   class "**InspectResponse**" as InspectResponse <<DTO>> #E1F5FE/0288D1 {
     + inspection_id: UUID
+    + target_id: String
     + finding_count: int
     + status: InspectionStatus
     + findings: List~FindingSummary~
+    --
+    <<wire>> Inspection resource (AIP-121)
   }
 
   class "**FindingTransitionRequest**" as FindingTransitionRequest <<DTO>> #E1F5FE/0288D1 {
     + finding_id: FindingId
+    + action: String
     + target_state: FindingState
     + reason: String
     + comments: String
+    --
+    <<wire>> POST :transitionFinding
+  }
+
+  class "**AttachEvidenceRequest**" as AttachEvidenceRequest <<DTO>> #E1F5FE/0288D1 {
+    + finding_id: FindingId
+    + evidence: Map
+    + comment: String
+    --
+    <<wire>> POST :attachEvidence
+  }
+
+  class "**ReviewConflictArtifactRequest**" as ReviewConflictArtifactRequest <<DTO>> #E1F5FE/0288D1 {
+    + artifact_id: UUID
+    + resolution_type: String
+    + rationale: String
+    --
+    <<wire>> POST :reviewConflictArtifact
   }
 
   class "**AggregateQueryRequest**" as AggregateQueryRequest <<DTO>> #E1F5FE/0288D1 {
     + scope: String
     + period: DateRange
     + filters: Map
+    --
+    <<wire>> GET :listFindingAggregates
   }
 
   class "**DetectionOutcome**" as DetectionOutcome <<DTO>> #E1F5FE/0288D1 {

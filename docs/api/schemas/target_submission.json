@@ -52,6 +52,14 @@
       ],
       "additionalProperties": true
     },
+    "directive_lineage_ids": {
+      "type": "array",
+      "description": "Optional subset of directive lineages to evaluate (class InspectRequest.directive_lineage_ids). Omit to use the active compiled rule set.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2,5}\\d{3}[A-Z]?$"
+      }
+    },
     "metadata": {
       "type": "object",
       "description": "Optional metadata about the target. Used for scope matching during control selection.",

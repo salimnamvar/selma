@@ -120,7 +120,7 @@ components:
               request_id: req_fsm001
 
     RateLimited:
-      description: "429 — Per-actor rate limit exceeded for directive.modify"
+      description: "429 — Per-actor rate limit exceeded (or edge admission)"
       content:
         application/json:
           schema:
@@ -139,6 +139,25 @@ components:
                 quota_limit: 30
                 quota_window: 60
               request_id: req_rat001
+
+    CompileQueueFull:
+      description: "503 — Compile outbox soft limit; mutation not committed"
+      content:
+        application/json:
+          schema:
+            $ref: schemas.yaml#/components/schemas/Error
+          example:
+            error:
+              type: "https://selma.dev/errors/compile-queue-full"
+              title: "Compile Queue Full"
+              status: 503
+              code: CompileQueueFull
+              detail: "compile_outbox_depth at soft_limit; retry after drain"
+              retryable: true
+              error_category: transient
+              details:
+                retry_after_seconds: 30
+              request_id: req_cqf001
 
     UpstreamTimeout:
       description: "504 — Target Sources gateway timeout after retries"

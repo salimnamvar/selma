@@ -78,7 +78,7 @@ else Escalated (Human Review Required)
     AS --> SI: ConflictView
     deactivate AS
 
-    SI -> AS: POST /artifacts/{artifact_id}/resolutions\n[capability conflict.resolve]
+    SI -> AS: POST /artifacts/{artifact_id}:reviewConflictArtifact\n[capability conflict.resolve]
     activate AS
     AS -> SA: record decision on conflict artifact
     activate SA

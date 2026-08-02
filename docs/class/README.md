@@ -103,7 +103,7 @@ python scripts/check_design_alignment.py
 | Entities / domain | CLS-001 | `shared_domain`, `directives_domain`, `compiled_rules_domain`, `inspections_domain`, `findings_domain`, `conflicts_domain`, auth grants, certification payload types |
 | Use cases | CLS-002 | `directives_application`, `compiled_rules_application` (C4: `compilation_application`), `inspections_application`, `findings_application` |
 | Interface adapters (driven) | CLS-003 | `*_infrastructure` including `DetectionEvaluator`, `DenialAuditAdapter` |
-| Interface adapters (driving) | CLS-004 | `rest_interface`, `cli_interface`, `tui_interface` |
+| Interface adapters (driving) | CLS-004 | `rest_interface` (paths = [`../api/`](../api/README.md) AIP-121/136), `cli_interface`, `tui_interface` |
 | Composition / main | CLS-004 | `composition_root` |
 
 ## ISP ports (method authority = this view)

@@ -63,7 +63,8 @@ Use-case identities **include** that file. Do not invent group strings.
 | UC-008 | `$TITLE_OFFLINE_CERT` | offline (not a CA ring) | — | offline · not peer |
 | Outer ring | `$TITLE_APPLICATION` | `<<application>> *_application` | application layer | container `application` |
 
-**Oval names** = package application leaves = class `<<Use Case>>` type names (ROD Verb+Resource).
+**Oval names** = package application leaves = class `<<Use Case>>` type names (ROD Verb+Resource).  
+**HTTP absorption:** the same oval names are OpenAPI `operationId` camelCase and map to AIP-121/136 methods under [`../api/`](../api/README.md) — use-case view does not invent paths.
 
 ## Naming (ROD + Clean Architecture)
 

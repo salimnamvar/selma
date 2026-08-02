@@ -1,6 +1,6 @@
 {
   "title": "CertificationResult",
-  "description": "Result of an architectural audit certification run produced by offline/CI certification_tool (not an in-process C4 peer). Stored as artifacts_store kind=certification. All 8 gates (AA-01 through AA-08) must pass for production-grade certification. Schema: docs/spec/contracts/certification/gates.yaml.",
+  "description": "Result of an architectural audit certification run produced by offline/CI certification_tool (not an in-process C4 peer). Stored as artifacts_store kind=certification. All 9 gates (AA-01 through AA-09) must pass for production-grade certification. Schema: docs/spec/contracts/certification/gates.yaml. Not a freestanding /certifications API collection.",
   "type": "object",
   "required": [
     "certification_id",
@@ -23,7 +23,7 @@
     },
     "status": {
       "type": "string",
-      "description": "Overall certification status. Pass requires all 8 gates to pass.",
+      "description": "Overall certification status. Pass requires all 9 gates to pass.",
       "enum": [
         "pass",
         "fail",
@@ -33,12 +33,12 @@
     },
     "gates": {
       "type": "array",
-      "description": "Results for each of the 8 architectural audit gates.",
+      "description": "Results for each of the 9 architectural audit gates (AA-01 through AA-09).",
       "items": {
         "$ref": "#/$defs/gate_result"
       },
-      "minItems": 8,
-      "maxItems": 8
+      "minItems": 9,
+      "maxItems": 9
     },
     "started_at": {
       "type": "string",
@@ -119,7 +119,8 @@
             "AA-05",
             "AA-06",
             "AA-07",
-            "AA-08"
+            "AA-08",
+            "AA-09"
           ]
         },
         "name": {
@@ -133,7 +134,8 @@
             "Conflict Resolution Determinism",
             "Discriminator Completeness",
             "Portable Serialization",
-            "Hermeticity Completeness"
+            "Hermeticity Completeness",
+            "Event Chain Integrity"
           ]
         },
         "pass_fail": {
@@ -294,13 +296,22 @@
           "validation_method": "Compile-time pin assertion + static analysis of compile path"
         },
         "duration_ms": 980
+      },
+      {
+        "gate_id": "AA-09",
+        "name": "Event Chain Integrity",
+        "pass_fail": "pass",
+        "evidence": {
+          "validation_method": "Offline chain_hash and hybrid logical clock monotonicity tool"
+        },
+        "duration_ms": 1100
       }
     ],
     "started_at": "2025-01-15T10:00:00Z",
     "completed_at": "2025-01-15T10:00:10Z",
     "summary": {
-      "total_gates": 7,
-      "passed": 7,
+      "total_gates": 9,
+      "passed": 9,
       "failed": 0,
       "blocking_failures": []
     },

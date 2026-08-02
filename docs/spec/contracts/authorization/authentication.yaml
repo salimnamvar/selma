@@ -172,6 +172,6 @@ stories:
     so_that: "only known actors with explicit capabilities enter use cases"
     acceptance_criteria:
       - "Given a missing Authorization header. When any protected route is called. Then 401 is returned and no use case runs."
-      - "Given a valid JWT lacking directive.modify. When PUT /directives/{id} is called. Then 403 is returned and DenialAuditPort records CapabilityDenied."
+      - "Given a valid JWT lacking directive.modify. When PATCH /directives/{lineage_id} is called. Then 403 is returned and DenialAuditPort records CapabilityDenied."
       - "Given roles claim without capabilities claim. When authentication succeeds. Then capabilities are expanded from role_matrix.yaml."
       - "Given a JWT claiming a capability ID absent from the server-side catalog. When authentication succeeds. Then the claimed ID is dropped, not honored, and audit telemetry is recorded."

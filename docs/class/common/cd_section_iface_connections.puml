@@ -28,8 +28,8 @@ FindingRouter --> ListFindings
 FindingRouter --> TransitionFinding
 FindingRouter --> GetFindingGuidance
 FindingRouter --> AttachEvidence
-ArtifactRouter --> GetInspection
-ArtifactRouter --> AttachEvidence
+FindingRouter --> ListFindingAggregates
+ArtifactRouter --> ReviewConflictArtifact
 
 ' ── CLI ─────────────────────────────────────────────────────
 DirectiveCommands --> CliCapabilityEnforcer

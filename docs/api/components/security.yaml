@@ -16,7 +16,7 @@ components:
         CapabilityEnforcer module. Catalog:
         `docs/spec/contracts/authorization/capabilities.yaml`. Denials append
         via application-owned `DenialAuditPort` (implementer:
-        `finding_events_repository`).
+        `DenialAuditAdapter` in findings infrastructure; port surface only).
 
         **Tenant model (v1):** single-tenant per deployment. JWT claims do not
         include `tenant_id`. Capability scope is the instance. Multi-tenancy

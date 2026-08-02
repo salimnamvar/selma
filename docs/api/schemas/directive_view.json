@@ -205,11 +205,21 @@
             }
           }
         },
-        "compilations": {
+        "fork": {
           "type": "object",
           "properties": {
             "href": {
-              "type": "string"
+              "type": "string",
+              "description": "AIP-136 :fork"
+            }
+          }
+        },
+        "merge": {
+          "type": "object",
+          "properties": {
+            "href": {
+              "type": "string",
+              "description": "AIP-136 :merge"
             }
           }
         },
@@ -287,8 +297,11 @@
       "revisions": {
         "href": "/directives/SC101/revisions"
       },
-      "compilations": {
-        "href": "/directives/SC101/compilations"
+      "fork": {
+        "href": "/directives/SC101:fork"
+      },
+      "merge": {
+        "href": "/directives/SC101:merge"
       },
       "latest_revision": {
         "href": "/directives/SC101/revisions/3"

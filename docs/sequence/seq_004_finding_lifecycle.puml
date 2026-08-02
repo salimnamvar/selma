@@ -36,7 +36,7 @@ deactivate LF
 user -> SI: submit evidence for finding
 activate SI
 
-SI -> AS: POST /findings/{id}/evidence
+SI -> AS: POST /findings/{id}:attachEvidence
 activate AS
 
 AS -> LF: route transition(finding_id, evidence)
@@ -81,7 +81,7 @@ deactivate SI
 user -> SI: waive finding
 activate SI
 
-SI -> AS: POST /findings/{id}/waive
+SI -> AS: POST /findings/{id}:transitionFinding\n(action=waive)
 activate AS
 
 AS -> LF: route waive(finding_id, reason)

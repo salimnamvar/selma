@@ -127,13 +127,14 @@ Algorithms, SoD rules, gate criteria: **spec contracts** — not restated here.
 
 | Resource | Owner application | Store / adapter |
 | :--- | :--- | :--- |
-| `/directives` | `directives_application` | `directives_store` + `directives_repository` |
-| `/directives/.../compilations` | `compilation_application` | `compiled_rules_store` + `compiled_rules_repository` |
+| `/directives` (+ revisions; AIP-136 `:fork|:merge|:split|:restore`; soft Delete) | `directives_application` | `directives_store` + `directives_repository` |
+| `/compilations` (+ `/{hash}`) | `compilation_application` | `compiled_rules_store` + `compiled_rules_repository` |
 | `/inspections` | `inspections_application` | evidence via `artifacts_repository` → `artifacts_store` |
-| `/findings` (+ guidance) | `findings_application` | `finding_events_store` + `finding_events_repository` |
-| `/artifacts` | (inspections / findings / certify) | `artifacts_store` + `artifacts_repository` |
+| `/findings` (+ AIP-136 `:transitionFinding|:attachEvidence|:listFindingAggregates`; events; guidance) | `findings_application` | `finding_events_store` + `finding_events_repository` |
+| `/artifacts` (+ AIP-136 `:reviewConflictArtifact`) | (inspections / findings / certify) | `artifacts_store` + `artifacts_repository` |
 
-Full path list: registry `api_resources` + [`../api/`](../api/README.md).
+Full path list and ROD operation map: registry `api_resources` + [`../api/`](../api/README.md).  
+OpenAPI owns wire paths; this table only maps resource families to C4 peers.
 
 ## Tenant model (v1 product boundary)
 

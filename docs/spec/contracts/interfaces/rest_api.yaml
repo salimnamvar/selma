@@ -11,11 +11,15 @@ description: >
   specific, but behavior and error semantics are normative.
 
 endpoint_families:
-  - family: "directives_store"
-    description: "Directive CRUD and lifecycle operations"
+  - family: "directives_application"
+    description: >
+      Directive CRUD and lifecycle operations. Concrete paths and operationIds
+      are owned by docs/api/ (R1): POST|GET /directives, GET|PATCH
+      /directives/{lineage_id}, GET .../revisions/{revision}, POST .../lifecycle.
     operations:
       - method: "POST"
-        action: "Create directive"
+        action: "CreateDirective"
+        path: "/directives"
         capability: "directive.create"
         request: "Directive document (conforming to rule schema); Idempotency-Key REQUIRED"
         response: "Created directive with lineage_id and execution_id"
@@ -27,32 +31,37 @@ endpoint_families:
         locking: "write_lock"
         idempotency: "required"
 
-      - method: "PUT"
-        action: "Modify directive (new revision)"
+      - method: "PATCH"
+        action: "UpdateDirective"
+        path: "/directives/{lineage_id}"
         capability: "directive.modify"
-        request: "Directive execution_id + changes; optional If-Match ETag"
+        request: "Directive changes; optional If-Match ETag; Idempotency-Key REQUIRED"
         response: "New revision with same lineage_id; ETag header"
         errors:
           - "400 SchemaError: invalid changes"
           - "403 CapabilityDenied"
-          - "404 NotFound: execution_id does not exist"
+          - "404 NotFound: lineage does not exist"
           - "409 Conflict: If-Match / revision mismatch"
+          - "503 CompileQueueFull: compile outbox soft limit"
         locking: "write_lock"
         optimistic_concurrency: "If-Match ETag = W/\"{lineage_id}:{revision}\""
+        idempotency: "required"
 
       - method: "GET"
-        action: "Read directive"
+        action: "GetDirective / ListDirectives"
+        path: "/directives | /directives/{lineage_id}"
         capability: null
-        request: "lineage_id or execution_id"
-        response: "Directive document"
+        request: "lineage_id (item) or list filters"
+        response: "Directive document or page"
         errors:
           - "404 NotFound"
         locking: "read_lock"
 
       - method: "POST"
-        action: "Lifecycle operation (fork/merge/split/retire)"
-        capability: "directive.fork/merge/split/retire"
-        request: "Operation type + target directive(s); Idempotency-Key REQUIRED"
+        action: "LifecycleTransitions"
+        path: "/directives/{lineage_id}:fork|:merge|:split|:restore (Delete for retire)"
+        capability: "directive.fork/merge/split/retire/restore"
+        request: "action + target directive(s); Idempotency-Key REQUIRED"
         response: "Resulting directive(s)"
         errors:
           - "400 SchemaError: invalid operation"
@@ -63,11 +72,43 @@ endpoint_families:
         locking: "write_lock"
         idempotency: "required"
 
-  - family: "inspections_application"
-    description: "Inspection submission and results"
+  - family: "compilation_application"
+    description: >
+      Hermetic compile surface. Concrete paths owned by docs/api/ (R2):
+      POST /compilations, GET /compilations/{hash}. Package dual:
+      compiled_rules_application.
     operations:
       - method: "POST"
-        action: "Submit target for inspection"
+        action: "CompileDirectives"
+        path: "/compilations"
+        capability: "directive.modify"
+        request: "lineage_ids[]; Idempotency-Key REQUIRED"
+        response: "Compilation status; content-addressed hash when completed"
+        errors:
+          - "400 SchemaError"
+          - "403 CapabilityDenied"
+          - "404 NotFound"
+          - "409 Conflict"
+          - "503 CompileQueueFull"
+        idempotency: "required"
+
+      - method: "GET"
+        action: "Get compilation by content-addressed hash"
+        path: "/compilations/{hash}"
+        capability: null
+        request: "SHA-256 hex hash"
+        response: "Compilation / snapshot status"
+        errors:
+          - "404 NotFound"
+
+  - family: "inspections_application"
+    description: >
+      Inspection submission and results. Concrete paths owned by docs/api/ (R3):
+      POST /inspections, GET /inspections/{inspection_id}.
+    operations:
+      - method: "POST"
+        action: "CreateInspection"
+        path: "/inspections"
         capability: "inspection.submit"
         request: "Target (conforming to target schema); Idempotency-Key REQUIRED"
         response: "Inspection snapshot with findings"
@@ -81,15 +122,18 @@ endpoint_families:
         idempotency: "required"
 
       - method: "GET"
-        action: "Read inspection results"
-        capability: null
+        action: "GetInspection"
+        path: "/inspections/{inspection_id}"
+        capability: "inspection.view"
         request: "inspection_id"
         response: "Inspection snapshot"
         errors:
+          - "403 CapabilityDenied"
           - "404 NotFound"
 
       - method: "POST"
-        action: "Reinspect target"
+        action: "Reinspect target (same CreateInspection surface with inspection.reinspect)"
+        path: "/inspections"
         capability: "inspection.reinspect"
         request: "target_id; Idempotency-Key REQUIRED"
         response: "New inspection snapshot"
@@ -100,17 +144,24 @@ endpoint_families:
         idempotency: "required"
 
   - family: "findings_application"
-    description: "Finding lifecycle management"
+    description: >
+      Finding lifecycle management. Concrete paths owned by docs/api/ (R4):
+      GET /findings, GET /findings/{finding_id},
+      POST /findings/{finding_id}:transitionFinding,
+      POST /findings/{finding_id}/evidence,
+      GET /findings/{finding_id}/events.
     operations:
       - method: "GET"
-        action: "List findings"
+        action: "ListFindings / GetFinding"
+        path: "/findings | /findings/{finding_id}"
         capability: "finding.view"
-        request: "Optional filters (target_id, lineage_id, fsm_state)"
-        response: "Array of finding objects"
+        request: "Optional filters (inspection_id, target_id, lineage_id, fsm_state)"
+        response: "Finding object(s)"
 
       - method: "POST"
-        action: "FSM transition (acknowledge/dismiss/waive/approve/reject/reopen)"
-        capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation/reopen"
+        action: "TransitionFinding"
+        path: "/findings/{finding_id}:transitionFinding"
+        capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation/reopen/supersede"
         request: "finding_id + transition-specific payload; Idempotency-Key REQUIRED"
         response: "Updated finding"
         errors:
@@ -123,13 +174,28 @@ endpoint_families:
         locking: "fsm_engine"
         idempotency: "required"
 
+      - method: "POST"
+        action: "AttachEvidence"
+        path: "/findings/{finding_id}:attachEvidence"
+        capability: "evidence.submit"
+        request: "evidence payload; Idempotency-Key REQUIRED"
+        response: "Updated finding"
+        errors:
+          - "400 SchemaError"
+          - "403 CapabilityDenied"
+          - "404 NotFound"
+          - "409 Conflict"
+        idempotency: "required"
+
   - family: "findings_application_read_models"
     description: >
       Read-only aggregates and guidance under findings_application.
       Not a freestanding analytics or guidance engine (C4).
+      Paths: GET /findings/aggregates, GET /findings/{finding_id}/guidance.
     operations:
       - method: "GET"
-        action: "View finding aggregates / analytics"
+        action: "ListFindingAggregates"
+        path: "/findings:listFindingAggregates"
         capability: "analytics.view"
         request: "Query parameters over finding events"
         response: "Aggregated data (read-only)"
@@ -137,29 +203,34 @@ endpoint_families:
           - "403 CapabilityDenied"
 
       - method: "GET"
-        action: "Get finding guidance"
+        action: "GetFindingGuidance"
+        path: "/findings/{finding_id}/guidance"
         capability: "finding.view"
         request: "finding_id"
         response: "Guidance payload from doctrine (guidance_only)"
         errors:
           - "404 NotFound"
 
-  - family: "artifacts_store"
+  - family: "artifacts_repository"
     description: >
       Write-once artifacts (inspection, conflict, certification, evidence).
       Conflict human-review and certification results are artifact-backed;
       ResolveConflict and certification_tool are not freestanding API peers.
+      Paths owned by docs/api/ (R5).
     operations:
       - method: "GET"
         action: "List / read artifacts"
+        path: "/artifacts | /artifacts/{artifact_id}"
         capability: null
         request: "Optional kind filter (inspection|conflict|certification|evidence)"
         response: "Artifact metadata and payload"
         errors:
+          - "403 CapabilityDenied (inspection.view when inspection-scoped)"
           - "404 NotFound"
 
       - method: "POST"
-        action: "Record human resolution on conflict artifact"
+        action: "ReviewConflictArtifact"
+        path: "/artifacts/{artifact_id}:reviewConflictArtifact"
         capability: "conflict.resolve"
         request: "artifact_id + resolution; Idempotency-Key REQUIRED"
         response: "Updated conflict artifact"
@@ -223,7 +294,7 @@ optimistic_concurrency:
   description: "Directive mutations"
   rules:
     - "GET directive returns ETag W/\"{lineage_id}:{revision}\""
-    - "PUT/lifecycle SHOULD send If-Match; mismatch → 409"
+    - "PATCH /directives/{lineage_id} and lifecycle custom methods SHOULD send If-Match; mismatch → 409"
     - "Finding transitions use per-finding chain serialization (see finding_events_store)"
 
 denial_audit:
@@ -298,4 +369,5 @@ stories:
     acceptance_criteria:
       - "Given a valid directive creation request. When POST /directives is called. Then a new directive is created with lineage_id and execution_id."
       - "Given an invalid target. When POST /inspections is called. Then 400 SchemaError is returned."
-      - "Given a finding FSM transition. When POST /findings/{id}/transition is called. Then capability is checked before processing."
+      - "Given a finding FSM transition. When POST /findings/{finding_id}:transitionFinding is called. Then capability is checked before processing."
+      - "Given a compile request. When POST /compilations is called with lineage_ids. Then CompileDirectives runs and returns compilation status."

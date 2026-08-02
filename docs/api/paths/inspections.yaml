@@ -1,20 +1,16 @@
-# R3 Inspections — inspections_application (+ optional target_sources_gateway)
-# Findings opened via findings_application; evidence written to artifacts_store.
+# R3 Inspections — AIP-121 standard methods on Inspection resource
+# Domain: Inspection aggregate · Use cases: CreateInspection, GetInspection
+# Class: InspectionRouter
 
 /inspections:
   post:
     operationId: createInspection
     tags: [Inspections]
-    summary: Create inspection
+    summary: CreateInspection
     description: |
-      Submits a target (inline body or optional remote reference) for evaluation
-      against frozen compiled rules. Requires `inspection.submit`.
-
-      Six-stage pipeline: normalize → classify → select_controls → evaluate →
-      aggregate → report. Never reads policy doctrines.
-
-      C4: `api` → `inspections_application` → `compiled_rules_repository` /
-      optional `target_sources_gateway` → opens findings via `findings_application`.
+      **Standard Create** (AIP-133). Use case **CreateInspection**.
+      Capability: `inspection.submit` (or `inspection.reinspect` for reinspect).
+      Requires `Idempotency-Key`. Response **is** the `Inspection` resource.
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:
@@ -25,11 +21,15 @@
             $ref: ../components/schemas.yaml#/components/schemas/TargetSubmission
     responses:
       "201":
-        description: Inspection completed
+        description: Inspection resource
+        headers:
+          Location:
+            schema:
+              type: string
         content:
           application/json:
             schema:
-              $ref: ../components/schemas.yaml#/components/schemas/InspectionResult
+              $ref: ../components/schemas.yaml#/components/schemas/Inspection
       "400":
         $ref: ../components/responses.yaml#/components/responses/SchemaError
       "401":
@@ -38,25 +38,32 @@
         $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
       "409":
         $ref: ../components/responses.yaml#/components/responses/Conflict
+      "429":
+        $ref: ../components/responses.yaml#/components/responses/RateLimited
+      "504":
+        $ref: ../components/responses.yaml#/components/responses/UpstreamTimeout
   get:
     operationId: listInspections
     tags: [Inspections]
-    summary: List inspections
-    description: Returns a paginated list of inspections.
+    summary: List Inspections
+    description: |
+      **Standard List** (AIP-132). Collection List required when more than one
+      Inspection resource is possible.
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/TargetIdFilter
-      - $ref: ../components/parameters.yaml#/components/parameters/LineageIdFilter
       - $ref: ../components/parameters.yaml#/components/parameters/PageSize
       - $ref: ../components/parameters.yaml#/components/parameters/PageToken
     responses:
       "200":
-        description: Inspection list
+        description: Inspection collection page
         content:
           application/json:
             schema:
               $ref: ../components/schemas.yaml#/components/schemas/ListInspectionsResponse
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
 
 /inspections/{inspection_id}:
   parameters:
@@ -64,46 +71,20 @@
   get:
     operationId: getInspection
     tags: [Inspections]
-    summary: Get inspection
-    description: >
-      Returns the immutable inspection snapshot. Requires capability
-      inspection.view (not finding.view). Artifact router MUST NOT authorize
-      inspection-scoped reads via findings capabilities alone.
+    summary: GetInspection
+    description: |
+      **Standard Get** (AIP-131). Use case **GetInspection**.
+      Capability: `inspection.view` (not `finding.view`).
     responses:
       "200":
-        description: Inspection snapshot
+        description: Inspection resource
         content:
           application/json:
             schema:
-              $ref: ../components/schemas.yaml#/components/schemas/InspectionResult
+              $ref: ../components/schemas.yaml#/components/schemas/Inspection
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
       "403":
-        $ref: ../components/responses.yaml#/components/responses/Forbidden
-      "404":
-        $ref: ../components/responses.yaml#/components/responses/NotFound
-
-/inspections/{inspection_id}/findings:
-  parameters:
-    - $ref: ../components/parameters.yaml#/components/parameters/InspectionId
-  get:
-    operationId: listInspectionFindings
-    tags: [Findings]
-    summary: List findings for inspection
-    description: Returns findings produced by the inspection (findings_application projection).
-    parameters:
-      - $ref: ../components/parameters.yaml#/components/parameters/FsmStateFilter
-      - $ref: ../components/parameters.yaml#/components/parameters/SeverityFilter
-      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
-      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
-    responses:
-      "200":
-        description: Finding list
-        content:
-          application/json:
-            schema:
-              $ref: ../components/schemas.yaml#/components/schemas/ListFindingsResponse
-      "401":
-        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
       "404":
         $ref: ../components/responses.yaml#/components/responses/NotFound

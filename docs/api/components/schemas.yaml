@@ -1,21 +1,16 @@
 components:
   schemas:
-    # ---------------------------------------------------------------------------
-    # Wire schema policy
-    # ---------------------------------------------------------------------------
-    # Resource wire types align with C4 resources and JSON Schema files under
-    # docs/api/schemas/ where those exist. Server-generated fields: readOnly.
-    # Certification results are artifact payloads (kind=certification), not a
-    # freestanding /certifications collection.
-    # Conflict human review is artifact-backed (kind=conflict).
+    # =========================================================================
+    # Wire schemas = domain aggregates / class DTOs / ERD projection columns
+    # AIP-121: same resource schema across Create / Get / Update / List items
+    # =========================================================================
 
     Error:
       type: object
       required: [error]
       description: >
-        Uniform error envelope for all API failures. Modeled on RFC 7807
-        (Problem Details) with extensions for machine-readable taxonomy
-        and retry guidance.
+        Uniform error envelope (RFC 7807-style). Code enum authority:
+        docs/spec/contracts/interfaces/rest_api.yaml.
       properties:
         error:
           type: object
@@ -24,22 +19,12 @@ components:
             type:
               type: string
               format: uri
-              description: >
-                RFC 7807 type URI identifying the error class
-                (e.g. 'https://selma.dev/errors/capability-denied')
             title:
               type: string
-              description: Short human-readable summary of the error
             status:
               type: integer
-              description: HTTP status code
             code:
               type: string
-              description: >
-                Machine-readable error code. Values: Unauthorized, CapabilityDenied,
-                SoDDenied, NotFound, SchemaError, Conflict, FSMError,
-                RateLimited, UpstreamTimeout, InternalError, CompileFailure,
-                CASMiss, HashChainViolation, PairedPolicyRefDangling
               enum:
                 - Unauthorized
                 - CapabilityDenied
@@ -52,92 +37,195 @@ components:
                 - UpstreamTimeout
                 - InternalError
                 - CompileFailure
+                - CompileQueueFull
                 - CASMiss
                 - HashChainViolation
                 - PairedPolicyRefDangling
             detail:
               type: string
-              description: >
-                Human-readable explanation specific to this occurrence
             retryable:
               type: boolean
-              description: >
-                true if the client MAY safely retry the same request;
-                false for terminal errors (e.g. CapabilityDenied, SchemaError)
             request_id:
               type: string
-              description: Unique request identifier for audit correlation
             details:
               type: object
-              description: Additional structured error context
               additionalProperties: true
             error_category:
               type: string
-              description: >
-                Transient or terminal classification for client retry logic
               enum: [transient, terminal, client_error]
 
-    # ----- Error taxonomy (applies to all Error responses) -----
-    #
-    #  Category    | Codes                                      | retryable
-    #  ------------|--------------------------------------------|----------
-    #  client_error| Unauthorized, CapabilityDenied, SoDDenied, | false
-    #              | NotFound, SchemaError, FSMError             |
-    #  terminal    | Conflict, CompileFailure, CASMiss,          | false
-    #              | HashChainViolation, PairedPolicyRefDangling |
-    #  transient   | RateLimited, UpstreamTimeout, InternalError | true
+    # ----- Directive (domain Directive aggregate) -----------------------------
+    # JSON Schema file keeps the full dual-document view; alias name = domain type.
 
-    # ----- Directives (directives_application) --------------------------------
+    Directive:
+      $ref: ../schemas/directive_view.json
 
     DirectiveView:
-      $ref: ../schemas/directive_view.json
+      $ref: "#/components/schemas/Directive"
+
+    DirectiveCreate:
+      type: object
+      required: [executable_document, policy_doctrine_document, paired_policy_ref]
+      description: |
+        Create body for **CreateDirective**. Class DTO `DirectiveCreateRequest`
+        fields map into dual documents + paired_policy_ref.
+      properties:
+        lineage_id:
+          type: string
+          pattern: "^[A-Z]{2,5}\\d{3}[A-Z]?$"
+          description: Optional client-proposed lineage id when identity contract allows
+        executable_document:
+          type: object
+          description: ExecutableRuleDoc (rule_schema)
+          additionalProperties: true
+        policy_doctrine_document:
+          type: object
+          description: PolicyDoctrineDoc (policy_doctrine)
+          additionalProperties: true
+        paired_policy_ref:
+          type: string
+          pattern: "^[a-z][a-z0-9_]+$"
+        subject:
+          type: object
+          additionalProperties: true
+        predicate:
+          type: object
+          additionalProperties: true
+        detection_spec:
+          type: object
+          additionalProperties: true
+        applicability:
+          type: object
+          additionalProperties: true
+        priority:
+          type: object
+          additionalProperties: true
+        modality:
+          type: string
+          enum: [obligation, prohibition, permission]
+        metadata:
+          type: object
+          additionalProperties: true
 
     DirectiveUpdate:
       type: object
-      required: [content]
-      description: Partial update body for a directive revision (creates a new revision).
+      required: [changes]
+      description: |
+        Update body for **UpdateDirective**. Class DTO `DirectiveUpdateRequest`
+        (`lineage_id` is path; `if_match` is header; `changes` is body).
       properties:
-        content:
+        changes:
           type: object
-          description: Updated executable + doctrine content (conforms to rule_schema / policy_doctrine)
+          description: Partial dual-document and metadata changes
           additionalProperties: true
         metadata:
           type: object
-          description: Updated metadata
           additionalProperties: true
 
-    # ----- Compilations (compilation_application) -----------------------------
-
-    CompilationStatus:
+    DirectiveForkRequest:
       type: object
-      required: [compilation_id, lineage_id, status, started_at]
-      description: Hermetic compile run status for a directive lineage.
+      description: "Body for custom method :fork (optional rationale)."
+      properties:
+        rationale:
+          type: string
+
+    DirectiveMergeRequest:
+      type: object
+      required: [other_lineage_id]
+      description: "Body for custom method :merge (LifecycleTransitions.Merge)."
+      properties:
+        other_lineage_id:
+          type: string
+          description: Peer lineage to merge with path lineage_id
+        rationale:
+          type: string
+
+    DirectiveSplitRequest:
+      type: object
+      description: "Body for custom method :split."
+      properties:
+        rationale:
+          type: string
+
+    DirectiveRestoreRequest:
+      type: object
+      required: [revision]
+      description: "Body for custom method :restore."
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+          description: Source revision number (ERD restore_from_revision)
+        rationale:
+          type: string
+
+    DirectiveLifecycleResponse:
+      type: object
+      required: [action, directives]
+      description: Result of LifecycleTransitions custom methods or multi-resource ops.
+      properties:
+        action:
+          type: string
+          enum: [retire, fork, merge, split, restore]
+        directives:
+          type: array
+          items:
+            $ref: "#/components/schemas/Directive"
+        primary_lineage_id:
+          type: string
+
+    ListDirectivesResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Directive"
+        next_page_token:
+          type: string
+
+    # ----- Compilation (domain CgIrSnapshot) ----------------------------------
+
+    Compilation:
+      type: object
+      required: [status]
+      description: |
+        Domain `CgIrSnapshot` wire resource + run status. Identity when published:
+        `cg_ir_snapshot_hash` (ERD snapshots PK / class SnapshotHash).
       properties:
         compilation_id:
           type: string
-          description: Unique compilation identifier
-        lineage_id:
-          type: string
-          description: Directive lineage that was compiled
+          description: Opaque run id while hash not yet known
+        lineage_ids:
+          type: array
+          items:
+            type: string
         cg_ir_snapshot_hash:
           type: string
-          description: Resulting CG-IR snapshot hash in compiled_rules_store
           pattern: "^[a-f0-9]{64}$"
+          description: Content-addressed snapshot hash (resource name when completed)
+          readOnly: true
+        frozen_env_hash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          readOnly: true
+        engine_version:
+          type: string
           readOnly: true
         status:
           type: string
           enum: [pending, in_progress, completed, failed]
-          description: Compilation status
         error:
           type: [object, "null"]
-          description: Error details if compilation failed
           properties:
-            code:
-              type: string
-            message:
-              type: string
-            stage:
-              type: string
+            code: { type: string }
+            message: { type: string }
+            stage: { type: string }
+        compiled_at:
+          type: [string, "null"]
+          format: date-time
+          readOnly: true
         started_at:
           type: string
           format: date-time
@@ -146,6 +234,10 @@ components:
           type: [string, "null"]
           format: date-time
           readOnly: true
+        provenance:
+          type: object
+          additionalProperties: true
+          readOnly: true
         _links:
           type: object
           readOnly: true
@@ -153,18 +245,24 @@ components:
             self:
               type: object
               properties: { href: { type: string } }
-            directive:
-              type: object
-              properties: { href: { type: string } }
+
+    CompilationStatus:
+      $ref: "#/components/schemas/Compilation"
 
     CompilationRequest:
       type: object
-      description: Optional body when triggering a compilation.
+      required: [lineage_ids]
+      description: "Request for **CompileDirectives** (`lineage_ids: List~LineageId~`)."
       properties:
+        lineage_ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            pattern: "^[A-Z]{2,5}\\d{3}[A-Z]?$"
         force:
           type: boolean
           default: false
-          description: Force recompilation even if CG-IR is current
 
     ListCompilationsResponse:
       type: object
@@ -173,25 +271,27 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/CompilationStatus"
+            $ref: "#/components/schemas/Compilation"
         next_page_token:
           type: string
 
-    # ----- Inspections (inspections_application) ------------------------------
+    # ----- Inspection (domain Inspection aggregate) ---------------------------
 
     TargetSubmission:
       $ref: ../schemas/target_submission.json
 
-    InspectionResult:
+    Inspection:
       type: object
       required:
         - inspection_id
         - target_id
         - status
-        - findings_count
+        - finding_count
         - started_at
         - completed_at
-      description: Immutable inspection snapshot (also stored as artifact kind=inspection).
+      description: |
+        Domain `Inspection` aggregate / ERD inspection_snapshots.
+        Identical schema for Create response, Get, List items (AIP-121).
       properties:
         inspection_id:
           type: string
@@ -199,18 +299,34 @@ components:
           readOnly: true
         target_id:
           type: string
-          description: Target that was inspected
+        target_hash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          readOnly: true
         cg_ir_snapshot_hash:
           type: string
-          description: Hash of the CG-IR snapshot used for evaluation
           pattern: "^[a-f0-9]{64}$"
+          readOnly: true
+        frozen_env_hash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          readOnly: true
+        engine_version:
+          type: string
+        inspector:
+          type: string
+          description: ActorId of inspector
           readOnly: true
         status:
           type: string
           enum: [completed, partial, failed]
-        findings_count:
+        finding_count:
           type: integer
           minimum: 0
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/FindingSummary"
         findings_by_severity:
           type: object
           properties:
@@ -221,26 +337,25 @@ components:
             informational: { type: integer }
         pipeline_trace:
           type: array
-          description: Ordered execution trace for each pipeline stage
+          description: ERD pipeline_traces ordered entries
           items:
             type: object
             properties:
               stage: { type: string }
               status: { type: string }
               duration_ms: { type: integer }
+              node_id: { type: string }
         skipped_nodes:
           type: array
           items:
             type: object
             properties:
-              directive_id: { type: string }
+              node_id: { type: string }
               reason: { type: string }
         system_state_hash:
           type: string
           pattern: "^[a-f0-9]{64}$"
           readOnly: true
-        engine_version:
-          type: string
         started_at:
           type: string
           format: date-time
@@ -259,9 +374,22 @@ components:
             findings:
               type: object
               properties: { href: { type: string } }
-            target:
-              type: object
-              properties: { href: { type: string } }
+
+    InspectionResult:
+      $ref: "#/components/schemas/Inspection"
+
+    FindingSummary:
+      type: object
+      required: [finding_id, fsm_state, severity]
+      description: Class DTO FindingSummary.
+      properties:
+        finding_id:
+          type: string
+          format: uuid
+        fsm_state:
+          $ref: "#/components/schemas/FindingState"
+        severity:
+          $ref: "#/components/schemas/Severity"
 
     ListInspectionsResponse:
       type: object
@@ -270,23 +398,53 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/InspectionResult"
+            $ref: "#/components/schemas/Inspection"
         next_page_token:
           type: string
 
-    # ----- Findings (findings_application) ------------------------------------
+    # ----- Finding (domain Finding / FindingProjection) -----------------------
 
-    FindingView:
+    FindingState:
+      type: string
+      description: |
+        storage_id from finding_lifecycle/states.yaml (identical to domain
+        FindingState enum / ERD enum). Display names with spaces are UI-only.
+      enum:
+        - Created
+        - Open
+        - Acknowledged
+        - EvidenceSubmitted
+        - PendingVerification
+        - Verified
+        - Rejected
+        - Dismissed
+        - Waived
+        - Superseded
+        - Closed
+
+    Severity:
+      type: string
+      enum: [critical, high, medium, low, informational]
+
+    Disposition:
+      type: string
+      description: Domain Disposition enum
+      enum: [valid, invalid, waived, dismissed, superseded]
+
+    Finding:
       $ref: ../schemas/finding_view.json
 
-    FindingTransition:
+    FindingView:
+      $ref: "#/components/schemas/Finding"
+
+    FindingTransitionRequest:
       type: object
       required: [action]
-      description: Request body for a finding FSM transition (PATCH).
+      description: |
+        Class DTO `FindingTransitionRequest` wire form for :transitionFinding.
       properties:
         action:
           type: string
-          description: FSM transition action
           enum:
             - acknowledge
             - dismiss
@@ -295,18 +453,36 @@ components:
             - reject_remediation
             - reopen
             - supersede
-        comment:
+        target_state:
+          $ref: "#/components/schemas/FindingState"
+        reason:
           type: string
-          description: Optional comment (required for reopen where contract requires it)
+        comments:
+          type: string
+          description: Mandatory for reopen/supersede where contract requires
+
+    FindingTransition:
+      $ref: "#/components/schemas/FindingTransitionRequest"
+
+    AttachEvidenceRequest:
+      type: object
+      required: [evidence]
+      description: "Request for :attachEvidence (class AttachEvidence)."
+      properties:
         evidence:
           type: object
-          description: Remediation evidence payload when submitting evidence
+          description: EvidenceRef payload
           additionalProperties: true
+        comment:
+          type: string
+
+    EvidenceSubmission:
+      $ref: "#/components/schemas/AttachEvidenceRequest"
 
     FindingEvent:
       type: object
       required: [event_id, finding_id, event_type, timestamp, actor, payload, event_hash]
-      description: Append-only finding lifecycle event (finding_events_store).
+      description: ERD events / append-only FindingEvent.
       properties:
         event_id:
           type: string
@@ -318,26 +494,35 @@ components:
         event_type:
           type: string
           enum: [FindingCreated, DispositionChanged, FindingClosed]
+        trigger_command:
+          type: string
         timestamp:
           type: string
           format: date-time
           readOnly: true
         logical_clock:
           type: string
-          description: Hybrid Logical Clock value for ordering
+          description: Hybrid logical clock encoding
           readOnly: true
         actor:
           type: string
         payload:
           type: object
           properties:
-            from_state: { type: string }
-            to_state: { type: string }
-            disposition: { type: string }
+            from_state: { $ref: "#/components/schemas/FindingState" }
+            to_state: { $ref: "#/components/schemas/FindingState" }
+            disposition: { $ref: "#/components/schemas/Disposition" }
           additionalProperties: true
         event_hash:
           type: string
-          description: SHA-256 hash for immutability verification
+          pattern: "^[a-f0-9]{64}$"
+          readOnly: true
+        prev_event_hash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          readOnly: true
+        chain_hash:
+          type: string
           pattern: "^[a-f0-9]{64}$"
           readOnly: true
 
@@ -348,7 +533,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/FindingView"
+            $ref: "#/components/schemas/Finding"
         next_page_token:
           type: string
 
@@ -363,18 +548,55 @@ components:
         next_page_token:
           type: string
 
-    GuidanceResponse:
+    AggregateReport:
+      type: object
+      required: [scope, finding_counts]
+      description: Domain AggregateReport / class AggregateQueryRequest result.
+      properties:
+        scope:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        finding_counts:
+          type: object
+          description: Map Severity → count
+          additionalProperties:
+            type: integer
+        directive_coverage:
+          type: number
+          format: double
+        buckets:
+          type: array
+          items:
+            type: object
+            required: [key, count]
+            properties:
+              key: { type: string }
+              count: { type: integer, minimum: 0 }
+              dimensions:
+                type: object
+                additionalProperties: true
+
+    FindingAggregatesResponse:
+      $ref: "#/components/schemas/AggregateReport"
+
+    Guidance:
       $ref: ../schemas/guidance_response.json
 
-    # ----- Artifacts (artifacts_repository → artifacts_store) -----------------
+    GuidanceResponse:
+      $ref: "#/components/schemas/Guidance"
 
-    ArtifactView:
+    # ----- Artifact (artifacts_store) -----------------------------------------
+
+    Artifact:
       type: object
       required: [artifact_id, kind, created_at]
       description: |
-        Write-once blob metadata from artifacts_store. Kinds include inspection
-        snapshots, conflict artifacts, and certification reports produced by the
-        offline/CI certification_tool.
+        Write-once artifact metadata (artifacts_repository → artifacts_store).
       properties:
         artifact_id:
           type: string
@@ -385,7 +607,6 @@ components:
         content_hash:
           type: string
           pattern: "^[a-f0-9]{64}$"
-          description: SHA-256 of immutable content
           readOnly: true
         created_at:
           type: string
@@ -393,7 +614,6 @@ components:
           readOnly: true
         payload:
           type: object
-          description: Kind-specific body (ConflictView, CertificationResult, InspectionResult, …)
           additionalProperties: true
         _links:
           type: object
@@ -403,6 +623,9 @@ components:
               type: object
               properties: { href: { type: string } }
 
+    ArtifactView:
+      $ref: "#/components/schemas/Artifact"
+
     ListArtifactsResponse:
       type: object
       required: [items]
@@ -410,21 +633,25 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/ArtifactView"
+            $ref: "#/components/schemas/Artifact"
         next_page_token:
           type: string
 
-    ConflictView:
+    ConflictArtifact:
       type: object
-      required: [conflict_id, status, conflicting_directives, detection_mechanism]
+      required: [artifact_id, status, conflicting_directives, detection_mechanism]
       description: |
-        Conflict artifact payload (artifacts kind=conflict). Produced by domain
-        service ResolveConflict during compile/inspect; human resolutions via
-        POST /artifacts/{artifact_id}/resolutions.
+        ERD conflict_artifacts payload (kind=conflict). Human resolution via
+        :reviewConflictArtifact.
       properties:
+        artifact_id:
+          type: string
         conflict_id:
           type: string
         status:
+          type: string
+          enum: [open, resolved, advisory]
+        binding_status:
           type: string
           enum: [open, resolved, advisory]
         detection_mechanism:
@@ -448,6 +675,9 @@ components:
               type: string
               format: date-time
             rationale: { type: string }
+        cg_ir_snapshot_hash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
         created_at:
           type: string
           format: date-time
@@ -459,14 +689,14 @@ components:
             self:
               type: object
               properties: { href: { type: string } }
-            resolutions:
-              type: object
-              properties: { href: { type: string } }
 
-    ConflictResolutionRequest:
+    ConflictView:
+      $ref: "#/components/schemas/ConflictArtifact"
+
+    ReviewConflictArtifactRequest:
       type: object
       required: [resolution_type]
-      description: Human resolution decision for a conflict artifact.
+      description: "Request for :reviewConflictArtifact."
       properties:
         resolution_type:
           type: string
@@ -475,8 +705,10 @@ components:
           type: string
         override_priority:
           type: object
-          description: Manual priority override (for manual_override type)
           additionalProperties: true
+
+    ConflictResolutionRequest:
+      $ref: "#/components/schemas/ReviewConflictArtifactRequest"
 
     CertificationResult:
       $ref: ../schemas/certification_result.json

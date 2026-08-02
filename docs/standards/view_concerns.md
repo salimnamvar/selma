@@ -31,7 +31,8 @@ These live under **spec** (and schema where structural data shapes apply). Struc
 | Hermetic compile + locks + outbox | `spec/contracts/compilation/`, `data_stores/directives_store.yaml` |
 | Store mutability / retention / HLC | `spec/contracts/data_stores/` |
 | Dual-document + `paired_policy_ref` | `spec/contracts/data_stores/directives_store.yaml`, `docs/schema/` |
-| REST idempotency / ETag | `spec/contracts/interfaces/rest_api.yaml`, `docs/api/` |
+| REST idempotency / ETag | `spec/contracts/interfaces/rest_api.yaml` |
+| HTTP paths / wire schemas (AIP-121/136) | `docs/api/` (absorbed encoding of use case + class + ERD; not a separate product design) |
 | Certification gates AA-01…AA-09 | `spec/contracts/certification/gates.yaml` |
 
 ## Naming dual (one concept, two labels)

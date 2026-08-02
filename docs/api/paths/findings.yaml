@@ -1,5 +1,67 @@
-# R4 Findings — findings_application → finding_events_repository → finding_events_store
-# Guidance is a sub-resource (guidance_only doctrine via directives_repository).
+# R4 Findings — AIP-121 standard Get/List + AIP-136 custom methods
+# Domain: Finding / FindingProjection · Store: finding_events_store
+# Use cases: GetFinding, ListFindings, TransitionFinding, AttachEvidence,
+#            GetFindingGuidance, ListFindingAggregates
+# Class: FindingRouter
+#
+# Custom (AIP-136): :transitionFinding :attachEvidence
+# Collection custom: :listFindingAggregates
+# Sub-resources: events (List), guidance (Get singleton)
+
+/findings:
+  get:
+    operationId: listFindings
+    tags: [Findings]
+    summary: ListFindings
+    description: |
+      **Standard List** (AIP-132). Use case **ListFindings**.
+      Capability: `finding.view`.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/InspectionIdFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/TargetIdFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/LineageIdFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/FsmStateFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/SeverityFilter
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: Finding collection page
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/ListFindingsResponse
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+
+/findings:listFindingAggregates:
+  get:
+    operationId: listFindingAggregates
+    tags: [Findings]
+    summary: ListFindingAggregates
+    description: |
+      **Collection custom method** (AIP-136) `:listFindingAggregates`.
+      Use case **ListFindingAggregates**. Capability: `analytics.view`.
+      Not a freestanding analytics engine peer.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/AggregateScope
+      - $ref: ../components/parameters.yaml#/components/parameters/AggregatePeriodStart
+      - $ref: ../components/parameters.yaml#/components/parameters/AggregatePeriodEnd
+      - $ref: ../components/parameters.yaml#/components/parameters/PageSize
+      - $ref: ../components/parameters.yaml#/components/parameters/PageToken
+    responses:
+      "200":
+        description: AggregateReport resource
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/AggregateReport
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
 
 /findings/{finding_id}:
   parameters:
@@ -7,39 +69,33 @@
   get:
     operationId: getFinding
     tags: [Findings]
-    summary: Get finding
+    summary: GetFinding
     description: |
-      Returns full finding details including evidence and disposition.
-      Requires `finding.view` where capability gating applies.
+      **Standard Get** (AIP-131). Use case **GetFinding**.
+      Resource schema is `Finding` (projection fold of finding_events_store).
     responses:
       "200":
-        description: Finding details
+        description: Finding resource
         content:
           application/json:
             schema:
-              $ref: ../components/schemas.yaml#/components/schemas/FindingView
+              $ref: ../components/schemas.yaml#/components/schemas/Finding
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
       "404":
         $ref: ../components/responses.yaml#/components/responses/NotFound
-  patch:
-    operationId: updateFinding
-    tags: [Findings]
-    summary: Transition finding (FSM)
-    description: |
-      Triggers an FSM state transition. Gated by capability checks and SoD per
-      `finding_lifecycle/transitions.yaml` and `sod_contract.yaml`. Each success
-      appends an immutable event to `finding_events_store` under per-finding
-      chain serialization. System-automatic transitions resulting from the human
-      transition (e.g. Waived→Closed, Verified→Closed) are appended atomically
-      in the same DB transaction (INV-FL-020). Require `Idempotency-Key`
-      (mutating POST; INV-RA-003) for safe retries.
 
-      Valid examples: Open → acknowledge | dismiss | waive | supersede;
-      Acknowledged | Evidence Submitted | Pending Verification | Rejected →
-      dismiss | waive | supersede (RO disposition; INV-FL-006);
-      Pending Verification → approve_remediation | reject_remediation;
-      Rejected → reopen.
+/findings/{finding_id}:transitionFinding:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/FindingId
+  post:
+    operationId: transitionFinding
+    tags: [Findings]
+    summary: TransitionFinding
+    description: |
+      **Custom method** (AIP-136) `:transitionFinding`. Use case **TransitionFinding**.
+      Capability is transition-specific. Returns the `Finding` resource.
+      Requires `Idempotency-Key`.
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
     requestBody:
@@ -47,16 +103,53 @@
       content:
         application/json:
           schema:
-            $ref: ../components/schemas.yaml#/components/schemas/FindingTransition
+            $ref: ../components/schemas.yaml#/components/schemas/FindingTransitionRequest
     responses:
       "200":
-        description: Finding updated
+        description: Finding after transition
         content:
           application/json:
             schema:
-              $ref: ../components/schemas.yaml#/components/schemas/FindingView
+              $ref: ../components/schemas.yaml#/components/schemas/Finding
       "400":
         $ref: ../components/responses.yaml#/components/responses/FsmError
+      "401":
+        $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
+      "404":
+        $ref: ../components/responses.yaml#/components/responses/NotFound
+      "409":
+        $ref: ../components/responses.yaml#/components/responses/Conflict
+
+/findings/{finding_id}:attachEvidence:
+  parameters:
+    - $ref: ../components/parameters.yaml#/components/parameters/FindingId
+  post:
+    operationId: attachEvidence
+    tags: [Findings]
+    summary: AttachEvidence
+    description: |
+      **Custom method** (AIP-136) `:attachEvidence`. Use case **AttachEvidence**.
+      Capability: `evidence.submit`. Returns the `Finding` resource.
+      Requires `Idempotency-Key`.
+    parameters:
+      - $ref: ../components/parameters.yaml#/components/parameters/IdempotencyKey
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas.yaml#/components/schemas/AttachEvidenceRequest
+    responses:
+      "200":
+        description: Finding after evidence attach
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas.yaml#/components/schemas/Finding
+      "400":
+        $ref: ../components/responses.yaml#/components/responses/SchemaError
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
       "403":
@@ -72,22 +165,24 @@
   get:
     operationId: listFindingEvents
     tags: [Findings]
-    summary: List finding events
+    summary: List FindingEvent sub-collection
     description: |
-      Returns the append-only event stream for the finding. Events are immutable
-      and hash-chained (`finding_events_store`).
+      **Standard List** of child `FindingEvent` resources (append-only
+      `finding_events_store` / ERD `events`).
     parameters:
       - $ref: ../components/parameters.yaml#/components/parameters/PageSize
       - $ref: ../components/parameters.yaml#/components/parameters/PageToken
     responses:
       "200":
-        description: Event stream page
+        description: FindingEvent collection page
         content:
           application/json:
             schema:
               $ref: ../components/schemas.yaml#/components/schemas/ListFindingEventsResponse
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/CapabilityDenied
       "404":
         $ref: ../components/responses.yaml#/components/responses/NotFound
 
@@ -97,19 +192,17 @@
   get:
     operationId: getFindingGuidance
     tags: [Guidance]
-    summary: Get finding guidance
+    summary: GetFindingGuidance
     description: |
-      Returns remediation guidance resolved from the policy doctrine revision
-      pinned by the finding's `paired_policy_ref` (not the latest lineage head)
-      via `directives_repository` (`guidance_only`). Never used for evaluation or
-      FSM transitions (gate AA-02). Not a freestanding guidance engine.
+      **Standard Get** of guidance singleton sub-resource.
+      Use case **GetFindingGuidance** (guidance_only doctrine).
     responses:
       "200":
-        description: Guidance payload
+        description: Guidance resource
         content:
           application/json:
             schema:
-              $ref: ../components/schemas.yaml#/components/schemas/GuidanceResponse
+              $ref: ../components/schemas.yaml#/components/schemas/Guidance
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
       "404":

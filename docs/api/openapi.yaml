@@ -4,54 +4,38 @@ info:
   title: Selma API
   version: "docs/standards/VERSION"
   description: |
-    Resource-oriented REST API for **Selma**, a domain-agnostic rule regularity
-    platform. Structure aligns with C4 design freeze ([docs/standards/VERSION](../standards/VERSION))
-    (`docs/c4-model/`).
+    Resource-oriented HTTP surface for **Selma** (`rest_interface` / C4 peer **`api`**).
 
-    ## Resources (ROD)
+    Designed per **[AIP-121 Resource-oriented design](https://google.aip.dev/121)** and
+    **[AIP-136 Custom methods](https://google.aip.dev/136)**:
 
-    | # | Resource | Collection / path | C4 owner | Methods |
-    |---|----------|-------------------|----------|---------|
-    | R1 | Directive | `/directives/{lineage_id}` · `/revisions/{revision}` | `directives_application` | Get, Update, Retire, GetRevision |
-    | R2 | Compilation | `/directives/{lineage_id}/compilations` | `compilation_application` | Create, List |
-    | R3 | Inspection | `/inspections` · `/inspections/{inspection_id}` | `inspections_application` | Create, List, Get |
-    | R3b | Inspection findings | `/inspections/{inspection_id}/findings` | `findings_application` | List |
-    | R4 | Finding | `/findings/{finding_id}` | `findings_application` | Get, Update (FSM) |
-    | R4b | Finding events | `/findings/{finding_id}/events` | `finding_events_store` | List |
-    | R4c | Finding guidance | `/findings/{finding_id}/guidance` | `findings_application` (`guidance_only`) | Get |
-    | R5 | Artifact | `/artifacts` · `/artifacts/{artifact_id}` | `artifacts_repository` | List, Get |
-    | R5b | Conflict resolution | `/artifacts/{artifact_id}/resolutions` | domain `ResolveConflict` + artifacts | Create (human) |
+    - Resources are nouns; hierarchy is acyclic
+    - Prefer **standard methods** Create / Get / List / Update / Delete
+    - **Custom methods** use `POST` (or `GET` when read-only) with `:` + camelCase verb
+    - Same resource schema for Create/Get/Update/List items of a type
+    - Every collection supports Get + List (except true singletons)
+    - Stateless request/response protocol
 
-    **Not freestanding API peers:** conflict *engine*, guidance/analytics *engine*,
-    in-process certification service. Certification (AA-01…AA-09) is offline/CI
-    `certification_tool` writing `artifacts_store` (kind=certification).
+    **This document owns:** path inventory, operationIds (ROD use-case mapping),
+    request/response wire schemas, shared parameters, error envelope shapes,
+    security scheme declaration. Normative behavior lives under `docs/spec/contracts/`.
 
-    ## Conventions
+    ## Resources (nouns)
 
-    - **AuthN:** Bearer JWT (OIDC/OAuth2 preferred). See `components/security.yaml`
-      and `docs/spec/contracts/authorization/authentication.yaml`.
-    - **AuthZ:** Capability + SoD enforced at the `api` gate before use-case
-      dispatch; denials via `DenialAuditPort`.
-    - **Idempotency:** `Idempotency-Key` header required on mutating POSTs
-      (inspections, finding transitions, compilations, conflict resolutions).
-    - **Optimistic concurrency:** Directive writes accept `If-Match` ETag
-      `W/"{lineage_id}:{revision}"`; mismatch → 409.
-    - Uniform error envelope (`Error` schema); capability denials produce audit events.
-    - Pagination: `page_size` / `page_token` (AIP-158 style).
-    - Path Item Objects are grouped by **resource** under `paths/` (one file per
-      resource family). Shared parameters, responses, and schemas live under
-      `components/`. JSON Schema wire types for primary views live in `schemas/`.
-    - Normative behavior: `docs/spec/contracts/`. Structural IDs: `docs/c4-model/`.
+    | # | Resource | Collection | Standard | Custom (AIP-136) | C4 owner |
+    |---|----------|------------|----------|------------------|----------|
+    | R1 | Directive | `/directives` | Create List Get Update Delete(soft) · Get revision | `:fork` `:merge` `:split` `:restore` | `directives_application` |
+    | R2 | Compilation | `/compilations` | Create List Get | — | `compilation_application` |
+    | R3 | Inspection | `/inspections` | Create List Get | — | `inspections_application` |
+    | R4 | Finding | `/findings` | List Get · List events · Get guidance | `:transitionFinding` `:attachEvidence` · collection `:listFindingAggregates` | `findings_application` |
+    | R5 | Artifact | `/artifacts` | List Get | `:reviewConflictArtifact` | `artifacts_repository` |
 
-    ## Path files
+    **Not freestanding resources/peers:** domain `ResolveConflict`, offline
+    `certification_tool`, pipeline stage names, `DrainOutbox`.
 
-    | File | Resource | URI prefix |
-    |------|----------|------------|
-    | `paths/directives.yaml` | R1 Directive | `/directives/{lineage_id}*` |
-    | `paths/compilations.yaml` | R2 Compilation | `/directives/{lineage_id}/compilations` |
-    | `paths/inspections.yaml` | R3 Inspection | `/inspections*` |
-    | `paths/findings.yaml` | R4 Finding | `/findings/{finding_id}*` |
-    | `paths/artifacts.yaml` | R5 Artifact | `/artifacts*` |
+    ## operationId = ROD use case (camelCase)
+
+    `createDirective` ↔ `CreateDirective`, `transitionFinding` ↔ `TransitionFinding`, …
 
   contact:
     name: Selma Team
@@ -70,36 +54,54 @@ security:
 
 tags:
   - name: Directives
-    description: Dual-document directive CRUD and lifecycle (`directives_application`)
+    description: Directive resource (`directives_application`)
   - name: Compilations
-    description: Hermetic CG-IR compile under a directive (`compilation_application`)
+    description: Compilation / CgIrSnapshot resource (`compilation_application`)
   - name: Inspections
-    description: Target inspection pipeline (`inspections_application`)
+    description: Inspection resource (`inspections_application`)
   - name: Findings
-    description: Finding lifecycle, events, and projections (`findings_application`)
+    description: Finding resource (`findings_application`)
   - name: Guidance
-    description: Finding guidance sub-resource (`guidance_only` doctrine reads)
+    description: Guidance singleton under Finding
   - name: Artifacts
-    description: Write-once evidence, conflict, and certification blobs (`artifacts_repository`)
+    description: Write-once Artifact resource (`artifacts_repository`)
 
 paths:
+  /directives:
+    $ref: "paths/directives.yaml#/~1directives"
   /directives/{lineage_id}:
     $ref: "paths/directives.yaml#/~1directives~1{lineage_id}"
   /directives/{lineage_id}/revisions/{revision}:
     $ref: "paths/directives.yaml#/~1directives~1{lineage_id}~1revisions~1{revision}"
+  /directives/{lineage_id}:fork:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}:fork"
+  /directives/{lineage_id}:merge:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}:merge"
+  /directives/{lineage_id}:split:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}:split"
+  /directives/{lineage_id}:restore:
+    $ref: "paths/directives.yaml#/~1directives~1{lineage_id}:restore"
 
-  /directives/{lineage_id}/compilations:
-    $ref: "paths/compilations.yaml#/~1directives~1{lineage_id}~1compilations"
+  /compilations:
+    $ref: "paths/compilations.yaml#/~1compilations"
+  /compilations/{hash}:
+    $ref: "paths/compilations.yaml#/~1compilations~1{hash}"
 
   /inspections:
     $ref: "paths/inspections.yaml#/~1inspections"
   /inspections/{inspection_id}:
     $ref: "paths/inspections.yaml#/~1inspections~1{inspection_id}"
-  /inspections/{inspection_id}/findings:
-    $ref: "paths/inspections.yaml#/~1inspections~1{inspection_id}~1findings"
 
+  /findings:
+    $ref: "paths/findings.yaml#/~1findings"
+  /findings:listFindingAggregates:
+    $ref: "paths/findings.yaml#/~1findings:listFindingAggregates"
   /findings/{finding_id}:
     $ref: "paths/findings.yaml#/~1findings~1{finding_id}"
+  /findings/{finding_id}:transitionFinding:
+    $ref: "paths/findings.yaml#/~1findings~1{finding_id}:transitionFinding"
+  /findings/{finding_id}:attachEvidence:
+    $ref: "paths/findings.yaml#/~1findings~1{finding_id}:attachEvidence"
   /findings/{finding_id}/events:
     $ref: "paths/findings.yaml#/~1findings~1{finding_id}~1events"
   /findings/{finding_id}/guidance:
@@ -109,8 +111,8 @@ paths:
     $ref: "paths/artifacts.yaml#/~1artifacts"
   /artifacts/{artifact_id}:
     $ref: "paths/artifacts.yaml#/~1artifacts~1{artifact_id}"
-  /artifacts/{artifact_id}/resolutions:
-    $ref: "paths/artifacts.yaml#/~1artifacts~1{artifact_id}~1resolutions"
+  /artifacts/{artifact_id}:reviewConflictArtifact:
+    $ref: "paths/artifacts.yaml#/~1artifacts~1{artifact_id}:reviewConflictArtifact"
 
 components:
   securitySchemes:
