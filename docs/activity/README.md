@@ -29,9 +29,9 @@ Read with [`contracts/`](../spec/contracts/) for the full behavioral contracts.
 
 | Activity Diagram | Corresponding State Machine |
 | :--- | :--- |
-| `act_001_inspection_pipeline.puml` | [`sm_004_inspection_pipeline.puml`](../state/sm_004_inspection_pipeline.puml) |
-| `act_002_finding_disposition.puml` | [`sm_001_finding_lifecycle.puml`](../state/sm_001_finding_lifecycle.puml) |
-| `act_003_directive_amendment.puml` | [`sm_002_directive_lifecycle.puml`](../state/sm_002_directive_lifecycle.puml) + [`sm_003_compilation_pipeline.puml`](../state/sm_003_compilation_pipeline.puml) |
+| `act_001_inspection_pipeline.puml` | [`state_machine_004_inspection_pipeline.puml`](../state/state_machine_004_inspection_pipeline.puml) |
+| `act_002_finding_disposition.puml` | [`state_machine_001_finding_lifecycle.puml`](../state/state_machine_001_finding_lifecycle.puml) |
+| `act_003_directive_amendment.puml` | [`state_machine_002_directive_lifecycle.puml`](../state/state_machine_002_directive_lifecycle.puml) + [`state_machine_003_compilation_pipeline.puml`](../state/state_machine_003_compilation_pipeline.puml) |
 
 ## Rendering
 

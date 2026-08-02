@@ -6,7 +6,7 @@ contract_id: "conflict.detection"
 schema_version: "1.0.0"
 design_contract_version: "1.1.0"
 owner_component: "compilation_application"
-state_machine_ref: "../../state/sm_005_conflict_resolution.puml"
+state_machine_ref: "../../state/state_machine_005_conflict_resolution.puml"
 description: >
   Defines when conflicts exist between rules. Conflicts are identified
   through two mechanisms: declared conflicts (compile-time) and outcome

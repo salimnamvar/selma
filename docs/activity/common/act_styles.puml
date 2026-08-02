@@ -59,7 +59,7 @@ skinparam arrow {
   FontSize                   10
 }
 
-' Semantic palette (matching sm_styles.puml):
+' Semantic palette (matching state_styles.puml):
 '   System action          teal       #1B7A6E
 '   Human action           blue       #3B7DD8
 '   Decision / branch      amber      #EBCB8B

@@ -1,0 +1,65 @@
+@startuml state_machine_007_authorization
+' ============================================================
+' Title:     State Machine 007 Capability Authorization
+' Source:    docs/spec/contracts/authorization/capabilities.yaml
+'            docs/spec/contracts/authorization/role_matrix.yaml
+'            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
+' C4:        api (ingress gate); denials → finding_events_repository → finding_events_store
+'            segregation of duties also at findings_application state machine; ResolveConflict (domain · not peer)
+' Package:   rest_interface / CapabilityEnforcer (C4: api)
+' Contract:  1.1.0
+' ============================================================
+
+title **State Machine 007 — Capability Authorization**\nC4: api · denials → finding_events_repository → finding_events_store\n<size:12><i>authenticate · capability · segregation of duties · stage · allow | deny+audit</i></size>
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+[*] --> RequestReceived : <b>AuthorizationRequestReceived</b>\nactor: any authenticated or unauthenticated caller\ncommand: any mutating or gated read
+
+state "Request\nReceived" as RequestReceived $STATE_COLOR_PENDING : **entry** raw request at interface\n**allowed** authenticate\n**forbidden** domain mutation
+state "Identity\nVerified" as IdentityVerified $STATE_COLOR_PROCESS : **entry** authenticated actor\nrole bound (Regulatory Official | Compliance Representative | System | AI agent)\n**allowed** matrix lookup\n**forbidden** anonymous dispatch
+
+' ---------- Hierarchical: access evaluation pipeline ----------
+state "Evaluate Access" as EvaluateAccess $STATE_COLOR_PROCESS {
+  [*] --> CapabilityEvaluated
+  state "Capability\nEvaluated" as CapabilityEvaluated $STATE_COLOR_PROCESS : **entry** matrix role × capability\n**allowed** PASS → segregation of duties or stage\n**forbidden** implicit grant\nmatrix: Official directive.* · finding.dismiss/waive/\napprove/reject/supersede · conflict.resolve\nCompliance: inspection.* · acknowledge · evidence\nBoth: finding.view · analytics.view (findings read models)
+  state "Segregation of Duties\nEvaluated" as SegregationOfDutiesEvaluated $STATE_COLOR_PENDING : **entry** only finding.waive or\nfinding.approve_remediation\n**allowed** creator provenance check ·\nevidence submitter check\n**forbidden** skip segregation of duties on those actions
+  state "Stage Gate\nChecked" as StageGateChecked $STATE_COLOR_PROCESS : **entry** enforcement point match\n1 ingress · 2 directive write lock\n3 inspection entry · 4 finding state machine\n5 conflict resolution\n**forbidden** bypass stage
+  state "Allowed" as Allowed $STATE_COLOR_STORE : **entry** proceed to domain state machine or pipeline\n**allowed** dispatch command\n**forbidden** skip audit on later deny paths
+
+  CapabilityEvaluated --> SegregationOfDutiesEvaluated : <b>AuthorizationSegregationOfDutiesRequired</b>\nactor: System\n[actionRequiresSegregationOfDuties]\naction ∈ {finding.waive, finding.approve_remediation}
+  CapabilityEvaluated --> StageGateChecked : <b>AuthorizationSegregationOfDutiesSkipped</b>\nactor: System\n[actionDoesNotRequireSegregationOfDuties]
+  SegregationOfDutiesEvaluated --> StageGateChecked : <b>AuthorizationSegregationOfDutiesPassed</b>\nactor: System\n[waiveImpliesActorNotCreator]\n[approveImpliesActorNotEvidenceSubmitter]
+  StageGateChecked --> Allowed : <b>AuthorizationAllowed</b>\nactor: System
+  Allowed --> [*] : <b>AuthorizationDispatched</b>\nactor: System
+}
+
+' ---------- Hierarchical: hard-deny path ----------
+state "Deny Path" as DenyPath $STATE_COLOR_GATE {
+  [*] --> Denied
+  state "Denied" as Denied $STATE_COLOR_GATE : **entry** 403 CapabilityDenied\n**allowed** audit only\n**forbidden** partial write · compensating success event\n· degraded-mode · auto-escalation
+  state "Denial\nAudited" as DenialAudited $STATE_COLOR_TERMINAL : **entry** append-only denial record\n{actor, capability, action,\noutcome:denied, timestamp, reason}\n**allowed** return error to caller\n**forbidden** mutate domain aggregate
+  state "Domain State\nUnchanged" as DomainUnchanged $STATE_COLOR_GATE : **entry** hard reject complete **terminal**\n**allowed** caller decides next action\n**forbidden** silent retry as success
+
+  Denied --> DenialAudited : <b>AuthorizationDenialAudited</b>\nactor: System\ncommand: append denial audit
+  DenialAudited --> DomainUnchanged : <b>AuthorizationDomainUnchanged</b>\nactor: System
+  DomainUnchanged --> [*] : <b>Finalized</b>\nactor: System
+}
+
+RequestReceived --> IdentityVerified : <b>AuthorizationIdentityVerified</b>\nactor: System (api)\ncommand: bind identity + role
+RequestReceived --> DenyPath : <b>AuthorizationDenied</b>\nactor: System\n/ reasonUnauthenticated()
+
+IdentityVerified --> EvaluateAccess : <b>AuthorizationCapabilityChecked</b>\nactor: System\ncommand: matrix lookup
+
+' External FAIL exits from evaluation substates into DenyPath
+CapabilityEvaluated --> Denied : <b>AuthorizationDenied</b>\nactor: System\n/ capabilityNotGrantedToRole()
+SegregationOfDutiesEvaluated --> Denied : <b>AuthorizationDenied</b>\nactor: System\n/ segregationOfDutiesConflict()
+StageGateChecked --> Denied : <b>AuthorizationDenied</b>\nactor: System\n/ stageCapabilityMismatch()
+
+EvaluateAccess --> [*] : <b>AuthorizationDispatched</b>\nactor: System
+DenyPath --> [*] : <b>Finalized</b>\nactor: System
+
+footer State Machine 007 · Contract 1.1.0 · api · Selma
+
+@enduml

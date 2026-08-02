@@ -6,7 +6,7 @@ contract_id: "finding_lifecycle.states"
 schema_version: "1.0.0"
 design_contract_version: "1.1.0"
 owner_component: "findings_application"
-state_machine_ref: "../../state/sm_001_finding_lifecycle.puml"
+state_machine_ref: "../../state/state_machine_001_finding_lifecycle.puml"
 description: >
   Defines the 11 states of the Finding FSM. Each state has a clear
   semantics, terminal flag, and disposition mapping. The FSM governs

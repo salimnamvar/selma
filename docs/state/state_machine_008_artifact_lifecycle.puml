@@ -1,0 +1,60 @@
+@startuml state_machine_008_artifact_lifecycle
+' ============================================================
+' Title:     State Machine 008 Artifact Lifecycle
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+'            docs/spec/contracts/data_stores/compiled_rules_store.yaml
+' C4:        artifacts_repository → artifacts_store
+'            producers: compilation_application | inspections_application |
+'            findings_application | ResolveConflict (domain) | certification_tool (offline)
+' Package:   artifacts_infrastructure
+' Contract:  1.1.0
+' ============================================================
+
+title **State Machine 008 — Artifact Lifecycle**\nC4: artifacts_repository → artifacts_store\n<size:12><i>build · publish · reference · optional replicate · write-once</i></size>
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+[*] --> Building : <b>ArtifactBuildStarted</b>\nactor: System (producer)\ncommand: begin artifact build\nproducers: compilation_application | inspections_application |\nResolveConflict | certification_tool | findings_application
+
+state "Building" as Building $STATE_COLOR_PENDING : **entry** transient workspace\n**allowed** compute hashes · validate\n**forbidden** durable truth claim\n**not** durable until Published
+state "Validated" as Validated $STATE_COLOR_PROCESS : **entry** integrity checks OK\nhashes computed\n**allowed** content-addressed storage put / write-once\n**forbidden** skip integrity
+state "Rejected\nBuild" as RejectedBuild $STATE_COLOR_GATE : **entry** validation failed **terminal**\n**allowed** producer retry as new build\n**forbidden** durable artifact
+
+' ---------- Orthogonal: reference lifecycle ‖ audit replication ----------
+state "Durable Artifact" as Durable $STATE_COLOR_STORE {
+  state "Reference Region" as RefRegion {
+    [*] --> Published
+    state "Published" as Published $STATE_COLOR_STORE : **entry** content-addressed or write-once committed\n**allowed** pin · consumers\n**forbidden** in-place update · delete compiled rules intermediate representation/events
+    state "Active\nReference" as ActiveReference $STATE_COLOR_RESOURCE : **entry** referenced by inspections_application\nor human workflows\n**allowed** supersede selection\n**forbidden** mutate bytes
+    state "Superseded\nReference" as SupersededReference $STATE_COLOR_TERMINAL : **entry** newer snapshot supersedes selection\nold bytes remain\n**allowed** archive · audit read\n**forbidden** rewrite content
+
+    Published --> ActiveReference : <b>ArtifactReferenced</b>\nactor: System | human workflow\ncommand: reference artifact
+    ActiveReference --> SupersededReference : <b>ArtifactSuperseded</b>\nactor: System\ncommand: newer compiled rules intermediate representation / new inspection wins selection
+  }
+  --
+  state "Replication Region" as ReplRegion {
+    [*] --> NotReplicated
+    state "Not\nReplicated" as NotReplicated $STATE_COLOR_PENDING : **entry** no optional_export copy yet\n**allowed** async replicate\n**forbidden** claim replica exists
+    state "Replicated" as Replicated $STATE_COLOR_STORE : **entry** optional_export append-only copy\n**allowed** retain\n**forbidden** mutate replica as source of truth rewrite
+
+    NotReplicated --> Replicated : <b>ArtifactReplicated</b>\nactor: System\ncommand: append-only copy to optional_export
+  }
+}
+
+state "Archived" as Archived $STATE_COLOR_TERMINAL : **entry** long-term retention **terminal**\n**allowed** read-only · optional_export copy\n**forbidden** delete before retention policy
+
+Building --> Validated : <b>ArtifactValidated</b>\nactor: System\ncommand: validate hashes / schema
+Building --> RejectedBuild : <b>ArtifactBuildRejected</b>\nactor: System\n/ noDurableArtifact()
+RejectedBuild --> [*] : <b>Finalized</b>\nactor: System
+
+Validated --> Durable : <b>ArtifactPublished</b>\nactor: System (adapter)\ncommand: content-addressed publish\n[identicalContentIdempotentSameHash]
+
+' Exit composite when reference region reaches retention
+SupersededReference --> Archived : <b>ArtifactArchived</b>\nactor: System\ncommand: apply retention (§3.5 defaults)
+
+Archived --> [*] : <b>Finalized</b>\nactor: System
+
+footer State Machine 008 · Contract 1.1.0 · artifacts_repository · Selma
+
+@enduml

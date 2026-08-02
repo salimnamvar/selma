@@ -1,0 +1,61 @@
+@startuml state_machine_011_machine_interaction
+' ============================================================
+' Title:     State Machine 011 — Machine Interaction Overview
+' Source:    docs/spec/contracts/ (all machines) · handoffs only
+' C4:        api | application peers | ResolveConflict (domain) | certification_tool (offline)
+' Package:   cross-machine handoffs only
+' Contract:  1.1.0
+' Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
+' ============================================================
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+title **State Machine 011 — Machine Interaction Overview**\nC4: api | application peers | ResolveConflict (domain) | certification_tool (offline)\n<size:12><i>authorization → domain machines · compile · inspect · findings · certification · artifacts</i></size>
+
+' Colors follow C4 peer family (see state_styles.puml palette)
+state "State Machine 007\nCapability Authorization" as Authorization $STATE_COLOR_GATE : C4: api (gate)\ningress · capability matrix ·\nsegregation of duties · stage\nallow | deny + audit
+state "State Machine 002\nDirective Lifecycle" as DirectiveLifecycle $STATE_COLOR_RESOURCE : C4: directives_application\nDraft · Active · Deprecated · Superseded
+state "State Machine 003\nCompilation Pipeline" as Compilation $STATE_COLOR_PENDING : C4: compilation_application (hermetic)\nhermetic gates · content-addressed publish
+state "State Machine 010\nCompiled Rules Hash" as CompiledRulesHash $STATE_COLOR_PROCESS : C4: compilation_application\ndual-hash · reuse (detail of 003)
+state "State Machine 004\nInspection Pipeline" as Inspection $STATE_COLOR_PROCESS : C4: inspections_application\nsix pure stages · FindingOpenPort
+state "State Machine 001\nFinding Lifecycle" as FindingLifecycle $STATE_COLOR_RESOURCE : C4: findings_application\n**normative** · eleven states ·\nsegregation of duties
+state "State Machine 009\nHybrid Logical Clock" as HybridLogicalClock $STATE_COLOR_RESOURCE : C4: finding_events_repository\n(pt, logical_counter, node_id) advance
+state "State Machine 005\nConflict Resolution" as ConflictResolution $STATE_COLOR_DOMAIN : package: conflicts_domain\nResolveConflict (not C4 peer)
+state "State Machine 006\nArchitectural Certification" as Certification $STATE_COLOR_EXTERNAL : non-peer: certification_tool\narchitectural audit gates 01…09 · offline
+state "State Machine 008\nArtifact Lifecycle" as ArtifactLifecycle $STATE_COLOR_STORE : C4: artifacts_repository\nwrite-once · four kinds
+
+[*] --> Authorization : <b>MutatingRequestReceived</b>
+Authorization --> DirectiveLifecycle : <b>AuthorizationAllowedDirective</b>\n[capability directive.*]
+Authorization --> Inspection : <b>AuthorizationAllowedInspection</b>\n[capability inspection.*]
+Authorization --> FindingLifecycle : <b>AuthorizationAllowedFinding</b>\n[capability finding.* | evidence.*]
+Authorization --> ConflictResolution : <b>AuthorizationAllowedConflict</b>\n[capability conflict.resolve]
+Authorization --> [*] : <b>AuthorizationDenied</b>\nDomainUnchanged
+
+DirectiveLifecycle --> Compilation : <b>CompileRequested</b>\npublish / identity operation
+Compilation --> CompiledRulesHash : <b>HashDetailEntered</b>
+CompiledRulesHash --> Compilation : <b>HashDetailReturned</b>\nsnapshot hash ready
+Compilation --> ArtifactLifecycle : <b>CompiledRulesPublished</b>
+DirectiveLifecycle --> ArtifactLifecycle : <b>DirectiveRecorded</b>
+
+Inspection --> Compilation : <b>CompiledRulesPinned</b>\npin compiled_rules_snapshot_hash
+Inspection --> FindingLifecycle : <b>FindingsBirthed</b>\nFindingCreated on Report
+Inspection --> ArtifactLifecycle : <b>InspectionArtifactPublished</b>\nsnapshot + trace
+Inspection --> ConflictResolution : <b>ConflictDetected</b>\nmulti-rule fire on frozen compiled rules
+
+FindingLifecycle --> HybridLogicalClock : <b>FindingEventAppended</b>\nevery success event
+HybridLogicalClock --> FindingLifecycle : <b>HybridLogicalClockTagged</b>\ntag logical clock
+FindingLifecycle --> ArtifactLifecycle : <b>FindingEventAppended</b>\nappend finding_events_store
+
+ConflictResolution --> ArtifactLifecycle : <b>ConflictArtifactPublished</b>
+Compilation --> ConflictResolution : <b>ConflictDetected</b>\ncompile-time conflict map
+
+Certification --> ArtifactLifecycle : <b>CertificationArtifactPublished</b>
+Certification --> Compilation : <b>CertificationSamplesRead</b>\nread compiled rules samples
+Certification --> FindingLifecycle : <b>CertificationSamplesRead</b>\nsegregation of duties / mediated-feedback tests\n(no production mutation)
+
+ArtifactLifecycle --> [*] : <b>ArtifactRetained</b>\narchived / retained
+
+footer State Machine 011 · Contract 1.1.0 · machine interaction overview · Selma
+
+@enduml

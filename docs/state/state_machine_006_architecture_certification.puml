@@ -1,0 +1,79 @@
+@startuml state_machine_006_architecture_certification
+' ============================================================
+' Title:     State Machine 006 Architectural Certification
+' Source:    docs/spec/contracts/certification/gates.yaml (AA-01 … AA-09)
+' C4:        certification_tool (offline · not peer) → artifacts_repository → artifacts_store
+' Package:   certification_tool (offline)
+' Contract:  1.1.0
+' ============================================================
+
+title **State Machine 006 — Architectural Certification**\nC4: certification_tool (offline · not peer) → artifacts_repository → artifacts_store\n<size:12><i>AA-01…AA-09 sequential gates · seal artifact</i></size>
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+[*] --> Triggered : <b>CertificationTriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: start certification run\n/ startCertification()
+
+state "Triggered" as Triggered $STATE_COLOR_PENDING : **entry** certification run_id assigned\n**allowed** collect evidence\n**forbidden** skip gates
+state "Collecting\nEvidence" as CollectingEvidence $STATE_COLOR_PROCESS : **entry** load compiled rules intermediate representation samples\nevent stream excerpts\ncompiler assertion output\nsource path inventory\n**forbidden** mutate domain state machines
+
+' ---------- Hierarchical composite: sequential AA gates ----------
+state "Validating Gates" as ValidatingGates $STATE_COLOR_PROCESS {
+  [*] --> AA01
+  state "AA-01\nMediated Feedback" as AA01 $STATE_COLOR_PROCESS : **entry** analytics has no write path\nto compiled rules intermediate representation / Finding state machine\nmethod: integration (no finding→compile)
+  state "AA-02\nDeclarative Governance" as AA02 $STATE_COLOR_PROCESS : **entry** doctrine guidance_only via\ndirectives_repository; absent from\nevaluation/state machine paths\nmethod: static analysis + path assert
+  state "AA-03\nEvaluator Purity" as AA03 $STATE_COLOR_PROCESS : **entry** no IO / randomness / env\nmethod: AST / sandbox purity
+  state "AA-04\nSegregation of Duties" as AA04 $STATE_COLOR_PROCESS : **entry** waive + approve segregation of duties tests\nmethod: integration segregation of duties corpus
+  state "AA-05\nConflict Determinism" as AA05 $STATE_COLOR_PROCESS : **entry** byte-identical replay\nmethod: conflict replay corpus
+  state "AA-06\nDiscriminator Completeness" as AA06 $STATE_COLOR_PROCESS : **entry** invalid type/config corpus\nmethod: discriminator rejection set
+  state "AA-07\nPortable Serialization" as AA07 $STATE_COLOR_PROCESS : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
+  state "AA-08\nHermeticity Completeness" as AA08 $STATE_COLOR_PROCESS : **entry** python_hash_seed · locale\nordered collections · runtime_preimage\nmethod: pin assert + static analysis
+  state "AA-09\nEvent Chain Integrity" as AA09 $STATE_COLOR_PROCESS : **entry** chain_hash + hybrid logical clock monotonicity\nretired_nodes fence\nmethod: offline chain tool (finding_events_store)
+
+  AA01 --> AA02 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa01()
+  AA02 --> AA03 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa02()
+  AA03 --> AA04 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa03()
+  AA04 --> AA05 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa04()
+  AA05 --> AA06 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa05()
+  AA06 --> AA07 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa06()
+  AA07 --> AA08 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa07()
+  AA08 --> AA09 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa08()
+  AA09 --> [*] : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa09()
+}
+
+state "Passed" as Passed $STATE_COLOR_STORE : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
+state "Failed" as Failed $STATE_COLOR_GATE : **entry** one or more gates red\n**allowed** write fail evidence\n**forbidden** certify
+state "Rejected" as Rejected $STATE_COLOR_GATE : **entry** evidence incomplete\nor non-reproducible run\n**allowed** remediate then re-run\n**forbidden** certify
+state "Certified" as Certified $STATE_COLOR_STORE : **entry** certification artifact sealed\n**allowed** archive · optional long-term export\n**forbidden** alter gate report
+state "Remediation\nRequired" as RemediationRequired $STATE_COLOR_PENDING : **entry** engineering fixes needed\n**allowed** new commit / rebuild\n**forbidden** mutate compiled rules snapshot · Finding state machine · Directive Graph
+state "Archived" as Archived $STATE_COLOR_TERMINAL : **entry** immutable retention **terminal**\n**allowed** read-only audit\n**forbidden** rewrite
+
+Triggered --> CollectingEvidence : <b>CertificationEvidenceCollecting</b>\nactor: System (certification_tool)
+CollectingEvidence --> ValidatingGates : <b>CertificationEvidenceReady</b>\nactor: System
+CollectingEvidence --> Rejected : <b>CertificationRejected</b>\nactor: System\n/ incompleteCorpus()
+
+' Completion of composite (all AA gates PASS)
+ValidatingGates --> Passed : <b>CertificationGatesComplete</b>\nactor: System
+
+' External exits from nested substates (any FAIL leaves composite)
+AA01 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa01()
+AA02 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa02()
+AA03 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa03()
+AA04 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa04()
+AA05 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa05()
+AA06 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa06()
+AA07 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa07()
+AA08 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa08()
+AA09 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa09()
+
+Passed --> Certified : <b>CertificationSealed</b>\nactor: System\ncommand: write-once pass evidence + gate report
+Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: US-GA-001
+Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nactor: System
+
+Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async optional long-term export
+RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: new certification run_id
+Archived --> [*] : <b>Finalized</b>\nactor: System
+
+footer State Machine 006 · Contract 1.1.0 · certification_tool · Selma
+
+@enduml

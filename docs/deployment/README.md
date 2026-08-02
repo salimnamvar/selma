@@ -153,7 +153,7 @@ Append path uses Hybrid Logical Clock ordering (`INV-ES-003` in `finding_events_
 2. **DB watermark** — on startup, effective state = `max(PVC, DB_watermark)`; pure PVC-only without watermark is non-conformant when PVC may be stale.
 3. **Fence and retire** — corrupted PVC → retire old `node_id`; reject appends from retired nodes.
 
-HLC state machine detail: [`../state/sm_009_hlc_clock.puml`](../state/sm_009_hlc_clock.puml).
+HLC state machine detail: [`../state/state_machine_009_hybrid_logical_clock.puml`](../state/state_machine_009_hybrid_logical_clock.puml).
 
 #### Object store immutability
 

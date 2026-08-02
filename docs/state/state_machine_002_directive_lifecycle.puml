@@ -1,6 +1,6 @@
-@startuml sm_002_directive_lifecycle
+@startuml state_machine_002_directive_lifecycle
 ' ============================================================
-' Title:     SM-002 Directive Lifecycle
+' Title:     State Machine 002 Directive Lifecycle
 ' Source:    docs/spec/contracts/directive/lifecycle.yaml
 '            docs/spec/contracts/directive/identity.yaml
 '            docs/spec/contracts/directive/amendment.yaml
@@ -10,24 +10,25 @@
 ' Contract:  1.1.0
 ' ============================================================
 
-title **SM-002 — Directive Lifecycle**\nC4: api → directives_application → directives_repository → directives_store\n<size:12><i>Draft · Active · Deprecated · Superseded · identity spawn</i></size>
+title **State Machine 002 — Directive Lifecycle**\nC4: api → directives_application → directives_repository → directives_store\n<size:12><i>Draft · Active · Deprecated · Superseded · identity spawn</i></size>
 
-!include ./common/sm_styles.puml
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
 
 [*] --> Draft : <b>DirectiveCreated</b>\nactor: Regulatory Official\ncommand: directive.create\n[capability: directive.create]\n/ assignLineageId()\n/ executionIdEqualsLineage()\n/ authoredByActor()\nstory: US-CP-001
 
-state "Draft" as Draft #B9770E : **entry** mutable drafting\n**allowed** modify · publish compile\n**forbidden** retire · fork · merge · split\n**identity** lineage_id + execution_id fixed
-state "Active" as Active #2C6E49 : **entry** published & operational in CG-IR\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split\n**forbidden** create (new root uses Draft)
-state "Deprecated" as Deprecated #4A4A4A : **entry** retired / absorbed parent\n**allowed** restore only\n**forbidden** fork · merge · split · modify body\nCG-IR nodes marked deprecated
-state "Superseded" as Superseded #4A4A4A : **entry** replaced by successor\n**allowed** read-only audit trail\n**forbidden** restore without successor governance\nmetadata.migration.superseded_by required
+state "Draft" as Draft $STATE_COLOR_PENDING : **entry** mutable drafting\n**allowed** modify · publish compile\n**forbidden** retire · fork · merge · split\n**identity** lineage_id + execution_id fixed
+state "Active" as Active $STATE_COLOR_STORE : **entry** published & operational in compiled rules intermediate representation\n**allowed** modify · retire · supersede\n**allowed** fork · merge · split\n**forbidden** create (new root uses Draft)
+state "Deprecated" as Deprecated $STATE_COLOR_TERMINAL : **entry** retired / absorbed parent\n**allowed** restore only\n**forbidden** fork · merge · split · modify body\ncompiled rules nodes marked deprecated
+state "Superseded" as Superseded $STATE_COLOR_TERMINAL : **entry** replaced by successor\n**allowed** read-only audit trail\n**forbidden** restore without successor governance\nmetadata.migration.superseded_by required
 
 ' ---------- Hierarchical composite: identity operations ----------
-state "Identity Spawn" as IdentitySpawn #1B7A6E {
+state "Identity Spawn" as IdentitySpawn $STATE_COLOR_PROCESS {
   ' Initial required (STM-026); deep targets Fork/Merge/Split override on entry
   [*] --> ForkChildren
-  state "Fork Children\n(spawn)" as ForkChildren #1B7A6E : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
-  state "Merge Result\n(spawn)" as MergeResult #1B7A6E : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
-  state "Split Children\n(spawn)" as SplitChildren #1B7A6E : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
+  state "Fork Children\n(spawn)" as ForkChildren $STATE_COLOR_PROCESS : **entry** 2 new execution_ids\nshared lineage_id\nlineage.operation = fork\nparent → Deprecated\nchildren enter Draft
+  state "Merge Result\n(spawn)" as MergeResult $STATE_COLOR_PROCESS : **entry** binary merge only (v8.2.x)\nlineage_id = MIN(parents) lex\nexecution_id = lineage_id + "-M" + SHA-256(...)[0:16]\nboth parents → Deprecated\nchild enters Draft
+  state "Split Children\n(spawn)" as SplitChildren $STATE_COLOR_PROCESS : **entry** N new execution_ids\nshared lineage_id\nlineage.operation = split\nparent → Deprecated\nchildren enter Draft
 }
 
 ' ---------- Internal revisions (STM-018 / STM-035: no re-entry) ----------
@@ -35,9 +36,9 @@ Draft : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.
 Active : <b>DirectiveRevised</b>\nactor: Regulatory Official\ncommand: directive.modify (revision)\n[capability: directive.modify]\n[exclusiveWriteLockAndCompileSuccess]\n/ recordRevision()\n/ idsUnchanged()\nstory: US-CP-003
 
 ' ---------- Status transitions ----------
-Draft --> Active : <b>DirectivePublished</b>\nactor: Regulatory Official + System\ncommand: directive.modify (publish)\n[capability: directive.modify]\n[hermeticCompileSuccess]\n/ publishCgIrSnapshot()\nstory: US-CP-001 / US-CP-003
+Draft --> Active : <b>DirectivePublished</b>\nactor: Regulatory Official + System\ncommand: directive.modify (publish)\n[capability: directive.modify]\n[hermeticCompileSuccess]\n/ publishCompiledRulesSnapshot()\nstory: US-CP-001 / US-CP-003
 
-Active --> Deprecated : <b>DirectiveRetired</b>\nactor: Regulatory Official\ncommand: directive.retire\n[capability: directive.retire]\n/ recordReason()\n/ markCgIrDeprecated()\nstory: US-DL-001
+Active --> Deprecated : <b>DirectiveRetired</b>\nactor: Regulatory Official\ncommand: directive.retire\n[capability: directive.retire]\n/ recordReason()\n/ markCompiledRulesDeprecated()\nstory: US-DL-001
 Active --> Superseded : <b>DirectiveSuperseded</b>\nactor: Regulatory Official\ncommand: directive.modify (supersede)\n[capability: directive.modify]\n[supersededByActiveOrDraftId]\n[successorCompileValidated]\n§2.2.4
 
 Deprecated --> Draft : <b>DirectiveRestored</b>\nactor: Regulatory Official\ncommand: directive.restore\n[capability: directive.restore]\n/ copyTargetRevision()\n/ preserveLineageId()\n[must recompile to re-activate]\nstory: US-DL-001
@@ -54,6 +55,6 @@ SplitChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncomman
 ' Stable sink: Superseded has no outgoing business edges → Final (STM-024)
 Superseded --> [*] : <b>Finalized</b>\nactor: System
 
-footer SM-002 · Contract 1.1.0 · directives_application · Selma
+footer State Machine 002 · Contract 1.1.0 · directives_application · Selma
 
 @enduml

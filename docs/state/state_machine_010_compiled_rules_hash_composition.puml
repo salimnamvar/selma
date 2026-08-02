@@ -1,0 +1,75 @@
+@startuml state_machine_010_compiled_rules_hash_composition
+' ============================================================
+' Title:     State Machine 010 Compiled Rules Hash Composition Composition
+' Source:    docs/spec/contracts/compilation/pipeline.yaml
+'            docs/spec/contracts/compilation/hermetic_boundary.yaml
+' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
+' Package:   compiled_rules_application (detail of State Machine 003)
+' Contract:  1.1.0
+' ============================================================
+
+title **State Machine 010 — compiled rules intermediate representation Hash Composition**\nC4: compilation_application → compiled_rules_repository → compiled_rules_store\n<size:12><i>dual-hash · local identity · content-addressed storage dedup · compiled_at excluded</i></size>
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+[*] --> NodeBodyLoaded : <b>HashChainStarted</b>\nactor: System (compilation_application)\ncommand: load semantic_body + presentation_body
+
+state "Node Body\nLoaded" as NodeBodyLoaded $STATE_COLOR_PENDING : **entry** semantic_body + presentation_body\n**allowed** enter DualHash\n**forbidden** neighbor embedding
+
+' ---------- Orthogonal dual-hash (AND-decomposition) ----------
+state "Dual Hash" as DualHash $STATE_COLOR_PROCESS {
+  state "Semantic Region" as SemRegion {
+    [*] --> SemanticHashComputed
+    state "Semantic Hash\nComputed" as SemanticHashComputed $STATE_COLOR_PROCESS : **entry** SHA-256(canonical_json(semantic_body))\n**forbidden** include presentation fields
+    SemanticHashComputed --> [*] : <b>SemanticHashReady</b>\nactor: System
+  }
+  --
+  state "Presentation Region" as PresRegion {
+    [*] --> PresentationHashComputed
+    state "Presentation Hash\nComputed" as PresentationHashComputed $STATE_COLOR_PROCESS : **entry** SHA-256(canonical_json(presentation_body))\n**forbidden** alter semantic_hash
+    PresentationHashComputed --> [*] : <b>PresentationHashReady</b>\nactor: System
+  }
+}
+
+state "Check Semantic\nReuse" as CheckSemanticReuse $STATE_COLOR_PENDING : **entry** compare prior snapshot node hashes\n**allowed** reuse or recompute branch\n**forbidden** force full rebuild when semantic matches
+state "Reuse Semantic\nSubgraph" as ReuseSemantic $STATE_COLOR_STORE : **entry** semantic_hash match\neditorial change only\n**allowed** preserve evaluator subgraph\n**forbidden** recompute pure semantic work
+state "Recompute\nEvaluator" as RecomputeEvaluator $STATE_COLOR_PROCESS : **entry** semantic_hash new or modified\n**allowed** rebuild evaluator materialization
+
+' ---------- Compose & publish (sequential) ----------
+state "Compose Snapshot" as ComposeSnapshot $STATE_COLOR_RESOURCE {
+  [*] --> NodeHashComposed
+  state "Node Hash\nComposed" as NodeHashComposed $STATE_COLOR_RESOURCE : **entry** SHA-256({semantic_hash, presentation_hash})\n**allowed** local node identity only\n**forbidden** embed graph neighbors
+  state "Edge Hash\nComputed" as EdgeHashComputed $STATE_COLOR_PROCESS : **entry** per depends_on:\nSHA-256({source, target})\n**allowed** directional edges
+  state "Snapshot Hash\nComposed" as SnapshotHashComposed $STATE_COLOR_RESOURCE : **entry** SHA-256({sorted node_hashes,\nsorted edge_hashes, provenance})\n**forbidden** include compiled_at
+  NodeHashComposed --> EdgeHashComputed : <b>EdgeHashesComputed</b>\nactor: System\ncommand: for each depends_on
+  EdgeHashComputed --> SnapshotHashComposed : <b>SnapshotHashComposed</b>\nactor: System\n[compiledAtExcluded]
+  SnapshotHashComposed --> [*] : <b>ComposeCompleted</b>\nactor: System
+}
+
+state "Check content-addressed storage\nExistence" as CheckContentAddressedStorage $STATE_COLOR_PENDING : **entry** lookup compiled_rules_store\n**allowed** dedup or new write
+state "Published\n(Dedup)" as PublishedDedup $STATE_COLOR_STORE : **entry** hash exists · no-op **terminal**\n**allowed** return existing hash\n**forbidden** rewrite bytes
+state "Published\n(New)" as PublishedNew $STATE_COLOR_STORE : **entry** novel snapshot write-once **terminal**\n**allowed** content-addressed storage put\n**forbidden** in-place update
+
+NodeBodyLoaded --> DualHash : <b>DualHashStarted</b>\nactor: System
+
+' Completion of both orthogonal regions → reuse check
+DualHash --> CheckSemanticReuse : <b>DualHashReady</b>\nactor: System
+
+CheckSemanticReuse --> ReuseSemantic : <b>SemanticSubgraphReused</b>\nactor: System\n[descriptionOrEditorialEditOnly]
+CheckSemanticReuse --> RecomputeEvaluator : <b>SemanticSubgraphRecomputed</b>\nactor: System
+
+ReuseSemantic --> ComposeSnapshot : <b>NodeHashComposeStarted</b>\nactor: System
+RecomputeEvaluator --> ComposeSnapshot : <b>NodeHashComposeStarted</b>\nactor: System
+
+ComposeSnapshot --> CheckContentAddressedStorage : <b>CasLookupStarted</b>\nactor: System
+
+CheckContentAddressedStorage --> PublishedDedup : <b>CompiledRulesDedupHit</b>\nactor: System\n[sameHashAndFrozenEnvAndEngine]
+CheckContentAddressedStorage --> PublishedNew : <b>CompiledRulesPublishedNew</b>\nactor: System
+
+PublishedDedup --> [*] : <b>Finalized</b>\nactor: System
+PublishedNew --> [*] : <b>Finalized</b>\nactor: System
+
+footer State Machine 010 · Contract 1.1.0 · compilation_application · Selma
+
+@enduml

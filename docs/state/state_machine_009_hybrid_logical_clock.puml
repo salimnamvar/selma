@@ -1,0 +1,68 @@
+@startuml state_machine_009_hybrid_logical_clock
+' ============================================================
+' Title:     State Machine 009 Hybrid Logical Clock
+' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
+' C4:        finding_events_repository → finding_events_store
+' Package:   platform_infrastructure (HybridLogicalClock) · findings_infrastructure
+' Deploy:    application StatefulSet persistent volume claim + DB watermark (topology only)
+' Contract:  1.1.0
+' ============================================================
+
+title **State Machine 009 — Hybrid Logical Clock**\nC4: finding_events_repository → finding_events_store\n<size:12><i>Tick · wall-clock absorption · partition heal · persistent volume claim + watermark load</i></size>
+
+!include ./common/state_styles.puml
+!include ./common/state_identities.puml
+
+[*] --> Initialized : <b>HybridLogicalClockInitialized</b>\nactor: System\ncommand: init hybrid logical clock node
+
+state "Initialized" as Initialized $STATE_COLOR_PENDING : **entry** pt=0 · lc=0 (cold start)\n**allowed** load persisted state\n**forbidden** emit without advance
+state "Steady" as Steady $STATE_COLOR_RESOURCE : **entry** last emitted (pt, lc, node_id)\n**node_id** StatefulSet ordinal/pod_name (not Pod IP)\n**persist** persistent volume claim primary · DB watermark recovery authority\n**load** (pt,lc)=max(persistent volume claim, DB watermark) then fsync persistent volume claim\n**allowed** local send · remote receive\n**forbidden** decrease pt/lc · reuse retired node_id
+
+' ---------- Hierarchical: single hybrid logical clock tick (RTC step) ----------
+state "Tick" as Tick $STATE_COLOR_PROCESS {
+  ' Initial required (STM-026); deep targets LocalSend / RemoteReceive override
+  [*] --> LocalSend
+  state "Local Send" as LocalSend $STATE_COLOR_PROCESS : **entry** hlc_send(pt_wall)\n**allowed** advance or increment\n**forbidden** regress pt
+  state "Remote Receive" as RemoteReceive $STATE_COLOR_PROCESS : **entry** hlc_receive(remote_pt, remote_lc, pt_wall)\n**allowed** merge max clocks\n**forbidden** overwrite committed events
+  state "Advancing" as Advancing $STATE_COLOR_STORE : **entry** pt strictly advances\nlc resets to 0\n**allowed** emit new tuple
+  state "Incrementing" as Incrementing $STATE_COLOR_STORE : **entry** pt unchanged · lc increments\nabsorbs wall regression / concurrency\n**allowed** emit new tuple
+  state "Event Emitted" as EventEmitted $STATE_COLOR_STORE : **entry** event tagged (pt, lc, node_id)\nevent_hash = SHA-256(canonical_json minus hash)\n**allowed** persist tuple\n**forbidden** emit non-monotonic tuple
+
+  LocalSend --> Advancing : <b>HybridLogicalClockAdvanced</b>\nactor: System\n[ptWallGreaterThanPt]\n/ ptNewEqualsWallLcZero()
+  LocalSend --> Incrementing : <b>HybridLogicalClockIncremented</b>\nactor: System\n[ptWallLessOrEqualPt]\n/ ptUnchangedLcPlusOne()
+  RemoteReceive --> Advancing : <b>HybridLogicalClockAdvanced</b>\nactor: System\n[maxClocksGreaterThanPt]\n/ ptNewEqualsMaxLcZero()
+  RemoteReceive --> Incrementing : <b>HybridLogicalClockIncremented</b>\nactor: System\n[maxClocksEqualPt]\n/ ptUnchangedLcMaxPlusOne()
+  Advancing --> EventEmitted : <b>HybridLogicalClockTupleEmitted</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)
+  Incrementing --> EventEmitted : <b>HybridLogicalClockTupleEmitted</b>\nactor: System\ncommand: tag event with (pt_new, lc_new, node_id)
+  EventEmitted --> [*] : <b>TickCompleted</b>\nactor: System
+}
+
+' ---------- Hierarchical: partition heal ----------
+state "Partition Heal" as PartitionHeal $STATE_COLOR_GATE {
+  [*] --> Partitioned
+  state "Partitioned" as Partitioned $STATE_COLOR_GATE : **entry** network partition\nlocal stream diverges\n**allowed** buffer · local emit\n**forbidden** assume global order
+  state "Reconciling" as Reconciling $STATE_COLOR_PENDING : **entry** merge remote stream\n**allowed** re-sort total order key\n**forbidden** overwrite committed
+  Partitioned --> Reconciling : <b>HybridLogicalClockReconciling</b>\nactor: System\ncommand: merge buffered remote events
+  Reconciling --> [*] : <b>HealCompleted</b>\nactor: System
+}
+
+Initialized --> Steady : <b>HybridLogicalClockStateLoaded</b>\nactor: System\ncommand: restore (pt, lc, node_id)\nfrom persistent volume claim primary; max(persistent volume claim, DB watermark)\n[reconcileNonDecreasing]
+
+state "Resync" as Resync $STATE_COLOR_PENDING : **entry** persistent volume claim stale or missing\n**allowed** fence old node_id · load DB max\n**forbidden** emit with stale persistent volume claim alone
+state "Fenced" as Fenced $STATE_COLOR_GATE : **entry** node_id retired\n**allowed** register new node_id\n**forbidden** reuse retired node_id
+
+Initialized --> Resync : <b>HybridLogicalClockPvcStaleOrMissing</b>\nactor: System\ncommand: detect persistent volume claim/DB divergence
+Resync --> Steady : <b>HybridLogicalClockResynced</b>\nactor: System\n/ ptLcEqualsMax(pvc, finding_events_max)\n/ fsync before accept appends
+Resync --> Fenced : <b>HybridLogicalClockNodeFenced</b>\nactor: System\n[pvcCorruptedOrLost]\n/ retire node_id in retired_nodes
+Fenced --> Initialized : <b>HybridLogicalClockNewNodeIssued</b>\nactor: System\ncommand: node_id = StatefulSet pod_name stable id\n+ new UUID suffix if retired
+
+Steady --> LocalSend : <b>HybridLogicalClockLocalSend</b>\nactor: System\ncommand: hybridLogicalClock_send
+Steady --> RemoteReceive : <b>HybridLogicalClockRemoteReceive</b>\nactor: System\ncommand: hybridLogicalClock_receive
+Steady --> PartitionHeal : <b>HybridLogicalClockPartitioned</b>\nactor: System\ncommand: heartbeat timeout
+
+Tick --> Steady : <b>HybridLogicalClockStatePersisted</b>\nactor: System\ncommand: fsync (pt_new, lc_new) on persistent volume claim\n+ periodic DB watermark upsert\n[strictlyNonDecreasingVsPrior]
+PartitionHeal --> Steady : <b>HybridLogicalClockReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ advanceLocalHybridLogicalClockToMaxRemote()\n/ noOverwriteCommitted()
+
+footer State Machine 009 · Contract 1.1.0 · finding_events_repository · Selma
+
+@enduml

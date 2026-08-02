@@ -1,0 +1,86 @@
+' ============================================================
+' Title:     Selma — State Machine Identities (canonical labels)
+' Purpose:   Stable display names, C4 owner strings, and actor
+'            labels for state diagrams — same role as
+'            c4_identities.puml and pkg_identities.puml.
+'            Diagrams MUST use these macros (no inventing IDs,
+'            no short-form actor or product names).
+' Contract:  1.1.0
+'
+' Include AFTER state_styles.puml.
+' ============================================================
+
+' ── C4 peer display strings (full registry IDs only) ────────
+!$C4_API = "api"
+!$C4_CLIENTS = "clients"
+!$C4_DIRECTIVES_APPLICATION = "directives_application"
+!$C4_COMPILATION_APPLICATION = "compilation_application"
+!$C4_INSPECTIONS_APPLICATION = "inspections_application"
+!$C4_FINDINGS_APPLICATION = "findings_application"
+!$C4_DIRECTIVES_REPOSITORY = "directives_repository"
+!$C4_COMPILED_RULES_REPOSITORY = "compiled_rules_repository"
+!$C4_FINDING_EVENTS_REPOSITORY = "finding_events_repository"
+!$C4_ARTIFACTS_REPOSITORY = "artifacts_repository"
+!$C4_TARGET_SOURCES_GATEWAY = "target_sources_gateway"
+!$C4_DIRECTIVES_STORE = "directives_store"
+!$C4_COMPILED_RULES_STORE = "compiled_rules_store"
+!$C4_FINDING_EVENTS_STORE = "finding_events_store"
+!$C4_ARTIFACTS_STORE = "artifacts_store"
+!$C4_TARGET_SOURCES = "target_sources"
+
+' ── Non-peers (full words; never drawn as C4 peers) ─────────
+!$NONPEER_RESOLVE_CONFLICT = "ResolveConflict (domain · not peer)"
+!$NONPEER_CERTIFICATION_TOOL = "certification_tool (offline · not peer)"
+!$NONPEER_DENIAL_AUDIT_PORT = "DenialAuditPort"
+!$NONPEER_FINDING_OPEN_PORT = "FindingOpenPort"
+
+' ── Package modules (full names; naming dual for compile) ───
+!$PKG_FINDINGS_APPLICATION = "findings_application"
+!$PKG_FINDINGS_DOMAIN = "findings_domain"
+!$PKG_DIRECTIVES_APPLICATION = "directives_application"
+!$PKG_COMPILED_RULES_APPLICATION = "compiled_rules_application"
+!$PKG_INSPECTIONS_APPLICATION = "inspections_application"
+!$PKG_CONFLICTS_DOMAIN = "conflicts_domain"
+!$PKG_ARTIFACTS_INFRASTRUCTURE = "artifacts_infrastructure"
+!$PKG_PLATFORM_INFRASTRUCTURE = "platform_infrastructure"
+!$PKG_REST_INTERFACE = "rest_interface"
+!$PKG_CAPABILITY_ENFORCER = "CapabilityEnforcer"
+
+' ── Actors (full role names; never RO / CR) ─────────────────
+!$ACTOR_REGULATORY_OFFICIAL = "Regulatory Official"
+!$ACTOR_COMPLIANCE_REPRESENTATIVE = "Compliance Representative"
+!$ACTOR_SYSTEM = "System"
+
+' ── Product terms (full words; avoid short forms on diagrams)
+!$TERM_COMPILED_RULES = "compiled rules intermediate representation"
+!$TERM_CONTENT_ADDRESSED_STORAGE = "content-addressed storage"
+!$TERM_HYBRID_LOGICAL_CLOCK = "hybrid logical clock"
+!$TERM_SEGREGATION_OF_DUTIES = "segregation of duties"
+!$TERM_PERSISTENT_VOLUME = "persistent volume claim"
+!$TERM_STATE_MACHINE = "state machine"
+
+' ── Owner edge strings for titles (canonical) ───────────────
+!$OWNER_FINDING_LIFECYCLE = "findings_application → finding_events_repository → finding_events_store"
+!$OWNER_DIRECTIVE_LIFECYCLE = "api → directives_application → directives_repository → directives_store"
+!$OWNER_COMPILATION = "compilation_application → compiled_rules_repository → compiled_rules_store"
+!$OWNER_INSPECTION = "inspections_application → artifacts_repository → artifacts_store"
+!$OWNER_CONFLICT = "ResolveConflict (domain · not peer) · compilation_application | inspections_application"
+!$OWNER_CERTIFICATION = "certification_tool (offline · not peer) → artifacts_repository → artifacts_store"
+!$OWNER_AUTHORIZATION = "api · denials → finding_events_repository → finding_events_store"
+!$OWNER_ARTIFACT = "artifacts_repository → artifacts_store"
+!$OWNER_HYBRID_LOGICAL_CLOCK = "finding_events_repository → finding_events_store"
+!$OWNER_COMPILED_RULES_HASH = "compilation_application → compiled_rules_repository → compiled_rules_store"
+!$OWNER_MACHINE_INTERACTION = "api | application peers | ResolveConflict (domain) | certification_tool (offline)"
+
+' ── Diagram catalog IDs (full phrase, not SM-NNN) ───────────
+!$DIAGRAM_FINDING_LIFECYCLE = "State Machine 001 — Finding Lifecycle"
+!$DIAGRAM_DIRECTIVE_LIFECYCLE = "State Machine 002 — Directive Lifecycle"
+!$DIAGRAM_COMPILATION = "State Machine 003 — Compilation Pipeline"
+!$DIAGRAM_INSPECTION = "State Machine 004 — Inspection Execution Pipeline"
+!$DIAGRAM_CONFLICT = "State Machine 005 — Conflict Resolution"
+!$DIAGRAM_CERTIFICATION = "State Machine 006 — Architectural Certification"
+!$DIAGRAM_AUTHORIZATION = "State Machine 007 — Capability Authorization"
+!$DIAGRAM_ARTIFACT = "State Machine 008 — Artifact Lifecycle"
+!$DIAGRAM_HYBRID_LOGICAL_CLOCK = "State Machine 009 — Hybrid Logical Clock"
+!$DIAGRAM_COMPILED_RULES_HASH = "State Machine 010 — Compiled Rules Hash Composition"
+!$DIAGRAM_MACHINE_INTERACTION = "State Machine 011 — Machine Interaction Overview"
