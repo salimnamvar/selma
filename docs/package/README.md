@@ -99,7 +99,7 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden: registry `forbidd
 | `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader`) | `directives_repository` |
 | `GuidanceReadPort` | `findings_application` | `directives_infrastructure` (`SqlGuidanceReader`) | `directives_repository` |
 | `CompiledRulesRepository` | compile + inspect (+ findings SoD) | `compiled_rules_infrastructure` | `compiled_rules_repository` |
-| `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`FindingEventRepositoryAdapter`) | `finding_events_repository` |
+| `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`AppendOnlyFindingEventRepository`) | `finding_events_repository` |
 | `DenialAuditPort` | `findings_application` | `findings_infrastructure` (`DenialAuditAdapter` only) | `finding_events_repository` |
 | `FindingOpenPort` | `findings_application` | `findings_application` (`OpenFindings` use-case facade) | n/a — peer port for `inspections_application` |
 | `InspectionArtifactPort` | `inspections_application` | `artifacts_infrastructure` | `artifacts_repository` |
