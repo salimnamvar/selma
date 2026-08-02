@@ -1,11 +1,12 @@
 @startuml selma_artifact_lifecycle
 ' ============================================================
-' Selma — Artifact Lifecycle State Machine
-' Source:  docs/spec/contracts/data_stores/
-' C4:      artifacts_repository → artifacts_store
-'          compiled_rules_repository → compiled_rules_store (CG-IR snapshots)
-'          finding_events_repository → finding_events_store (events)
-' Contract: 1.1.0
+' Title:     Artifact Lifecycle State Machine
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+'            docs/spec/contracts/data_stores/compiled_rules_store.yaml
+' C4:        artifacts_repository → artifacts_store
+'            producers: compilation_application | inspections_application |
+'            findings_application | ResolveConflict (domain) | certification_tool (offline)
+' Contract:  1.1.0
 ' ============================================================
 
 title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthogonal reference ‖ replication · no silent rewrite</i></size>

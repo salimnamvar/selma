@@ -1,11 +1,10 @@
 ' ============================================================
 ' Title:     Selma -- Component Diagram
-' Boundary:  Selma system; Application process nested inside
-' Purpose:   Structural peers inside Application and their
-'            dependencies (product architecture). Code modules:
-'            docs/package/. Runtime topology: docs/deployment/.
-'            Domain services are not C4 peers. Stores sit inside
-'            Selma and outside the Application process boundary.
+' Source:    docs/standards/c4_registry.yaml (peers.components, peers.stores)
+' C4:        clients → api → *_application → *_repository | *_gateway → *_store
+'            narrow: api → finding_events_repository (DenialAuditPort path)
+' Purpose:   Product peers and dependencies only. Modules → package/.
+'            Topology → deployment/. FSMs → state/. Domain services not peers.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_component

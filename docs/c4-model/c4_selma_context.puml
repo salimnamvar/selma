@@ -1,9 +1,9 @@
 ' ============================================================
 ' Title:     Selma -- Context Diagram
-' Boundary:  Selma
-' Purpose:   Actors and optional external Target Sources.
-'            Tier-C integrations (CI/CD, audit export, remediation)
-'            are not first-class context peers.
+' Source:    docs/standards/c4_registry.yaml (peers.actors, peers.systems)
+' C4:        regulatory_official | compliance_representative | selma | target_sources
+' Purpose:   Actors and optional external Target Sources only.
+'            CI/CD, audit export, remediation are not context peers.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml c4_selma_context

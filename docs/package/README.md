@@ -1,20 +1,21 @@
 # Selma Package Diagrams
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **View concerns:** [`../standards/view_concerns.md`](../standards/view_concerns.md)  
+> **design_contract_version:** `1.1.0` · Structural SSoT for **peers:** [`../c4-model/`](../c4-model/README.md)
 
-## View concern
+## View concern (this directory owns)
 
 | | |
 | :--- | :--- |
 | **Answers** | *How* is source code modularized under Clean Architecture? |
-| **Owns** | `{resource}_{layer}` packages, use cases, ISP ports, domain libs, infrastructure adapters, composition root, module dependency edges |
-| **Does not own** | Peer inventing (C4 registry), component Rel graph semantics (C4 Component), network zones / TLS / failure domains / RPO (deployment), FSM tables / locks (spec) |
+| **Owns 100%** | `{resource}_{layer}` packages, use cases, ISP port **ownership**, domain libs, infrastructure adapter classes, composition root, module dependency edges |
+| **Does not own** | Peer inventing / Component Rel graph (C4) · zones / TLS / failure domains / RPO (deployment) · FSM tables / locks / capability catalog (spec) · store mutability semantics (spec) |
 | **Join key** | C4 peer IDs on package titles only — never redefine them |
 
-PlantUML package diagrams are an **implementation view**. Behavior stays in `spec/`; product structure in `c4-model/`; runtime topology in `deployment/`.
+PlantUML package diagrams are an **implementation view**. Behavior stays in `spec/`; product structure in `c4-model/`; runtime topology in `deployment/`; FSMs in `state/`.
 
-## Source layout (like C4 `common/`)
+## Source layout
 
 | Path | Role | Edit when… |
 | :--- | :--- | :--- |
@@ -31,14 +32,11 @@ PlantUML package diagrams are an **implementation view**. Behavior stays in `spe
 
 **Include order:** `cd_styles` → `pkg_styles` → `pkg_identities` → sections → `pkg_connections`.
 
-## Usage
-
 ```bash
 plantuml docs/package/pkg_001_clean_architecture.puml
-plantuml -tsvg docs/package/*.puml
 ```
 
-## Diagram Index
+## Diagram index
 
 | ID | File | Description |
 |----|------|-------------|
@@ -79,7 +77,7 @@ Peer definitions: [`../c4-model/`](../c4-model/README.md) + [`../standards/c4_re
 | `inspections_application` / `inspections_domain` | `inspections_application` |
 | `inspections_infrastructure` | `target_sources_gateway` (+ `DetectionEvaluator` non-peer) |
 | `findings_application` / `findings_domain` | `findings_application` |
-| `findings_infrastructure` | `finding_events_repository` + separate `DenialAuditAdapter` (ISP) |
+| `findings_infrastructure` | `finding_events_repository` + `DenialAuditAdapter` (ISP) |
 | `artifacts_infrastructure` | `artifacts_repository` |
 | `rest_interface` / `cli_interface` / `tui_interface` | `api` + `clients` |
 | `conflicts_domain` | not a peer — in-process with compile + inspect |
@@ -91,14 +89,14 @@ Peer definitions: [`../c4-model/`](../c4-model/README.md) + [`../standards/c4_re
 |------------|----------------|
 | `compilation_application` | `compiled_rules_application` / `compiled_rules_infrastructure` |
 
-Do not invent C4 peer `compiled_rules_application`. Forbidden IDs: registry `forbidden_ids`.
+Do not invent C4 peer `compiled_rules_application`. Forbidden: registry `forbidden_c4_peer_ids`.
 
 ## Application ports (ISP) — owned here
 
 | Port | Owner package | Implementer package | C4 adapter peer |
 |------|---------------|---------------------|-----------------|
-| `DirectiveRepository` | `directives_application` | `directives_infrastructure` (`SqlDirectiveWriter` only) | `directives_repository` |
-| `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader` only — never multi-port god adapter) | `directives_repository` |
+| `DirectiveRepository` | `directives_application` | `directives_infrastructure` (`SqlDirectiveWriter`) | `directives_repository` |
+| `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader`) | `directives_repository` |
 | `GuidanceReadPort` | `findings_application` | `directives_infrastructure` (`SqlGuidanceReader`) | `directives_repository` |
 | `CompiledRulesRepository` | compile + inspect (+ findings SoD) | `compiled_rules_infrastructure` | `compiled_rules_repository` |
 | `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`FindingEventRepositoryAdapter`) | `finding_events_repository` |
@@ -107,21 +105,17 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden IDs: registry `for
 | `InspectionArtifactPort` | `inspections_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `FindingArtifactPort` | `findings_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `TargetSourcesGateway` | `inspections_application` | `inspections_infrastructure` | `target_sources_gateway` |
-| `CertificationArtifactPort` | `certification_tool` / API system capability | `artifacts_infrastructure` | `artifacts_repository` (prod via API; offline local only) |
+| `CertificationArtifactPort` | `certification_tool` / API system capability | `artifacts_infrastructure` | `artifacts_repository` |
 
-**ISP hardening:** One physical connection pool MAY back multiple adapters, but
-each port MUST be a **separate adapter class** (or narrow façade) so
-`compiled_rules_application` cannot call mutating `DirectiveRepository` methods
-via a `CompilerReadPort` reference, and `api` cannot call full
-`FindingEventRepository` methods via `DenialAuditPort`.
+**ISP rule:** one physical pool MAY back multiple adapters; each port MUST be a **separate adapter class** so a `CompilerReadPort` reference cannot mutate directives, and `api` cannot use full `FindingEventRepository` via `DenialAuditPort`.
 
-Port method shapes: [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml).  
-Gate denial path semantics: [`../c4-model/`](../c4-model/README.md) DenialAuditPort + finding-lifecycle SoD contract.
+Method shapes: [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml).  
+Denial-audit **wire path** on Component diagram: [`../c4-model/`](../c4-model/README.md). Normative denial fields: [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml).
 
 ## Module edges vs C4 component edges
 
-- **C4 Component** owns *which peers may call which peers* (product structure).
-- **Package** owns *which modules/ports implement that* (code structure).
+- **C4 Component** owns which **peers** may call which peers.
+- **Package** owns which **modules/ports** implement that.
 - Edges in `pkg_connections.puml` must **conform** to the C4 dependency rule; they must not invent new peers.
 
 ```
@@ -132,16 +126,17 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 | Service | Package | Consumers |
 |---------|---------|-----------|
-| `ResolveConflict` | `conflicts_domain` | compile + inspect application packages |
+| `ResolveConflict` | `conflicts_domain` | `compiled_rules_application`, `inspections_application` |
 | `FindingFsm` | `findings_domain` | `findings_application` |
 | `CapabilityEnforcer` | shared under `*_interface` | REST/CLI/TUI only |
 
-Shared `conflicts_domain` version across split deployables: [`../deployment/README.md`](../deployment/README.md) Compilation section (ops constraint), C4 non-peers (structural note).
+Shared library versioning when compile/inspect deployables split: **ops constraint** in [`../deployment/`](../deployment/README.md); structural non-peer note in C4.
 
 ## Related
 
-- [C4 Architecture](../c4-model/README.md) — structural SSoT
-- [Class Diagrams](../class/README.md) — types inside packages
-- [Deployment](../deployment/README.md) — topology / TLS / RPO
-- [Standards / C4 registry](../standards/c4_registry.yaml)
+- [C4 Architecture](../c4-model/README.md) — structural SSoT  
+- [Class Diagrams](../class/README.md) — types inside packages  
+- [Deployment](../deployment/README.md) — topology / TLS / RPO  
+- [State machines](../state/README.md) — FSM visualization  
+- [Standards / C4 registry](../standards/c4_registry.yaml) · [View concerns](../standards/view_concerns.md)  
 - [Spec contracts](../spec/README.md)

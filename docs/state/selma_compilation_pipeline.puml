@@ -1,17 +1,19 @@
 @startuml selma_compilation_pipeline
 ' ============================================================
-' Selma — Hermetic Compilation / CG-IR Pipeline
-' Source:  docs/spec/contracts/compilation/pipeline.yaml
-'          docs/spec/contracts/compilation/hermetic_boundary.yaml
-' C4:      compilation_application → compiled_rules_repository → compiled_rules_store
-' Contract: 1.1.0
+' Title:     Hermetic Compilation / CG-IR Pipeline
+' Source:    docs/spec/contracts/compilation/pipeline.yaml
+'            docs/spec/contracts/compilation/hermetic_boundary.yaml
+'            docs/spec/contracts/data_stores/directives_store.yaml (compile_coordination)
+' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
+'            drains compile_request outbox via directives_repository (store-mediated)
+' Contract:  1.1.0
 ' ============================================================
 
 title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>Hierarchical validate → materialize · all-or-nothing CAS · no runtime policy</i></size>
 
 !include ./common/sm_styles.puml
 
-[*] --> Requested : <b>CompileRequested</b>\nactor: System (api | compilation_application)\ncommand: directive change | compile trigger
+[*] --> Requested : <b>CompileRequested</b>\nactor: System (compilation_application drains outbox |\nclient enqueue via /compilations)\ncommand: directive change | compile trigger
 
 state "Requested" as Requested #B9770E : **entry** request_id assigned\n**allowed** dedup by (graph version + frozen_env)\n**forbidden** partial CG-IR write
 state "Queued" as Queued #B9770E : **entry** FIFO queue\n**allowed** writer-preference scheduling\n**forbidden** skip lock (directives lock contract)

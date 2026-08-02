@@ -1,11 +1,12 @@
 @startuml selma_inspection_pipeline
 ' ============================================================
-' Selma — Inspection Execution Pipeline
-' Source:  docs/spec/contracts/inspection/pipeline.yaml
-'          docs/spec/contracts/inspection/finding_contract.yaml
-' C4:      inspections_application → artifacts_repository → artifacts_store
-'          inspection → findings_application (finding birth)
-' Contract: 1.1.0
+' Title:     Inspection Execution Pipeline
+' Source:    docs/spec/contracts/inspection/pipeline.yaml
+'            docs/spec/contracts/inspection/finding_contract.yaml
+' C4:        inspections_application → artifacts_repository → artifacts_store
+'            FindingOpenPort → findings_application (atomic FindingCreated+Open)
+'            optional target_sources_gateway → target_sources
+' Contract:  1.1.0
 ' ============================================================
 
 title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>

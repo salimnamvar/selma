@@ -1,10 +1,9 @@
 ' ============================================================
-' Title:     Selma -- Production Deployment Diagram
-' Purpose:   WHERE Selma runs: network zones, process nodes,
-'            store failure domains, TLS hops, monitoring.
-'            Uses C4 container/store IDs only. Does NOT redraw
-'            component graph or package modules (see c4-model,
-'            package).
+' Title:     Production Deployment (DEP-001)
+' Source:    docs/deployment/README.md · store tech from c4_registry
+' C4:        clients → application → *_store | target_sources
+' Purpose:   WHERE Selma runs: zones, nodes, failure domains, TLS.
+'            Does NOT redraw component graph or package modules.
 ' Contract:  1.1.0
 ' ============================================================
 @startuml dep_001_production

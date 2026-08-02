@@ -1,13 +1,12 @@
 @startuml selma_architecture_certification
 ' ============================================================
-' Selma — Architectural Certification State Machine
-' Source:  docs/spec/contracts/certification/gates.yaml (AA-01 … AA-08)
-' C4:      certification_tool → artifacts_repository → artifacts_store
-'          trigger: CI/CD → api
-' Contract: 1.1.0
+' Title:     Architectural Certification State Machine
+' Source:    docs/spec/contracts/certification/gates.yaml (AA-01 … AA-09)
+' C4:        certification_tool (offline · not peer) → artifacts_repository → artifacts_store
+' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Architectural Certification FSM\n<size:12><i>offline/CI eight-gate audit (not C4 peer) · hierarchical AA composite · no runtime policy contamination</i></size>
+title Selma — Architectural Certification FSM\n<size:12><i>offline/CI nine-gate audit (not C4 peer) · hierarchical AA composite · AA-09 chain integrity</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -27,6 +26,7 @@ state "Validating Gates" as ValidatingGates #1B7A6E {
   state "AA-06\nDiscriminator Completeness" as AA06 #1B7A6E : **entry** invalid type/config corpus\nmethod: discriminator rejection set
   state "AA-07\nPortable Serialization" as AA07 #1B7A6E : **entry** RE2 canaries · UTC/NaN\nmethod: portability canaries
   state "AA-08\nHermeticity Completeness" as AA08 #1B7A6E : **entry** python_hash_seed · locale\nordered collections · runtime_preimage\nmethod: pin assert + static analysis
+  state "AA-09\nEvent Chain Integrity" as AA09 #1B7A6E : **entry** chain_hash + HLC monotonicity\nretired_nodes fence\nmethod: offline chain tool (finding_events_store)
 
   AA01 --> AA02 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa01()
   AA02 --> AA03 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa02()
@@ -35,7 +35,8 @@ state "Validating Gates" as ValidatingGates #1B7A6E {
   AA05 --> AA06 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa05()
   AA06 --> AA07 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa06()
   AA07 --> AA08 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa07()
-  AA08 --> [*] : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa08()
+  AA08 --> AA09 : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa08()
+  AA09 --> [*] : <b>CertificationGatePassed</b>\nactor: System\n/ gateAa09()
 }
 
 state "Passed" as Passed #2C6E49 : **entry** all gates green\n**allowed** seal certification artifact\n**forbidden** mutate Directive Graph
@@ -61,6 +62,7 @@ AA05 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa05()
 AA06 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa06()
 AA07 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa07()
 AA08 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa08()
+AA09 --> Failed : <b>CertificationGateFailed</b>\nactor: System\n/ gateAa09()
 
 Passed --> Certified : <b>CertificationSealed</b>\nactor: System\ncommand: write-once pass evidence + gate report
 Failed --> RemediationRequired : <b>CertificationFailed</b>\nactor: System\ncommand: gate-id fail report\nstory: US-GA-001

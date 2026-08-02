@@ -1,9 +1,10 @@
 @startuml selma_machine_interaction
 ' ============================================================
-' Selma — State Machine Interaction Overview
-' Source:  docs/c4-model/c4_selma_component.puml + docs/state-machine ownership
-' Contract: 1.1.0
-' Role:    Cross-machine handoff overview (behavior only; C4 owns structure)
+' Title:     State Machine Interaction Overview
+' Source:    docs/spec/contracts/ (all machines) · handoffs only
+' C4:        api | *_application | ResolveConflict (domain) | certification_tool (offline)
+' Contract:  1.1.0
+' Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
 ' ============================================================
 
 title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · FSMs · domain service · offline tool · not freestanding engines</i></size>

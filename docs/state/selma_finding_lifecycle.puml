@@ -1,10 +1,11 @@
 @startuml selma_finding_lifecycle
 ' ============================================================
-' Selma — Finding Lifecycle State Machine (NORMATIVE)
-' Source:  docs/spec/contracts/finding_lifecycle/
-'          (states.yaml, transitions.yaml, sod_contract.yaml)
-' C4:      findings_application → finding_events_repository → finding_events_store
-' Contract: 1.1.0
+' Title:     Finding Lifecycle State Machine (NORMATIVE)
+' Source:    docs/spec/contracts/finding_lifecycle/states.yaml
+'            docs/spec/contracts/finding_lifecycle/transitions.yaml
+'            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
+' C4:        findings_application → finding_events_repository → finding_events_store
+' Contract:  1.1.0
 ' ============================================================
 
 title Selma — Finding Lifecycle FSM\n<size:12><i>Normative 11-state · hierarchical remediation · SoD-1/SoD-2 · system-only close</i></size>

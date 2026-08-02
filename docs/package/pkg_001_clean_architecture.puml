@@ -1,8 +1,9 @@
 @startuml pkg_001_clean_architecture
 ' ============================================================
 ' Title:     PKG-001 Clean Architecture Packages
-' Source:    docs/c4-model/ (structural SSoT) + c4_registry.yaml
+' Source:    docs/standards/c4_registry.yaml · docs/c4-model/ (peer SSoT)
 ' C4:        {resource}_{layer} maps to C4 peers; stores via repos
+' Purpose:   HOW modules layer (CA rings, ports). Not zones/FSMs/peers invent.
 ' Contract:  1.1.0
 '
 ' Structure (mirrors c4-model/common/):

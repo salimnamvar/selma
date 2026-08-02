@@ -6,6 +6,7 @@ and version line**. This directory is the **checkable schema** for that discipli
 | Artifact | Role |
 | :--- | :--- |
 | [`c4_registry.yaml`](c4_registry.yaml) | Canonical C4 IDs, non-peers, API resource surface, forbidden aliases |
+| [`view_concerns.md`](view_concerns.md) | Exclusive ownership matrix for C4 / package / deployment / state (no principle duplication) |
 | [`contract.schema.json`](contract.schema.json) | Front-matter schema for `docs/spec/contracts/**/*.yaml` |
 | [`diagram_header.schema.md`](diagram_header.schema.md) | Required PlantUML header fields |
 | [`section_readme.template.md`](section_readme.template.md) | Required section README shape |

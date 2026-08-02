@@ -1,9 +1,11 @@
 # Selma — {Section Title}
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`c4_registry.yaml`](../standards/c4_registry.yaml)  
+> **View concerns:** [`view_concerns.md`](../standards/view_concerns.md)  
 > **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 {One-paragraph purpose: what this section shows and what it must not invent.}
+{State exclusive ownership: Answers / Owns 100% / Does not own / Join key — do not restate sibling views' design principles.}
 
 ## Role in authority order
 

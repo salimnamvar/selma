@@ -41,7 +41,8 @@ All design work MUST follow [`standards/`](standards/README.md):
 | Standard | Purpose | Check |
 | :--- | :--- | :--- |
 | [`standards/c4_registry.yaml`](standards/c4_registry.yaml) | Canonical C4 IDs, non-peers, API resources, forbidden aliases | `python scripts/check_design_alignment.py` |
-| [`standards/contract.schema.json`](standards/contract.schema.json) | Spec contract front-matter | same |
+| [`standards/view_concerns.md`](standards/view_concerns.md) | Exclusive ownership: C4 / package / deployment / state | design review |
+| [`standards/contract.schema.json`](standards/contract.schema.json) | Spec contract front-matter | same checker |
 | [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract: 1.1.0`, C4, Source) | same |
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 
@@ -77,15 +78,19 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **Deployment** | [`deployment/`](deployment/README.md) | *Where* it runs (zones, TLS, failure domains, RPO) |
 | **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
 
-### Structural views (no concern overlap)
+### Structural & state views (no concern overlap)
 
-| Question | Authority | Must not restate |
-| :--- | :--- | :--- |
-| What peers / containers / components exist? | [`c4-model/`](c4-model/README.md) | Package trees, LB/zones, port classes |
-| How are source modules and ports organized? | [`package/`](package/README.md) | Peer inventing, store clusters, monitoring |
-| Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Component use-case graph, domain services |
+Full matrix: [`standards/view_concerns.md`](standards/view_concerns.md).
 
-Join key across all three: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
+| Question | Authority | Owns 100% | Must not restate |
+| :--- | :--- | :--- | :--- |
+| What peers / containers / components exist? | [`c4-model/`](c4-model/README.md) | Peer IDs, dependency rule, boundaries | Package trees, zones/TLS/RPO, FSM tables, capability matrix |
+| How are source modules and ports organized? | [`package/`](package/README.md) | `{resource}_{layer}`, ISP ports, module edges | Peer inventing, failure domains, normative FSM/lock text |
+| Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Zones, TLS, HA, RPO/RTO, observability | Component use-case graph, package trees, domain algorithms |
+| How does state evolve (FSMs / pipelines)? | [`state/`](state/README.md) | Extracted states/transitions from contracts | Peer inventing, packages, zones; product design principles (spec owns) |
+
+Join key: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).  
+Behavior principles (authn, SoD, hermetic compile, dual-document, store mutability): **`spec/contracts/`** + **`schema/`** only — structural views link, never duplicate.
 
 ## Authority (investigation order)
 

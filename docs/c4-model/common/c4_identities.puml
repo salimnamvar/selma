@@ -32,7 +32,8 @@
 '   Domain services (e.g. ResolveConflict) stay inside use cases;
 '   they are not C4 peer components.
 '
-' Contract:  1.1.0 (docs/spec/contracts/)
+' Contract:  1.1.0 (docs/standards/c4_registry.yaml)
+' View:      C4 structural IDs only — not package trees, not zones/RPO, not FSMs
 ' ============================================================
 
 ' ------------------------------------------------------------
