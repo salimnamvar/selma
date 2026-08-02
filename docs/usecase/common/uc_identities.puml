@@ -1,17 +1,23 @@
 ' ============================================================
 ' Title:     Selma — Use Case Identities (canonical labels)
-' Purpose:   Stable actor names, package group titles, ROD use-case
-'            names, and diagram catalog IDs — same role as
-'            c4_identities / pkg_identities / cd_identities /
-'            state_identities. Diagrams and sections MUST use these
-'            macros (no inventing peers, no short-form actor names).
+' Purpose:   Bind use-case groups and ROD ovals to the SAME
+'            package titles and C4 peers as package / class / C4.
+'            Group rectangles MUST use $TITLE_APP_* / $TITLE_IF_*
+'            / $TITLE_DOM_* from package pkg_identities (SSoT).
 ' Contract:  1.2.0
 '
 ' Include AFTER uc_styles.puml.
-' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
-' Use-case names identical to package UC_* leaves and class
-' <<Use Case>> types (Resource-Oriented Design: Verb + Resource).
+'
+' Identity binding (must stay identical):
+'   Use-case group rectangle  == package nested package title
+'                             == class package box title
+'                             == C4 component id (dual for compile)
+'   Use-case oval name        == package application leaf
+'                             == class <<Use Case>> type name
 ' ============================================================
+
+' ── SSoT: package titles (groups) + port names ──────────────
+!include ../../package/common/pkg_identities.puml
 
 ' ── Diagram catalog ─────────────────────────────────────────
 !$DIAGRAM_ID_DIRECTIVES     = "UC-001"
@@ -32,14 +38,15 @@
 !$DIAGRAM_GUIDANCE      = "Use Case 007 — Guidance"
 !$DIAGRAM_CERTIFICATION = "Use Case 008 — Certification"
 
-!$TITLE_DIRECTIVES    = "**UC-001 — Directives**\ndirectives_application"
-!$TITLE_COMPILATION   = "**UC-002 — Compilation**\ncompiled_rules_application (C4: compilation_application)"
-!$TITLE_INSPECTION    = "**UC-003 — Inspection**\ninspections_application"
-!$TITLE_FINDINGS      = "**UC-004 — Findings**\nfindings_application"
-!$TITLE_CONFLICT      = "**UC-005 — Conflict**\nResolveConflict (domain · not peer) · ReviewConflictArtifact"
-!$TITLE_AUTHORIZATION = "**UC-006 — Authorization**\nrest_interface (C4: api) capability gate"
-!$TITLE_GUIDANCE      = "**UC-007 — Guidance**\nfindings_application read models"
-!$TITLE_CERTIFICATION = "**UC-008 — Certification**\ncertification_tool (offline · not peer)"
+' Diagram titles: UC id + package group title (from pkg_identities)
+!$TITLE_DIRECTIVES    = "**UC-001 — Directives**\n$TITLE_APP_DIR"
+!$TITLE_COMPILATION   = "**UC-002 — Compilation**\n$TITLE_APP_CR"
+!$TITLE_INSPECTION    = "**UC-003 — Inspection**\n$TITLE_APP_INS"
+!$TITLE_FINDINGS      = "**UC-004 — Findings**\n$TITLE_APP_FIND"
+!$TITLE_CONFLICT      = "**UC-005 — Conflict**\n$TITLE_DOM_CON · $TITLE_APP_FIND"
+!$TITLE_AUTHORIZATION = "**UC-006 — Authorization**\n$TITLE_IF_REST"
+!$TITLE_GUIDANCE      = "**UC-007 — Guidance**\n$TITLE_APP_FIND"
+!$TITLE_CERTIFICATION = "**UC-008 — Certification**\n$TITLE_OFFLINE_CERT"
 
 !$FOOTER_DIRECTIVES    = "UC-001 · Directives · Contract 1.2.0 · Selma"
 !$FOOTER_COMPILATION   = "UC-002 · Compilation · Contract 1.2.0 · Selma"
@@ -50,67 +57,64 @@
 !$FOOTER_GUIDANCE      = "UC-007 · Guidance · Contract 1.2.0 · Selma"
 !$FOOTER_CERTIFICATION = "UC-008 · Certification · Contract 1.2.0 · Selma"
 
-' ── C4 peer IDs (registry only) ─────────────────────────────
+' ── C4 peer IDs (registry only; same strings as package dual) ─
 !$C4_API = "api"
 !$C4_CLIENTS = "clients"
+!$C4_APPLICATION = "application"
 !$C4_DIRECTIVES_APPLICATION = "directives_application"
 !$C4_COMPILATION_APPLICATION = "compilation_application"
 !$C4_INSPECTIONS_APPLICATION = "inspections_application"
 !$C4_FINDINGS_APPLICATION = "findings_application"
-!$C4_DIRECTIVES_REPOSITORY = "directives_repository"
-!$C4_COMPILED_RULES_REPOSITORY = "compiled_rules_repository"
-!$C4_FINDING_EVENTS_REPOSITORY = "finding_events_repository"
-!$C4_ARTIFACTS_REPOSITORY = "artifacts_repository"
-!$C4_TARGET_SOURCES_GATEWAY = "target_sources_gateway"
-!$C4_DIRECTIVES_STORE = "directives_store"
-!$C4_COMPILED_RULES_STORE = "compiled_rules_store"
-!$C4_FINDING_EVENTS_STORE = "finding_events_store"
-!$C4_ARTIFACTS_STORE = "artifacts_store"
-!$C4_TARGET_SOURCES = "target_sources"
 
-' ── Non-peers (full words; never drawn as C4 peers) ─────────
-!$NONPEER_RESOLVE_CONFLICT = "ResolveConflict (domain · not peer)"
-!$NONPEER_CERTIFICATION_TOOL = "certification_tool (offline · not peer)"
+' ── Non-peers ───────────────────────────────────────────────
+!$NONPEER_RESOLVE_CONFLICT = "ResolveConflict"
+!$NONPEER_CERTIFICATION_TOOL = "certification_tool"
 
-' ── Package group titles (identical to package / class) ─────
-!$PKG_DIRECTIVES_APPLICATION = "directives_application"
-!$PKG_COMPILED_RULES_APPLICATION = "compiled_rules_application\n(C4: compilation_application)"
-!$PKG_INSPECTIONS_APPLICATION = "inspections_application"
-!$PKG_FINDINGS_APPLICATION = "findings_application"
-!$PKG_CONFLICTS_DOMAIN = "conflicts_domain\n(domain · not peer)"
-!$PKG_REST_INTERFACE = "rest_interface\n(C4: api)"
-!$PKG_CERTIFICATION_TOOL = "certification_tool\n(offline · not peer)"
-!$PKG_SYSTEM_BOUNDARY = "Selma Application"
+' ── Group aliases (point at package SSoT — do not invent) ───
+' Application clusters (C4 *_application components)
+!$GRP_APP_DIR  = $TITLE_APP_DIR
+!$GRP_APP_CR   = $TITLE_APP_CR
+!$GRP_APP_INS  = $TITLE_APP_INS
+!$GRP_APP_FIND = $TITLE_APP_FIND
+' Interface gate (C4: api)
+!$GRP_IF_REST  = $TITLE_IF_REST
+' Domain service package (not a C4 component peer)
+!$GRP_DOM_CON  = $TITLE_DOM_CON
+' Offline tool (not a C4 peer, not a Clean Architecture package ring)
+!$GRP_OFFLINE_CERT = $TITLE_OFFLINE_CERT
+' Outer application layer ring (package TITLE_APPLICATION)
+!$GRP_APPLICATION_LAYER = $TITLE_APPLICATION
 
 ' ── Actors (identical to C4 persons + System for automation) ─
-' C4 peers.actors: regulatory_official | compliance_representative
-' Only these two persons may appear as human/service actors.
-' System is allowed for automated goals (outbox, open findings, …).
-' Never invent optional continuous-integration / ops actors.
 !$ACTOR_REGULATORY_OFFICIAL = "Regulatory Official"
 !$ACTOR_COMPLIANCE_REPRESENTATIVE = "Compliance Representative"
 !$ACTOR_SYSTEM = "System"
 
 ' ── ROD use-case names (package leaf == class <<Use Case>>) ─
-' directives_application
+' directives_application  (package UC_DIR_*)
 !$UC_NAME_CREATE_DIRECTIVE = "CreateDirective"
 !$UC_NAME_GET_DIRECTIVE = "GetDirective"
 !$UC_NAME_LIST_DIRECTIVES = "ListDirectives"
 !$UC_NAME_UPDATE_DIRECTIVE = "UpdateDirective"
 !$UC_NAME_LIFECYCLE_TRANSITIONS = "LifecycleTransitions"
+!$UC_NAME_RETIRE_DIRECTIVE = "Retire"
+!$UC_NAME_FORK_DIRECTIVE = "Fork"
+!$UC_NAME_MERGE_DIRECTIVE = "Merge"
+!$UC_NAME_SPLIT_DIRECTIVE = "Split"
+!$UC_NAME_RESTORE_DIRECTIVE = "Restore"
 
-' compiled_rules_application (C4: compilation_application)
+' compiled_rules_application  (C4: compilation_application; package UC_CR_*)
 !$UC_NAME_COMPILE_DIRECTIVES = "CompileDirectives"
 !$UC_NAME_PUBLISH_COMPILED_RULES = "PublishCompiledRules"
 !$UC_NAME_DRAIN_OUTBOX = "DrainOutbox"
 !$UC_NAME_VALIDATE_DIRECTIVE_DOCUMENTS = "ValidateDirectiveDocuments"
 
-' inspections_application
+' inspections_application  (package UC_INS_*)
 !$UC_NAME_CREATE_INSPECTION = "CreateInspection"
 !$UC_NAME_GET_INSPECTION = "GetInspection"
 !$UC_NAME_RUN_INSPECTION_PIPELINE = "RunInspectionPipeline"
 
-' findings_application
+' findings_application  (package UC_FIND_*)
 !$UC_NAME_GET_FINDING = "GetFinding"
 !$UC_NAME_LIST_FINDINGS = "ListFindings"
 !$UC_NAME_TRANSITION_FINDING = "TransitionFinding"
@@ -120,16 +124,16 @@
 !$UC_NAME_LIST_FINDING_AGGREGATES = "ListFindingAggregates"
 !$UC_NAME_REVIEW_CONFLICT_ARTIFACT = "ReviewConflictArtifact"
 
-' domain (not application use case; conflict group only)
+' conflicts_domain  (package SVC_CONFLICT; class <<Domain Service>> — not application UC)
 !$UC_NAME_RESOLVE_CONFLICT = "ResolveConflict"
 
-' rest_interface gate (C4: api) — actor-visible goals at ingress
+' rest_interface (C4: api) — gate goals; package REST_AUTHN / REST_CAP / REST_DENY
 !$UC_NAME_AUTHENTICATE_ACTOR = "AuthenticateActor"
 !$UC_NAME_CHECK_CAPABILITY = "CheckCapability"
 !$UC_NAME_APPEND_DENIAL = "AppendDenial"
 !$UC_NAME_ENFORCE_SEGREGATION_OF_DUTIES = "EnforceSegregationOfDuties"
 
-' certification_tool (offline)
+' certification_tool (offline · not peer)
 !$UC_NAME_RUN_ARCHITECTURAL_CERTIFICATION = "RunArchitecturalCertification"
 !$UC_NAME_VALIDATE_MEDIATED_FEEDBACK = "ValidateMediatedFeedback"
 !$UC_NAME_VALIDATE_DECLARATIVE_GOVERNANCE = "ValidateDeclarativeGovernance"
@@ -140,10 +144,3 @@
 !$UC_NAME_VALIDATE_PORTABLE_SERIALIZATION = "ValidatePortableSerialization"
 !$UC_NAME_VALIDATE_HERMETICITY_COMPLETENESS = "ValidateHermeticityCompleteness"
 !$UC_NAME_VALIDATE_EVENT_CHAIN_INTEGRITY = "ValidateEventChainIntegrity"
-
-' LifecycleTransitions methods (class methods; actor-visible goals)
-!$UC_NAME_RETIRE_DIRECTIVE = "Retire"
-!$UC_NAME_FORK_DIRECTIVE = "Fork"
-!$UC_NAME_MERGE_DIRECTIVE = "Merge"
-!$UC_NAME_SPLIT_DIRECTIVE = "Split"
-!$UC_NAME_RESTORE_DIRECTIVE = "Restore"

@@ -1,6 +1,6 @@
 ' Section: cd_section_iface_tui.puml
 
-package "tui_interface\n(C4: clients)" as IF_TUI #E1F5FE/0288D1 {
+package "$PKG_TUI_INTERFACE" as IF_TUI #E1F5FE/0288D1 {
 
   class "**DirectiveScreens**" as DirectiveScreens <<Interface>> #E1F5FE/0288D1 {
     + showList()

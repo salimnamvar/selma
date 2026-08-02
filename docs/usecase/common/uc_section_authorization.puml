@@ -1,10 +1,11 @@
 ' ============================================================
 ' Section: uc_section_authorization.puml
-' Group:   rest_interface (C4: api) — capability / segregation gate
-' Actor-visible ingress goals; not *_application use-case classes.
+' Group SSoT: $TITLE_IF_REST = rest_interface (C4: api)
+'             == package IF_REST == class rest_interface
+' Gate goals at driving adapter (not *_application package)
 ' ============================================================
 
-rectangle "$PKG_REST_INTERFACE" as GRP_AUTH $UC_PKG_INTERFACE {
+rectangle "$GRP_IF_REST" as GRP_AUTH $UC_PKG_INTERFACE {
 
   usecase "$UC_NAME_AUTHENTICATE_ACTOR" as UC_AUTH_AUTHN $CA_FILL_INTERFACE
   usecase "$UC_NAME_CHECK_CAPABILITY" as UC_AUTH_CHECK $CA_FILL_GATE

@@ -1,6 +1,6 @@
 ' Section: cd_section_app_directives.puml
 
-package "directives_application" as UC_DIR #E0F2F1/1B7A6E {
+package "$PKG_DIRECTIVES_APPLICATION" as UC_DIR #E0F2F1/1B7A6E {
 
   class "**CreateDirective**" as CreateDirective <<Use Case>> #E0F2F1/1B7A6E {
     - repo: DirectiveRepository

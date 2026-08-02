@@ -1,10 +1,10 @@
 ' ============================================================
 ' Section: uc_section_guidance.puml
-' Group:   findings_application read-model goals
-' Subset of findings ROD use cases (guidance + aggregates only)
+' Group SSoT: $TITLE_APP_FIND only (slice of findings_application)
+' Not a separate package or C4 peer — same group as UC-004
 ' ============================================================
 
-rectangle "$PKG_FINDINGS_APPLICATION" as GRP_GUIDE $UC_PKG_APPLICATION {
+rectangle "$GRP_APP_FIND" as GRP_GUIDE $UC_PKG_APPLICATION {
 
   usecase "$UC_NAME_GET_FINDING_GUIDANCE" as UC_FIND_GUIDE $CA_FILL_APPLICATION
   usecase "$UC_NAME_LIST_FINDING_AGGREGATES" as UC_FIND_AGGR $CA_FILL_APPLICATION

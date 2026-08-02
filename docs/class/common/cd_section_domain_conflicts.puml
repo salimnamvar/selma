@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_conflicts.puml
 ' ============================================================
 
-package "conflicts_domain" as DOM_CON #F3E5F5/7B1FA2 {
+package "$PKG_CONFLICTS_DOMAIN" as DOM_CON #F3E5F5/7B1FA2 {
 
   class "**ResolveConflict**" as ResolveConflict <<Domain Service>> #F3E5F5/7B1FA2 {
     + resolve(a: Directive, b: Directive): ConflictArtifact

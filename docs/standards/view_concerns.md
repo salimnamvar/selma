@@ -55,14 +55,31 @@ Never invent C4 peer `compiled_rules_application` (see `forbidden_c4_peer_ids` i
 
 ## Use case ↔ structural identity dual
 
-| Concept | Use-case oval / group | Package leaf | Class type | C4 peer |
+**Group SSoT:** `docs/package/common/pkg_identities.puml` macros `$TITLE_APP_*`, `$TITLE_IF_*`, `$TITLE_DOM_*`, `$TITLE_OFFLINE_CERT`.  
+Use-case diagrams **include** that file and draw group rectangles only from those macros. Class package boxes use the same display strings. C4 component IDs appear in the dual subtitle where applicable.
+
+| Use-case group (rectangle) | Package title macro | Class package box | C4 component peer |
+| :--- | :--- | :--- | :--- |
+| `$TITLE_APP_DIR` | `directives_application` + `(C4: directives_application)` | same | `directives_application` |
+| `$TITLE_APP_CR` | `compiled_rules_application` + `(C4: compilation_application)` | same | `compilation_application` |
+| `$TITLE_APP_INS` | `inspections_application` + `(C4: inspections_application)` | same | `inspections_application` |
+| `$TITLE_APP_FIND` | `findings_application` + `(C4: findings_application)` | same | `findings_application` |
+| `$TITLE_IF_REST` | `rest_interface (C4: api)` | same | `api` |
+| `$TITLE_DOM_CON` | `conflicts_domain` | same | **not** a peer (domain) |
+| `$TITLE_OFFLINE_CERT` | offline (not a CA package ring) | — | `certification_tool` (offline · not peer) |
+| Outer `$TITLE_APPLICATION` | `<<application>> *_application` | application layer | C4 container `application` |
+
+| Concept | Use-case oval | Package leaf | Class type | C4 peer |
 | :--- | :--- | :--- | :--- | :--- |
-| Create directive | `CreateDirective` in `directives_application` | `CreateDirective` | `<<Use Case>> CreateDirective` | `directives_application` |
-| Compile | `CompileDirectives` in `compiled_rules_application` | `CompileDirectives` | `<<Use Case>> CompileDirectives` | `compilation_application` |
-| Transition finding | `TransitionFinding` in `findings_application` | `TransitionFinding` | `<<Use Case>> TransitionFinding` | `findings_application` |
-| Capability gate | `CheckCapability` in `rest_interface` (C4: api) | interface gate types | gate / enforcer types | `api` |
-| Resolve conflict | `ResolveConflict` group labeled `(domain · not peer)` | `conflicts_domain` | `<<Domain Service>> ResolveConflict` | **not** a peer |
-| Certification run | `RunArchitecturalCertification` offline group | offline tool | certification payloads | `certification_tool` (offline · not peer) |
+| Create directive | `CreateDirective` | `CreateDirective` | `<<Use Case>> CreateDirective` | `directives_application` |
+| Compile | `CompileDirectives` | `CompileDirectives` | `<<Use Case>> CompileDirectives` | `compilation_application` |
+| Transition finding | `TransitionFinding` | `TransitionFinding` | `<<Use Case>> TransitionFinding` | `findings_application` |
+| Capability gate | `CheckCapability` | `CapabilityEnforcer` (interface) | gate types | `api` |
+| Resolve conflict | `ResolveConflict` in `$TITLE_DOM_CON` | `ResolveConflict` | `<<Domain Service>> ResolveConflict` | **not** a peer |
+| Conflict review | `ReviewConflictArtifact` in `$TITLE_APP_FIND` | `ReviewConflictArtifact` | `<<Use Case>> ReviewConflictArtifact` | `findings_application` |
+| Certification run | `RunArchitecturalCertification` in `$TITLE_OFFLINE_CERT` | offline | certification payloads | offline · not peer |
+
+**Forbidden group labels:** invented names (`Selma Application`, “Conflict engine”, “Guidance engine”), bare package ids when the SSoT dual form exists, groups that do not appear in package or C4 (except `$TITLE_OFFLINE_CERT` and `$TITLE_DOM_*`).
 
 Never invent a C4 peer for domain services or the certification tool. Never name use cases after pipeline stages or FSM states (`NormalizeTarget`, `PendingVerification`, …) — state and activity views own those.
 

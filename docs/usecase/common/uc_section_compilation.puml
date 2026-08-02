@@ -1,10 +1,11 @@
 ' ============================================================
 ' Section: uc_section_compilation.puml
-' Group:   compiled_rules_application (C4: compilation_application)
-' ROD use cases — identical to package APP_CR and class UC_CR
+' Group SSoT: $TITLE_APP_CR (package compiled_rules_application)
+'             == C4 compilation_application (naming dual)
+' Leaves: package UC_CR_* == class <<Use Case>>
 ' ============================================================
 
-rectangle "$PKG_COMPILED_RULES_APPLICATION" as GRP_CR $UC_PKG_APPLICATION {
+rectangle "$GRP_APP_CR" as GRP_CR $UC_PKG_APPLICATION {
 
   usecase "$UC_NAME_COMPILE_DIRECTIVES" as UC_CR_COMPILE $CA_FILL_APPLICATION
   usecase "$UC_NAME_PUBLISH_COMPILED_RULES" as UC_CR_PUB $CA_FILL_APPLICATION

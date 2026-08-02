@@ -1,10 +1,11 @@
 ' ============================================================
 ' Section: uc_section_certification.puml
-' Group:   certification_tool (offline · not peer)
-' Gates AA-01 … AA-09 as included validation use cases
+' Group SSoT: $TITLE_OFFLINE_CERT (pkg_identities)
+'             certification_tool (offline · not peer)
+' Not an application package; not a C4 component peer
 ' ============================================================
 
-rectangle "$PKG_CERTIFICATION_TOOL" as GRP_CERT $UC_PKG_EXTERNAL {
+rectangle "$GRP_OFFLINE_CERT" as GRP_CERT $UC_PKG_EXTERNAL {
 
   usecase "$UC_NAME_RUN_ARCHITECTURAL_CERTIFICATION" as UC_CERT_RUN $CA_FILL_EXTERNAL
   usecase "$UC_NAME_VALIDATE_MEDIATED_FEEDBACK" as UC_CERT_AA01 $CA_FILL_EXTERNAL

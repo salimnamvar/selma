@@ -1,14 +1,15 @@
 ' ============================================================
 ' Section: uc_section_conflict.puml
-' Group:   conflicts_domain (domain · not peer) + findings review
-' ResolveConflict is a domain service (class / package domain).
-' ReviewConflictArtifact is findings_application (actor-facing).
+' Groups (exact package titles — no invented labels):
+'   $TITLE_DOM_CON  = conflicts_domain  (package/class; not C4 peer)
+'   $TITLE_APP_FIND = findings_application (C4 findings_application)
+' Leaves: ResolveConflict (domain service) · ReviewConflictArtifact (app UC)
 ' ============================================================
 
-rectangle "$PKG_CONFLICTS_DOMAIN" as GRP_CON $UC_PKG_DOMAIN {
+rectangle "$GRP_DOM_CON" as GRP_CON $UC_PKG_DOMAIN {
   usecase "$UC_NAME_RESOLVE_CONFLICT" as UC_CON_RESOLVE $CA_FILL_DOMAIN
 }
 
-rectangle "$PKG_FINDINGS_APPLICATION" as GRP_FIND_CON $UC_PKG_APPLICATION {
+rectangle "$GRP_APP_FIND" as GRP_FIND_CON $UC_PKG_APPLICATION {
   usecase "$UC_NAME_REVIEW_CONFLICT_ARTIFACT" as UC_FIND_CONFLICT $CA_FILL_APPLICATION
 }

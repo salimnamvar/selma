@@ -37,6 +37,20 @@
 !$TITLE_APP_INS = "inspections_application\n(C4: inspections_application)"
 !$TITLE_APP_FIND = "findings_application\n(C4: findings_application)"
 
+' Domain resource packages (not C4 component peers)
+!$TITLE_DOM_SHARED = "shared_domain"
+!$TITLE_DOM_DIR = "directives_domain"
+!$TITLE_DOM_CR = "compiled_rules_domain"
+!$TITLE_DOM_INS = "inspections_domain"
+!$TITLE_DOM_FIND = "findings_domain"
+!$TITLE_DOM_CON = "conflicts_domain"
+!$TITLE_DOM_EVENTS = "domain_events"
+!$TITLE_DOM_CERT = "certification_payloads"
+!$TITLE_DOM_AUTH = "authorization_domain"
+
+' Offline non-peer (not a package under Clean Architecture rings)
+!$TITLE_OFFLINE_CERT = "certification_tool\n(offline · not peer)"
+
 !$TITLE_INFRA_DIR = "directives_infrastructure\n(C4: directives_repository)"
 !$TITLE_INFRA_CR = "compiled_rules_infrastructure\n(C4: compiled_rules_repository)"
 !$TITLE_INFRA_FE = "findings_infrastructure\n(C4: finding_events_repository)"

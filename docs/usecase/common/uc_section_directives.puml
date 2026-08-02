@@ -1,10 +1,11 @@
 ' ============================================================
 ' Section: uc_section_directives.puml
-' Group:   directives_application (C4: directives_application)
-' ROD use cases — identical to package APP_DIR and class UC_DIR
+' Group SSoT: $TITLE_APP_DIR (package) == class directives_application
+'             == C4 directives_application
+' Leaves: package UC_DIR_* == class <<Use Case>>
 ' ============================================================
 
-rectangle "$PKG_DIRECTIVES_APPLICATION" as GRP_DIR $UC_PKG_APPLICATION {
+rectangle "$GRP_APP_DIR" as GRP_DIR $UC_PKG_APPLICATION {
 
   usecase "$UC_NAME_CREATE_DIRECTIVE" as UC_DIR_CREATE $CA_FILL_APPLICATION
   usecase "$UC_NAME_GET_DIRECTIVE" as UC_DIR_GET $CA_FILL_APPLICATION

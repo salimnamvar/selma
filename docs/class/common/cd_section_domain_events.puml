@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_events.puml
 ' ============================================================
 
-package "domain_events" as EVT_PKG #FFFDE7/F9A825 {
+package "$PKG_DOMAIN_EVENTS" as EVT_PKG #FFFDE7/F9A825 {
 
   abstract class "**DomainEvent**" as DomainEvent <<Domain Event>> #FFFDE7/F9A825 {
     + event_id: EventId

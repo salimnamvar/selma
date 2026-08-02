@@ -57,6 +57,8 @@
 !$NONPEER_FINDING_OPEN_PORT = "FindingOpenPort"
 
 ' ── Package module titles (identical to package diagram) ────
+' Package box titles — MUST match docs/package/common/pkg_identities.puml
+' $TITLE_APP_* / $TITLE_DOM_* / $TITLE_IF_* / $TITLE_INFRA_* (byte-identical)
 !$PKG_SHARED_DOMAIN = "shared_domain"
 !$PKG_DIRECTIVES_DOMAIN = "directives_domain"
 !$PKG_COMPILED_RULES_DOMAIN = "compiled_rules_domain"
@@ -67,10 +69,10 @@
 !$PKG_CERTIFICATION_PAYLOADS = "certification_payloads"
 !$PKG_AUTHORIZATION_DOMAIN = "authorization_domain"
 
-!$PKG_DIRECTIVES_APPLICATION = "directives_application"
+!$PKG_DIRECTIVES_APPLICATION = "directives_application\n(C4: directives_application)"
 !$PKG_COMPILED_RULES_APPLICATION = "compiled_rules_application\n(C4: compilation_application)"
-!$PKG_INSPECTIONS_APPLICATION = "inspections_application"
-!$PKG_FINDINGS_APPLICATION = "findings_application"
+!$PKG_INSPECTIONS_APPLICATION = "inspections_application\n(C4: inspections_application)"
+!$PKG_FINDINGS_APPLICATION = "findings_application\n(C4: findings_application)"
 !$PKG_APPLICATION_PORTS = "application.ports"
 !$PKG_APPLICATION_DTO = "application.dto"
 
@@ -81,9 +83,9 @@
 !$PKG_INSPECTIONS_INFRASTRUCTURE = "inspections_infrastructure\n(C4: target_sources_gateway)"
 !$PKG_PLATFORM_INFRASTRUCTURE = "platform_infrastructure"
 
-!$PKG_REST_INTERFACE = "rest_interface\n(C4: api)"
-!$PKG_CLI_INTERFACE = "cli_interface\n(C4: clients)"
-!$PKG_TUI_INTERFACE = "tui_interface\n(C4: clients)"
+!$PKG_REST_INTERFACE = "rest_interface (C4: api)"
+!$PKG_CLI_INTERFACE = "cli_interface (C4: clients)"
+!$PKG_TUI_INTERFACE = "tui_interface (C4: clients)"
 !$PKG_COMPOSITION_ROOT = "composition_root"
 
 ' ── Port names (ISP; identical to package !$PORT_*) ─────────

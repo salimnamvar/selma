@@ -47,18 +47,36 @@ python scripts/check_design_alignment.py
 
 **Rule:** never invent hex in diagram bodies — only palette macros / `$UC_*` aliases.
 
+## Identity binding (groups — identical across views)
+
+**SSoT for group display titles:** [`../package/common/pkg_identities.puml`](../package/common/pkg_identities.puml)  
+Use-case identities **include** that file. Do not invent group strings.
+
+| UC | Group rectangle (macro) | Package package | Class package box | C4 component |
+| :--- | :--- | :--- | :--- | :--- |
+| UC-001 | `$TITLE_APP_DIR` | `directives_application` + C4 dual | same | `directives_application` |
+| UC-002 | `$TITLE_APP_CR` | `compiled_rules_application` + C4 dual | same | `compilation_application` |
+| UC-003 | `$TITLE_APP_INS` | `inspections_application` + C4 dual | same | `inspections_application` |
+| UC-004 / UC-007 | `$TITLE_APP_FIND` | `findings_application` + C4 dual | same | `findings_application` |
+| UC-005 | `$TITLE_DOM_CON` + `$TITLE_APP_FIND` | `conflicts_domain` + findings app | same | domain not peer · `findings_application` |
+| UC-006 | `$TITLE_IF_REST` | `rest_interface (C4: api)` | same | `api` |
+| UC-008 | `$TITLE_OFFLINE_CERT` | offline (not a CA ring) | — | offline · not peer |
+| Outer ring | `$TITLE_APPLICATION` | `<<application>> *_application` | application layer | container `application` |
+
+**Oval names** = package application leaves = class `<<Use Case>>` type names (ROD Verb+Resource).
+
 ## Naming (ROD + Clean Architecture)
 
 | Element | Convention | Examples |
 | :--- | :--- | :--- |
 | Diagram ID | `UC-NNN` / `Use Case NNN` | `UC-001`, `Use Case 001 — Directives` |
 | File | `uc_NNN_{resource}.puml` | `uc_004_findings.puml` |
-| Group rectangle | Package title (dual for compile) | `directives_application`, `compiled_rules_application` + `(C4: compilation_application)` |
+| Group rectangle | **Only** `$TITLE_APP_*` / `$TITLE_IF_*` / `$TITLE_DOM_*` / `$TITLE_OFFLINE_CERT` from package identities | never invent “Selma Application” or bare drifted labels |
 | Use-case oval | PascalCase **Verb + Resource** = class / package leaf | `CreateDirective`, `TransitionFinding`, `CompileDirectives` |
-| Actors | Full C4 person names | `Regulatory Official`, `Compliance Representative` |
-| Non-peers | Full words + label | `ResolveConflict (domain · not peer)`, `certification_tool (offline · not peer)` |
+| Actors | Full C4 person names only (+ System when connected) | `Regulatory Official`, `Compliance Representative` |
+| Non-peers | Domain / offline groups from package macros | `$TITLE_DOM_CON`, `$TITLE_OFFLINE_CERT` |
 
-**Forbidden on this view:** pipeline stage names as use cases (`NormalizeTarget`, `Materialize…`), FSM state names (`PendingVerification`), store mutability prose, capability catalog tables, C4 Rel graphs, short forms (`CG-IR`, `SoD`, `RO`).
+**Forbidden on this view:** pipeline stage names as use cases (`NormalizeTarget`, `Materialize…`), FSM state names (`PendingVerification`), store mutability prose, capability catalog tables, C4 Rel graphs, short forms (`CG-IR`, `SoD`, `RO`), **invented group names**.
 
 ## Actor catalog (identical to C4)
 
@@ -83,14 +101,14 @@ and `c4_registry.yaml` `peers.actors`.
 
 | ID | File | Group (package) | C4 | ROD use cases (must match package + class) |
 | :--- | :--- | :--- | :--- | :--- |
-| **UC-001** | [uc_001_directives.puml](uc_001_directives.puml) | `directives_application` | `directives_application` | `CreateDirective`, `GetDirective`, `ListDirectives`, `UpdateDirective`, `LifecycleTransitions` (+ `Retire` / `Fork` / `Merge` / `Split` / `Restore` methods) |
-| **UC-002** | [uc_002_compilation.puml](uc_002_compilation.puml) | `compiled_rules_application` | `compilation_application` | `CompileDirectives`, `PublishCompiledRules`, `DrainOutbox`, `ValidateDirectiveDocuments` |
-| **UC-003** | [uc_003_inspection.puml](uc_003_inspection.puml) | `inspections_application` | `inspections_application` | `CreateInspection`, `GetInspection`, `RunInspectionPipeline` |
-| **UC-004** | [uc_004_findings.puml](uc_004_findings.puml) | `findings_application` | `findings_application` | `GetFinding`, `ListFindings`, `TransitionFinding`, `GetFindingGuidance`, `AttachEvidence`, `OpenFindings`, `ListFindingAggregates`, `ReviewConflictArtifact` |
-| **UC-005** | [uc_005_conflict.puml](uc_005_conflict.puml) | `conflicts_domain` + findings | `ResolveConflict` (domain · not peer) | `ResolveConflict`, `ReviewConflictArtifact` |
-| **UC-006** | [uc_006_authorization.puml](uc_006_authorization.puml) | `rest_interface` | `api` | `AuthenticateActor`, `CheckCapability`, `AppendDenial`, `EnforceSegregationOfDuties` |
-| **UC-007** | [uc_007_guidance.puml](uc_007_guidance.puml) | `findings_application` | `findings_application` | `GetFindingGuidance`, `ListFindingAggregates` |
-| **UC-008** | [uc_008_certification.puml](uc_008_certification.puml) | offline tool | `certification_tool` (offline · not peer) | `RunArchitecturalCertification` + AA-01…AA-09 validators · actor: System only |
+| **UC-001** | [uc_001_directives.puml](uc_001_directives.puml) | `$TITLE_APP_DIR` | `directives_application` | `CreateDirective`, `GetDirective`, `ListDirectives`, `UpdateDirective`, `LifecycleTransitions` (+ `Retire` / `Fork` / `Merge` / `Split` / `Restore`) |
+| **UC-002** | [uc_002_compilation.puml](uc_002_compilation.puml) | `$TITLE_APP_CR` | `compilation_application` | `CompileDirectives`, `PublishCompiledRules`, `DrainOutbox`, `ValidateDirectiveDocuments` |
+| **UC-003** | [uc_003_inspection.puml](uc_003_inspection.puml) | `$TITLE_APP_INS` | `inspections_application` | `CreateInspection`, `GetInspection`, `RunInspectionPipeline` |
+| **UC-004** | [uc_004_findings.puml](uc_004_findings.puml) | `$TITLE_APP_FIND` | `findings_application` | full findings ROD catalog |
+| **UC-005** | [uc_005_conflict.puml](uc_005_conflict.puml) | `$TITLE_DOM_CON` + `$TITLE_APP_FIND` | domain + `findings_application` | `ResolveConflict`, `ReviewConflictArtifact` |
+| **UC-006** | [uc_006_authorization.puml](uc_006_authorization.puml) | `$TITLE_IF_REST` | `api` | `AuthenticateActor`, `CheckCapability`, `AppendDenial`, `EnforceSegregationOfDuties` |
+| **UC-007** | [uc_007_guidance.puml](uc_007_guidance.puml) | `$TITLE_APP_FIND` (slice) | `findings_application` | `GetFindingGuidance`, `ListFindingAggregates` |
+| **UC-008** | [uc_008_certification.puml](uc_008_certification.puml) | `$TITLE_OFFLINE_CERT` | offline · not peer | `RunArchitecturalCertification` + AA-01…AA-09 · System only |
 
 ## Conventions
 

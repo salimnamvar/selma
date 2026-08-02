@@ -1,6 +1,6 @@
 ' Section: cd_section_iface_rest.puml
 
-package "rest_interface\n(C4: api)" as IF_REST #E1F5FE/0288D1 {
+package "$PKG_REST_INTERFACE" as IF_REST #E1F5FE/0288D1 {
 
   class "**DirectiveRouter**" as DirectiveRouter <<Interface>> #E1F5FE/0288D1 {
     + POST /directives

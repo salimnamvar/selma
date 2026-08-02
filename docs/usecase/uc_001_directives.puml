@@ -15,7 +15,7 @@ left to right direction
 
 actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
 
-rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+rectangle "$GRP_APPLICATION_LAYER" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_directives.puml
 }
 

@@ -1,6 +1,6 @@
 ' Section: cd_section_iface_cli.puml
 
-package "cli_interface\n(C4: clients)" as IF_CLI #E1F5FE/0288D1 {
+package "$PKG_CLI_INTERFACE" as IF_CLI #E1F5FE/0288D1 {
 
   class "**DirectiveCommands**" as DirectiveCommands <<Interface>> #E1F5FE/0288D1 {
     + create(...)
