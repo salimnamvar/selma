@@ -173,7 +173,7 @@ stories:
     i_want: "to verify architectural audit gates before production certification"
     so_that: "reference implementations are production-grade"
     acceptance_criteria:
-      - "Given a reference implementation. When architectural audit runs. Then all 8 gates (AA-01 through AA-08) are verified with pass/fail per gate."
+      - "Given a reference implementation. When architectural audit runs. Then all 9 gates (AA-01 through AA-09) are verified with pass/fail per gate."
       - "Given gate AA-01 (Mediated Feedback). When verification runs. Then it is confirmed that findings_application read models have no write path to compiled_rules or the finding FSM."
       - "Given gate AA-04 (Segregation of Duties). When verification runs. Then it is confirmed that finding.waive is denied when actor is in creator_provenance."
       - "Given gate AA-08 (Hermeticity Completeness). When verification runs. Then python_hash_seed, locale, wall-clock policy, ordered collections, and exhaustive runtime_preimage are confirmed."

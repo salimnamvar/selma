@@ -65,7 +65,10 @@
     operationId: getInspection
     tags: [Inspections]
     summary: Get inspection
-    description: Returns the immutable inspection snapshot.
+    description: >
+      Returns the immutable inspection snapshot. Requires capability
+      inspection.view (not finding.view). Artifact router MUST NOT authorize
+      inspection-scoped reads via findings capabilities alone.
     responses:
       "200":
         description: Inspection snapshot
@@ -75,6 +78,8 @@
               $ref: ../components/schemas.yaml#/components/schemas/InspectionResult
       "401":
         $ref: ../components/responses.yaml#/components/responses/Unauthorized
+      "403":
+        $ref: ../components/responses.yaml#/components/responses/Forbidden
       "404":
         $ref: ../components/responses.yaml#/components/responses/NotFound
 

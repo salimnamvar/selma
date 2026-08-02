@@ -60,10 +60,13 @@ sod_test_matrix:
       note: "Capability only; no creator_provenance SoD"
     - action: "finding.waive"
       sod_rule: "SOD-001"
-      check: "actor NOT IN creator_provenance"
+      check: "sod_identity(actor) NOT IN creator_provenance(finding)"
     - action: "finding.supersede"
       sod_rule: "SOD-003"
-      check: "actor NOT IN creator_provenance"
+      check: "sod_identity(actor) NOT IN creator_provenance(finding)"
+    - action: "finding.reopen"
+      sod_rule: null
+      note: "Capability finding.reopen only; mandatory comments"
   additional:
     - action: "finding.approve_remediation"
       from: "Pending Verification"

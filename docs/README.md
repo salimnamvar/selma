@@ -30,7 +30,7 @@ post-finding guidance.
 
 **Not product peers:** CI/CD, long-term audit export, remediation ticketing.
 Conflict resolution (`ResolveConflict`) and guidance are domain / findings
-concerns. Certification (AA-01…AA-08) is offline/CI `certification_tool`.
+concerns. Certification (AA-01…AA-09) is offline/CI `certification_tool`.
 Capability denials at `api` use application-owned **`DenialAuditPort`**
 (implemented by `finding_events_repository`).
 

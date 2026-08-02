@@ -113,6 +113,14 @@ elseif (Regulatory Official) then
     end note
     :Transition: Pending Verification → Rejected;
     :Append DispositionChanged Event;
+  elseif (Reopen) then
+    :Check Capability\n<color:#1B7A6E><b>finding.reopen</b></color>;
+    note right
+      TR-FL-009: first-class finding.reopen
+      (NOT reject_remediation). Mandatory comments.
+    end note
+    :Transition: Rejected → Open;
+    :Append DispositionChanged Event;
   endif
 endif
 

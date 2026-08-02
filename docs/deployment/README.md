@@ -32,7 +32,7 @@ Internals of Application are defined by [C4 Component](../c4-model/c4_selma_comp
 | **External** | Optional pull only | `target_sources` |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
 
-CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-08) is not a deploy peer. Production CI MUST upload certification results via the authenticated API (`CertificationArtifactPort` / artifacts resource with a system capability) — **not** by opening direct network ingress from CI into the Data Zone object store. Local/dev offline write to `artifacts_store` kind=certification remains allowed when the tool runs co-located with store credentials under operator control.
+CI/CD, long-term audit export, and remediation ticketing are **optional clients/exports**, not required topology peers. Offline **`certification_tool`** (AA-01…AA-09) is not a deploy peer. Production CI MUST upload certification results via the authenticated API (`CertificationArtifactPort` / artifacts resource with a system capability) — **not** by opening direct network ingress from CI into the Data Zone object store. Local/dev offline write to `artifacts_store` kind=certification remains allowed when the tool runs co-located with store credentials under operator control.
 
 ## Environment Requirements
 

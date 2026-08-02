@@ -374,7 +374,7 @@ package "<<use_cases.findings_application>>\nConflict artifact review\n(findings
 
 note as N_CERT
   **certification_tool (offline/CI)**
-  AA-01…AA-08 are **not** in-process application use cases.
+  AA-01…AA-09 are **not** in-process application use cases.
   The tool suite may write certification blobs via
   ArtifactRepository → artifacts_store.
   Clients **read** them as Artifacts (kind=certification).

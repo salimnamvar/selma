@@ -23,7 +23,7 @@ info:
     | R5b | Conflict resolution | `/artifacts/{artifact_id}/resolutions` | domain `ResolveConflict` + artifacts | Create (human) |
 
     **Not freestanding API peers:** conflict *engine*, guidance/analytics *engine*,
-    in-process certification service. Certification (AA-01…AA-08) is offline/CI
+    in-process certification service. Certification (AA-01…AA-09) is offline/CI
     `certification_tool` writing `artifacts_store` (kind=certification).
 
     ## Conventions

@@ -55,7 +55,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 | `compliance_representative` | Actor | Compliance Representative | — |
 | `selma` | System | Selma | System boundary |
 | `target_sources` | External (optional) | Target Sources | External system |
-| `clients` | Container | Clients | Driving adapters (outer ring) |
+| `clients` | Container | Clients | External UX surfaces (Web SPA, Desktop, Mobile) — distinct threat model from in-process CLI/TUI adapters |
 | `application` | Container | Application | Runtime process |
 | `directives_store` | Store | Directives Store | Frameworks & drivers |
 | `compiled_rules_store` | Store | Compiled Rules Store | Frameworks & drivers |
@@ -74,9 +74,10 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 ### Naming notes
 
-- **`compilation_application` (C4 ID)** — hermetic compile process; publishes `compiled_rules_store`. **Package prefix is `compiled_rules_*`** (e.g. `compiled_rules_application`, `compiled_rules_infrastructure`) so the resource that is written stays explicit. These are **one concept, two names by design**: C4 emphasizes the hermetic process; packages emphasize the compiled-rules resource. Never invent a C4 peer ID `compiled_rules_application` — it is listed under `forbidden_ids` in [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml) and enforced by `scripts/check_design_alignment.py`.
+- **`compilation_application` (C4 ID)** — hermetic compile process; publishes `compiled_rules_store`. **Package prefix is `compiled_rules_*`** (e.g. `compiled_rules_application`, `compiled_rules_infrastructure`) so the resource that is written stays explicit. These are **one concept, two names by design**: C4 emphasizes the hermetic process; packages emphasize the compiled-rules resource. Never invent a C4 peer ID `compiled_rules_application` — it is listed under `forbidden_ids` in [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml) and enforced by `scripts/check_design_alignment.py`. CI SHOULD also forbid Python package names matching `compilation_*` (import-linter / ArchUnit-equivalent) so developers do not create a third name.
 - **`findings_application` vs `finding_events_store`** — findings is the resource/use-case projection; finding events is the append-only system of record.
 - **`{resource}_repository`** pairs with `{resource}_store` (e.g. `directives_repository` → `directives_store`).
+- **`clients` vs CLI/TUI:** C4 `clients` is the external UX container (Web CDN SPA, Desktop binary, Mobile). Package `cli_interface` / `tui_interface` are Clean Architecture driving adapters that may run locally and still go through `api` or an embedded CapabilityEnforcer. Threat models differ (XSS/CDN vs local binary); do not treat them as one attack surface in security reviews.
 
 ## Clean Architecture mapping
 
@@ -125,7 +126,7 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 | :--- | :--- |
 | Conflict resolution algorithm | Domain service `ResolveConflict` in `conflicts_domain`; invoked **in-process** by `compilation_application` and `inspections_application` (package edges required; not a C4 component). When compile and inspect deployables are split, both MUST load the **same versioned** `conflicts_domain` library artifact (shared package / single release train); forking a private copy is non-conformant. Deployment topology note: [`../deployment/README.md`](../deployment/README.md) Compilation (hermetic) / DEP-001 |
 | Guidance & analytics | Findings Application → doctrine via `directives_repository` (`guidance_only`); revision pinned by `paired_policy_ref` (see Design principles) |
-| AA-01…AA-08 certification | Offline/CI **`certification_tool`** (registry non-peer); may write `artifacts_store` kind=certification only when run — not drawn as Context/Container peer |
+| AA-01…AA-09 certification | Offline/CI **`certification_tool`** (registry non-peer); may write `artifacts_store` kind=certification only when run — not drawn as Context/Container peer |
 | Capability catalog / SoD | Enforced at `api`; normative in [`../spec/contracts/authorization/`](../spec/contracts/authorization/) and OpenAPI [`../api/components/security.yaml`](../api/components/security.yaml) |
 | CI/CD | Optional client of API / certify tool |
 | Long-term audit export | Ops export from Finding Events / Artifacts stores (not a product peer) |

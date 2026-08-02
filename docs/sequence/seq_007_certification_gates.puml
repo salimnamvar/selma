@@ -87,7 +87,17 @@ group AA-08: Hermeticity Completeness
         python_hash_seed, locale,
         wall-clock policy, ordered
         collections, exhaustive
-        runtime_preimage (HERM-008).
+        runtime_preimage (HERM-008),
+        nondeterministic denylist.
+    end note
+end
+
+group AA-09: Event Chain Integrity
+    AA -> AA: verify chain_hash + HLC monotonicity
+    note right of AA
+        Sample finding streams;
+        retired_nodes fencing;
+        non-decreasing (pt,lc,node_id).
     end note
 end
 
@@ -112,7 +122,7 @@ AA --> cicd: CertificationResult
 deactivate AA
 
 note right of AA
-    All 8 gates must pass
+    All 9 gates must pass
     for certification to succeed.
     Partial pass is not valid.
     Tool is not an in-process C4 peer.

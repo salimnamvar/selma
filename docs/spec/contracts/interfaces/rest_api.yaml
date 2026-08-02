@@ -111,7 +111,7 @@ endpoint_families:
 
       - method: "POST"
         action: "FSM transition (acknowledge/dismiss/waive/approve/reject/reopen)"
-        capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation"
+        capability: "finding.acknowledge/dismiss/waive/approve_remediation/reject_remediation/reopen"
         request: "finding_id + transition-specific payload; Idempotency-Key REQUIRED"
         response: "Updated finding"
         errors:

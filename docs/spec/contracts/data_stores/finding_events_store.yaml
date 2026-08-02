@@ -372,6 +372,7 @@ guidance_pinning:
     - "FindingCreated payload MUST store paired_policy_ref of the doctrine revision at evaluation/create time"
     - "GetFindingGuidance resolves doctrine by that ref only — never latest revision of the lineage"
     - "If doctrine document is missing (retention edge case), return 404 GuidanceUnavailable with explicit error — do not substitute"
+    - "If pinned doctrine is retired, return 410 Gone with pointer to current doctrine when known — do not silently serve retired prose as current"
 
 replay_validation:
   description: "How historical event streams are validated against the current FSM"

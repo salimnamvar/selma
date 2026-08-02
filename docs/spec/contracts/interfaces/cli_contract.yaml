@@ -110,6 +110,12 @@ command_families:
         behavior: "Transition Pending Verification → Rejected"
         output: "Updated finding"
 
+      - name: "reopen"
+        capability: "finding.reopen"
+        args: "Finding ID + mandatory comments"
+        behavior: "Transition Rejected → Open (first-class capability; not reject_remediation)"
+        output: "Updated finding"
+
   - family: "audit"
     description: "Audit and verification commands"
     commands:
@@ -122,7 +128,7 @@ command_families:
       - name: "certify"
         capability: null
         args: "Implementation path"
-        behavior: "Run architectural audit gates AA-01 through AA-08"
+        behavior: "Run architectural audit gates AA-01 through AA-09"
         output: "Certification results with gate-ID traceability"
 
 error_behavior:
