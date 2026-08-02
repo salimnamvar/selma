@@ -2,80 +2,102 @@
 ' ============================================================
 ' Title:     ERD-002 Compiled Rules Store
 ' Source:    docs/spec/contracts/data_stores/compiled_rules_store.yaml
+'            docs/spec/contracts/compilation/pipeline.yaml
 ' C4:        compiled_rules_store ← compiled_rules_repository
-' Contract:  1.2.0
+'            (compilation_application publish path)
+' Package:   compiled_rules_infrastructure (C4: compiled_rules_repository)
+' Contract:  1.3.0
 ' ============================================================
+
 !include common/erd_styles.puml
+!include common/erd_identities.puml
 
-title Compiled Rules Store (Content-Addressed) — C4 store: compiled_rules_store · Immutable
+title $TITLE_COMPILED_RULES
 
-package "Compiled Rules" {
-  entity "Snapshots" as Snapshots {
-    * cg_ir_snapshot_hash : CHAR(64) <<PK, SHA-256>>
+package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
+
+  entity "$TABLE_SNAPSHOTS" as Snapshots <<immutable>> <<content_addressed>> <<system_of_record>> {
+    * **cg_ir_snapshot_hash** : CHAR(64) <<PK, SHA-256>>
     --
-    frozen_env_hash : CHAR(64)
+    frozen_env_hash : CHAR(64) <<SHA-256>>
     engine_version : TEXT
     directive_graph_version : TEXT
-    compiled_at : TIMESTAMPTZ
+    compiled_at : TIMESTAMPTZ <<excluded from hash>>
+    provenance : JSONB
     manifest_ref : TEXT
   }
 
-  entity "Nodes" as Nodes {
-    * node_hash : CHAR(64) <<PK, SHA-256>>
+  entity "$TABLE_NODES" as Nodes <<immutable>> <<content_addressed>> {
+    * **node_hash** : CHAR(64) <<PK, SHA-256>>
     --
+    node_id : TEXT <<logical control identity>>
+    node_kind : $ENUM_NODE_KIND
     node_body : JSONB
-    semantic_hash : CHAR(64)
-    presentation_hash : CHAR(64)
+    semantic_hash : CHAR(64) <<SHA-256>>
+    presentation_hash : CHAR(64) <<SHA-256>>
     creator_provenance : TEXT
   }
 
-  entity "Edges" as Edges {
-    * edge_hash : CHAR(64) <<PK, SHA-256>>
+  entity "$TABLE_EDGES" as Edges <<immutable>> <<content_addressed>> {
+    * **edge_hash** : CHAR(64) <<PK, SHA-256>>
     --
-    o source_node_hash : CHAR(64) <<FK>>
-    o target_node_hash : CHAR(64) <<FK>>
+    source_id : TEXT
+    target_id : TEXT
+    edge_kind : $ENUM_EDGE_KIND
+    o source_node_hash : CHAR(64) <<FK → Nodes, nullable>>
+    o target_node_hash : CHAR(64) <<FK → Nodes, nullable>>
   }
 
-  entity "SnapshotNodes" as SnapshotNodes {
-    o snapshot_hash : CHAR(64) <<FK>>
-    --
-    o node_hash : CHAR(64) <<FK>>
+  entity "$TABLE_SNAPSHOT_NODES" as SnapshotNodes <<immutable>> {
+    * o **snapshot_hash** : CHAR(64) <<PK, FK → Snapshots>>
+    * o **node_hash** : CHAR(64) <<PK, FK → Nodes>>
   }
 
-  entity "LineageHeads" as LineageHeads {
-    * lineage_id : UUID <<PK>>
+  entity "$TABLE_SNAPSHOT_EDGES" as SnapshotEdges <<immutable>> {
+    * o **snapshot_hash** : CHAR(64) <<PK, FK → Snapshots>>
+    * o **edge_hash** : CHAR(64) <<PK, FK → Edges>>
+  }
+
+  entity "$TABLE_LINEAGE_HEADS" as LineageHeads <<secondary_index>> <<mutable>> {
+    * **lineage_id** : UUID <<PK>>
     --
-    head_snapshot_hash : CHAR(64) <<FK, SHA-256>>
-    head_revision : INTEGER
+    o head_snapshot_hash : CHAR(64) <<FK → Snapshots, SHA-256>>
+    head_revision : INTEGER <<revision-monotonic>>
     updated_at : TIMESTAMPTZ
+  }
+
+  enum "$ENUM_NODE_KIND" as NodeKind {
+    control
+    gateway
+    join
+  }
+
+  enum "$ENUM_EDGE_KIND" as EdgeKind {
+    depends_on
+    sequence
+    conflict
   }
 }
 
-Snapshots ||--o{ SnapshotNodes : "cg_ir_snapshot_hash"
+Snapshots ||--o{ SnapshotNodes : "snapshot_hash"
 Nodes ||--o{ SnapshotNodes : "node_hash"
+Snapshots ||--o{ SnapshotEdges : "snapshot_hash"
+Edges ||--o{ SnapshotEdges : "edge_hash"
 Nodes ||--o{ Edges : "source_node_hash"
 Nodes ||--o{ Edges : "target_node_hash"
 LineageHeads }o--|| Snapshots : "head_snapshot_hash"
+Nodes }o..|| NodeKind : "node_kind domain"
+Edges }o..|| EdgeKind : "edge_kind domain"
 
-note bottom of Nodes
-  **Deduplication**
-  • Identical node_body → identical node_hash
-  • Hash is deterministic (SHA-256 of canonical JSON)
-end note
+legend bottom
+  |= Stereotype |= Meaning |
+  | <<immutable>> <<content_addressed>> | Blob identity = hash; never updated in place |
+  | <<secondary_index>> | lineage_id → head_snapshot_hash (mirrors directives head) |
+  | Hash composition | node_hash = SHA-256(semantic ∥ presentation); snapshot excludes compiled_at |
+  | Cross-store | lineage_id joins directives_store heads by identifier only |
+  | $LEGEND_ERD |
+endlegend
 
-note bottom of Snapshots
-  **Invariants**
-  • Immutable after publish
-  • cg_ir_snapshot_hash is deterministic
-  • frozen_env_hash captures the build environment
-end note
-
-note bottom of LineageHeads
-  **head_snapshot_hash index (INV-CS-006)**
-  • lineage_id → latest published snapshot
-  • Mirrors Directives.head_snapshot_hash
-  • GetLatestCompiledRules uses this — not compiled_at
-  • Updated atomically with outbox completed
-end note
+footer ERD-002 · compiled_rules_store · Contract 1.3.0 · Selma
 
 @enduml

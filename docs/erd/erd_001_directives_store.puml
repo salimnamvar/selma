@@ -2,101 +2,121 @@
 ' ============================================================
 ' Title:     ERD-001 Directives Store
 ' Source:    docs/spec/contracts/data_stores/directives_store.yaml
+'            docs/spec/contracts/directive/lifecycle.yaml
+'            docs/spec/contracts/directive/identity.yaml
 ' C4:        directives_store ← directives_repository
-' Contract:  1.2.0
+'            (directives_application · compilation_application drain)
+' Package:   directives_infrastructure (C4: directives_repository)
+' Contract:  1.3.0
 ' ============================================================
+
 !include common/erd_styles.puml
+!include common/erd_identities.puml
 
-title Directives Store (PostgreSQL) — C4 store: directives_store · Mutable, Versioned
+title $TITLE_DIRECTIVES
 
-package "Directives" {
-  entity "Directives" as Directives {
-    * lineage_id : UUID <<PK, immutable>>
+package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
+
+  entity "$TABLE_DIRECTIVES" as Directives <<mutable>> <<system_of_record>> {
+    * **lineage_id** : UUID <<PK, immutable>>
     --
-    execution_id : UUID
-    status : ENUM(active, deprecated, draft, superseded)
-    revision : INTEGER
+    execution_id : UUID <<indexed>>
+    status : $ENUM_DIRECTIVE_STATUS
+    revision : INTEGER <<head revision>>
     head_snapshot_hash : CHAR(64) <<nullable, SHA-256>>
     metadata : JSONB
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ
   }
 
-  entity "DirectiveRevisions" as DirectiveRevisions {
-    * revision_id : UUID <<PK>>
+  entity "$TABLE_DIRECTIVE_REVISIONS" as DirectiveRevisions <<append_only>> {
+    * **revision_id** : UUID <<PK>>
     --
-    o lineage_id : UUID <<FK>>
+    o **lineage_id** : UUID <<FK → Directives>>
     execution_id : UUID
-    revision_number : INTEGER
-    executable_document : JSONB
-    policy_doctrine_document : JSONB
-    paired_policy_ref : TEXT
+    * revision_number : INTEGER <<unique with lineage_id>>
+    executable_document : JSONB <<rule_schema.json>>
+    policy_doctrine_document : JSONB <<policy_doctrine.yaml>>
+    * paired_policy_ref : TEXT <<unique, indexed>>
     created_by : TEXT
     created_at : TIMESTAMPTZ
   }
 
-  entity "LineageOperations" as LineageOperations {
-    * operation_id : UUID <<PK>>
+  entity "$TABLE_LINEAGE_OPERATIONS" as LineageOperations <<append_only>> {
+    * **operation_id** : UUID <<PK>>
     --
-    o lineage_id : UUID <<FK>>
-    operation_type : ENUM(fork, merge, split)
-    source_ids : JSONB
-    target_ids : JSONB
+    o **lineage_id** : UUID <<FK → Directives>>
+    operation_type : $ENUM_LINEAGE_OPERATION
+    source_ids : JSONB <<UUID array>>
+    target_ids : JSONB <<UUID array>>
+    created_by : TEXT
     created_at : TIMESTAMPTZ
   }
 
-  entity "CompileRequests" as CompileRequests {
-    * request_id : UUID <<PK>>
+  entity "$TABLE_COMPILE_REQUESTS" as CompileRequests <<outbox>> <<mutable>> {
+    * **request_id** : UUID <<PK>>
     --
-    o lineage_id : UUID <<FK>>
-    revision_number : INTEGER
-    status : ENUM(pending, in_progress, completed, failed, permanently_failed)
+    o **lineage_id** : UUID <<FK → Directives>>
+    * revision_number : INTEGER <<unique with lineage_id>>
+    status : $ENUM_COMPILE_REQUEST_STATUS
     idempotency_key : TEXT <<nullable>>
-    enqueued_at : TIMESTAMPTZ
-    completed_at : TIMESTAMPTZ <<nullable>>
+    worker_id : TEXT <<nullable, lease holder>>
+    lease_expires_at : TIMESTAMPTZ <<nullable>>
+    retry_count : INTEGER <<default 0>>
+    failure_class : TEXT <<nullable, schema|retriable>>
     last_error : TEXT <<nullable>>
+    enqueued_at : TIMESTAMPTZ
+    claimed_at : TIMESTAMPTZ <<nullable>>
+    completed_at : TIMESTAMPTZ <<nullable>>
+  }
+
+  entity "$TABLE_PAIRED_POLICY_REF_COUNTS" as PairedPolicyRefCounts <<secondary_index>> {
+    * **paired_policy_ref** : TEXT <<PK>>
+    --
+    refcount : INTEGER <<non-negative>>
+    updated_at : TIMESTAMPTZ
+  }
+
+  enum "$ENUM_DIRECTIVE_STATUS" as DirectiveStatus {
+    draft
+    active
+    deprecated
+    superseded
+  }
+
+  enum "$ENUM_LINEAGE_OPERATION" as LineageOperationType {
+    fork
+    merge
+    split
+  }
+
+  enum "$ENUM_COMPILE_REQUEST_STATUS" as CompileRequestStatus {
+    pending
+    in_progress
+    completed
+    failed
+    permanently_failed
   }
 }
 
 Directives ||--o{ DirectiveRevisions : "lineage_id"
 Directives ||--o{ LineageOperations : "lineage_id"
 Directives ||--o{ CompileRequests : "lineage_id"
+DirectiveRevisions ||--o| PairedPolicyRefCounts : "paired_policy_ref"
+Directives }o..|| CompileRequestStatus : "outbox status domain"
+Directives }o..|| DirectiveStatus : "status domain"
+LineageOperations }o..|| LineageOperationType : "operation_type domain"
 
-note bottom of Directives
-  **Locking Model**
-  • read_lock  → concurrent reads (FOR SHARE / RR)
-  • write_lock → exclusive writes, FIFO queue
-  • Release read locks before hermetic CPU compile
-  • Optimistic concurrency: ETag W/"{lineage}:{rev}"
-  **head_snapshot_hash**
-  • Latest published cg_ir_snapshot_hash for lineage
-  • Set atomically when outbox → completed
-  • null until first successful compile
-end note
+legend bottom
+  |= Stereotype |= Meaning |
+  | <<mutable>> | Head row updated in place (status, revision, head_snapshot_hash) |
+  | <<append_only>> | New rows only; history never rewritten |
+  | <<outbox>> | Transactional compile request; lease + status machine |
+  | <<secondary_index>> | Guidance GC refcount; not system of record for documents |
+  | Cross-store | head_snapshot_hash → compiled_rules_store by content hash only |
+  | $LEGEND_ERD |
+endlegend
 
-note bottom of DirectiveRevisions
-  **Invariants**
-  • lineage_id is immutable once set
-  • Every modification creates a new revision
-  • revision_number is monotonically increasing
-  • Dual document: executable_document (rule_schema)
-    + policy_doctrine_document (policy_doctrine)
-  • paired_policy_ref links guidance to this revision
-  • Compiler reads executable only; guidance reads doctrine only
-end note
-
-note bottom of CompileRequests
-  **Transactional outbox**
-  • Inserted in same TX as directive mutation
-  • Unique (lineage_id, revision_number)
-  • Drained by compilation_application
-  • Temporary CG-IR lag is allowed
-end note
-
-note bottom of LineageOperations
-  **Invariants**
-  • source_ids / target_ids are JSON arrays
-  • operation_type ∈ {fork, merge, split}
-end note
+footer ERD-001 · directives_store · Contract 1.3.0 · Selma
 
 @enduml

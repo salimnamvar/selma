@@ -1,0 +1,114 @@
+' ============================================================
+' Title:     Selma — Entity-Relationship Diagram Identities
+' Purpose:   Stable diagram titles, C4 store peer IDs, table
+'            display names, product terms — same role as
+'            c4_identities / pkg_identities / dep_identities /
+'            cd_identities / state_identities / uc_identities.
+'            Diagrams MUST use these macros (no inventing IDs).
+' Contract:  1.3.0
+'
+' Include AFTER erd_styles.puml.
+' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
+' Storage authority: docs/spec/contracts/data_stores/*.yaml
+' ============================================================
+
+' ── Diagram catalog ─────────────────────────────────────────
+!$DIAGRAM_DIRECTIVES = "Entity Relationship 001 — Directives Store"
+!$DIAGRAM_COMPILED_RULES = "Entity Relationship 002 — Compiled Rules Store"
+!$DIAGRAM_FINDING_EVENTS = "Entity Relationship 003 — Finding Events Store"
+!$DIAGRAM_ARTIFACTS = "Entity Relationship 004 — Artifacts Store"
+
+!$DIAGRAM_ID_DIRECTIVES = "ERD-001"
+!$DIAGRAM_ID_COMPILED_RULES = "ERD-002"
+!$DIAGRAM_ID_FINDING_EVENTS = "ERD-003"
+!$DIAGRAM_ID_ARTIFACTS = "ERD-004"
+
+!$TITLE_DIRECTIVES = "**ERD-001 — Directives Store**\nC4: directives_store · owner: directives_repository\nPostgreSQL · mutable dual documents · compile outbox"
+!$TITLE_COMPILED_RULES = "**ERD-002 — Compiled Rules Store**\nC4: compiled_rules_store · owner: compiled_rules_repository\ncontent-addressed storage · immutable snapshots"
+!$TITLE_FINDING_EVENTS = "**ERD-003 — Finding Events Store**\nC4: finding_events_store · owner: finding_events_repository\nappend-only log · hybrid logical clock · hash chain"
+!$TITLE_ARTIFACTS = "**ERD-004 — Artifacts Store**\nC4: artifacts_store · owner: artifacts_repository\nobject store · write-once inspection · conflict · certification"
+
+' ── C4 peer IDs (registry only; identical across views) ─────
+!$C4_DIRECTIVES_STORE = "directives_store"
+!$C4_COMPILED_RULES_STORE = "compiled_rules_store"
+!$C4_FINDING_EVENTS_STORE = "finding_events_store"
+!$C4_ARTIFACTS_STORE = "artifacts_store"
+
+!$C4_DIRECTIVES_REPOSITORY = "directives_repository"
+!$C4_COMPILED_RULES_REPOSITORY = "compiled_rules_repository"
+!$C4_FINDING_EVENTS_REPOSITORY = "finding_events_repository"
+!$C4_ARTIFACTS_REPOSITORY = "artifacts_repository"
+
+!$C4_DIRECTIVES_APPLICATION = "directives_application"
+!$C4_COMPILATION_APPLICATION = "compilation_application"
+!$C4_INSPECTIONS_APPLICATION = "inspections_application"
+!$C4_FINDINGS_APPLICATION = "findings_application"
+
+' ── Store package boundary titles ───────────────────────────
+!$PKG_DIRECTIVES_STORE = "directives_store\n(C4 store · PostgreSQL)"
+!$PKG_COMPILED_RULES_STORE = "compiled_rules_store\n(C4 store · content-addressed storage)"
+!$PKG_FINDING_EVENTS_STORE = "finding_events_store\n(C4 store · PostgreSQL append-only)"
+!$PKG_ARTIFACTS_STORE = "artifacts_store\n(C4 store · object store)"
+
+' ── Table display names (stable ERD aliases) ────────────────
+!$TABLE_DIRECTIVES = "Directives"
+!$TABLE_DIRECTIVE_REVISIONS = "DirectiveRevisions"
+!$TABLE_LINEAGE_OPERATIONS = "LineageOperations"
+!$TABLE_COMPILE_REQUESTS = "CompileRequests"
+!$TABLE_PAIRED_POLICY_REF_COUNTS = "PairedPolicyRefCounts"
+
+!$TABLE_SNAPSHOTS = "Snapshots"
+!$TABLE_NODES = "Nodes"
+!$TABLE_EDGES = "Edges"
+!$TABLE_SNAPSHOT_NODES = "SnapshotNodes"
+!$TABLE_SNAPSHOT_EDGES = "SnapshotEdges"
+!$TABLE_LINEAGE_HEADS = "LineageHeads"
+
+!$TABLE_EVENTS = "Events"
+!$TABLE_FINDING_PROJECTIONS = "FindingProjections"
+!$TABLE_FINDING_OPEN_KEYS = "FindingOpenKeys"
+!$TABLE_IDEMPOTENCY_RECORDS = "IdempotencyRecords"
+!$TABLE_RETIRED_NODES = "RetiredNodes"
+!$TABLE_HYBRID_LOGICAL_CLOCK_STATE = "HybridLogicalClockState"
+
+!$TABLE_INSPECTION_SNAPSHOTS = "InspectionSnapshots"
+!$TABLE_PIPELINE_TRACES = "PipelineTraces"
+!$TABLE_CONFLICT_ARTIFACTS = "ConflictArtifacts"
+!$TABLE_EVIDENCE_ARTIFACTS = "EvidenceArtifacts"
+!$TABLE_CERTIFICATION_ARTIFACTS = "CertificationArtifacts"
+
+' ── Product terms (full words on diagrams) ──────────────────
+!$TERM_HYBRID_LOGICAL_CLOCK = "hybrid logical clock"
+!$TERM_CONTENT_ADDRESSED_STORAGE = "content-addressed storage"
+!$TERM_COMPILED_RULES_IR = "compiled rules intermediate representation"
+!$TERM_PAIRED_POLICY_REF = "paired_policy_ref"
+!$TERM_TRANSACTIONAL_OUTBOX = "transactional outbox"
+!$TERM_SEGREGATION_OF_DUTIES = "segregation of duties"
+!$TERM_OBJECT_STORE = "object store"
+
+' ── Stereotype labels (encode mutability without notes) ─────
+!$ST_MUTABLE = "mutable"
+!$ST_IMMUTABLE = "immutable"
+!$ST_APPEND_ONLY = "append_only"
+!$ST_WRITE_ONCE = "write_once"
+!$ST_PROJECTION = "projection"
+!$ST_OUTBOX = "outbox"
+!$ST_INDEX = "secondary_index"
+!$ST_CAS = "content_addressed"
+!$ST_SYSTEM_OF_RECORD = "system_of_record"
+
+' ── Enum type labels ────────────────────────────────────────
+!$ENUM_DIRECTIVE_STATUS = "DirectiveStatus"
+!$ENUM_LINEAGE_OPERATION = "LineageOperationType"
+!$ENUM_COMPILE_REQUEST_STATUS = "CompileRequestStatus"
+!$ENUM_NODE_KIND = "NodeKind"
+!$ENUM_EDGE_KIND = "EdgeKind"
+!$ENUM_FINDING_EVENT_TYPE = "FindingEventType"
+!$ENUM_INSPECTION_STATUS = "InspectionStatus"
+!$ENUM_PIPELINE_STAGE = "PipelineStage"
+!$ENUM_TRACE_STATUS = "TraceStatus"
+!$ENUM_CONFLICT_TYPE = "ConflictType"
+!$ENUM_BINDING_STATUS = "BindingStatus"
+
+' ── Legend snippets ─────────────────────────────────────────
+!$LEGEND_ERD = "mutable=#E0F2F1 · append_only=#FFF3E0 · immutable/content_addressed=#FFFDE7 · projection/index=#E1F5FE · outbox=#E0F2F1 · store boundary=#E8F5E9"

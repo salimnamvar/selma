@@ -48,7 +48,7 @@ All design work MUST follow [`standards/`](standards/README.md):
 | [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract:` = `VERSION`, C4, Source) | same |
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 
-**design_contract_version:** `1.2.0` — stamp of [`standards/VERSION`](standards/VERSION) (C4, API `info.version`, contracts, diagram headers). Bump `VERSION` once, then `python scripts/check_design_alignment.py --fix`.
+**design_contract_version:** `1.3.0` — stamp of [`standards/VERSION`](standards/VERSION) (C4, API `info.version`, contracts, diagram headers). Bump `VERSION` once, then `python scripts/check_design_alignment.py --fix`.
 
 **Tenant model (v1):** single-tenant per deployment instance. Multi-tenancy is
 out of scope; see [`c4-model/README.md`](c4-model/README.md) "Tenant model".
@@ -74,7 +74,7 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
 | **Class diagrams** | [`class/`](class/README.md) | Types inside packages (domain / app / infra) |
 | **Package diagrams** | [`package/`](package/README.md) | *How* code modules layer (CA rings, ports) |
-| **ERDs** | [`erd/`](erd/README.md) | Four `*_store` resources |
+| **ERDs** | [`erd/`](erd/README.md) | Durable tables per C4 `*_store` (keys, enums, mutability) |
 | **Activity diagrams** | [`activity/`](activity/README.md) | Procedural swim-lane flows |
 | **API** | [`api/`](api/README.md) | Modular OpenAPI (Redocly) |
 | **Deployment** | [`deployment/`](deployment/README.md) | *Where* it runs (zones, TLS, failure domains, RPO) |
@@ -89,6 +89,7 @@ Full matrix: [`standards/view_concerns.md`](standards/view_concerns.md).
 | How are source modules and ports organized? | [`package/`](package/README.md) | `{resource}_{layer}`, ISP ports, module edges | Peer inventing, failure domains, normative FSM/lock text |
 | Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Zones, TLS, HA, RPO/RTO, observability | Component use-case graph, package trees, domain algorithms |
 | How does state evolve (FSMs / pipelines)? | [`state/`](state/README.md) | Extracted states/transitions from contracts | Peer inventing, packages, zones; product design principles (spec owns) |
+| What durable tables sit in each store? | [`erd/`](erd/README.md) | Entities, columns, PK/FK/unique, mutability stereotypes | FSM guards, lock algorithms, zones/TLS, class methods, use-case goals |
 
 Join key: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
 Behavior principles (authn, SoD, hermetic compile, dual-document, store mutability): **`spec/contracts/`** + **`schema/`** only — structural views link, never duplicate.

@@ -1,46 +1,107 @@
-@startuml erd_styles
-' ── Selma ERD Global Styles ──
+' ============================================================
+' Title:     Selma — Entity-Relationship Diagram Styles
+' Purpose:   ERD chrome + aliases to CA palette.
+'            MACRO frameworks = store tables; MICRO = mutability.
+' Contract:  1.3.0
+'
+' Include order:
+'   !include common/erd_styles.puml   (pulls ca_palette)
+'   !include common/erd_identities.puml
+' ============================================================
 
+!include ../../standards/common/ca_palette.puml
+
+!theme plain
 skinparam linetype ortho
-
-skinparam backgroundColor #FEFEFE
-skinparam defaultFontName "JetBrains Mono"
+skinparam backgroundColor $CA_CANVAS
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam defaultFontName "Arial"
 skinparam defaultFontSize 11
+skinparam defaultFontColor $CA_INK
+skinparam defaultTextAlignment left
+skinparam handwritten false
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor $CA_INK
+skinparam nodesep 30
+skinparam ranksep 40
 
-' Entity styling
-skinparam entity {
-  BackgroundColor #F7F9FC
-  BorderColor #3F51B5
-  FontColor #1E293B
-  ArrowColor #3F51B5
-  StereotypeFontSize 10
-  AttributeFontSize 10
-}
-
-' Package (store boundary) styling
+skinparam packageStyle rectangle
 skinparam package {
-  BackgroundColor #EDF2F7
-  BorderColor #3F51B5
-  FontColor #1E293B
-  Style rectangle
+  FontSize 12
+  FontStyle bold
+  FontColor $CA_INK
+  BorderThickness 2
+  BackgroundColor $CA_FILL_FRAMEWORKS
+  BorderColor $CA_BORDER_FRAMEWORKS
 }
 
-' Note styling
-skinparam note {
-  BackgroundColor #FFFBEB
-  BorderColor #D97706
-  FontColor #78350F
-  FontSize 10
+skinparam entity {
+  BackgroundColor #FFFFFF
+  BorderColor $CA_BORDER_FRAMEWORKS
+  FontColor $CA_INK
+  FontSize 11
+  FontStyle bold
+  AttributeFontSize 10
+  StereotypeFontSize 9
+  StereotypeFontColor $CA_BORDER_NEUTRAL
+  BorderThickness 1.5
+  ArrowColor $CA_ARROW
 }
 
-' Legend styling
+skinparam enum {
+  BackgroundColor $CA_FILL_HERMETIC
+  BorderColor $CA_SOLID_HERMETIC
+  FontColor $CA_INK
+  StereotypeFontColor $CA_BORDER_HERMETIC
+}
+
+skinparam ArrowColor $CA_ARROW
+skinparam ArrowThickness 1.5
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor $CA_INK
+
 skinparam legend {
-  BackgroundColor #F1F5F9
-  BorderColor #94A3B8
+  BackgroundColor $CA_LEGEND_BG
+  BorderColor $CA_LEGEND_BORDER
+  FontSize 10
+  FontColor $CA_INK
 }
 
-' Title styling
-skinparam titleFontColor #1E293B
-skinparam titleFontSize 14
+' ── MACRO aliases (CA layers) ───────────────────────────────
+!$ERD_COLOR_STORE         = $CA_SOLID_FRAMEWORKS
+!$ERD_FILL_STORE          = $CA_FILL_FRAMEWORKS
+!$ERD_BORDER_STORE        = $CA_BORDER_FRAMEWORKS
 
-@enduml
+!$ERD_COLOR_MUTABLE       = $CA_SOLID_APPLICATION
+!$ERD_FILL_MUTABLE        = $CA_FILL_APPLICATION
+!$ERD_BORDER_MUTABLE      = $CA_BORDER_APPLICATION
+
+!$ERD_COLOR_IMMUTABLE     = $CA_SOLID_IMMUTABLE
+!$ERD_FILL_IMMUTABLE      = $CA_FILL_FRAMEWORKS
+!$ERD_BORDER_IMMUTABLE    = $CA_BORDER_FRAMEWORKS
+
+!$ERD_COLOR_APPEND_ONLY   = $CA_SOLID_INFRASTRUCTURE
+!$ERD_FILL_APPEND_ONLY    = $CA_FILL_INFRASTRUCTURE
+!$ERD_BORDER_APPEND_ONLY  = $CA_BORDER_INFRASTRUCTURE
+
+!$ERD_COLOR_CAS           = $CA_SOLID_HERMETIC
+!$ERD_FILL_CAS            = $CA_FILL_HERMETIC
+!$ERD_BORDER_CAS          = $CA_BORDER_HERMETIC
+
+!$ERD_COLOR_INDEX         = $CA_SOLID_INTERFACE
+!$ERD_FILL_INDEX          = $CA_FILL_INTERFACE
+!$ERD_BORDER_INDEX        = $CA_BORDER_INTERFACE
+
+!$ERD_COLOR_PROJECTION    = $CA_SOLID_INTERFACE
+!$ERD_FILL_PROJECTION     = $CA_FILL_INTERFACE
+!$ERD_BORDER_PROJECTION   = $CA_BORDER_INTERFACE
+
+!$ERD_COLOR_OUTBOX        = $CA_SOLID_APPLICATION
+!$ERD_FILL_OUTBOX         = $CA_FILL_APPLICATION
+!$ERD_BORDER_OUTBOX       = $CA_BORDER_APPLICATION
+
+!$ERD_PKG_STORE           = $CA_PKG_FRAMEWORKS
+!$ERD_PKG_CAS             = $CA_PKG_HERMETIC
+!$ERD_PKG_APPEND          = $CA_PKG_INFRASTRUCTURE

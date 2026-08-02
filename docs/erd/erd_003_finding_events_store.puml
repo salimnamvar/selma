@@ -2,75 +2,115 @@
 ' ============================================================
 ' Title:     ERD-003 Finding Events Store
 ' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
+'            docs/spec/contracts/finding_lifecycle/states.yaml
+'            docs/spec/contracts/finding_lifecycle/transitions.yaml
 ' C4:        finding_events_store ← finding_events_repository
-' Contract:  1.2.0
+'            (findings_application · DenialAuditPort)
+' Package:   findings_infrastructure (C4: finding_events_repository)
+' Contract:  1.3.0
 ' ============================================================
+
 !include common/erd_styles.puml
+!include common/erd_identities.puml
 
-title Finding Events Store (Append-Only Log) — C4 store: finding_events_store · Immutable
+title $TITLE_FINDING_EVENTS
 
-package "Finding Events" {
-  entity "Events" as Events {
-    * event_id : UUID <<PK>>
+package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
+
+  entity "$TABLE_EVENTS" as Events <<append_only>> <<system_of_record>> {
+    * **event_id** : UUID <<PK>>
     --
-    finding_id : UUID <<indexed, nullable for global denials>>
-    event_type : ENUM(FindingCreated, DispositionChanged, FindingClosed,\nCapabilityDenied, SoDDenied, ConflictResolved, ResolutionDecided)
+    finding_id : UUID <<nullable, indexed>>
+    event_type : $ENUM_FINDING_EVENT_TYPE
     timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
-    physical_time : TIMESTAMPTZ <<HLC wall clock>>
-    logical_counter : INTEGER <<HLC counter>>
-    node_id : TEXT <<HLC node identifier>>
+    physical_time : TIMESTAMPTZ <<hybrid logical clock wall>>
+    logical_counter : INTEGER <<hybrid logical clock counter>>
+    node_id : TEXT <<hybrid logical clock node>>
     actor : TEXT
     payload : JSONB
     event_hash : CHAR(64) <<SHA-256>>
     prev_event_hash : CHAR(64) <<SHA-256, nullable>>
     chain_hash : CHAR(64) <<SHA-256>>
-    idempotency_key : TEXT <<nullable, unique per actor>>
+    idempotency_key : TEXT <<nullable>>
   }
 
-  entity "FindingProjections" as FindingProjections {
-    * finding_id : UUID <<PK>>
+  entity "$TABLE_FINDING_PROJECTIONS" as FindingProjections <<projection>> <<mutable>> {
+    * **finding_id** : UUID <<PK>>
     --
     fsm_state : TEXT
-    paired_policy_ref : TEXT
-    chain_head_hash : CHAR(64)
+    disposition : TEXT <<nullable>>
+    severity : TEXT
+    paired_policy_ref : TEXT <<pinned doctrine revision>>
+    inspection_id : UUID
+    control_id : TEXT
+    target_hash : CHAR(64) <<SHA-256>>
+    chain_head_hash : CHAR(64) <<SHA-256>>
+    last_applied_event_id : UUID
     event_count : INTEGER
     updated_at : TIMESTAMPTZ
   }
 
-  entity "IdempotencyRecords" as IdempotencyRecords {
-    * actor : TEXT
-    * idempotency_key : TEXT
+  entity "$TABLE_FINDING_OPEN_KEYS" as FindingOpenKeys <<secondary_index>> {
+    * **inspection_id** : UUID <<PK part>>
+    * **control_id** : TEXT <<PK part>>
+    * **target_hash** : CHAR(64) <<PK part, SHA-256>>
     --
-    event_id : UUID <<FK>>
-    request_hash : CHAR(64)
+    o finding_id : UUID <<FK → FindingProjections>>
     created_at : TIMESTAMPTZ
+  }
+
+  entity "$TABLE_IDEMPOTENCY_RECORDS" as IdempotencyRecords <<secondary_index>> {
+    * **actor** : TEXT <<PK part>>
+    * **idempotency_key** : TEXT <<PK part>>
+    --
+    o event_id : UUID <<FK → Events>>
+    request_hash : CHAR(64) <<SHA-256>>
+    created_at : TIMESTAMPTZ
+  }
+
+  entity "$TABLE_RETIRED_NODES" as RetiredNodes <<append_only>> {
+    * **node_id** : TEXT <<PK>>
+    --
+    retired_at : TIMESTAMPTZ
+    reason : TEXT
+    replaced_by : TEXT <<nullable>>
+  }
+
+  entity "$TABLE_HYBRID_LOGICAL_CLOCK_STATE" as HybridLogicalClockState <<mutable>> {
+    * **node_id** : TEXT <<PK>>
+    --
+    physical_time : TIMESTAMPTZ
+    logical_counter : INTEGER
+    updated_at : TIMESTAMPTZ
+  }
+
+  enum "$ENUM_FINDING_EVENT_TYPE" as FindingEventType {
+    FindingCreated
+    DispositionChanged
+    FindingClosed
+    CapabilityDenied
+    SoDDenied
+    ConflictResolved
+    ResolutionDecided
   }
 }
 
 Events ||--o| FindingProjections : "finding_id"
 Events ||--o| IdempotencyRecords : "event_id"
+FindingProjections ||--o| FindingOpenKeys : "finding_id"
+Events }o..|| FindingEventType : "event_type domain"
+HybridLogicalClockState ||--o| RetiredNodes : "node_id fence"
 
-note bottom of Events
-  **Hybrid Logical Clock (HLC)**
-  Total ordering: physical_time → logical_counter → node_id → event_id
+legend bottom
+  |= Stereotype |= Meaning |
+  | <<append_only>> <<system_of_record>> | Event stream never rewritten; chain_hash contiguous |
+  | <<projection>> | Materialized cache; rebuild by hybrid logical clock fold |
+  | <<secondary_index>> | Open-finding uniqueness · client idempotency |
+  | Total order | physical_time → logical_counter → node_id → event_id |
+  | Cross-store | paired_policy_ref → directives_store revision by text key only |
+  | $LEGEND_ERD |
+endlegend
 
-  **Tamper-Evidence Chain**
-  • event_hash = SHA-256(event_id ‖ payload ‖ prev_event_hash)
-  • chain_hash = SHA-256(event_hash ‖ prev_chain_hash)
-  • Append serializes per finding_id (advisory lock or expected chain head)
-
-  **Invariants**
-  • Events are immutable once written
-  • No duplicate event_ids
-  • HLC is monotonically non-decreasing
-  • chain_hash forms a contiguous hash chain from first event
-end note
-
-note bottom of FindingProjections
-  **State hydration**
-  • Materialized snapshot updated with each append
-  • Event stream remains system of record
-  • paired_policy_ref pins guidance doctrine revision
-end note
+footer ERD-003 · finding_events_store · Contract 1.3.0 · Selma
 
 @enduml
