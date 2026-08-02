@@ -1,0 +1,139 @@
+' ============================================================
+' Title:     Selma — Deployment Identities (canonical labels)
+' Purpose:   Stable zone names, node labels, C4 IDs, tech strings,
+'            edge descriptions — same role as c4_identities.puml,
+'            pkg_identities.puml, state_identities.puml.
+'            Diagrams MUST use these macros (no inventing IDs).
+' Contract:  1.1.0
+'
+' Include AFTER dep_styles.puml.
+' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
+' ============================================================
+
+' ── Diagram catalog ─────────────────────────────────────────
+!$DIAGRAM_PRODUCTION = "Deployment 001 — Production Topology"
+!$DIAGRAM_ID_PRODUCTION = "DEP-001"
+
+' ── Zone display titles (full words) ────────────────────────
+!$ZONE_USER = "External User Zone"
+!$ZONE_PUBLIC = "Public Zone"
+!$ZONE_APPLICATION = "Application Zone"
+!$ZONE_DATA = "Data Zone"
+!$ZONE_EXTERNAL = "External Zone (optional)"
+!$ZONE_MONITORING = "Monitoring Zone"
+
+' ── C4 peer IDs (registry only; identical to other views) ───
+!$C4_CLIENTS = "clients"
+!$C4_APPLICATION = "application"
+!$C4_API = "api"
+!$C4_COMPILATION_APPLICATION = "compilation_application"
+!$C4_DIRECTIVES_REPOSITORY = "directives_repository"
+!$C4_COMPILED_RULES_REPOSITORY = "compiled_rules_repository"
+!$C4_FINDING_EVENTS_REPOSITORY = "finding_events_repository"
+!$C4_ARTIFACTS_REPOSITORY = "artifacts_repository"
+!$C4_TARGET_SOURCES_GATEWAY = "target_sources_gateway"
+!$C4_DIRECTIVES_STORE = "directives_store"
+!$C4_COMPILED_RULES_STORE = "compiled_rules_store"
+!$C4_FINDING_EVENTS_STORE = "finding_events_store"
+!$C4_ARTIFACTS_STORE = "artifacts_store"
+!$C4_TARGET_SOURCES = "target_sources"
+
+' ── Package dual (compile naming) ───────────────────────────
+!$PKG_COMPILED_RULES = "compiled_rules_*"
+
+' ── Product terms (full words on diagrams) ──────────────────
+!$TERM_HYBRID_LOGICAL_CLOCK = "hybrid logical clock"
+!$TERM_CONTENT_ADDRESSED_STORAGE = "content-addressed storage"
+!$TERM_PERSISTENT_VOLUME_CLAIM = "persistent volume claim"
+!$TERM_STATEFUL_SET = "StatefulSet"
+!$TERM_FAILURE_DOMAIN = "failure domain"
+!$TERM_OBJECT_STORE = "S3-compatible object store"
+
+' ── Node Names (Title Case where human; IDs for C4 peers) ───
+!$NAME_clients = "Clients"
+!$TECH_clients = "CLI / Web / Desktop / Mobile"
+!$DESC_clients = "Driving adapters outside Selma deployables (C4: clients)"
+
+!$NAME_load_balancer = "Load Balancer"
+!$TECH_load_balancer = "managed multi-AZ or active/standby"
+!$DESC_load_balancer = "Edge entry; global admission limit; TLS termination"
+
+!$NAME_application = "Application"
+!$TECH_application = "Python 3.11+ / Docker / StatefulSet"
+!$DESC_application = "C4 application container: api · compilation_application (package: compiled_rules_*) · *_application · *_repository adapters · *_gateway · hybrid logical clock on persistent volume claim · CPU cgroup api versus compile"
+
+!$NAME_hlc_pvc = "Persistent Volume Claim"
+!$TECH_hlc_pvc = "node_id + hybrid logical clock state"
+!$DESC_hlc_pvc = "Stable ordinal volume for hybrid logical clock node state"
+
+!$NAME_pg_cluster_a = "PostgreSQL cluster A"
+!$TECH_pg_cluster_a = "failure domain A"
+!$DESC_pg_cluster_a = "Directives system of record isolation"
+
+!$NAME_pg_cluster_b = "PostgreSQL cluster B"
+!$TECH_pg_cluster_b = "failure domain B"
+!$DESC_pg_cluster_b = "Finding events system of record isolation"
+
+!$NAME_object_store = "Object Store"
+!$TECH_object_store = "S3-compatible"
+!$DESC_object_store = "Shared object plane for compiled rules and artifacts"
+
+!$NAME_directives_store = "directives_store"
+!$TECH_directives_store = "PostgreSQL"
+!$DESC_directives_store = "Dual-document directives (C4 store peer)"
+
+!$NAME_finding_events_store = "finding_events_store"
+!$TECH_finding_events_store = "PostgreSQL (append-only table)"
+!$DESC_finding_events_store = "Append-only finding and denial events (C4 store peer)"
+
+!$NAME_compiled_rules_store = "compiled_rules_store"
+!$TECH_compiled_rules_store = "content-addressed storage"
+!$DESC_compiled_rules_store = "Immutable compiled rule snapshots (C4 store peer)"
+
+!$NAME_artifacts_store = "artifacts_store"
+!$TECH_artifacts_store = "object store (write-once)"
+!$DESC_artifacts_store = "Write-once inspection, conflict, certification blobs (C4 store peer)"
+
+!$NAME_target_sources = "target_sources"
+!$TECH_target_sources = "HTTPS / API"
+!$DESC_target_sources = "Optional external target pull (C4 external; never mutated by Selma)"
+
+!$NAME_prometheus = "Prometheus / Grafana"
+!$DESC_prometheus = "Metrics and dashboards"
+
+!$NAME_logs = "ELK / Loki"
+!$DESC_logs = "Centralized logs"
+
+!$NAME_traces = "Jaeger"
+!$DESC_traces = "Distributed traces"
+
+' ── Multi-line node labels for PlantUML ─────────────────────
+!$NODE_CLIENTS = "clients\nCLI / Web / Desktop / Mobile"
+!$NODE_LOAD_BALANCER = "Load Balancer HA\nmanaged multi-AZ or active/standby"
+!$NODE_APPLICATION = "application (StatefulSet)\nPython 3.11+ / Docker\nC4: application container\n(api · compilation_application\n(package: compiled_rules_*) ·\n*_application · *_repository\nvia adapters · *_gateway)\nhybrid logical clock on volume claim\nCPU cgroup: api vs compile"
+!$NODE_HLC_PVC = "persistent volume claim\nnode_id + hybrid logical clock state"
+!$NODE_PG_A = "PostgreSQL cluster A\nfailure domain A"
+!$NODE_PG_B = "PostgreSQL cluster B\nfailure domain B"
+!$NODE_OBJECT_STORE = "S3-compatible object store"
+!$NODE_DIRECTIVES_STORE = "directives_store"
+!$NODE_FINDING_EVENTS_STORE = "finding_events_store"
+!$NODE_COMPILED_RULES_STORE = "compiled_rules_store\n(content-addressed storage)"
+!$NODE_ARTIFACTS_STORE = "artifacts_store\n(write-once)"
+!$NODE_TARGET_SOURCES = "target_sources"
+!$NODE_PROMETHEUS = "Prometheus / Grafana"
+!$NODE_LOGS = "ELK / Loki"
+!$NODE_TRACES = "Jaeger"
+
+' ── Edge labels (topology only; full words) ─────────────────
+!$EDGE_CLIENTS_LB = "HTTPS"
+!$EDGE_LB_APP = "HTTPS / REST"
+!$EDGE_APP_PVC = "persist hybrid logical clock"
+!$EDGE_APP_DIRECTIVES = "SQL / TLS\nvia directives_repository"
+!$EDGE_APP_EVENTS = "Append-Only / TLS\nvia finding_events_repository"
+!$EDGE_APP_COMPILED = "CAS / TLS\nvia compiled_rules_repository"
+!$EDGE_APP_ARTIFACTS = "Object Write / TLS\nvia artifacts_repository"
+!$EDGE_APP_TARGETS = "HTTPS optional\nvia target_sources_gateway"
+
+' ── Footer / title helpers ──────────────────────────────────
+!$FOOTER_PRODUCTION = "DEP-001 · Contract 1.1.0 · topology only · C4 IDs · Selma"
+!$TITLE_PRODUCTION = "**DEP-001 — Production Deployment**\nZones · nodes · store failure domains · TLS"

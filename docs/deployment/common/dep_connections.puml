@@ -1,0 +1,37 @@
+' ============================================================
+' Title:     Deployment topology connections (all edges)
+' Purpose:   Every zone leaf has ≥1 edge. Edit edges here.
+'            Topology only — not component use-case graph.
+' Contract:  1.1.0
+'
+' Include AFTER all dep_section_*.puml files.
+' Store I/O only via C4 *_repository adapters (never api → store).
+' ============================================================
+
+' ── Zone layout pins ────────────────────────────────────────
+ZONE_USER -[hidden]right- ZONE_PUBLIC
+ZONE_PUBLIC -[hidden]right- ZONE_APP
+ZONE_APP -[hidden]down- ZONE_DATA
+ZONE_DATA -[hidden]right- ZONE_EXT
+ZONE_APP -[hidden]right- ZONE_MON
+
+' ── Traffic path ────────────────────────────────────────────
+NODE_CLIENTS --> NODE_LOAD_BALANCER : $EDGE_CLIENTS_LB
+NODE_LOAD_BALANCER --> NODE_APPLICATION : $EDGE_LB_APP
+
+' ── Hybrid logical clock persistence ────────────────────────
+NODE_APPLICATION --> NODE_HLC_PVC : $EDGE_APP_PVC
+
+' ── Application → stores (via repository peers) ─────────────
+NODE_APPLICATION --> NODE_DIRECTIVES_STORE : $EDGE_APP_DIRECTIVES
+NODE_APPLICATION --> NODE_FINDING_EVENTS_STORE : $EDGE_APP_EVENTS
+NODE_APPLICATION --> NODE_COMPILED_RULES_STORE : $EDGE_APP_COMPILED
+NODE_APPLICATION --> NODE_ARTIFACTS_STORE : $EDGE_APP_ARTIFACTS
+
+' ── Optional external pull ──────────────────────────────────
+NODE_APPLICATION --> NODE_TARGET_SOURCES : $EDGE_APP_TARGETS
+
+' ── Observability (async export; not product peers) ─────────
+NODE_APPLICATION ..> NODE_PROMETHEUS
+NODE_APPLICATION ..> NODE_LOGS
+NODE_APPLICATION ..> NODE_TRACES

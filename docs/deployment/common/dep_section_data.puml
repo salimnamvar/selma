@@ -1,0 +1,20 @@
+' ============================================================
+' Section: DATA ZONE (C4: four *_store · production failure domains)
+' Aliases: ZONE_DATA, NODE_PG_A, NODE_PG_B, NODE_OBJECT_STORE,
+'          NODE_DIRECTIVES_STORE, NODE_FINDING_EVENTS_STORE,
+'          NODE_COMPILED_RULES_STORE, NODE_ARTIFACTS_STORE
+' ============================================================
+
+' Zone fill/border = DEP_ZONE_DATA_* (#E8F5E9 / #2C6E49 · C4 store)
+package "$ZONE_DATA" as ZONE_DATA #E8F5E9/2C6E49 {
+  node "$NODE_PG_A" as NODE_PG_A {
+    database "$NODE_DIRECTIVES_STORE" as NODE_DIRECTIVES_STORE
+  }
+  node "$NODE_PG_B" as NODE_PG_B {
+    database "$NODE_FINDING_EVENTS_STORE" as NODE_FINDING_EVENTS_STORE
+  }
+  node "$NODE_OBJECT_STORE" as NODE_OBJECT_STORE {
+    database "$NODE_COMPILED_RULES_STORE" as NODE_COMPILED_RULES_STORE
+    database "$NODE_ARTIFACTS_STORE" as NODE_ARTIFACTS_STORE
+  }
+}

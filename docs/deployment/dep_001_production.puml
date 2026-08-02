@@ -1,94 +1,37 @@
+@startuml dep_001_production
 ' ============================================================
-' Title:     Production Deployment (DEP-001)
-' Source:    docs/deployment/README.md · store tech from c4_registry
+' Title:     DEP-001 Production Deployment
+' Source:    docs/deployment/README.md · docs/standards/c4_registry.yaml
 ' C4:        clients → application → *_store | target_sources
+' Package:   runtime co-locates compiled_rules_* with application process
 ' Purpose:   WHERE Selma runs: zones, nodes, failure domains, TLS.
 '            Does NOT redraw component graph or package modules.
 ' Contract:  1.1.0
+'
+' Structure (mirrors package/state/c4 common/):
+'   common/dep_styles.puml       — visual language + C4 palette
+'   common/dep_identities.puml   — zone/node/edge/C4 labels
+'   common/dep_section_*.puml    — one file per zone
+'   common/dep_connections.puml  — all topology edges
+'
+' This file only orchestrates includes. Edit sections/connections
+' to change structure; do not re-inline content here.
 ' ============================================================
-@startuml dep_001_production
-title **DEP-001 — Production Deployment**\nZones · nodes · store failure domains · TLS\n
 
-!theme plain
-skinparam linetype ortho
-skinparam defaultFontName Arial
-skinparam defaultFontSize 10
-skinparam shadowing false
-skinparam roundCorner 8
-skinparam backgroundColor #FAFBFC
-skinparam packageStyle rectangle
-skinparam package {
-  FontSize 11
-  FontStyle bold
-}
-skinparam node {
-  BackgroundColor #FAFBFC
-  BorderColor #78909C
-  FontSize 11
-}
-skinparam database {
-  BackgroundColor #FFF8E1
-  BorderColor #F57C00
-}
+!include common/dep_styles.puml
+!include common/dep_identities.puml
 
-' ── External User Zone (C4: clients — outside Selma deployables) ──
-package "External User Zone" as USER_ZONE #F3E5F5/E1BEE7 {
-  node "clients\nCLI / Web / Desktop / Mobile" as CLIENTS
-}
+title $TITLE_PRODUCTION
 
-' ── Public Zone ──
-package "Public Zone" as PUBLIC_ZONE #E3F2FD/BBDEFB {
-  node "Load Balancer HA\nmanaged multi-AZ or active/standby" as LOAD_BALANCER
-}
+!include common/dep_section_user.puml
+!include common/dep_section_public.puml
+!include common/dep_section_application.puml
+!include common/dep_section_data.puml
+!include common/dep_section_external.puml
+!include common/dep_section_monitoring.puml
 
-' ── Application Zone (C4: application — StatefulSet; internals = C4 component) ──
-package "Application Zone" as APP_ZONE #E8F5E9/C8E6C9 {
-  node "application (StatefulSet)\nPython 3.11+ / Docker\nC4: application container\n(api · compilation_application\n(package: compiled_rules_*) ·\n*_application · *_repository\nvia adapters · *_gateway)\nHLC state on PVC\nCPU cgroup: api vs compile" as APP
-  database "PVC\nnode_id + hlc_state" as HLC_PVC
-  APP --> HLC_PVC : persist HLC
-}
+!include common/dep_connections.puml
 
-' ── Data Zone (C4: four *_store · production failure domains) ──
-package "Data Zone" as DATA_ZONE #FFF3E0/FFE0B2 {
-  node "PostgreSQL cluster A\nfailure domain A" as PG_A {
-    database "directives_store" as DIRECTIVES
-  }
-  node "PostgreSQL cluster B\nfailure domain B" as PG_B {
-    database "finding_events_store" as EVENTS
-  }
-  node "S3-compatible object store" as OBJ_STORE {
-    database "compiled_rules_store\n(CAS)" as COMPILED
-    database "artifacts_store\n(write-once)" as ARTIFACTS
-  }
-}
-
-' ── External optional (C4: target_sources) ──
-package "External Zone (optional)" as EXT_ZONE #FCE4EC/F8BBD0 {
-  cloud "target_sources" as TARGETS
-}
-
-' ── Monitoring ──
-package "Monitoring Zone" as MON #E8EAF6/C5CAE9 {
-  node "Prometheus / Grafana" as PROM
-  node "ELK / Loki" as ELK
-  node "Jaeger" as JAEGER
-}
-
-' ── Topology edges only (not component use-case graph) ──
-' Store I/O only via C4 *_repository adapters (never api → store).
-CLIENTS --> LOAD_BALANCER : HTTPS
-LOAD_BALANCER --> APP : HTTPS / REST
-
-APP --> DIRECTIVES : SQL / TLS\nvia directives_repository
-APP --> EVENTS : Append-Only / TLS\nvia finding_events_repository
-APP --> COMPILED : CAS / TLS\nvia compiled_rules_repository
-APP --> ARTIFACTS : Object Write / TLS\nvia artifacts_repository
-APP --> TARGETS : HTTPS optional\nvia target_sources_gateway
-
-APP ..> PROM
-APP ..> ELK
-APP ..> JAEGER
-
-footer DEP-001 · Contract 1.1.0 · topology only · C4 IDs · Selma
+footer $FOOTER_PRODUCTION
 
 @enduml

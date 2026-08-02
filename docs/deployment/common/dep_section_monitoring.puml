@@ -1,0 +1,11 @@
+' ============================================================
+' Section: MONITORING ZONE (ops observability · not C4 peers)
+' Aliases: ZONE_MON, NODE_PROMETHEUS, NODE_LOGS, NODE_TRACES
+' ============================================================
+
+' Zone fill/border = DEP_ZONE_MON_* (#F5EEF8 / #8E44AD · ops / mediated)
+package "$ZONE_MONITORING" as ZONE_MON #F5EEF8/8E44AD {
+  node "$NODE_PROMETHEUS" as NODE_PROMETHEUS
+  node "$NODE_LOGS" as NODE_LOGS
+  node "$NODE_TRACES" as NODE_TRACES
+}

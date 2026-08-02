@@ -1,0 +1,9 @@
+' ============================================================
+' Section: EXTERNAL ZONE (C4: target_sources · optional)
+' Aliases: ZONE_EXT, NODE_TARGET_SOURCES
+' ============================================================
+
+' Zone fill/border = DEP_ZONE_EXT_* (#F0F0F0 / #8A9199 · C4 external)
+package "$ZONE_EXTERNAL" as ZONE_EXT #F0F0F0/8A9199 {
+  cloud "$NODE_TARGET_SOURCES" as NODE_TARGET_SOURCES
+}

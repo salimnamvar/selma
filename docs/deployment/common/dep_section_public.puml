@@ -1,0 +1,9 @@
+' ============================================================
+' Section: PUBLIC ZONE (edge entry)
+' Aliases: ZONE_PUBLIC, NODE_LOAD_BALANCER
+' ============================================================
+
+' Zone fill/border = DEP_ZONE_PUBLIC_* (#EEF4FC / #3B7DD8 · C4 container)
+package "$ZONE_PUBLIC" as ZONE_PUBLIC #EEF4FC/3B7DD8 {
+  node "$NODE_LOAD_BALANCER" as NODE_LOAD_BALANCER
+}

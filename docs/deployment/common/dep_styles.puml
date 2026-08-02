@@ -1,0 +1,114 @@
+' ============================================================
+' Title:     Selma — Deployment Styles (shared)
+' Purpose:   ONE visual language for all dep_NNN_*.puml diagrams.
+'            Palette locked to C4 / state / package semantic colors.
+' Contract:  1.1.0
+'
+' Include order (every deployment diagram):
+'   !include common/dep_styles.puml
+'   !include common/dep_identities.puml
+'   !include common/dep_section_*.puml
+'   !include common/dep_connections.puml
+'
+' PlantUML note blocks are FORBIDDEN in deployment .puml files.
+' ============================================================
+
+!theme plain
+skinparam linetype ortho
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 10
+skinparam defaultTextAlignment center
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam handwritten false
+skinparam backgroundColor #FAFBFC
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #1A2332
+skinparam nodesep 40
+skinparam ranksep 50
+
+skinparam packageStyle rectangle
+skinparam package {
+  FontSize 11
+  FontStyle bold
+  FontColor #1A2332
+  BorderThickness 2
+}
+
+skinparam node {
+  BackgroundColor #FAFBFC
+  BorderColor #5B7BA5
+  FontSize 10
+  FontColor #1A2332
+  BorderThickness 1.5
+}
+
+skinparam database {
+  BackgroundColor #2C6E49
+  BorderColor #1B4332
+  FontColor #FFFFFF
+  FontSize 10
+  FontStyle bold
+}
+
+skinparam cloud {
+  BackgroundColor #8A9199
+  BorderColor #5C636A
+  FontColor #FFFFFF
+  FontSize 10
+}
+
+skinparam ArrowColor #3D4F5F
+skinparam ArrowThickness 1.5
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor #2C3E50
+
+' ------------------------------------------------------------
+' Semantic colors (identical hex to C4 / state macros)
+' ------------------------------------------------------------
+' C4 person / actor            indigo   #4A6FA5
+' C4 container / resource      blue     #3B7DD8
+' C4 system / process          teal     #1B7A6E
+' C4 store                     green    #2C6E49
+' C4 gate                      red      #A93226
+' C4 hermetic / pending        amber    #B9770E
+' Terminal / retired           grey     #4A4A4A
+' Mediated / domain-only       purple   #8E44AD
+' C4 external                  grey     #8A9199
+' ------------------------------------------------------------
+
+!$DEP_COLOR_ACTOR       = "#4A6FA5"
+!$DEP_COLOR_CONTAINER   = "#3B7DD8"
+!$DEP_COLOR_PROCESS     = "#1B7A6E"
+!$DEP_COLOR_STORE       = "#2C6E49"
+!$DEP_COLOR_GATE        = "#A93226"
+!$DEP_COLOR_PENDING     = "#B9770E"
+!$DEP_COLOR_TERMINAL    = "#4A4A4A"
+!$DEP_COLOR_DOMAIN      = "#8E44AD"
+!$DEP_COLOR_EXTERNAL    = "#8A9199"
+
+' Zone package fill/border pairs (light fill + semantic border)
+!$DEP_ZONE_USER_FILL    = "#E8EEF5"
+!$DEP_ZONE_USER_BORDER  = "#4A6FA5"
+!$DEP_ZONE_PUBLIC_FILL  = "#EEF4FC"
+!$DEP_ZONE_PUBLIC_BORDER = "#3B7DD8"
+!$DEP_ZONE_APP_FILL     = "#E8F5F3"
+!$DEP_ZONE_APP_BORDER   = "#1B7A6E"
+!$DEP_ZONE_DATA_FILL    = "#E8F5E9"
+!$DEP_ZONE_DATA_BORDER  = "#2C6E49"
+!$DEP_ZONE_EXT_FILL     = "#F0F0F0"
+!$DEP_ZONE_EXT_BORDER   = "#8A9199"
+!$DEP_ZONE_MON_FILL     = "#F5EEF8"
+!$DEP_ZONE_MON_BORDER   = "#8E44AD"
+
+' Node accents inside zones
+!$DEP_NODE_APP_BG       = "#3B7DD8"
+!$DEP_NODE_APP_FG       = "#FFFFFF"
+!$DEP_NODE_LB_BG        = "#85B4F2"
+!$DEP_NODE_LB_FG        = "#0D2137"
+!$DEP_NODE_PVC_BG       = "#B9770E"
+!$DEP_NODE_PVC_FG       = "#FFFFFF"
+!$DEP_NODE_PG_BG        = "#FAFBFC"
+!$DEP_NODE_OBJ_BG       = "#FAFBFC"
+!$DEP_NODE_MON_BG       = "#E8EAF6"

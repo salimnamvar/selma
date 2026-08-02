@@ -9,12 +9,71 @@
 | | |
 | :--- | :--- |
 | **Answers** | *Where* does Selma run, and how is it **operated** in production? |
-| **Owns 100%** | Network zones, nodes, TLS/mTLS hops, store failure domains, sizing, backup/RPO/RTO, observability, HA, edge rate limits, process model (StatefulSet/PVC), compile CPU isolation as **ops** |
+| **Owns 100%** | Network zones, nodes, TLS/mTLS hops, store failure domains, sizing, backup/RPO/RTO, observability, HA, edge rate limits, process model (StatefulSet / persistent volume claim), compile CPU isolation as **ops** |
 | **Does not own** | Peer inventing / Component use-case graph (C4) · package trees / ports / domain services (package/class) · FSM tables / locks / capability catalog (spec) |
 | **Join key** | C4 container IDs (`clients`, `application`) and store IDs (`*_store`); v1 one Application process hosts all C4 components |
 
+**No PlantUML `note` blocks** on deployment diagrams. Encode ops facts as node labels, edge labels, or README tables.
+
 DEP-001 is a **topology** diagram: Clients → LB → Application → stores / optional `target_sources` / monitoring.  
 Internals of Application: [C4 Component](../c4-model/c4_selma_component.puml). Code layout: [package](../package/README.md). Behavior: [spec](../spec/README.md) / [state](../state/README.md).
+
+## Source layout (like C4 / package / state `common/`)
+
+| Path | Role | Edit when… |
+| :--- | :--- | :--- |
+| [`common/dep_styles.puml`](common/dep_styles.puml) | Skinparams + **semantic color macros** (C4-identical hex) | Visual language / harmony |
+| [`common/dep_identities.puml`](common/dep_identities.puml) | Zone titles, node labels, C4 IDs, edge strings, diagram title/footer | Rename labels / C4 IDs |
+| [`common/dep_section_user.puml`](common/dep_section_user.puml) | External User Zone (`clients`) | Client topology |
+| [`common/dep_section_public.puml`](common/dep_section_public.puml) | Public Zone (load balancer) | Edge entry |
+| [`common/dep_section_application.puml`](common/dep_section_application.puml) | Application Zone + hybrid logical clock volume | Process model |
+| [`common/dep_section_data.puml`](common/dep_section_data.puml) | Data Zone · four `*_store` · failure domains | Store topology |
+| [`common/dep_section_external.puml`](common/dep_section_external.puml) | External Zone (`target_sources`) | Optional pull |
+| [`common/dep_section_monitoring.puml`](common/dep_section_monitoring.puml) | Monitoring Zone | Observability nodes |
+| [`common/dep_connections.puml`](common/dep_connections.puml) | All topology edges | Wiring / TLS hops |
+| [`dep_001_production.puml`](dep_001_production.puml) | Orchestrator | Include order only |
+
+**Include order:** `dep_styles` → `dep_identities` → `dep_section_*` → `dep_connections`.
+
+```bash
+plantuml docs/deployment/dep_001_production.puml
+python scripts/check_design_alignment.py
+```
+
+## Color harmony (C4 · package · state · deployment)
+
+Zone package borders use the **same hex values** as C4 element tags:
+
+| Zone | Fill / border | C4 / state meaning |
+| :--- | :--- | :--- |
+| External User | `#E8EEF5` / `#4A6FA5` | Person / actor |
+| Public | `#EEF4FC` / `#3B7DD8` | Container / resource |
+| Application | `#E8F5F3` / `#1B7A6E` | System / process |
+| Data | `#E8F5E9` / `#2C6E49` | Data store |
+| External | `#F0F0F0` / `#8A9199` | External system |
+| Monitoring | `#F5EEF8` / `#8E44AD` | Ops / mediated (not a product peer) |
+| Store databases | skinparam `#2C6E49` | C4 `$tags="store"` |
+
+**Rule:** same semantic → same hex. Do not invent ad-hoc colors in diagram bodies; change `dep_styles.puml` once.
+
+## Naming (aligned with other views)
+
+| View | File pattern | Example |
+| :--- | :--- | :--- |
+| C4 | `c4_selma_{level}.puml` | `c4_selma_container.puml` |
+| Package | `pkg_NNN_*.puml` | `pkg_001_clean_architecture.puml` |
+| **Deployment** | `dep_NNN_*.puml` | `dep_001_production.puml` |
+| State | `state_machine_NNN_*.puml` | `state_machine_001_finding_lifecycle.puml` |
+| Class | `cd_NNN_*.puml` | `cd_001_domain_model.puml` |
+
+| Element | Convention |
+| :--- | :--- |
+| Diagram ID | `DEP-NNN` / `Deployment NNN` in title and footer |
+| Zone aliases | `ZONE_*` from `dep_identities` |
+| Node aliases | `NODE_*` from `dep_identities` |
+| C4 IDs | Registry peers only (`directives_store`, `application`, …) |
+| Full words | `hybrid logical clock`, `content-addressed storage`, `persistent volume claim` (not bare `HLC` / `CAS` / `PVC` as sole labels) |
+| Edges | Topology only; store hops cite `via *_repository` |
 
 ## Diagram index
 
@@ -28,7 +87,7 @@ Internals of Application: [C4 Component](../c4-model/c4_selma_component.puml). C
 |:-----|:--------|:-----------|
 | **External User** | Driving adapters outside Selma deployables | `clients` |
 | **Public** | Edge entry | Load balancer (managed multi-AZ or active/standby) |
-| **Application** | C4 `application` process (v1 **StatefulSet**) | One runtime co-locating all C4 components (`api`, `compilation_application` / package `compiled_rules_*`, other `*_application`, `*_repository` adapters, `*_gateway`). HLC node state on PVC. |
+| **Application** | C4 `application` process (v1 **StatefulSet**) | One runtime co-locating all C4 components (`api`, `compilation_application` / package `compiled_rules_*`, other `*_application`, `*_repository` adapters, `*_gateway`). Hybrid logical clock node state on persistent volume claim. |
 | **Data** | Four C4 `*_store` | PG cluster A: `directives_store`; PG cluster B: `finding_events_store`; object store: `compiled_rules_store` + `artifacts_store`. Store I/O only via `*_repository` — never direct `api` → store. |
 | **External** | Optional pull only | `target_sources` |
 | **Monitoring** | Observability | Prometheus/Grafana, ELK/Loki, Jaeger |
@@ -45,7 +104,7 @@ Internals of Application: [C4 Component](../c4-model/c4_selma_component.puml). C
 | Docker | 24+ | Container runtime |
 | PostgreSQL | 15+ | Directives + Finding Events (**production MUST use separate instances or clusters**) |
 | Nginx / Traefik | latest | TLS termination at edge |
-| Object store | S3-compatible | Artifacts; CAS backend for Compiled Rules |
+| Object store | S3-compatible | Artifacts; content-addressed backend for Compiled Rules |
 
 ### Compute resources (per Application replica)
 
@@ -71,11 +130,11 @@ v1 co-locates `api` and `compilation_application` in one process. Production MUS
 | C4 store | Storage type | Scaling |
 |:---------|:-------------|:--------|
 | `directives_store` | PostgreSQL | Vertical + read replicas; revisions referenced by `paired_policy_ref` retained indefinitely (INV-DS-007) |
-| `compiled_rules_store` | Filesystem (dev) or S3-compatible CAS (production) | Horizontal object store; snapshots indefinite |
+| `compiled_rules_store` | Filesystem (dev) or S3-compatible content-addressed storage (production) | Horizontal object store; snapshots indefinite |
 | `finding_events_store` | PostgreSQL (append-only table) | Partition by time; events indefinite |
 | `artifacts_store` | S3-compatible object store | Horizontal |
 
-**CAS backend (production):** `compiled_rules_store` MUST be S3-compatible (not single-node filesystem) so snapshots survive node loss. API contract: `compiled_rules_store.yaml`. Local disk remains cache only.
+**Content-addressed backend (production):** `compiled_rules_store` MUST be S3-compatible (not single-node filesystem) so snapshots survive node loss. API contract: `compiled_rules_store.yaml`. Local disk remains cache only.
 
 **Finding Events technology note (ops):** PostgreSQL append-only keeps the stack consistent with Directives; migration path to a log stream if throughput demands it is environment-owned.
 
@@ -128,7 +187,7 @@ PgBouncer (or equivalent) for Directives and Finding Events, with **separate poo
 | Scenario | Effective RTO | Notes |
 |:---------|:--------------|:------|
 | Finding Events only | < 1 hour | Independent of compile |
-| Directives only | < 1 hour | Compiled Rules still serve last CAS snapshots until rebuild |
+| Directives only | < 1 hour | Compiled Rules still serve last content-addressed snapshots until rebuild |
 | Directives **and** Compiled Rules | Directives RTO + recompile RTO ≤ ~1.5 hours | Recompile waits on Directives |
 | Full data-zone loss | max(Directives+recompile, Events, Artifacts) ≈ ≤ 2 hours | Often dominated by Artifacts restore |
 
@@ -138,22 +197,22 @@ PgBouncer (or equivalent) for Directives and Finding Events, with **separate poo
 |:----------|:----|:----|:------|
 | `finding_events_store` | **0** | ≤ 15 min | Synchronous replication; regulatory event log |
 | `directives_store` | ≤ 5 min | ≤ 15 min | Sync preferred |
-| `compiled_rules_store` / `artifacts_store` | ≤ 15 min | ≤ 30 min | CAS + Object Lock/WORM; multi-AZ |
-| Application StatefulSet | n/a | ≤ 5 min | PVC reattach; HLC resync before traffic |
+| `compiled_rules_store` / `artifacts_store` | ≤ 15 min | ≤ 30 min | Content-addressed + Object Lock/WORM; multi-AZ |
+| Application StatefulSet | n/a | ≤ 5 min | Volume reattach; hybrid logical clock resync before traffic |
 
 ### Horizontal scaling
 
 Application replicas behind the load balancer; state externalized to the four stores.
 
-#### HLC node state persistence (required)
+#### Hybrid logical clock node state persistence (required)
 
-Append path uses Hybrid Logical Clock ordering (`INV-ES-003` in `finding_events_store.yaml`). Production:
+Append path uses hybrid logical clock ordering (`INV-ES-003` in `finding_events_store.yaml`). Production:
 
-1. **StatefulSet with PVCs** — stable `node_id` per ordinal; HLC state on PVC; DEP-001 shows the PVC.
-2. **DB watermark** — on startup, effective state = `max(PVC, DB_watermark)`; pure PVC-only without watermark is non-conformant when PVC may be stale.
-3. **Fence and retire** — corrupted PVC → retire old `node_id`; reject appends from retired nodes.
+1. **StatefulSet with persistent volume claims** — stable `node_id` per ordinal; hybrid logical clock state on volume; DEP-001 shows the volume.
+2. **DB watermark** — on startup, effective state = `max(volume, DB_watermark)`; pure volume-only without watermark is non-conformant when volume may be stale.
+3. **Fence and retire** — corrupted volume → retire old `node_id`; reject appends from retired nodes.
 
-HLC state machine detail: [`../state/state_machine_009_hybrid_logical_clock.puml`](../state/state_machine_009_hybrid_logical_clock.puml).
+Hybrid logical clock state machine: [`../state/state_machine_009_hybrid_logical_clock.puml`](../state/state_machine_009_hybrid_logical_clock.puml).
 
 #### Object store immutability
 
@@ -161,13 +220,13 @@ Production `compiled_rules_store` and `artifacts_store` MUST enable S3 Object Lo
 
 #### certification_tool authentication (ops)
 
-Offline/CI `certification_tool` uses **scoped credentials** limited to certification object prefix — not JWT SoD, not anonymous store access. Credentials MUST NOT write directives/events stores.
+Offline/CI `certification_tool` uses **scoped credentials** limited to certification object prefix — not JWT segregation of duties, not anonymous store access. Credentials MUST NOT write directives/events stores.
 
 #### Compile sandbox (same pod)
 
 Hermetic compile CPU work MUST use process/netns sandbox or compile sidecar with NetworkPolicy egress deny (HERM / INV-HB-011).
 
-**Denial spool replay (ops):** CapabilityDenied / SoDDenied events spooled during store outage MUST be replayed with HLC timestamps at **replay time** (see finding_events_store + SoD contracts).
+**Denial spool replay (ops):** CapabilityDenied / segregation-of-duties denied events spooled during store outage MUST be replayed with hybrid logical clock timestamps at **replay time** (see finding_events_store + SoD contracts).
 
 ### Load balancer high availability
 
@@ -211,10 +270,10 @@ Mutating POSTs require client `Idempotency-Key` scoped to `(actor, key)`. Normat
 | `compile_outbox_lease_steal_total` | Multi-replica reclaim |
 | `directive_lock_wait_seconds` | Writer-preference fairness |
 | `compile_duration_seconds` / in-process concurrency | API vs compile CPU |
-| `finding_fsm_transition_total` / denial rate | SoD / authz health |
+| `finding_fsm_transition_total` / denial rate | Segregation of duties / authz health |
 | `finding_events_append_latency` / denial_append_rate | Denial-audit vs lifecycle volume |
 | `denied_actions` volume | SOC two-channel model |
-| `hlc_counter_reset_total` / node_id restart | HLC persistence health |
+| `hlc_counter_reset_total` / node_id restart | Hybrid logical clock persistence health |
 | Per-endpoint request rate & error ratio | Incident triage |
 | `directive_modify_rate_limited_total` | Per-actor 429 before write-queue 503 |
 
@@ -236,6 +295,7 @@ Logs MUST include `lineage_id`, `revision`, `finding_id`, `event_id`, `actor_id`
 
 - [C4 Architecture](../c4-model/README.md) — peers  
 - [Package Diagrams](../package/README.md) — modules / ports  
+- [Class diagrams](../class/README.md) — types  
 - [State machines](../state/README.md) — FSMs  
 - [Spec contracts](../spec/README.md) — behavior  
 - [OpenAPI security](../api/components/security.yaml)  
