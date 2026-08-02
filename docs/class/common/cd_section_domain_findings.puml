@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_findings.puml
 ' ============================================================
 
-package "findings_domain" as DOM_FIND #F0F4F8/78909C {
+package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
 
   class "**Finding**" as Finding <<Aggregate Root>> #E8F5E9/2C6E49 {
     + finding_id: FindingId
@@ -28,13 +28,13 @@ package "findings_domain" as DOM_FIND #F0F4F8/78909C {
     + updated_at: HlcTimestamp
   }
 
-  class "**FindingFsm**" as FindingFsm <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**FindingFsm**" as FindingFsm <<Domain Service>> #F3E5F5/8E44AD {
     + transition(finding: Finding, target: FindingState, actor: ActorId): boolean
     + allowedTransitions(current: FindingState): Set~FindingState~
     + checkSegregationOfDuties(finding: Finding, actor: ActorId, action: String): boolean
   }
 
-  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #F3E5F5/8E44AD {
     + materialize(ref: PairedPolicyRef, doctrine: PolicyDoctrineDoc): GuidancePayload
   }
 

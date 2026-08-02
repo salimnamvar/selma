@@ -19,7 +19,8 @@ PlantUML package diagrams are an **implementation view**. Behavior stays in `spe
 
 | Path | Role | Edit when… |
 | :--- | :--- | :--- |
-| [`common/pkg_styles.puml`](common/pkg_styles.puml) | Colours, `packageStyle`, `<<port>>` skin | Visual language |
+| [`../standards/common/ca_palette.puml`](../standards/common/ca_palette.puml) | **CA MACRO/MICRO color SSoT** | Hex / layer tokens |
+| [`common/pkg_styles.puml`](common/pkg_styles.puml) | Includes palette; layer package chrome; `<<port>>` = gate | Visual language |
 | [`common/pkg_identities.puml`](common/pkg_identities.puml) | Titles, port/store names, alias registry | Rename labels |
 | [`common/pkg_section_interface.puml`](common/pkg_section_interface.puml) | `*_interface` | REST/CLI/TUI modules |
 | [`common/pkg_section_composition.puml`](common/pkg_section_composition.puml) | `composition_root` | DI / outbox scheduler |
@@ -30,7 +31,20 @@ PlantUML package diagrams are an **implementation view**. Behavior stays in `spe
 | [`common/pkg_connections.puml`](common/pkg_connections.puml) | All module edges | Wiring / implements |
 | [`pkg_001_clean_architecture.puml`](pkg_001_clean_architecture.puml) | Orchestrator | Include order only |
 
-**Include order:** `cd_styles` → `pkg_styles` → `pkg_identities` → sections → `pkg_connections`.
+**Include order:** `ca_palette` → `pkg_styles` → `pkg_identities` → sections → `pkg_connections`.
+
+### CA layer colors (package rings)
+
+| Package ring | CA MACRO | Fill / border |
+| :--- | :--- | :--- |
+| `*_interface` | Interface | `#EEF4FC` / `#3B7DD8` |
+| `*_application` | Application | `#E8F5E9` / `#1B7A6E` |
+| `*_domain` | Domain | `#F3E5F5` / `#8E44AD` |
+| `*_infrastructure` | Infrastructure | `#FEF5E7` / `#B9770E` |
+| stores | Frameworks | `#E8F5E9` / `#2C6E49` |
+| external | External | `#F0F0F0` / `#8A9199` |
+| `composition_root` | Composition | `#EDE7F6` / `#5E35B1` |
+| `<<port>>` | Gate (micro) | `#FDEDEC` / `#A93226` |
 
 ```bash
 plantuml docs/package/pkg_001_clean_architecture.puml

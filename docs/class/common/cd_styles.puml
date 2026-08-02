@@ -1,30 +1,28 @@
 ' ============================================================
-' Title:     Selma — Class Diagram Styles (shared)
-' Purpose:   ONE visual language for all cd_NNN_*.puml diagrams.
-'            Palette locked to C4 / package / deployment / state.
+' Title:     Selma — Class Diagram Styles
+' Purpose:   Class view chrome + aliases to CA palette.
+'            MACRO = Clean Architecture layers; MICRO = type archetypes.
 ' Contract:  1.1.0
 '
-' Include order (every class diagram):
-'   !include common/cd_styles.puml
+' Include order:
+'   !include common/cd_styles.puml   (pulls ca_palette)
 '   !include common/cd_identities.puml
-'   !include common/cd_section_*.puml
-'   !include common/cd_section_*_connections.puml
-'
-' PlantUML note blocks are FORBIDDEN in class .puml files.
 ' ============================================================
 
+!include ../../standards/common/ca_palette.puml
+
 !theme plain
-skinparam backgroundColor #FAFBFC
+skinparam backgroundColor $CA_CANVAS
 skinparam shadowing false
 skinparam roundCorner 8
 skinparam defaultFontName "Arial"
 skinparam defaultFontSize 11
-skinparam defaultFontColor #1A2332
+skinparam defaultFontColor $CA_INK
 skinparam defaultTextAlignment left
 skinparam handwritten false
 skinparam titleFontSize 16
 skinparam titleFontStyle bold
-skinparam titleFontColor #1A2332
+skinparam titleFontColor $CA_INK
 skinparam linetype ortho
 skinparam nodesep 30
 skinparam ranksep 40
@@ -33,91 +31,93 @@ skinparam packageStyle rectangle
 skinparam package {
   FontSize 12
   FontStyle bold
-  FontColor #1A2332
+  FontColor $CA_INK
   BorderThickness 2
   StereotypeFontSize 10
 }
 
 skinparam class {
   BackgroundColor #FFFFFF
-  BorderColor #5B7BA5
+  BorderColor $CA_BORDER_NEUTRAL
   FontSize 11
   FontStyle bold
-  HeaderBackgroundColor #F0F4F8
+  HeaderBackgroundColor $CA_BOUNDARY_DEFAULT_FILL
   AttributeFontSize 10
   StereotypeFontSize 9
-  StereotypeFontColor #5B7BA5
+  StereotypeFontColor $CA_BORDER_NEUTRAL
   BorderThickness 1.5
 }
 
 skinparam abstract {
-  BackgroundColor #F7F9FB
-  BorderColor #95A5B6
+  BackgroundColor $CA_FILL_TERMINAL
+  BorderColor $CA_SOLID_ENTITY
   FontStyle italic
 }
 
 skinparam enum {
-  BackgroundColor #FEF5E7
-  BorderColor #B9770E
-  StereotypeFontColor #7D4E00
+  BackgroundColor $CA_FILL_HERMETIC
+  BorderColor $CA_SOLID_HERMETIC
+  StereotypeFontColor $CA_BORDER_HERMETIC
 }
 
 skinparam interface {
-  BackgroundColor #FDEDEC
-  BorderColor #A93226
-  StereotypeFontColor #641E16
+  BackgroundColor $CA_FILL_GATE
+  BorderColor $CA_SOLID_GATE
+  StereotypeFontColor $CA_BORDER_GATE_DEEP
 }
 
-skinparam ArrowColor #3D4F5F
+skinparam ArrowColor $CA_ARROW
 skinparam ArrowThickness 1.5
 skinparam ArrowFontSize 9
-skinparam ArrowFontColor #2C3E50
+skinparam ArrowFontColor $CA_INK
 
 skinparam legend {
-  BackgroundColor #FFFFFF
-  BorderColor #D0D7DE
+  BackgroundColor $CA_LEGEND_BG
+  BorderColor $CA_LEGEND_BORDER
   FontSize 10
 }
 
-' ------------------------------------------------------------
-' Semantic colors (identical hex to C4 / state / deployment)
-' ------------------------------------------------------------
-' C4 person / actor            indigo   #4A6FA5
-' C4 container / resource      blue     #3B7DD8
-' C4 system / process          teal     #1B7A6E
-' C4 store                     green    #2C6E49
-' C4 gate                      red      #A93226
-' C4 hermetic / pending        amber    #B9770E
-' Terminal / retired           grey     #4A4A4A
-' Mediated / domain-only       purple   #8E44AD
-' C4 external                  grey     #8A9199
-' ------------------------------------------------------------
+' ── MACRO aliases (CA layers) ───────────────────────────────
+!$CD_LAYER_ACTOR_SOLID           = $CA_SOLID_ACTOR
+!$CD_LAYER_INTERFACE_SOLID       = $CA_SOLID_INTERFACE
+!$CD_LAYER_APPLICATION_SOLID     = $CA_SOLID_APPLICATION
+!$CD_LAYER_DOMAIN_SOLID          = $CA_SOLID_DOMAIN
+!$CD_LAYER_INFRASTRUCTURE_SOLID  = $CA_SOLID_INFRASTRUCTURE
+!$CD_LAYER_FRAMEWORKS_SOLID      = $CA_SOLID_FRAMEWORKS
+!$CD_LAYER_EXTERNAL_SOLID        = $CA_SOLID_EXTERNAL
+!$CD_LAYER_COMPOSITION_SOLID     = $CA_SOLID_COMPOSITION
 
-!$CD_COLOR_ACTOR     = "#4A6FA5"
-!$CD_COLOR_CONTAINER = "#3B7DD8"
-!$CD_COLOR_PROCESS   = "#1B7A6E"
-!$CD_COLOR_STORE     = "#2C6E49"
-!$CD_COLOR_GATE      = "#A93226"
-!$CD_COLOR_PENDING   = "#B9770E"
-!$CD_COLOR_TERMINAL  = "#4A4A4A"
-!$CD_COLOR_DOMAIN    = "#8E44AD"
-!$CD_COLOR_EXTERNAL  = "#8A9199"
+' Package ring strings (must match package diagram)
+!$CD_PKG_DOMAIN          = $CA_PKG_DOMAIN
+!$CD_PKG_APPLICATION     = $CA_PKG_APPLICATION
+!$CD_PKG_INFRASTRUCTURE  = $CA_PKG_INFRASTRUCTURE
+!$CD_PKG_INTERFACE       = $CA_PKG_INTERFACE
+!$CD_PKG_COMPOSITION     = $CA_PKG_COMPOSITION
+!$CD_PKG_GATE            = $CA_PKG_GATE
+!$CD_PKG_FRAMEWORKS      = $CA_PKG_FRAMEWORKS
 
-' Archetype fill/border (use inline on class packages)
-' Aggregate Root     store green family     #E8F5E9/2C6E49
-' Value Object/DTO   container blue family  #EEF4FC/3B7DD8
-' Domain Service     process teal family    #E8F5F3/1B7A6E
-' Use Case           process teal family    #E8F5E9/1B7A6E
-' Port               gate red family        #FDEDEC/A93226
-' Entity             neutral grey           #ECEFF1/546E7A
-' Enum / Event       pending amber          #FEF5E7/B9770E
-' Adapter            hermetic amber         #FEF5E7/B9770E
-' Interface adapter  container blue         #EEF4FC/3B7DD8
-' Composition        domain purple          #F5EEF8/8E44AD
-'
-' Package rings (match package diagram CA layers):
-' Domain             #F0F4F8/78909C
-' Application        #E8F5E9/1B7A6E
-' Infrastructure     #FEF5E7/B9770E
-' Interface          #EEF4FC/3B7DD8
-' Composition        #F5EEF8/8E44AD
+' ── MICRO aliases (type archetypes inside layers) ───────────
+' Aggregate root lives in domain but durability → frameworks green
+!$CD_ARCH_AGGREGATE  = $CA_PKG_FRAMEWORKS
+!$CD_ARCH_VO         = $CA_PKG_INTERFACE
+!$CD_ARCH_SERVICE    = $CA_PKG_DOMAIN
+!$CD_ARCH_USECASE    = $CA_PKG_APPLICATION
+!$CD_ARCH_PORT       = $CA_PKG_GATE
+!$CD_ARCH_ENTITY     = $CA_PKG_ENTITY
+!$CD_ARCH_EVENT      = $CA_PKG_HERMETIC
+!$CD_ARCH_ENUM       = $CA_PKG_HERMETIC
+!$CD_ARCH_ADAPTER    = $CA_PKG_INFRASTRUCTURE
+!$CD_ARCH_DTO        = $CA_PKG_INTERFACE
+!$CD_ARCH_INTERFACE  = $CA_PKG_INTERFACE
+!$CD_ARCH_COMPOSITION = $CA_PKG_COMPOSITION
+
+' Legacy short aliases (prefer CD_LAYER_* / CD_ARCH_*)
+!$CD_COLOR_ACTOR     = $CA_SOLID_ACTOR
+!$CD_COLOR_CONTAINER = $CA_SOLID_INTERFACE
+!$CD_COLOR_PROCESS   = $CA_SOLID_APPLICATION
+!$CD_COLOR_STORE     = $CA_SOLID_FRAMEWORKS
+!$CD_COLOR_GATE      = $CA_SOLID_GATE
+!$CD_COLOR_PENDING   = $CA_SOLID_HERMETIC
+!$CD_COLOR_TERMINAL  = $CA_SOLID_TERMINAL
+!$CD_COLOR_DOMAIN    = $CA_SOLID_DOMAIN
+!$CD_COLOR_EXTERNAL  = $CA_SOLID_EXTERNAL

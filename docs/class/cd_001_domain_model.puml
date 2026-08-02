@@ -34,13 +34,14 @@ title $TITLE_DOMAIN
 !include common/cd_section_domain_connections.puml
 
 legend bottom
-  |= Archetype |= C4 color family |
-  | Aggregate Root | store green #2C6E49 |
-  | Value Object / Read Model | container blue #3B7DD8 |
-  | Domain Service | process teal #1B7A6E |
-  | Domain Event / Enum | hermetic amber #B9770E |
-  | Entity | neutral grey |
-  | Packages | `*_domain` modules (package view owns edges) |
+  |= Archetype |= CA MACRO / MICRO |
+  | Package ring `*_domain` | **Domain** purple #8E44AD |
+  | Aggregate Root | **Frameworks** green (durable) #2C6E49 |
+  | Value Object / Read Model | **Interface** blue #3B7DD8 |
+  | Domain Service | **Domain** purple #8E44AD |
+  | Domain Event / Enum | **Infrastructure** amber #B9770E |
+  | Entity | micro entity grey |
+  | Palette | docs/standards/common/ca_palette.puml |
 endlegend
 
 footer $FOOTER_DOMAIN

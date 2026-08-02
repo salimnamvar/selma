@@ -27,11 +27,12 @@ title $TITLE_APPLICATION
 !include common/cd_section_app_connections.puml
 
 legend bottom
-  |= Archetype |= C4 color family |
-  | Port | gate red #A93226 |
-  | Use Case | process teal #1B7A6E |
-  | DTO | container blue #3B7DD8 |
-  | Package titles | identical to package diagram modules |
+  |= Archetype |= CA MACRO / MICRO |
+  | Package ring `*_application` | **Application** teal #1B7A6E |
+  | Port | **Gate** micro #A93226 |
+  | Use Case | **Application** #1B7A6E |
+  | DTO | **Interface** blue #3B7DD8 |
+  | Palette | docs/standards/common/ca_palette.puml |
 endlegend
 
 footer $FOOTER_APPLICATION

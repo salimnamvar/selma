@@ -25,23 +25,24 @@
 
 **Include order:** `state_styles` → `state_identities` → diagram body.
 
-## Color harmony (C4 · package · deployment · state)
+## Color harmony (CA MACRO + state MICRO)
 
-State fill colors use the **same hex values** as C4 element tags so semantic meaning is stable across views:
+**SSoT:** [`../standards/common/ca_palette.puml`](../standards/common/ca_palette.puml)  
+State styles include the palette and re-export `$STATE_COLOR_*` as **lifecycle micro** aliases of CA layers:
 
-| State color macro | Hex | C4 / deploy meaning | Typical state use |
+| `$STATE_COLOR_*` (micro) | CA MACRO | Hex | Typical state use |
 | :--- | :--- | :--- | :--- |
-| `$STATE_COLOR_RESOURCE` | `#3B7DD8` | Container / resource | Durable resource hubs (Created, Open, Steady) |
-| `$STATE_COLOR_PROCESS` | `#1B7A6E` | System / in-flight | Pure pipelines, automated stages |
-| `$STATE_COLOR_STORE` | `#2C6E49` | Data store / durable success | Published, Verified, Allowed, artifact durable |
-| `$STATE_COLOR_GATE` | `#A93226` | Capability gate | Denied, Failed, Rejected |
-| `$STATE_COLOR_PENDING` | `#B9770E` | Hermetic / pending | Draft, Queued, awaits human, Waived pre-terminal |
-| `$STATE_COLOR_TERMINAL` | `#4A4A4A` | Terminal / retired | Closed, Dismissed, Archived |
-| `$STATE_COLOR_DOMAIN` | `#8E44AD` | Mediated / domain-only | ResolveConflict path (not a C4 peer) |
-| `$STATE_COLOR_EXTERNAL` | `#8A9199` | External system | Offline `certification_tool` overview |
-| `$STATE_COLOR_ACTOR` | `#4A6FA5` | Person / actor | Rare actor emphasis |
+| `RESOURCE` | Interface | `#3B7DD8` | Durable resource hubs (Created, Open) |
+| `PROCESS` | Application | `#1B7A6E` | Pure pipelines, automated stages |
+| `STORE` | Frameworks | `#2C6E49` | Published, Verified, durable success |
+| `PENDING` | Infrastructure | `#B9770E` | Draft, Queued, awaits human |
+| `DOMAIN` | Domain | `#8E44AD` | ResolveConflict path (not a C4 peer) |
+| `GATE` | Gate (micro) | `#A93226` | Denied, Failed, Rejected |
+| `TERMINAL` | Terminal (micro) | `#4A4A4A` | Closed, Dismissed, Archived |
+| `EXTERNAL` | External | `#8A9199` | Offline certification tool |
+| `ACTOR` | Actors | `#4A6FA5` | Rare actor emphasis |
 
-**Rule:** same lifecycle meaning → same color macro on every diagram. Do not invent ad-hoc hex codes in diagram bodies.
+**Rule:** never invent hex in diagram bodies — only `$STATE_COLOR_*` macros.
 
 ## Naming (full words only)
 

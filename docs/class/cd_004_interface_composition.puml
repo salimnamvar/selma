@@ -27,13 +27,12 @@ title $TITLE_INTERFACE
 !include common/cd_section_iface_connections.puml
 
 legend bottom
-  |= Package |= C4 |
-  | rest_interface | api |
-  | cli_interface · tui_interface | clients |
-  | composition_root | (wiring · not a peer) |
-  | Interface color | container blue #3B7DD8 |
-  | Composition color | domain purple #8E44AD |
-  | Port color | gate red #A93226 |
+  |= Package |= CA MACRO · C4 |
+  | rest_interface | **Interface** · api |
+  | cli / tui_interface | **Interface** · clients |
+  | composition_root | **Composition** · wiring |
+  | Port ref | **Gate** micro |
+  | Palette | docs/standards/common/ca_palette.puml |
 endlegend
 
 footer $FOOTER_INTERFACE

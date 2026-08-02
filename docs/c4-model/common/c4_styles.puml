@@ -1,90 +1,31 @@
 ' ============================================================
-' Title:     Selma -- C4 Style Overrides (shared palette)
-' Purpose:   ONE visual language for Context, Container, and
-'            Component diagrams. Colors, line styles, labels,
-'            and legend entries are defined only here.
+' Title:     Selma -- C4 Style Overrides
+' Purpose:   C4 element + relationship styles mapped to the
+'            Clean Architecture MACRO / MICRO palette
+'            (docs/standards/common/ca_palette.puml).
 ' Contract:  1.1.0
 '
 ' Include AFTER C4_Context / C4_Container / C4_Component.
-' Then include ./common/c4_identities.puml (canonical IDs + Names).
+' Then include ./common/c4_identities.puml.
 ' End every diagram with SHOW_LEGEND().
 '
-' ── Element palette (locked) ────────────────────────────────
-'   Person              indigo     #4A6FA5
-'   External person     muted blue #8B9BB4
-'   System (in scope)   teal       #1B7A6E   e.g. Selma
-'   External system     grey       #8A9199
-'   Container           blue       #3B7DD8
-'   External container  grey-blue  #A0A8B0
-'   Component           light blue #85B4F2   (same family as container)
-'   Data store          green      #2C6E49   via $tags="store"
-'   Hermetic unit       amber      #B9770E   via $tags="hermetic"
-'   Capability gate     red        #A93226   via $tags="gate"
-'   System boundary     teal dash  fill #E8F5F3
-'   Container boundary  blue dash  fill #EEF4FC
+' MACRO mapping:
+'   person              → CA actors
+'   container / component → CA interface
+'   system (Selma)      → CA application (product process)
+'   *_store tag         → CA frameworks
+'   external_*          → CA external
+'   hermetic tag        → CA infrastructure / hermetic
+'   gate tag            → CA micro gate
 '
-' ── Relationship palette (locked) ───────────────────────────
-'   (default)              solid grey     ordinary path
-'   capability_enforced    solid red      permission gate
-'   compile_only           dashed amber   hermetic / runtime-prohibited
-'   immutable              solid green    append-only
-'   mediated               dashed purple  no external mutation
-'   async                  dotted blue    eventually consistent
-'   validation_only        dashed teal    read/inspect only
-'   immutable_async        dotted green   append-only + async
-'   mediated_async         dotted purple  mediated + async
-'   guidance_only          dotted blue    policy read for reasoning, not evaluation
-'
-' Multi-tag edges MUST use a single combined tag (not a+b), so
-' PlantUML applies one consistent line color:
-'   $tags="immutable_async"   not  $tags="immutable+async"
-'
-' ── Entity format (locked) ──────────────────────────────────
-'   Person / System / Container / Component / *Db macros:
-'     Alias: snake_case, stable across all three diagrams
-'     Name:  Title Case, identical string when the same entity
-'            appears on more than one diagram
-'     Tech:  "Primary / Secondary / Tertiary" with " / " separator
-'            (omit on Context-level Person/System when not needed)
-'     Desc:  one prose sentence (or two short clauses); identical
-'            text when the same entity is carried across levels
-'   Data stores: always ContainerDb / ContainerDb_Ext + $tags="store"
-'   Hermetic compile unit: $tags="hermetic"
-'   Capability/SoD gate entry: $tags="gate"
-'
-' ── Clean Architecture component roles (Component diagram) ──
-'   Driving adapter:  api ($tags="gate")
-'   Use-case cluster: *_application
-'                     (directives_application | compilation_application |
-'                      inspections_application | findings_application)
-'   Driven adapter:   *_repository | *_gateway
-'   Data store:       *_store  (ContainerDb + $tags="store")
-'   Dependency rule:  outer → inner only along:
-'                     clients → api → *_application → adapters → *_store
-'
-' ── Relationship format (locked) ────────────────────────────
-'   Rel(from, to, "description", "technology", $tags="...")
-'   description:
-'     - lowercase intent phrase (no trailing period)
-'     - same semantic edge => same description across diagrams
-'       (lower levels may refine endpoints, not reword intent)
-'   technology (canonical vocabulary — use exactly):
-'     Network:    HTTPS | REST / HTTPS | HTTPS / API | CI/CD
-'     In-process: Internal
-'     Data I/O (repository → store only):
-'                 SQL | CAS | Append-Only | Object Write
-'     Semantic edge labels pair with matching $tags; do not invent
-'     ad-hoc tech strings (e.g. Read-Only / Write-Only) — express
-'     direction in the description and semantics via $tags.
-'   $tags: apply whenever the edge has that semantic; never leave
-'     a tagged semantic untagged on one diagram and tagged on another
-'   capability_enforced: only on edges that cross the permission
-'     gate (person→clients, clients→api, api→use cases). Never on
-'     repository → store edges.
+' MICRO mapping (relationship tags): capability, hermetic,
+'   immutable, mediated, async, validation_only, guidance_only
 ' ============================================================
 
+!include ../../standards/common/ca_palette.puml
+
 ' ------------------------------------------------------------
-' C4 label-break knobs (assignment wins over C4 defaults)
+' C4 label-break knobs
 ' ------------------------------------------------------------
 !$DEFAULT_WRAP_WIDTH = 160
 !$MAX_MESSAGE_SIZE = 90
@@ -104,10 +45,10 @@ skinparam roundCorner 8
 skinparam monochrome false
 skinparam handwritten false
 
-skinparam backgroundColor #FAFBFC
+skinparam backgroundColor $CA_CANVAS
 skinparam titleFontSize 16
 skinparam titleFontStyle bold
-skinparam titleFontColor #1A2332
+skinparam titleFontColor $CA_INK
 
 skinparam wrapWidth 160
 skinparam maxMessageSize 90
@@ -118,69 +59,60 @@ skinparam responseMessageBelowArrow true
 skinparam arrowThickness 1.5
 skinparam arrowFontSize 9
 
-skinparam packageBorderColor #2C3E50
-skinparam packageFontColor #2C3E50
+skinparam packageBorderColor $CA_INK
+skinparam packageFontColor $CA_INK
 skinparam packageFontStyle bold
-skinparam componentBorderColor #2C3E50
-skinparam rectangleBorderColor #2C3E50
-skinparam databaseBorderColor #2C3E50
-skinparam personBorderColor #2C3E50
+skinparam componentBorderColor $CA_INK
+skinparam rectangleBorderColor $CA_INK
+skinparam databaseBorderColor $CA_INK
+skinparam personBorderColor $CA_INK
 
-skinparam legendBackgroundColor #FFFFFF
-skinparam legendBorderColor #D0D7DE
+skinparam legendBackgroundColor $CA_LEGEND_BG
+skinparam legendBorderColor $CA_LEGEND_BORDER
 skinparam legendFontSize 9
 
 ' ------------------------------------------------------------
-' Element palette -- identical on every C4 level
+' Element palette — MACRO layers via ca_palette
 ' ------------------------------------------------------------
 !if %function_exists("C4Version")
 
-' Actors
-UpdateElementStyle("person", $bgColor="#4A6FA5", $fontColor="#FFFFFF", $borderColor="#2F4A73", $shadowing="false", $legendText="person / actor")
-UpdateElementStyle("external_person", $bgColor="#8B9BB4", $fontColor="#FFFFFF", $borderColor="#6B7A90", $shadowing="false", $legendText="external person")
+' Actors → CA actors
+UpdateElementStyle("person", $bgColor=$CA_SOLID_ACTOR, $fontColor="#FFFFFF", $borderColor="#2F4A73", $shadowing="false", $legendText="person / actor (CA actors)")
+UpdateElementStyle("external_person", $bgColor=$CA_SOLID_EXTERNAL_PERSON, $fontColor="#FFFFFF", $borderColor="#6B7A90", $shadowing="false", $legendText="external person")
 
-' Systems
-UpdateElementStyle("system", $bgColor="#1B7A6E", $fontColor="#FFFFFF", $borderColor="#0F4F47", $shadowing="false", $borderThickness="2", $legendText="system (in scope)")
-UpdateElementStyle("external_system", $bgColor="#8A9199", $fontColor="#FFFFFF", $borderColor="#5C636A", $shadowing="false", $legendText="external system")
+' System in scope → CA application (process)
+UpdateElementStyle("system", $bgColor=$CA_SOLID_APPLICATION, $fontColor="#FFFFFF", $borderColor="#0F4F47", $shadowing="false", $borderThickness="2", $legendText="system (CA application)")
+UpdateElementStyle("external_system", $bgColor=$CA_SOLID_EXTERNAL, $fontColor="#FFFFFF", $borderColor="#5C636A", $shadowing="false", $legendText="external system (CA external)")
 
-' Containers (runtime units) -- same blue on Container + Component diagrams
-UpdateElementStyle("container", $bgColor="#3B7DD8", $fontColor="#FFFFFF", $borderColor="#1F5BB5", $shadowing="false", $legendText="container")
+' Containers → CA interface (runtime shell)
+UpdateElementStyle("container", $bgColor=$CA_SOLID_INTERFACE, $fontColor="#FFFFFF", $borderColor="#1F5BB5", $shadowing="false", $legendText="container (CA interface)")
 UpdateElementStyle("external_container", $bgColor="#A0A8B0", $fontColor="#FFFFFF", $borderColor="#7A828A", $shadowing="false", $legendText="external container")
 
-' Components -- lighter tint of container blue (nested under container)
-UpdateElementStyle("component", $bgColor="#85B4F2", $fontColor="#0D2137", $borderColor="#3B7DD8", $shadowing="false", $borderThickness="1", $legendText="component")
+' Components → soft interface (nested under container)
+UpdateElementStyle("component", $bgColor=$CA_SOLID_INTERFACE_SOFT, $fontColor="#0D2137", $borderColor=$CA_SOLID_INTERFACE, $shadowing="false", $borderThickness="1", $legendText="component (CA interface nest)")
 
-' Default relationship (untagged)
-UpdateRelStyle("#3D4F5F", "#5A6B7A")
+UpdateRelStyle($CA_ARROW, "#5A6B7A")
 
-' Boundaries match their element family
-UpdateBoundaryStyle("", $bgColor="#F0F4F8", $fontColor="#1A2332", $borderColor="#34495E", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $legendText="boundary")
-UpdateBoundaryStyle("system", $bgColor="#E8F5F3", $fontColor="#0F4F47", $borderColor="#1B7A6E", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="System", $legendText="system boundary")
-UpdateBoundaryStyle("container", $bgColor="#EEF4FC", $fontColor="#1F5BB5", $borderColor="#3B7DD8", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="Container", $legendText="container boundary")
+UpdateBoundaryStyle("", $bgColor=$CA_BOUNDARY_DEFAULT_FILL, $fontColor=$CA_INK, $borderColor="#34495E", $shadowing="false", $borderStyle="dashed", $borderThickness="2", $legendText="boundary")
+UpdateBoundaryStyle("system", $bgColor=$CA_BOUNDARY_SYSTEM_FILL, $fontColor="#0F4F47", $borderColor=$CA_SOLID_APPLICATION, $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="System", $legendText="system boundary (CA application)")
+UpdateBoundaryStyle("container", $bgColor=$CA_BOUNDARY_CONTAINER_FILL, $fontColor="#1F5BB5", $borderColor=$CA_SOLID_INTERFACE, $shadowing="false", $borderStyle="dashed", $borderThickness="2", $type="Container", $legendText="container boundary (CA interface)")
 
-' Data stores -- apply with $tags="store" on ContainerDb / ContainerDb_Ext
-' so green is identical on Container and Component diagrams
-AddElementTag("store", $bgColor="#2C6E49", $fontColor="#FFFFFF", $borderColor="#1B4332", $shadowing="false", $legendText="data store (DB / CAS / log)")
+' Frameworks & drivers
+AddElementTag("store", $bgColor=$CA_SOLID_FRAMEWORKS, $fontColor="#FFFFFF", $borderColor=$CA_BORDER_FRAMEWORKS_DEEP, $shadowing="false", $legendText="data store (CA frameworks)")
 
-' Optional annotation tags (same everywhere)
-AddElementTag("hermetic", $bgColor="#B9770E", $fontColor="#FFFFFF", $borderColor="#7D4E00", $borderStyle="dashed", $borderThickness="2", $legendText="hermetic compile boundary")
-AddElementTag("gate", $bgColor="#A93226", $fontColor="#FFFFFF", $borderColor="#641E16", $legendText="capability / SoD gate")
+' MICRO tags
+AddElementTag("hermetic", $bgColor=$CA_SOLID_HERMETIC, $fontColor="#FFFFFF", $borderColor=$CA_BORDER_HERMETIC, $borderStyle="dashed", $borderThickness="2", $legendText="hermetic (CA infrastructure)")
+AddElementTag("gate", $bgColor=$CA_SOLID_GATE, $fontColor="#FFFFFF", $borderColor=$CA_BORDER_GATE_DEEP, $legendText="capability gate (CA micro gate)")
 
-' ------------------------------------------------------------
-' Relationship tags -- identical line colors on every diagram
-' ------------------------------------------------------------
-AddRelTag("capability_enforced", $textColor="#922B21", $lineColor="#C0392B", $lineStyle="solid", $lineThickness="2", $legendText="capability-enforced\npermission gate before action")
+' Relationship MICRO tags
+AddRelTag("capability_enforced", $textColor="#922B21", $lineColor=$CA_SOLID_CAPABILITY, $lineStyle="solid", $lineThickness="2", $legendText="capability-enforced\npermission gate before action")
 AddRelTag("compile_only", $textColor="#9A5B00", $lineColor="#E67E22", $lineStyle="dashed", $lineThickness="2", $legendText="compile-time only\nruntime access prohibited")
-AddRelTag("immutable", $textColor="#0B5E3C", $lineColor="#1B8A5A", $lineStyle="solid", $lineThickness="2", $legendText="append-only / immutable\nnever mutated")
-AddRelTag("mediated", $textColor="#5B2C6F", $lineColor="#8E44AD", $lineStyle="dashed", $lineThickness="2", $legendText="mediated output\nno external state mutation")
-AddRelTag("async", $textColor="#1A5276", $lineColor="#2980B9", $lineStyle="dotted", $lineThickness="2", $legendText="asynchronous\neventually consistent")
-AddRelTag("validation_only", $textColor="#0E6655", $lineColor="#16A085", $lineStyle="dashed", $lineThickness="2", $legendText="validation only\nread/inspect, no mutation")
-
-' Combined tags (single stereo => one reliable color in PlantUML)
-AddRelTag("immutable_async", $textColor="#0B5E3C", $lineColor="#1B8A5A", $lineStyle="dotted", $lineThickness="2", $legendText="append-only + async\nnever mutated, eventual delivery")
-AddRelTag("mediated_async", $textColor="#5B2C6F", $lineColor="#8E44AD", $lineStyle="dotted", $lineThickness="2", $legendText="mediated + async\nno external mutation, eventual")
-
-' Guidance-only read — policy doctrine for reasoning, never for evaluation
+AddRelTag("immutable", $textColor="#0B5E3C", $lineColor=$CA_SOLID_IMMUTABLE, $lineStyle="solid", $lineThickness="2", $legendText="append-only / immutable\nnever mutated")
+AddRelTag("mediated", $textColor="#5B2C6F", $lineColor=$CA_SOLID_MEDIATED, $lineStyle="dashed", $lineThickness="2", $legendText="mediated output\nno external state mutation")
+AddRelTag("async", $textColor="#1A5276", $lineColor=$CA_SOLID_ASYNC, $lineStyle="dotted", $lineThickness="2", $legendText="asynchronous\neventually consistent")
+AddRelTag("validation_only", $textColor="#0E6655", $lineColor=$CA_SOLID_VALIDATION, $lineStyle="dashed", $lineThickness="2", $legendText="validation only\nread/inspect, no mutation")
+AddRelTag("immutable_async", $textColor="#0B5E3C", $lineColor=$CA_SOLID_IMMUTABLE, $lineStyle="dotted", $lineThickness="2", $legendText="append-only + async\nnever mutated, eventual delivery")
+AddRelTag("mediated_async", $textColor="#5B2C6F", $lineColor=$CA_SOLID_MEDIATED, $lineStyle="dotted", $lineThickness="2", $legendText="mediated + async\nno external mutation, eventual")
 AddRelTag("guidance_only", $textColor="#1A5276", $lineColor="#2E86C1", $lineStyle="dotted", $lineThickness="1", $legendText="guidance only\nread for reasoning, not evaluation")
 
 !endif

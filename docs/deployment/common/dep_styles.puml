@@ -1,17 +1,14 @@
 ' ============================================================
-' Title:     Selma — Deployment Styles (shared)
-' Purpose:   ONE visual language for all dep_NNN_*.puml diagrams.
-'            Palette locked to C4 / state / package semantic colors.
+' Title:     Selma — Deployment Styles
+' Purpose:   Deployment chrome + zone colors from CA MACRO layers.
 ' Contract:  1.1.0
 '
-' Include order (every deployment diagram):
+' Include order:
 '   !include common/dep_styles.puml
 '   !include common/dep_identities.puml
-'   !include common/dep_section_*.puml
-'   !include common/dep_connections.puml
-'
-' PlantUML note blocks are FORBIDDEN in deployment .puml files.
 ' ============================================================
+
+!include ../../standards/common/ca_palette.puml
 
 !theme plain
 skinparam linetype ortho
@@ -21,10 +18,10 @@ skinparam defaultTextAlignment center
 skinparam shadowing false
 skinparam roundCorner 8
 skinparam handwritten false
-skinparam backgroundColor #FAFBFC
+skinparam backgroundColor $CA_CANVAS
 skinparam titleFontSize 16
 skinparam titleFontStyle bold
-skinparam titleFontColor #1A2332
+skinparam titleFontColor $CA_INK
 skinparam nodesep 40
 skinparam ranksep 50
 
@@ -32,83 +29,70 @@ skinparam packageStyle rectangle
 skinparam package {
   FontSize 11
   FontStyle bold
-  FontColor #1A2332
+  FontColor $CA_INK
   BorderThickness 2
 }
 
 skinparam node {
-  BackgroundColor #FAFBFC
-  BorderColor #5B7BA5
+  BackgroundColor $CA_CANVAS
+  BorderColor $CA_BORDER_NEUTRAL
   FontSize 10
-  FontColor #1A2332
+  FontColor $CA_INK
   BorderThickness 1.5
 }
 
 skinparam database {
-  BackgroundColor #2C6E49
-  BorderColor #1B4332
+  BackgroundColor $CA_SOLID_FRAMEWORKS
+  BorderColor $CA_BORDER_FRAMEWORKS_DEEP
   FontColor #FFFFFF
   FontSize 10
   FontStyle bold
 }
 
 skinparam cloud {
-  BackgroundColor #8A9199
-  BorderColor #5C636A
+  BackgroundColor $CA_SOLID_EXTERNAL
+  BorderColor $CA_BORDER_EXTERNAL
   FontColor #FFFFFF
   FontSize 10
 }
 
-skinparam ArrowColor #3D4F5F
+skinparam ArrowColor $CA_ARROW
 skinparam ArrowThickness 1.5
 skinparam ArrowFontSize 9
-skinparam ArrowFontColor #2C3E50
+skinparam ArrowFontColor $CA_INK
 
-' ------------------------------------------------------------
-' Semantic colors (identical hex to C4 / state macros)
-' ------------------------------------------------------------
-' C4 person / actor            indigo   #4A6FA5
-' C4 container / resource      blue     #3B7DD8
-' C4 system / process          teal     #1B7A6E
-' C4 store                     green    #2C6E49
-' C4 gate                      red      #A93226
-' C4 hermetic / pending        amber    #B9770E
-' Terminal / retired           grey     #4A4A4A
-' Mediated / domain-only       purple   #8E44AD
-' C4 external                  grey     #8A9199
-' ------------------------------------------------------------
+' ── MACRO solid aliases ─────────────────────────────────────
+!$DEP_COLOR_ACTOR       = $CA_SOLID_ACTOR
+!$DEP_COLOR_CONTAINER   = $CA_SOLID_INTERFACE
+!$DEP_COLOR_PROCESS     = $CA_SOLID_APPLICATION
+!$DEP_COLOR_STORE       = $CA_SOLID_FRAMEWORKS
+!$DEP_COLOR_GATE        = $CA_SOLID_GATE
+!$DEP_COLOR_PENDING     = $CA_SOLID_INFRASTRUCTURE
+!$DEP_COLOR_TERMINAL    = $CA_SOLID_TERMINAL
+!$DEP_COLOR_DOMAIN      = $CA_SOLID_DOMAIN
+!$DEP_COLOR_EXTERNAL    = $CA_SOLID_EXTERNAL
 
-!$DEP_COLOR_ACTOR       = "#4A6FA5"
-!$DEP_COLOR_CONTAINER   = "#3B7DD8"
-!$DEP_COLOR_PROCESS     = "#1B7A6E"
-!$DEP_COLOR_STORE       = "#2C6E49"
-!$DEP_COLOR_GATE        = "#A93226"
-!$DEP_COLOR_PENDING     = "#B9770E"
-!$DEP_COLOR_TERMINAL    = "#4A4A4A"
-!$DEP_COLOR_DOMAIN      = "#8E44AD"
-!$DEP_COLOR_EXTERNAL    = "#8A9199"
+' ── Zone packages (CA layer mapping) ────────────────────────
+' External User → ACTORS
+' Public edge   → INTERFACE
+' Application   → APPLICATION
+' Data          → FRAMEWORKS
+' External opt  → EXTERNAL
+' Monitoring    → COMPOSITION (ops plane, not product peer)
+!$DEP_ZONE_USER_FILL     = $CA_FILL_ACTOR
+!$DEP_ZONE_USER_BORDER   = $CA_BORDER_ACTOR
+!$DEP_ZONE_PUBLIC_FILL   = $CA_FILL_INTERFACE
+!$DEP_ZONE_PUBLIC_BORDER = $CA_BORDER_INTERFACE
+!$DEP_ZONE_APP_FILL      = $CA_FILL_APPLICATION
+!$DEP_ZONE_APP_BORDER    = $CA_BORDER_APPLICATION
+!$DEP_ZONE_DATA_FILL     = $CA_FILL_FRAMEWORKS
+!$DEP_ZONE_DATA_BORDER   = $CA_BORDER_FRAMEWORKS
+!$DEP_ZONE_EXT_FILL      = $CA_FILL_EXTERNAL
+!$DEP_ZONE_EXT_BORDER    = $CA_BORDER_EXTERNAL
+!$DEP_ZONE_MON_FILL      = $CA_FILL_COMPOSITION
+!$DEP_ZONE_MON_BORDER    = $CA_BORDER_COMPOSITION
 
-' Zone package fill/border pairs (light fill + semantic border)
-!$DEP_ZONE_USER_FILL    = "#E8EEF5"
-!$DEP_ZONE_USER_BORDER  = "#4A6FA5"
-!$DEP_ZONE_PUBLIC_FILL  = "#EEF4FC"
-!$DEP_ZONE_PUBLIC_BORDER = "#3B7DD8"
-!$DEP_ZONE_APP_FILL     = "#E8F5F3"
-!$DEP_ZONE_APP_BORDER   = "#1B7A6E"
-!$DEP_ZONE_DATA_FILL    = "#E8F5E9"
-!$DEP_ZONE_DATA_BORDER  = "#2C6E49"
-!$DEP_ZONE_EXT_FILL     = "#F0F0F0"
-!$DEP_ZONE_EXT_BORDER   = "#8A9199"
-!$DEP_ZONE_MON_FILL     = "#F5EEF8"
-!$DEP_ZONE_MON_BORDER   = "#8E44AD"
-
-' Node accents inside zones
-!$DEP_NODE_APP_BG       = "#3B7DD8"
-!$DEP_NODE_APP_FG       = "#FFFFFF"
-!$DEP_NODE_LB_BG        = "#85B4F2"
-!$DEP_NODE_LB_FG        = "#0D2137"
-!$DEP_NODE_PVC_BG       = "#B9770E"
-!$DEP_NODE_PVC_FG       = "#FFFFFF"
-!$DEP_NODE_PG_BG        = "#FAFBFC"
-!$DEP_NODE_OBJ_BG       = "#FAFBFC"
-!$DEP_NODE_MON_BG       = "#E8EAF6"
+!$DEP_NODE_APP_BG        = $CA_SOLID_INTERFACE
+!$DEP_NODE_LB_BG         = $CA_SOLID_INTERFACE_SOFT
+!$DEP_NODE_PVC_BG        = $CA_SOLID_INFRASTRUCTURE
+!$DEP_NODE_MON_BG        = $CA_FILL_COMPOSITION

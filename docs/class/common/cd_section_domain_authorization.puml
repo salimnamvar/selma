@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_authorization.puml
 ' ============================================================
 
-package "authorization_domain" as DOM_AUTH #F0F4F8/78909C {
+package "authorization_domain" as DOM_AUTH #F3E5F5/8E44AD {
 
   class "**ActorCapabilityGrant**" as ActorCapabilityGrant <<Entity>> #ECEFF1/546E7A {
     + actor_id: ActorId
@@ -12,7 +12,7 @@ package "authorization_domain" as DOM_AUTH #F0F4F8/78909C {
     + constraints: Map
   }
 
-  class "**CapabilityGate**" as CapabilityGate <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**CapabilityGate**" as CapabilityGate <<Domain Service>> #F3E5F5/8E44AD {
     + check(capability: CapabilityId, actor: ActorId, grants: List~ActorCapabilityGrant~): boolean
   }
 }

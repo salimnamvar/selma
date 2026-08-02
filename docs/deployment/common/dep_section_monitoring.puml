@@ -4,7 +4,7 @@
 ' ============================================================
 
 ' Zone fill/border = DEP_ZONE_MON_* (#F5EEF8 / #8E44AD · ops / mediated)
-package "$ZONE_MONITORING" as ZONE_MON #F5EEF8/8E44AD {
+package "$ZONE_MONITORING" as ZONE_MON #EDE7F6/5E35B1 {
   node "$NODE_PROMETHEUS" as NODE_PROMETHEUS
   node "$NODE_LOGS" as NODE_LOGS
   node "$NODE_TRACES" as NODE_TRACES

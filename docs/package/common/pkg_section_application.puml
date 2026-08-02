@@ -4,9 +4,9 @@
 ' Aliases: APPLICATION, APP_*, UC_*, P_*
 ' ============================================================
 
-package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
+package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/1B7A6E {
 
-  package "$TITLE_APP_DIR" as APP_DIR #C8E6C9/388E3C {
+  package "$TITLE_APP_DIR" as APP_DIR #C8E6C9/1B7A6E {
     together {
       [CreateDirective] as UC_DIR_CREATE
       [GetDirective] as UC_DIR_GET
@@ -22,7 +22,7 @@ package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
     UC_DIR_LIFE -[hidden]down- P_DIR_REPO
   }
 
-  package "$TITLE_APP_CR" as APP_CR #C8E6C9/388E3C {
+  package "$TITLE_APP_CR" as APP_CR #C8E6C9/1B7A6E {
     together {
       [CompileDirectives] as UC_CR_COMPILE
       [PublishCompiledRules] as UC_CR_PUB
@@ -36,7 +36,7 @@ package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
     P_CR_READ -[hidden]right- P_CR_REPO
   }
 
-  package "$TITLE_APP_INS" as APP_INS #C8E6C9/388E3C {
+  package "$TITLE_APP_INS" as APP_INS #C8E6C9/1B7A6E {
     together {
       [CreateInspection] as UC_INS_CREATE
       [GetInspection] as UC_INS_GET
@@ -50,7 +50,7 @@ package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
     P_INS_ART -[hidden]right- P_INS_TGT
   }
 
-  package "$TITLE_APP_FIND" as APP_FIND #C8E6C9/388E3C {
+  package "$TITLE_APP_FIND" as APP_FIND #C8E6C9/1B7A6E {
     together {
       [GetFinding] as UC_FIND_GET
       [ListFindings] as UC_FIND_LIST

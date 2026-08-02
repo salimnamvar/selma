@@ -40,21 +40,21 @@ plantuml docs/deployment/dep_001_production.puml
 python scripts/check_design_alignment.py
 ```
 
-## Color harmony (C4 · package · state · deployment)
+## Color harmony (CA MACRO + deployment MICRO)
 
-Zone package borders use the **same hex values** as C4 element tags:
+**SSoT:** [`../standards/common/ca_palette.puml`](../standards/common/ca_palette.puml) via [`common/dep_styles.puml`](common/dep_styles.puml).
 
-| Zone | Fill / border | C4 / state meaning |
+| Zone | CA MACRO | Fill / border |
 | :--- | :--- | :--- |
-| External User | `#E8EEF5` / `#4A6FA5` | Person / actor |
-| Public | `#EEF4FC` / `#3B7DD8` | Container / resource |
-| Application | `#E8F5F3` / `#1B7A6E` | System / process |
-| Data | `#E8F5E9` / `#2C6E49` | Data store |
-| External | `#F0F0F0` / `#8A9199` | External system |
-| Monitoring | `#F5EEF8` / `#8E44AD` | Ops / mediated (not a product peer) |
-| Store databases | skinparam `#2C6E49` | C4 `$tags="store"` |
+| External User | Actors | `#E8EEF5` / `#4A6FA5` |
+| Public | Interface | `#EEF4FC` / `#3B7DD8` |
+| Application | Application | `#E8F5E9` / `#1B7A6E` |
+| Data | Frameworks | `#E8F5E9` / `#2C6E49` |
+| External | External | `#F0F0F0` / `#8A9199` |
+| Monitoring | Composition (ops plane) | `#EDE7F6` / `#5E35B1` |
+| Store databases | Frameworks solid | `#2C6E49` |
 
-**Rule:** same semantic → same hex. Do not invent ad-hoc colors in diagram bodies; change `dep_styles.puml` once.
+**Rule:** never invent hex in sections; match palette literals.
 
 ## Naming (aligned with other views)
 

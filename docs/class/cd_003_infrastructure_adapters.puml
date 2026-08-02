@@ -28,14 +28,17 @@ title $TITLE_INFRASTRUCTURE
 !include common/cd_section_infra_connections.puml
 
 legend bottom
-  |= Module |= C4 peer |
+  |= Module |= CA layer · C4 peer |
+  | `*_infrastructure` ring | **Infrastructure** amber #B9770E |
+  | Adapter classes | same (driven adapters) |
+  | Port ref | **Gate** micro #A93226 |
   | directives_infrastructure | directives_repository |
   | compiled_rules_infrastructure | compiled_rules_repository |
   | findings_infrastructure | finding_events_repository |
   | artifacts_infrastructure | artifacts_repository |
   | inspections_infrastructure | target_sources_gateway |
   | platform_infrastructure | (not a peer) |
-  | Adapter color | hermetic amber #B9770E |
+  | Palette | docs/standards/common/ca_palette.puml |
 endlegend
 
 footer $FOOTER_INFRASTRUCTURE

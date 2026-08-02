@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_inspections.puml
 ' ============================================================
 
-package "inspections_domain" as DOM_INS #F0F4F8/78909C {
+package "inspections_domain" as DOM_INS #F3E5F5/8E44AD {
 
   class "**Inspection**" as Inspection <<Aggregate Root>> #E8F5E9/2C6E49 {
     + inspection_id: UUID
@@ -36,7 +36,7 @@ package "inspections_domain" as DOM_INS #F0F4F8/78909C {
     failed
   }
 
-  class "**ScopeMatcher**" as ScopeMatcher <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**ScopeMatcher**" as ScopeMatcher <<Domain Service>> #F3E5F5/8E44AD {
     + match(applicability: Applicability, target: Target): int
   }
 }

@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_certification.puml
 ' ============================================================
 
-package "certification_payloads" as DOM_CERT #F0F4F8/78909C {
+package "certification_payloads" as DOM_CERT #F3E5F5/8E44AD {
 
   class "**CertificationRun**" as CertificationRun <<Value Object>> #EEF4FC/3B7DD8 {
     + run_id: UUID

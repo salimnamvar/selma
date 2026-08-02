@@ -1,40 +1,64 @@
 ' ============================================================
-' Title:     Selma -- Package Diagram Styles (shared)
-' Purpose:   ONE visual language for package diagrams.
+' Title:     Selma — Package Diagram Styles
+' Purpose:   Package chrome + CA MACRO layer package colors.
 ' Contract:  1.1.0
 '
-' Include AFTER base class styles from the orchestrator:
-'   !include ../class/common/cd_styles.puml
+' Include order (orchestrator):
+'   !include ../../standards/common/ca_palette.puml
 '   !include common/pkg_styles.puml
+'   !include common/pkg_identities.puml
 ' ============================================================
+
+!include ../../standards/common/ca_palette.puml
 
 top to bottom direction
 skinparam packageStyle rectangle
 skinparam linetype polyline
 skinparam nodesep 20
 skinparam ranksep 30
+skinparam backgroundColor $CA_CANVAS
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam defaultFontColor $CA_INK
+skinparam shadowing false
+skinparam roundCorner 8
 
 skinparam package {
-  BackgroundColor #F0F4F8
-  BorderColor #5B7BA5
+  BackgroundColor $CA_BOUNDARY_DEFAULT_FILL
+  BorderColor $CA_BORDER_NEUTRAL
   FontSize 11
   FontStyle bold
+  FontColor $CA_INK
 }
 
 skinparam component {
   BackgroundColor #FFFFFF
-  BorderColor #7F8C9A
+  BorderColor $CA_BORDER_NEUTRAL
   FontSize 10
 }
 
 skinparam database {
-  BackgroundColor #ECEFF1
-  BorderColor #546E7A
+  BackgroundColor $CA_FILL_FRAMEWORKS
+  BorderColor $CA_BORDER_FRAMEWORKS
 }
 
-' Ports are rectangular components (never PlantUML circle interface)
+' Ports — MICRO gate (ISP application-owned ports)
 skinparam component<<port>> {
-  BackgroundColor #FCE4EC
-  BorderColor #C62828
+  BackgroundColor $CA_FILL_GATE
+  BorderColor $CA_SOLID_GATE
   FontStyle bold
 }
+
+' ── MACRO package ring aliases (sections use matching hex) ──
+!$PKG_LAYER_INTERFACE      = $CA_PKG_INTERFACE
+!$PKG_LAYER_INTERFACE_NEST = $CA_PKG_INTERFACE_NEST
+!$PKG_LAYER_APPLICATION    = $CA_PKG_APPLICATION
+!$PKG_LAYER_APPLICATION_NEST = $CA_PKG_APPLICATION_NEST
+!$PKG_LAYER_DOMAIN         = $CA_PKG_DOMAIN
+!$PKG_LAYER_DOMAIN_NEST    = $CA_PKG_DOMAIN_NEST
+!$PKG_LAYER_INFRASTRUCTURE = $CA_PKG_INFRASTRUCTURE
+!$PKG_LAYER_INFRASTRUCTURE_NEST = $CA_PKG_INFRASTRUCTURE_NEST
+!$PKG_LAYER_FRAMEWORKS     = $CA_PKG_FRAMEWORKS
+!$PKG_LAYER_EXTERNAL       = $CA_PKG_EXTERNAL
+!$PKG_LAYER_COMPOSITION    = $CA_PKG_COMPOSITION
+!$PKG_LAYER_GATE           = $CA_PKG_GATE

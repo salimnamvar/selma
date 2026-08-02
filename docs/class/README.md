@@ -38,24 +38,35 @@ plantuml docs/class/*.puml
 python scripts/check_design_alignment.py
 ```
 
-## Color harmony (C4 · package · deployment · state · class)
+## Color harmony (CA MACRO + class MICRO)
 
-| Archetype | Fill / border | C4 / state meaning |
+**SSoT:** [`../standards/common/ca_palette.puml`](../standards/common/ca_palette.puml) via [`common/cd_styles.puml`](common/cd_styles.puml).
+
+### MACRO — package rings (identical to package diagram)
+
+| Package ring | CA layer | Fill / border |
 | :--- | :--- | :--- |
-| Aggregate Root | `#E8F5E9` / `#2C6E49` | Data store |
-| Value Object / DTO / Read Model | `#EEF4FC` / `#3B7DD8` | Container / resource |
-| Domain Service / Use Case | `#E8F5E9` / `#1B7A6E` | System / process |
-| Port | `#FDEDEC` / `#A93226` | Capability gate |
-| Domain Event / Enum | `#FEF5E7` / `#B9770E` | Hermetic / pending |
-| Adapter / platform | `#FEF5E7` / `#B9770E` | Hermetic amber |
-| Interface adapter | `#EEF4FC` / `#3B7DD8` | Container |
-| Composition root | `#F5EEF8` / `#8E44AD` | Domain / mediated |
-| Entity | `#ECEFF1` / `#546E7A` | Neutral |
-| Domain package ring | `#F0F4F8` / `#78909C` | Package domain layer |
-| Application package ring | `#E8F5E9` / `#1B7A6E` | Package application layer |
-| Infrastructure package ring | `#FEF5E7` / `#B9770E` | Package infrastructure layer |
+| `*_domain` | Domain | `#F3E5F5` / `#8E44AD` |
+| `*_application` | Application | `#E8F5E9` / `#1B7A6E` |
+| `*_infrastructure` | Infrastructure | `#FEF5E7` / `#B9770E` |
+| `*_interface` | Interface | `#EEF4FC` / `#3B7DD8` |
+| `composition_root` | Composition | `#EDE7F6` / `#5E35B1` |
+| `application.ports` | Gate (micro) | `#FDEDEC` / `#A93226` |
 
-**Rule:** same semantic → same hex. Change colors only in `cd_styles.puml` / section archetype tags, never invent ad-hoc hex in new types.
+### MICRO — type archetypes
+
+| Archetype | CA mapping | Fill / border |
+| :--- | :--- | :--- |
+| Aggregate Root | Frameworks (durable) | `#E8F5E9` / `#2C6E49` |
+| Value Object / DTO | Interface | `#EEF4FC` / `#3B7DD8` |
+| Domain Service | Domain | `#F3E5F5` / `#8E44AD` |
+| Use Case | Application | `#E8F5E9` / `#1B7A6E` |
+| Port | Gate | `#FDEDEC` / `#A93226` |
+| Domain Event / Enum | Infrastructure / hermetic | `#FEF5E7` / `#B9770E` |
+| Adapter | Infrastructure | `#FEF5E7` / `#B9770E` |
+| Entity | micro entity | `#ECEFF1` / `#546E7A` |
+
+**Rule:** change hex only in `ca_palette.puml`.
 
 ## Naming (aligned with other views)
 

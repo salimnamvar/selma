@@ -2,7 +2,7 @@
 ' Section: cd_section_domain_directives.puml
 ' ============================================================
 
-package "directives_domain" as DOM_DIR #F0F4F8/78909C {
+package "directives_domain" as DOM_DIR #F3E5F5/8E44AD {
 
   class "**Directive**" as Directive <<Aggregate Root>> #E8F5E9/2C6E49 {
     + lineage_id: LineageId
@@ -54,13 +54,13 @@ package "directives_domain" as DOM_DIR #F0F4F8/78909C {
     superseded
   }
 
-  class "**LineageService**" as LineageService <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**LineageService**" as LineageService <<Domain Service>> #F3E5F5/8E44AD {
     + fork(lineage: LineageId): LineageId
     + merge(left: LineageId, right: LineageId): LineageId
     + split(lineage: LineageId): List~LineageId~
   }
 
-  class "**DetectionDiscriminator**" as DetectionDiscriminator <<Domain Service>> #E8F5F3/1B7A6E {
+  class "**DetectionDiscriminator**" as DetectionDiscriminator <<Domain Service>> #F3E5F5/8E44AD {
     + resolve(spec: DetectionSpec, active: Directive): DetectionStrategy
   }
 }

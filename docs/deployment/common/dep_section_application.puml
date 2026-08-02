@@ -5,7 +5,7 @@
 ' ============================================================
 
 ' Zone fill/border = DEP_ZONE_APP_* (#E8F5F3 / #1B7A6E · C4 system)
-package "$ZONE_APPLICATION" as ZONE_APP #E8F5F3/1B7A6E {
+package "$ZONE_APPLICATION" as ZONE_APP #E8F5E9/1B7A6E {
   node "$NODE_APPLICATION" as NODE_APPLICATION
   database "$NODE_HLC_PVC" as NODE_HLC_PVC
 }

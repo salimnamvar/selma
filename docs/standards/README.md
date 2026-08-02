@@ -7,6 +7,8 @@ and version line**. This directory is the **checkable schema** for that discipli
 | :--- | :--- |
 | [`VERSION`](VERSION) | **Sole SSoT** for `design_contract_version` (one SemVer line) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Design-line history (Keep a Changelog) |
+| [`common/ca_palette.puml`](common/ca_palette.puml) | **Sole SSoT** for Clean Architecture MACRO layer + MICRO concern colors |
+| [`common/README.md`](common/README.md) | Palette mapping for C4 / package / class / deployment / state |
 | [`c4_registry.yaml`](c4_registry.yaml) | Canonical C4 IDs, non-peers, API resource surface, forbidden aliases; carries a **stamp** of `VERSION` |
 | [`view_concerns.md`](view_concerns.md) | Exclusive ownership matrix for C4 / package / deployment / state (no principle duplication) |
 | [`contract.schema.json`](contract.schema.json) | Front-matter schema for `docs/spec/contracts/**/*.yaml` |

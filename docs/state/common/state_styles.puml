@@ -1,16 +1,15 @@
 ' ============================================================
-' Title:     Selma — State Machine Styles (shared)
-' Purpose:   ONE visual language for all state_machine_*.puml
-'            diagrams. Palette is locked to C4 / package /
-'            deployment semantic colors so views stay connected.
+' Title:     Selma — State Machine Styles
+' Purpose:   State view chrome + MICRO lifecycle aliases mapped
+'            to Clean Architecture MACRO palette (ca_palette).
 ' Contract:  1.1.0
 '
-' Include order (every state machine diagram):
+' Include order:
 '   !include ./common/state_styles.puml
 '   !include ./common/state_identities.puml
-'
-' Notes are FORBIDDEN in state-machine .puml files.
 ' ============================================================
+
+!include ../../standards/common/ca_palette.puml
 
 skinparam defaultFontName       "Arial"
 skinparam defaultFontSize       11
@@ -20,20 +19,20 @@ skinparam defaultTextAlignment  center
 skinparam shadowing             false
 skinparam roundCorner           8
 skinparam handwritten           false
-skinparam backgroundColor       #FAFBFC
+skinparam backgroundColor       $CA_CANVAS
 skinparam titleFontSize         16
 skinparam titleFontStyle        bold
-skinparam titleFontColor        #1A2332
+skinparam titleFontColor        $CA_INK
 
 skinparam state {
-  BorderColor                #2C3E50
+  BorderColor                $CA_INK
   FontColor                  #FFFFFF
-  BackgroundColor            #3B7DD8
+  BackgroundColor            $CA_SOLID_INTERFACE
   BorderThickness            2
   FontStyle                  bold
-  StartColor                 #1B7A6E
-  EndColor                   #4A4A4A
-  ArrowColor                 #34495E
+  StartColor                 $CA_SOLID_APPLICATION
+  EndColor                   $CA_SOLID_TERMINAL
+  ArrowColor                 $CA_ARROW
   ArrowThickness             2
 }
 
@@ -42,37 +41,26 @@ skinparam ranksep            60
 skinparam linetype           polyline
 
 ' ------------------------------------------------------------
-' Semantic state colors (identical hex to C4 element palette)
+' MICRO lifecycle colors → MACRO CA layers
 ' Use as:  state "Open" as Open $STATE_COLOR_RESOURCE
 ' ------------------------------------------------------------
-' C4 person / actor            indigo   #4A6FA5  → STATE_COLOR_ACTOR
-' C4 container / resource      blue     #3B7DD8  → STATE_COLOR_RESOURCE
-' C4 system / in-flight        teal     #1B7A6E  → STATE_COLOR_PROCESS
-' C4 store / durable success   green    #2C6E49  → STATE_COLOR_STORE
-' C4 gate / deny / reject      red      #A93226  → STATE_COLOR_GATE
-' C4 hermetic / pending human  amber    #B9770E  → STATE_COLOR_PENDING
-' Terminal sink / retired      grey     #4A4A4A  → STATE_COLOR_TERMINAL
-' C4 mediated / domain-only    purple   #8E44AD  → STATE_COLOR_DOMAIN
-' C4 external / offline tool   grey     #8A9199  → STATE_COLOR_EXTERNAL
+' ACTOR     → CA actors (person)
+' RESOURCE  → CA interface (resource/container hub)
+' PROCESS   → CA application (in-flight use-case work)
+' STORE     → CA frameworks (durable success)
+' GATE      → CA micro gate (deny / fail)
+' PENDING   → CA infrastructure / hermetic (queued, awaits)
+' TERMINAL  → CA micro terminal
+' DOMAIN    → CA domain (ResolveConflict path)
+' EXTERNAL  → CA external (offline tool)
 ' ------------------------------------------------------------
 
-!$STATE_COLOR_ACTOR     = "#4A6FA5"
-!$STATE_COLOR_RESOURCE  = "#3B7DD8"
-!$STATE_COLOR_PROCESS   = "#1B7A6E"
-!$STATE_COLOR_STORE     = "#2C6E49"
-!$STATE_COLOR_GATE      = "#A93226"
-!$STATE_COLOR_PENDING   = "#B9770E"
-!$STATE_COLOR_TERMINAL  = "#4A4A4A"
-!$STATE_COLOR_DOMAIN    = "#8E44AD"
-!$STATE_COLOR_EXTERNAL  = "#8A9199"
-
-' When to apply (locked — same meaning on every diagram):
-'   RESOURCE  — durable resource states (finding Open/Created, resource hubs)
-'   PROCESS   — automated pipeline / pure evaluation / system advance
-'   STORE     — durable success: published, verified, allowed, resolved binding
-'   GATE      — capability deny, reject, failed, fatal
-'   PENDING   — awaits human, draft, queued, pre-terminal waived, certificate run
-'   TERMINAL  — sinks: closed, dismissed, superseded, archived, domain unchanged
-'   DOMAIN    — domain service only (ResolveConflict path), not a C4 peer
-'   EXTERNAL  — offline / optional external non-peer (certification_tool samples)
-'   ACTOR     — reserved for actor-role emphasis (rare on pure FSMs)
+!$STATE_COLOR_ACTOR     = $CA_SOLID_ACTOR
+!$STATE_COLOR_RESOURCE  = $CA_SOLID_INTERFACE
+!$STATE_COLOR_PROCESS   = $CA_SOLID_APPLICATION
+!$STATE_COLOR_STORE     = $CA_SOLID_FRAMEWORKS
+!$STATE_COLOR_GATE      = $CA_SOLID_GATE
+!$STATE_COLOR_PENDING   = $CA_SOLID_INFRASTRUCTURE
+!$STATE_COLOR_TERMINAL  = $CA_SOLID_TERMINAL
+!$STATE_COLOR_DOMAIN    = $CA_SOLID_DOMAIN
+!$STATE_COLOR_EXTERNAL  = $CA_SOLID_EXTERNAL
