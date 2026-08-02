@@ -15,7 +15,6 @@
 ' to change structure; do not re-inline content here.
 ' ============================================================
 
-!include ../../standards/common/ca_palette.puml
 !include common/pkg_styles.puml
 !include common/pkg_identities.puml
 

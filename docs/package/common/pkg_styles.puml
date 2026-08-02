@@ -3,8 +3,7 @@
 ' Purpose:   Package chrome + CA MACRO layer package colors.
 ' Contract:  docs/standards/VERSION
 ' Include order (orchestrator):
-'   !include ../../standards/common/ca_palette.puml
-'   !include common/pkg_styles.puml
+'   !include common/pkg_styles.puml   (pulls ca_palette)
 '   !include common/pkg_identities.puml
 ' ============================================================
 
