@@ -78,7 +78,6 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **Activity diagrams** | [`activity/`](activity/README.md) | Procedural swim-lane flows |
 | **API** | [`api/`](api/README.md) | Modular OpenAPI (Redocly) |
 | **Deployment** | [`deployment/`](deployment/README.md) | *Where* it runs (zones, TLS, failure domains, RPO) |
-| **Project phases** | [`mindmap/`](mindmap/README.md) | Phase status |
 
 ### Structural & state views (no concern overlap)
 
@@ -91,7 +90,7 @@ Full matrix: [`standards/view_concerns.md`](standards/view_concerns.md).
 | Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Zones, TLS, HA, RPO/RTO, observability | Component use-case graph, package trees, domain algorithms |
 | How does state evolve (FSMs / pipelines)? | [`state/`](state/README.md) | Extracted states/transitions from contracts | Peer inventing, packages, zones; product design principles (spec owns) |
 
-Join key: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).  
+Join key: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
 Behavior principles (authn, SoD, hermetic compile, dual-document, store mutability): **`spec/contracts/`** + **`schema/`** only — structural views link, never duplicate.
 
 ## Authority (investigation order)

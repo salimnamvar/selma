@@ -19,7 +19,6 @@ Full docs index: [`docs/README.md`](docs/README.md)
 
 - Contracts: [`docs/spec/README.md`](docs/spec/README.md)
 - Design Freeze: [`docs/design/README.md`](docs/design/README.md)
-- Phases: [`docs/mindmap/README.md`](docs/mindmap/README.md)
 
 ## License
 
