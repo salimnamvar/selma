@@ -101,11 +101,11 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden: registry `forbidd
 | `CompiledRulesRepository` | compile + inspect (+ findings SoD) | `compiled_rules_infrastructure` | `compiled_rules_repository` |
 | `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`FindingEventRepositoryAdapter`) | `finding_events_repository` |
 | `DenialAuditPort` | `findings_application` | `findings_infrastructure` (`DenialAuditAdapter` only) | `finding_events_repository` |
-| `FindingOpenPort` | `findings_application` | `findings_application` (use-case facade) | n/a — peer port for `inspections_application` |
+| `FindingOpenPort` | `findings_application` | `findings_application` (`OpenFindings` use-case facade) | n/a — peer port for `inspections_application` |
 | `InspectionArtifactPort` | `inspections_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `FindingArtifactPort` | `findings_application` | `artifacts_infrastructure` | `artifacts_repository` |
 | `TargetSourcesGateway` | `inspections_application` | `inspections_infrastructure` | `target_sources_gateway` |
-| `CertificationArtifactPort` | `certification_tool` / API system capability | `artifacts_infrastructure` | `artifacts_repository` |
+| `CertificationArtifactPort` | composition binds offline `certification_tool` | `artifacts_infrastructure` | `artifacts_repository` |
 
 **ISP rule:** one physical pool MAY back multiple adapters; each port MUST be a **separate adapter class** so a `CompilerReadPort` reference cannot mutate directives, and `api` cannot use full `FindingEventRepository` via `DenialAuditPort`.
 

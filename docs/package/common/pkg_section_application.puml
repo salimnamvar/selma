@@ -57,18 +57,26 @@ package "$TITLE_APPLICATION" as APPLICATION #E8F5E9/2E7D32 {
       [TransitionFinding] as UC_FIND_TRANS
       [GetFindingGuidance] as UC_FIND_GUIDE
       [AttachEvidence] as UC_FIND_EVID
+      [OpenFindings] as UC_FIND_OPEN
+      [ListFindingAggregates] as UC_FIND_AGGR
+      [ReviewConflictArtifact] as UC_FIND_CONFLICT
       ["$PORT_FIND_EVT"] as P_FIND_EVT <<port>>
       ["$PORT_FIND_DENY"] as P_FIND_DENY <<port>>
       ["$PORT_FIND_GUIDE"] as P_FIND_GUIDE <<port>>
       ["$PORT_FIND_ART"] as P_FIND_ART <<port>>
+      ["$PORT_FIND_OPEN"] as P_FIND_OPEN <<port>>
     }
     UC_FIND_GET -[hidden]right- UC_FIND_LIST
     UC_FIND_LIST -[hidden]right- UC_FIND_TRANS
     UC_FIND_TRANS -[hidden]right- UC_FIND_GUIDE
     UC_FIND_GUIDE -[hidden]right- UC_FIND_EVID
-    UC_FIND_EVID -[hidden]down- P_FIND_EVT
+    UC_FIND_EVID -[hidden]right- UC_FIND_OPEN
+    UC_FIND_OPEN -[hidden]right- UC_FIND_AGGR
+    UC_FIND_AGGR -[hidden]right- UC_FIND_CONFLICT
+    UC_FIND_CONFLICT -[hidden]down- P_FIND_EVT
     P_FIND_EVT -[hidden]right- P_FIND_DENY
     P_FIND_DENY -[hidden]right- P_FIND_GUIDE
     P_FIND_GUIDE -[hidden]right- P_FIND_ART
+    P_FIND_ART -[hidden]right- P_FIND_OPEN
   }
 }

@@ -54,6 +54,8 @@
 !$PORT_FIND_DENY = "DenialAuditPort"
 !$PORT_FIND_GUIDE = "GuidanceReadPort"
 !$PORT_FIND_ART = "FindingArtifactPort"
+!$PORT_FIND_OPEN = "FindingOpenPort"
+!$PORT_CERT_ART = "CertificationArtifactPort"
 
 ' ── Store display names (C4 store peers) ────────────────────
 !$STORE_DIR = "directives_store"
@@ -72,8 +74,9 @@
 ' Compile UC: UC_CR_COMPILE UC_CR_PUB UC_CR_DRAIN
 ' Inspect UC: UC_INS_CREATE UC_INS_GET UC_INS_PIPE
 ' Findings UC: UC_FIND_GET UC_FIND_LIST UC_FIND_TRANS UC_FIND_GUIDE UC_FIND_EVID
+'              UC_FIND_OPEN UC_FIND_AGGR UC_FIND_CONFLICT
 ' Ports: P_DIR_REPO P_CR_READ P_CR_REPO P_INS_ART P_INS_TGT
-'        P_FIND_EVT P_FIND_DENY P_FIND_GUIDE P_FIND_ART
+'        P_FIND_EVT P_FIND_DENY P_FIND_GUIDE P_FIND_ART P_FIND_OPEN P_CERT_ART
 ' Domain: AGG_* VO_* SVC_FSM SVC_CONFLICT
 ' Infra: SQL_DIR CAS_CR EVT_REPO OBJ_CLI ART_INS ART_FIND ART_CERT
 '        TGT_GW DET_EVAL PLAT_HASH PLAT_HLC

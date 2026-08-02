@@ -8,7 +8,9 @@ package "$TITLE_COMPOSITION" as COMPOSITION #E8EAF6/3F51B5 {
     [ApplicationContainer] as WIRE_APP
     [PortBindings] as WIRE_PORTS
     [OutboxDrainScheduler] as WIRE_OUTBOX
+    ["$PORT_CERT_ART"] as P_CERT_ART <<port>>
   }
   WIRE_APP -[hidden]right- WIRE_PORTS
   WIRE_PORTS -[hidden]right- WIRE_OUTBOX
+  WIRE_OUTBOX -[hidden]right- P_CERT_ART
 }

@@ -9,7 +9,6 @@ package "$TITLE_INFRASTRUCTURE" as INFRASTRUCTURE #FFF3E0/E65100 {
     [SqlDirectiveWriter] as SQL_DIR
     [SqlCompilerReader] as SQL_CR_R
     [SqlGuidanceReader] as SQL_GUIDE
-    [DenialAuditAdapter] as DENY_ADAPT
   }
 
   package "$TITLE_INFRA_CR" as INFRA_CR #FFE0B2/F57C00 {
@@ -17,7 +16,11 @@ package "$TITLE_INFRASTRUCTURE" as INFRASTRUCTURE #FFF3E0/E65100 {
   }
 
   package "$TITLE_INFRA_FE" as INFRA_FE #FFE0B2/F57C00 {
-    [AppendOnlyFindingEventRepository] as EVT_REPO
+    together {
+      [AppendOnlyFindingEventRepository] as EVT_REPO
+      [DenialAuditAdapter] as DENY_ADAPT
+    }
+    EVT_REPO -[hidden]right- DENY_ADAPT
   }
 
   package "$TITLE_INFRA_ART" as INFRA_ART #FFE0B2/F57C00 {
