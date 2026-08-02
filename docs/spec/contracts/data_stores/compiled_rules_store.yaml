@@ -259,11 +259,18 @@ physical_model:
         - { name: head_revision, type: INTEGER, notes: "revision-monotonic" }
         - { name: updated_at, type: TIMESTAMPTZ }
   relationships:
-    - { from: Snapshots, to: SnapshotNodes, cardinality: "1:N", on: snapshot_hash }
-    - { from: Nodes, to: SnapshotNodes, cardinality: "1:N", on: node_hash }
-    - { from: Snapshots, to: SnapshotEdges, cardinality: "1:N", on: snapshot_hash }
-    - { from: Edges, to: SnapshotEdges, cardinality: "1:N", on: edge_hash }
-    - { from: LineageHeads, to: Snapshots, cardinality: "N:1", on: head_snapshot_hash }
+    description: >
+      Strict 1:M only. Snapshot↔Node and Snapshot↔Edge conceptual many-to-many
+      are realized solely as two 1:M edges into associative entities
+      SnapshotNodes and SnapshotEdges (never a direct M:N edge).
+    edges:
+      - { parent: Snapshots, child: SnapshotNodes, cardinality: "1:M", on: snapshot_hash }
+      - { parent: Nodes, child: SnapshotNodes, cardinality: "1:M", on: node_hash }
+      - { parent: Snapshots, child: SnapshotEdges, cardinality: "1:M", on: snapshot_hash }
+      - { parent: Edges, child: SnapshotEdges, cardinality: "1:M", on: edge_hash }
+      - { parent: Nodes, child: Edges, cardinality: "1:M", on: source_node_hash, role: source }
+      - { parent: Nodes, child: Edges, cardinality: "1:M", on: target_node_hash, role: target }
+      - { parent: Snapshots, child: LineageHeads, cardinality: "1:M", on: head_snapshot_hash }
   cross_store_pointers:
     - { column: "LineageHeads.lineage_id", targets: "directives_store.Directives.lineage_id", kind: identifier }
     - { column: "LineageHeads.head_snapshot_hash", mirrors: "directives_store.Directives.head_snapshot_hash", kind: content_hash }

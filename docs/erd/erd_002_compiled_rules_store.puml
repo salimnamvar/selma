@@ -5,11 +5,10 @@
 '            docs/schema/rule_schema.json (executable projection → node_body)
 '            docs/spec/contracts/compilation/pipeline.yaml
 ' C4:        compiled_rules_store ← compiled_rules_repository
-'            (compilation_application publish path)
 ' Package:   compiled_rules_infrastructure (C4: compiled_rules_repository)
 ' Contract:  docs/standards/VERSION
-' State machines supported by durable facts (not drawn here):
-'   003 Compilation · 010 Hash composition · 005 Conflict (frozen body) · 008 Artifact
+' Cardinality: every FK edge is Parent ||--o{ Child (1:M only)
+' Associative entities resolve conceptual M:N as two 1:M pairs
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -29,6 +28,11 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     provenance : JSONB
     conflicts_domain_version : TEXT <<nullable>>
     manifest_ref : TEXT
+    --
+    <<trigger>> onPublishImmutable()
+    <<guard>> compiledAtExcludedFromHash()
+    <<guard>> identicalHashIsDedupNoOp()
+    <<integrity>> recomputeSnapshotHashMatchesPk()
   }
 
   entity "$TABLE_NODES" as Nodes <<immutable>> <<content_addressed>> {
@@ -45,6 +49,10 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     presentation_hash : CHAR(64) <<SHA-256>>
     creator_provenance : TEXT
     deprecated : BOOLEAN <<default false>>
+    --
+    <<trigger>> onStoreDedupByNodeHash()
+    <<guard>> semanticHashExcludesNeighbors()
+    <<integrity>> nodeHashEqualsDualHashCompose()
   }
 
   entity "$TABLE_EDGES" as Edges <<immutable>> <<content_addressed>> {
@@ -53,18 +61,28 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     source_id : TEXT
     target_id : TEXT
     edge_kind : $ENUM_EDGE_KIND
-    o source_node_hash : CHAR(64) <<FK → Nodes, nullable>>
-    o target_node_hash : CHAR(64) <<FK → Nodes, nullable>>
+    o source_node_hash : CHAR(64) <<FK → Nodes>>
+    o target_node_hash : CHAR(64) <<FK → Nodes>>
+    --
+    <<trigger>> onStoreDedupByEdgeHash()
+    <<guard>> edgeDirectionalDependsOn()
+    <<integrity>> edgeHashEqualsSourceTargetPair()
   }
 
-  entity "$TABLE_SNAPSHOT_NODES" as SnapshotNodes <<immutable>> {
-    * o **snapshot_hash** : CHAR(64) <<PK, FK → Snapshots>>
-    * o **node_hash** : CHAR(64) <<PK, FK → Nodes>>
+  ' Associative entity: conceptual Snapshot M:N Node → two 1:M only
+  entity "$TABLE_SNAPSHOT_NODES" as SnapshotNodes <<immutable>> <<associative>> {
+    * o **snapshot_hash** : CHAR(64) <<PK part, FK → Snapshots>>
+    * o **node_hash** : CHAR(64) <<PK part, FK → Nodes>>
+    --
+    <<integrity>> compositePkMembership()
   }
 
-  entity "$TABLE_SNAPSHOT_EDGES" as SnapshotEdges <<immutable>> {
-    * o **snapshot_hash** : CHAR(64) <<PK, FK → Snapshots>>
-    * o **edge_hash** : CHAR(64) <<PK, FK → Edges>>
+  ' Associative entity: conceptual Snapshot M:N Edge → two 1:M only
+  entity "$TABLE_SNAPSHOT_EDGES" as SnapshotEdges <<immutable>> <<associative>> {
+    * o **snapshot_hash** : CHAR(64) <<PK part, FK → Snapshots>>
+    * o **edge_hash** : CHAR(64) <<PK part, FK → Edges>>
+    --
+    <<integrity>> compositePkMembership()
   }
 
   entity "$TABLE_LINEAGE_HEADS" as LineageHeads <<secondary_index>> <<mutable>> {
@@ -73,6 +91,11 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     o head_snapshot_hash : CHAR(64) <<FK → Snapshots, SHA-256>>
     head_revision : INTEGER <<revision-monotonic>>
     updated_at : TIMESTAMPTZ
+    --
+    <<trigger>> onOutboxCompletedAdvanceHead()
+    <<guard>> headRevisionMonotonic()
+    <<guard>> lateOlderCompileMustNotClobber()
+    <<integrity>> headPointsToExistingSnapshot()
   }
 
   enum "$ENUM_NODE_KIND" as NodeKind {
@@ -88,22 +111,24 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
   }
 }
 
-Snapshots ||--o{ SnapshotNodes : "snapshot_hash"
-Nodes ||--o{ SnapshotNodes : "node_hash"
-Snapshots ||--o{ SnapshotEdges : "snapshot_hash"
-Edges ||--o{ SnapshotEdges : "edge_hash"
-Nodes ||--o{ Edges : "source_node_hash"
-Nodes ||--o{ Edges : "target_node_hash"
-LineageHeads }o--|| Snapshots : "head_snapshot_hash"
-Nodes }o..|| NodeKind : "node_kind domain"
-Edges }o..|| EdgeKind : "edge_kind domain"
+' ── 1:M only (Parent ||--o{ Child) ──
+Snapshots ||--o{ SnapshotNodes : "1:M snapshot_hash"
+Nodes ||--o{ SnapshotNodes : "1:M node_hash"
+Snapshots ||--o{ SnapshotEdges : "1:M snapshot_hash"
+Edges ||--o{ SnapshotEdges : "1:M edge_hash"
+Nodes ||--o{ Edges : "1:M source_node_hash"
+Nodes ||--o{ Edges : "1:M target_node_hash"
+Snapshots ||--o{ LineageHeads : "1:M head_snapshot_hash"
+
+Nodes }o..|| NodeKind
+Edges }o..|| EdgeKind
 
 legend bottom
-  |= Stereotype |= Meaning |
-  | <<immutable>> <<content_addressed>> | Blob identity = hash; never updated in place |
-  | <<secondary_index>> | lineage_id → head_snapshot_hash (mirrors directives head) |
-  | Guard facts | sameHashAndFrozenEnv · sameLineageId · priority/recency columns |
-  | Trigger effects | publish snapshot · head advance · node deprecated flag |
+  |= Rule |= Application |
+  | No M:N edge | Snapshot↔Node / Snapshot↔Edge use **associative** tables (two 1:M) |
+  | Graph edge | Nodes 1:M Edges twice (source role · target role) — still 1:M |
+  | Head index | Snapshots 1:M LineageHeads (many lineages may pin same hash) |
+  | Methods | <<trigger>> publish/dedup · <<guard>> hash rules · <<integrity>> CAS |
   | $LEGEND_ERD |
 endlegend
 

@@ -549,10 +549,15 @@ physical_model:
         - { name: refcount, type: INTEGER, notes: "non-negative" }
         - { name: updated_at, type: TIMESTAMPTZ }
   relationships:
-    - { from: Directives, to: DirectiveRevisions, cardinality: "1:N", on: lineage_id }
-    - { from: Directives, to: LineageOperations, cardinality: "1:N", on: lineage_id }
-    - { from: Directives, to: CompileRequests, cardinality: "1:N", on: lineage_id }
-    - { from: DirectiveRevisions, to: PairedPolicyRefCounts, cardinality: "1:0..1", on: paired_policy_ref }
+    description: >
+      Strict 1:M only (Parent → Child). Conceptual many-to-many is forbidden as a
+      direct edge; use associative entities (none required in this store).
+      Optional single child = 1:M with UNIQUE on child FK.
+    edges:
+      - { parent: Directives, child: DirectiveRevisions, cardinality: "1:M", on: lineage_id }
+      - { parent: Directives, child: LineageOperations, cardinality: "1:M", on: lineage_id }
+      - { parent: Directives, child: CompileRequests, cardinality: "1:M", on: lineage_id }
+      - { parent: DirectiveRevisions, child: PairedPolicyRefCounts, cardinality: "1:M", on: paired_policy_ref, child_unique: true }
   cross_store_pointers:
     - { column: "Directives.head_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
     - { column: "CompileRequests.published_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }

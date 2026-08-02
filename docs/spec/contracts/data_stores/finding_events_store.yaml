@@ -540,9 +540,14 @@ physical_model:
         - { name: logical_counter, type: INTEGER }
         - { name: updated_at, type: TIMESTAMPTZ }
   relationships:
-    - { from: Events, to: FindingProjections, cardinality: "N:0..1", on: finding_id }
-    - { from: Events, to: IdempotencyRecords, cardinality: "1:0..1", on: event_id }
-    - { from: FindingProjections, to: FindingOpenKeys, cardinality: "1:0..1", on: finding_id }
+    description: >
+      Strict 1:M only (Parent → Child). FindingProjections is parent of its
+      event stream and open-key row. Events parent of idempotency records.
+      Optional single child uses UNIQUE on child FK.
+    edges:
+      - { parent: FindingProjections, child: Events, cardinality: "1:M", on: finding_id, notes: "finding_id null allowed for global denial events only" }
+      - { parent: FindingProjections, child: FindingOpenKeys, cardinality: "1:M", on: finding_id, child_unique: true }
+      - { parent: Events, child: IdempotencyRecords, cardinality: "1:M", on: event_id, child_unique: true }
   cross_store_pointers:
     - { column: "FindingProjections.paired_policy_ref", targets: "directives_store.DirectiveRevisions.paired_policy_ref", kind: text_key }
     - { column: "FindingProjections.evidence_ref", targets: "artifacts_store.EvidenceArtifacts.evidence_id", kind: identifier }

@@ -113,11 +113,21 @@
 !$ENUM_BINDING_STATUS = "BindingStatus"
 !$ENUM_CERTIFICATION_RUN_STATUS = "CertificationRunStatus"
 
-' ── State-machine mapping vocabulary (ERD models facts, not graphs) ──
-' Trigger  → durable event row | outbox status | versioned artifact row
-' Guard    → queryable column / enum / projection fact (not transition edges)
-' Action   → column write co-committed with the trigger row
-' Capability / lock / pure-compute guards → not ERD (api / engine / process)
+' ── Cardinality rule (strict) ───────────────────────────────
+' Every structural relationship is drawn Parent ||--o{ Child (1:M).
+' Conceptual many-to-many is NEVER a direct edge: introduce an
+' associative entity so only two 1:M relationships remain.
+' Optional child: still 1:M with UNIQUE on child FK (at most one row).
+' Enum domains use dashed }o..|| (attribute domain, not table FK).
+
+' ── Methods compartment (PlantUML IE = class ops on entity) ──
+' Industry practice (IE / EER / PlantUML class-based entity):
+'   attributes above -- ; integrity ops / db triggers below --
+' <<trigger>>  row lifecycle effect (append, status advance, publish)
+' <<guard>>    store-evaluable predicate over columns (not capability matrix)
+' <<integrity>> hash / lease / uniqueness enforcement
+' FSM *graphs* stay in state view; ERD methods bind data constraints only.
 
 ' ── Legend snippets ─────────────────────────────────────────
-!$LEGEND_ERD = "mutable=#E0F2F1 · append_only=#FFF3E0 · immutable/content_addressed=#FFFDE7 · projection/index=#E1F5FE · outbox=#E0F2F1 · store boundary=#E8F5E9"
+!$LEGEND_ERD = "1:M only Parent||--o{Child · junction=two 1:M · methods=<<trigger>>/<<guard>>/<<integrity>>"
+!$LEGEND_ERD_COLOR = "mutable=#E0F2F1 · append_only=#FFF3E0 · immutable=#FFFDE7 · projection=#E1F5FE · outbox=#E0F2F1"

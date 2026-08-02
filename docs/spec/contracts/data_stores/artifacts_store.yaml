@@ -377,8 +377,10 @@ physical_model:
         - { name: created_at, type: TIMESTAMPTZ }
         - { name: object_key, type: TEXT, constraints: [nullable] }
   relationships:
-    - { from: InspectionSnapshots, to: PipelineTraces, cardinality: "1:N", on: inspection_id }
-    - { from: CertificationRuns, to: CertificationArtifacts, cardinality: "1:N", on: run_id }
+    description: "Strict 1:M only (Parent → Child). Conflict/Evidence are root entities in this store (cross-store IDs only)."
+    edges:
+      - { parent: InspectionSnapshots, child: PipelineTraces, cardinality: "1:M", on: inspection_id }
+      - { parent: CertificationRuns, child: CertificationArtifacts, cardinality: "1:M", on: run_id }
   cross_store_pointers:
     - { column: "InspectionSnapshots.cg_ir_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
     - { column: "ConflictArtifacts.cg_ir_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }

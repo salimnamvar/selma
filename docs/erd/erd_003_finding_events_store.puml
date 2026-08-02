@@ -6,11 +6,9 @@
 '            docs/spec/contracts/finding_lifecycle/transitions.yaml
 '            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
 ' C4:        finding_events_store ← finding_events_repository
-'            (findings_application · DenialAuditPort)
 ' Package:   findings_infrastructure (C4: finding_events_repository)
 ' Contract:  docs/standards/VERSION
-' State machines supported by durable facts (not drawn here):
-'   001 Finding Lifecycle · 007 Authorization denials · 009 Hybrid logical clock
+' Cardinality: every FK edge is Parent ||--o{ Child (1:M only)
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -19,27 +17,6 @@
 title $TITLE_FINDING_EVENTS
 
 package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
-
-  entity "$TABLE_EVENTS" as Events <<append_only>> <<system_of_record>> {
-    * **event_id** : UUID <<PK>>
-    --
-    finding_id : UUID <<nullable, indexed>>
-    event_type : $ENUM_FINDING_EVENT_TYPE
-    trigger_command : TEXT <<nullable, finding.*|evidence.*|system>>
-    from_fsm_state : TEXT <<nullable>>
-    to_fsm_state : TEXT <<nullable>>
-    timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
-    physical_time : TIMESTAMPTZ <<hybrid logical clock wall>>
-    logical_counter : INTEGER <<hybrid logical clock counter>>
-    node_id : TEXT <<hybrid logical clock node>>
-    actor : TEXT
-    payload : JSONB
-    atomic_batch_id : UUID <<nullable, INV-FL-020>>
-    event_hash : CHAR(64) <<SHA-256>>
-    prev_event_hash : CHAR(64) <<SHA-256, nullable>>
-    chain_hash : CHAR(64) <<SHA-256>>
-    idempotency_key : TEXT <<nullable>>
-  }
 
   entity "$TABLE_FINDING_PROJECTIONS" as FindingProjections <<projection>> <<mutable>> {
     * **finding_id** : UUID <<PK>>
@@ -60,6 +37,45 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
     last_applied_event_id : UUID
     event_count : INTEGER
     updated_at : TIMESTAMPTZ
+    --
+    <<trigger>> applyEventBatch(atomic_batch_id)
+    <<guard>> actorNotInCreatorProvenance(actor)
+    <<guard>> actorNotEvidenceSubmitter(actor)
+    <<guard>> hasMandatoryReopenComments()
+    <<guard>> fsmStateAllowsCommand(command)
+    <<integrity>> rebuildEqualsLiveFold()
+  }
+
+  entity "$TABLE_EVENTS" as Events <<append_only>> <<system_of_record>> {
+    * **event_id** : UUID <<PK>>
+    --
+    o finding_id : UUID <<nullable, FK → FindingProjections, indexed>>
+    event_type : $ENUM_FINDING_EVENT_TYPE
+    trigger_command : TEXT <<nullable, finding.*|evidence.*|system>>
+    from_fsm_state : TEXT <<nullable>>
+    to_fsm_state : TEXT <<nullable>>
+    timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
+    physical_time : TIMESTAMPTZ <<hybrid logical clock wall>>
+    logical_counter : INTEGER <<hybrid logical clock counter>>
+    node_id : TEXT <<hybrid logical clock node>>
+    actor : TEXT
+    payload : JSONB
+    atomic_batch_id : UUID <<nullable, INV-FL-020>>
+    event_hash : CHAR(64) <<SHA-256>>
+    prev_event_hash : CHAR(64) <<SHA-256, nullable>>
+    chain_hash : CHAR(64) <<SHA-256>>
+    idempotency_key : TEXT <<nullable>>
+    --
+    <<trigger>> appendFindingCreated()
+    <<trigger>> appendDispositionChanged()
+    <<trigger>> appendFindingClosed()
+    <<trigger>> appendCapabilityDenied()
+    <<trigger>> appendSoDDenied()
+    <<guard>> nodeIdNotRetired()
+    <<guard>> hlcTupleNonDecreasing()
+    <<integrity>> eventHashCoversAllFields()
+    <<integrity>> chainHashContiguous()
+    <<integrity>> noDuplicateEventId()
   }
 
   entity "$TABLE_FINDING_OPEN_KEYS" as FindingOpenKeys <<secondary_index>> {
@@ -67,25 +83,25 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
     * **control_id** : TEXT <<PK part>>
     * **target_hash** : CHAR(64) <<PK part, SHA-256>>
     --
-    o finding_id : UUID <<FK → FindingProjections>>
+    o finding_id : UUID <<FK → FindingProjections, UNIQUE>>
     created_at : TIMESTAMPTZ
+    --
+    <<trigger>> onFindingCreatedRegisterOpenKey()
+    <<guard>> openKeyUniquePerInspectionControlTarget()
+    <<integrity>> oneOpenFindingPerKey()
   }
 
   entity "$TABLE_IDEMPOTENCY_RECORDS" as IdempotencyRecords <<secondary_index>> {
     * **actor** : TEXT <<PK part>>
     * **idempotency_key** : TEXT <<PK part>>
     --
-    o event_id : UUID <<FK → Events>>
+    o event_id : UUID <<FK → Events, UNIQUE>>
     request_hash : CHAR(64) <<SHA-256>>
     created_at : TIMESTAMPTZ
-  }
-
-  entity "$TABLE_RETIRED_NODES" as RetiredNodes <<append_only>> {
-    * **node_id** : TEXT <<PK>>
     --
-    retired_at : TIMESTAMPTZ
-    reason : TEXT
-    replaced_by : TEXT <<nullable>>
+    <<trigger>> onClientRetryReturnPriorEvent()
+    <<guard>> actorKeyUnique()
+    <<integrity>> requestHashStable()
   }
 
   entity "$TABLE_HYBRID_LOGICAL_CLOCK_STATE" as HybridLogicalClockState <<mutable>> {
@@ -94,6 +110,24 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
     physical_time : TIMESTAMPTZ
     logical_counter : INTEGER
     updated_at : TIMESTAMPTZ
+    --
+    <<trigger>> onSendAdvanceOrIncrement()
+    <<trigger>> onReceiveMergeRemote()
+    <<trigger>> onPersistWatermark()
+    <<guard>> tupleStrictlyNonDecreasing()
+    <<integrity>> loadMaxOfPvcAndDb()
+  }
+
+  entity "$TABLE_RETIRED_NODES" as RetiredNodes <<append_only>> {
+    * **node_id** : TEXT <<PK>>
+    --
+    retired_at : TIMESTAMPTZ
+    reason : TEXT
+    replaced_by : TEXT <<nullable>>
+    --
+    <<trigger>> onFenceRetireNode()
+    <<guard>> appendRejectsRetiredNodeId()
+    <<integrity>> retiredNeverReuseWithoutNewIdentity()
   }
 
   enum "$ENUM_FINDING_EVENT_TYPE" as FindingEventType {
@@ -129,21 +163,24 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
   }
 }
 
-Events ||--o| FindingProjections : "finding_id"
-Events ||--o| IdempotencyRecords : "event_id"
-FindingProjections ||--o| FindingOpenKeys : "finding_id"
-Events }o..|| FindingEventType : "event_type domain"
-FindingProjections }o..|| FindingState : "fsm_state domain"
-FindingProjections }o..|| FindingDisposition : "disposition domain"
-HybridLogicalClockState ||--o| RetiredNodes : "node_id fence"
+' ── 1:M only (Parent ||--o{ Child) ──
+' Finding is the parent of its event stream (0 events until first append)
+FindingProjections ||--o{ Events : "1:M finding_id\n(null finding_id = global denial stream)"
+FindingProjections ||--o{ FindingOpenKeys : "1:M finding_id\n(UNIQUE child ⇒ at most one)"
+Events ||--o{ IdempotencyRecords : "1:M event_id\n(UNIQUE child ⇒ at most one)"
+' HybridLogicalClockState and RetiredNodes share node_id namespace but are
+' alternate row sets (active watermark vs fence) — no parent/child edge.
+
+Events }o..|| FindingEventType
+FindingProjections }o..|| FindingState
+FindingProjections }o..|| FindingDisposition
 
 legend bottom
-  |= Stereotype |= Meaning |
-  | <<append_only>> <<system_of_record>> | Trigger = new event row; never rewritten |
-  | <<projection>> | Guard inputs denormalized for bounded read (SoD · state) |
-  | Guard facts | fsm_state · creator_provenance · evidence_submitter · comments |
-  | Trigger effects | event_type · from/to · atomic_batch_id · chain advance |
-  | Not stored | capability matrix · lock wait (api / process) |
+  |= Rule |= Application |
+  | 1:M stream | FindingProjections \|\|--o{ Events (not Events N:1 redraw as reverse) |
+  | Optional one | 1:M + UNIQUE on child (open key · idempotency · retired fence) |
+  | <<trigger>> | Named after store effects aligned with state machine **trigger** names |
+  | <<guard>> | SoD / HLC / open-key predicates over **columns** (capability matrix stays contracts) |
   | $LEGEND_ERD |
 endlegend
 

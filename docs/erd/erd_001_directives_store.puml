@@ -4,13 +4,10 @@
 ' Source:    docs/spec/contracts/data_stores/directives_store.yaml (physical_model)
 '            docs/schema/rule_schema.json · docs/schema/policy_doctrine.yaml
 '            docs/spec/contracts/directive/lifecycle.yaml
-'            docs/spec/contracts/directive/identity.yaml
 ' C4:        directives_store ← directives_repository
-'            (directives_application · compilation_application drain)
 ' Package:   directives_infrastructure (C4: directives_repository)
 ' Contract:  docs/standards/VERSION
-' State machines supported by durable facts (not drawn here):
-'   002 Directive Lifecycle · 003 Compilation (outbox) · 011 interaction
+' Cardinality: every FK edge is Parent ||--o{ Child (1:M only)
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -34,6 +31,15 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
     metadata : JSONB
     created_at : TIMESTAMPTZ
     updated_at : TIMESTAMPTZ
+    --
+    <<trigger>> onCreateAssignLineage()
+    <<trigger>> onReviseBumpRevision()
+    <<trigger>> onPublishEnqueueOutbox()
+    <<trigger>> onCompileCompletedAdvanceHead()
+    <<guard>> statusAllowsForkMergeSplit()
+    <<guard>> supersededByPresentWhenSuperseded()
+    <<guard>> headSnapshotOnlyAdvancesOnCompleted()
+    <<integrity>> lineageIdImmutable()
   }
 
   entity "$TABLE_DIRECTIVE_REVISIONS" as DirectiveRevisions <<append_only>> {
@@ -48,6 +54,11 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
     change_trigger : TEXT <<create|modify|publish|restore|spawn>>
     created_by : TEXT
     created_at : TIMESTAMPTZ
+    --
+    <<trigger>> onInsertDualDocuments()
+    <<guard>> bothDocumentsPresent()
+    <<guard>> pairedPolicyRefResolvesInLineage()
+    <<integrity>> revisionNumberMonotonicPerLineage()
   }
 
   entity "$TABLE_LINEAGE_OPERATIONS" as LineageOperations <<append_only>> {
@@ -60,6 +71,10 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
     parent_status_after : $ENUM_DIRECTIVE_STATUS
     created_by : TEXT
     created_at : TIMESTAMPTZ
+    --
+    <<trigger>> onForkMergeSplitRecord()
+    <<guard>> parentWasActiveBeforeSpawn()
+    <<integrity>> sourceAndTargetArraysNonEmpty()
   }
 
   entity "$TABLE_COMPILE_REQUESTS" as CompileRequests <<outbox>> <<mutable>> {
@@ -79,6 +94,15 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
     enqueued_at : TIMESTAMPTZ
     claimed_at : TIMESTAMPTZ <<nullable>>
     completed_at : TIMESTAMPTZ <<nullable>>
+    --
+    <<trigger>> onEnqueuePending()
+    <<trigger>> onClaimLease()
+    <<trigger>> onHeartbeatRefreshLease()
+    <<trigger>> onCompletePublishSnapshot()
+    <<trigger>> onFailOrPermanentlyFail()
+    <<guard>> leaseHolderMayTransition()
+    <<guard>> naturalKeyUniqueLineageRevision()
+    <<integrity>> statusMachineLegalTransitions()
   }
 
   entity "$TABLE_PAIRED_POLICY_REF_COUNTS" as PairedPolicyRefCounts <<secondary_index>> {
@@ -86,6 +110,10 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
     --
     refcount : INTEGER <<non-negative>>
     updated_at : TIMESTAMPTZ
+    --
+    <<trigger>> onFindingCreatedIncrement()
+    <<guard>> refcountNonNegative()
+    <<integrity>> hardDeleteForbiddenWhenRefcountPositive()
   }
 
   enum "$ENUM_DIRECTIVE_STATUS" as DirectiveStatus {
@@ -110,22 +138,23 @@ package "$PKG_DIRECTIVES_STORE" as PKG_DIR $ERD_PKG_STORE {
   }
 }
 
-Directives ||--o{ DirectiveRevisions : "lineage_id"
-Directives ||--o{ LineageOperations : "lineage_id"
-Directives ||--o{ CompileRequests : "lineage_id"
-DirectiveRevisions ||--o| PairedPolicyRefCounts : "paired_policy_ref"
-Directives }o..|| CompileRequestStatus : "outbox status domain"
-Directives }o..|| DirectiveStatus : "status domain"
-LineageOperations }o..|| LineageOperationType : "operation_type domain"
+' ── Structural relationships: Parent ||--o{ Child (1:M only) ──
+Directives ||--o{ DirectiveRevisions : "1:M lineage_id"
+Directives ||--o{ LineageOperations : "1:M lineage_id"
+Directives ||--o{ CompileRequests : "1:M lineage_id"
+DirectiveRevisions ||--o{ PairedPolicyRefCounts : "1:M paired_policy_ref\n(UNIQUE child ⇒ at most one)"
+
+' Attribute domains (not table FKs)
+Directives }o..|| DirectiveStatus
+CompileRequests }o..|| CompileRequestStatus
+LineageOperations }o..|| LineageOperationType
 
 legend bottom
-  |= Stereotype |= Meaning |
-  | <<mutable>> | Head row updated in place (status, revision, head_snapshot_hash) |
-  | <<append_only>> | New rows only; history never rewritten |
-  | <<outbox>> | Transactional compile request; lease + status machine |
-  | <<secondary_index>> | Guidance GC refcount; not system of record for documents |
-  | Guard facts | status · superseded_by · head_snapshot_hash · outbox status |
-  | Trigger effects | revision row · lineage op · outbox enqueue · head advance |
+  |= Rule |= Application |
+  | Cardinality | **Only** Parent \|\|--o{ Child (1:M). No M:N edges. |
+  | Optional one | 1:M + UNIQUE on child FK (PairedPolicyRefCounts) |
+  | Methods | <<trigger>> row effects · <<guard>> column predicates · <<integrity>> invariants |
+  | FSM graphs | State view + contracts — not drawn as transition edges here |
   | $LEGEND_ERD |
 endlegend
 

@@ -6,11 +6,9 @@
 '            docs/spec/contracts/conflict/detection.yaml
 '            docs/spec/contracts/certification/gates.yaml
 ' C4:        artifacts_store ← artifacts_repository
-'            (inspections_application · findings_application · certification_tool)
 ' Package:   artifacts_infrastructure (C4: artifacts_repository)
 ' Contract:  docs/standards/VERSION
-' State machines supported by durable facts (not drawn here):
-'   004 Inspection · 005 Conflict · 006 Certification · 008 Artifact lifecycle
+' Cardinality: every FK edge is Parent ||--o{ Child (1:M only)
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -38,6 +36,11 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     system_state_hash : CHAR(64) <<SHA-256>>
     object_key : TEXT <<object store locator>>
     content_hash : CHAR(64) <<SHA-256, nullable>>
+    --
+    <<trigger>> onInspectionCompletedWriteOnce()
+    <<guard>> skippedNodesImpliesPartial()
+    <<guard>> evaluateRetryWithinMax()
+    <<integrity>> systemStateHashFiveDimensions()
   }
 
   entity "$TABLE_PIPELINE_TRACES" as PipelineTraces <<write_once>> {
@@ -53,6 +56,10 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     trigger_name : TEXT <<nullable, stage pass|fault|retry>>
     error : TEXT <<nullable>>
     duration_ms : INTEGER
+    --
+    <<trigger>> onStageCompleteAppendTrace()
+    <<guard>> sequenceIndexChronological()
+    <<integrity>> durationMatchesTimestamps()
   }
 
   entity "$TABLE_CONFLICT_ARTIFACTS" as ConflictArtifacts <<append_only>> {
@@ -73,6 +80,14 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     created_at : TIMESTAMPTZ
     created_by : TEXT
     object_key : TEXT <<nullable>>
+    --
+    <<trigger>> onConflictOpenedNewVersion()
+    <<trigger>> onHumanResolveAppendVersion()
+    <<trigger>> onArchiveAppendVersion()
+    <<guard>> sameLineageIdForBinding()
+    <<guard>> differentLineageIdForAdvisory()
+    <<guard>> decisionOnFrozenSnapshotOnly()
+    <<integrity>> versionMonotonicPerArtifact()
   }
 
   entity "$TABLE_EVIDENCE_ARTIFACTS" as EvidenceArtifacts <<write_once>> {
@@ -85,6 +100,10 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     submitted_by : TEXT <<evidence submitter>>
     created_by : TEXT
     created_at : TIMESTAMPTZ
+    --
+    <<trigger>> onEvidenceSubmitWriteOnce()
+    <<guard>> submittedByRecordedForSoD()
+    <<integrity>> contentHashImmutable()
   }
 
   entity "$TABLE_CERTIFICATION_RUNS" as CertificationRuns <<mutable>> {
@@ -95,6 +114,11 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     started_at : TIMESTAMPTZ
     completed_at : TIMESTAMPTZ <<nullable>>
     overall_pass : BOOLEAN <<nullable>>
+    --
+    <<trigger>> onCertificationTriggered()
+    <<trigger>> onGatesCompleteSealRun()
+    <<guard>> allGatesPresentBeforeCertified()
+    <<integrity>> runStatusLegalTransitions()
   }
 
   entity "$TABLE_CERTIFICATION_ARTIFACTS" as CertificationArtifacts <<write_once>> {
@@ -107,6 +131,10 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     checked_at : TIMESTAMPTZ
     created_at : TIMESTAMPTZ
     object_key : TEXT <<nullable>>
+    --
+    <<trigger>> onGateResultWriteOnce()
+    <<guard>> gateIdInAa01ToAa09()
+    <<integrity>> oneResultPerGatePerRun()
   }
 
   enum "$ENUM_INSPECTION_STATUS" as InspectionStatus {
@@ -155,21 +183,26 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
   }
 }
 
-InspectionSnapshots ||--o{ PipelineTraces : "inspection_id"
-CertificationRuns ||--o{ CertificationArtifacts : "run_id"
-InspectionSnapshots }o..|| InspectionStatus : "status domain"
-PipelineTraces }o..|| PipelineStage : "stage domain"
-PipelineTraces }o..|| TraceStatus : "status domain"
-ConflictArtifacts }o..|| ConflictType : "conflict_type domain"
-ConflictArtifacts }o..|| BindingStatus : "binding_status domain"
-CertificationRuns }o..|| CertificationRunStatus : "status domain"
+' ── 1:M only ──
+InspectionSnapshots ||--o{ PipelineTraces : "1:M inspection_id"
+CertificationRuns ||--o{ CertificationArtifacts : "1:M run_id"
+
+' Standalone parents (no parent table in this store): ConflictArtifacts, EvidenceArtifacts
+' Evidence is keyed by finding_id (cross-store pointer, not FK edge)
+
+InspectionSnapshots }o..|| InspectionStatus
+PipelineTraces }o..|| PipelineStage
+PipelineTraces }o..|| TraceStatus
+ConflictArtifacts }o..|| ConflictType
+ConflictArtifacts }o..|| BindingStatus
+CertificationRuns }o..|| CertificationRunStatus
 
 legend bottom
-  |= Stereotype |= Meaning |
-  | <<write_once>> | Completed blob never modified |
-  | <<append_only>> | Conflict trigger → new version (binding_status advance) |
-  | Guard facts | skipped_nodes · same/different lineage · frozen hash · binding_status |
-  | Trigger effects | stage trace · conflict version · gate artifact · run status |
+  |= Rule |= Application |
+  | 1:M only | Inspection → Traces · Run → Gate artifacts |
+  | Standalone | Conflict / Evidence have no in-store parent (cross-store IDs only) |
+  | Versioning | Conflict 1:M is **versions of same artifact_id** (composite PK) |
+  | Methods | <<trigger>> write-once/append · <<guard>> lineage/skip/retry · <<integrity>> hash |
   | $LEGEND_ERD |
 endlegend
 

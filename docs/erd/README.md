@@ -56,8 +56,50 @@ across failure domains). Pointers such as `head_snapshot_hash` and
 **No PlantUML `note` blocks.** Encode mutability with stereotypes
 (`<<mutable>>`, `<<append_only>>`, `<<immutable>>`, `<<write_once>>`,
 `<<projection>>`, `<<outbox>>`, `<<secondary_index>>`, `<<content_addressed>>`,
-`<<system_of_record>>`). Constraints appear as `<<PK>>` / `<<FK>>` /
-`<<unique>>` attribute markers and enum entities.
+`<<system_of_record>>`, `<<associative>>`). Constraints appear as `<<PK>>` /
+`<<FK>>` / `<<unique>>` attribute markers and enum entities.
+
+## Cardinality rule (strict 1:M)
+
+Relational stores do **not** draw bare many-to-many edges. Every structural
+relationship is **Parent `||--o{` Child** (one-to-many).
+
+| Situation | How we model it |
+| :--- | :--- |
+| Parent has many children | `Parent \|\|--o{ Child` |
+| Optional at most one child | Same 1:M **plus** `UNIQUE` on child FK |
+| Conceptual M:N (e.g. snapshot↔node) | **Associative entity** with **two** 1:M edges only |
+| Graph edge (source + target) | Two 1:M roles: `Nodes \|\|--o{ Edges : source` and `: target` |
+| Cross-store pin | Column only (hash/id) — **no** drawn FK |
+
+This matches industry Information Engineering / crow’s-foot practice: M:N is
+always resolved by a junction table, which is exactly two 1:M relationships.
+
+## Triggers and guards on entities (methods)
+
+PlantUML IE entities use the **same method compartment as classes** (attributes
+above `--`, operations below). That is the standard way to attach behavior to
+tables without notes:
+
+| Stereotype | Meaning | Authority |
+| :--- | :--- | :--- |
+| `<<trigger>>` | Row lifecycle effect (append, status advance, publish, lease claim) | Store contract + aligned state **trigger** name |
+| `<<guard>>` | Predicate over **this table’s columns** (SoD fields, status, HLC, lineage) | Store contract; same names as state guards when store-evaluable |
+| `<<integrity>>` | Hash chain, uniqueness, monotonic revision, CAS immutability | Store invariants |
+
+**What other serious projects do**
+
+| Approach | Used for | We do |
+| :--- | :--- | :--- |
+| IE/crow’s-foot ERD (PlantUML `entity`) | Tables, keys, 1:M / associative M:N | Yes |
+| Entity **operations** (UML-style) | DB triggers / integrity procedures | Yes (`<<trigger>>` / `<<integrity>>`) |
+| Separate **state machine** diagrams | Business FSM transitions + full guards | Yes (`docs/state/`) — not redrawn as ER edges |
+| Capability / auth matrices | Who may fire a command | Spec contracts — **not** ERD methods |
+| Chen pure ER (no methods) | Teaching only | No — too weak for our integrity story |
+
+ERD methods are **not** a second FSM diagram: they bind **data constraints and
+append effects**. Full transition graphs (states, include/extend-style edges,
+capability gates) stay in the state view and `finding_lifecycle/*.yaml`.
 
 ## Alignment map (ERD ↔ other views)
 
