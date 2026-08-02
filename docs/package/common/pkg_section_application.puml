@@ -27,12 +27,14 @@ package "$TITLE_APPLICATION" as APPLICATION #E0F2F1/00897B {
       [CompileDirectives] as UC_CR_COMPILE
       [PublishCompiledRules] as UC_CR_PUB
       [DrainOutbox] as UC_CR_DRAIN
+      [ValidateDirectiveDocuments] as UC_CR_VALID
       ["$PORT_CR_READ"] as P_CR_READ <<port>>
       ["$PORT_CR_REPO"] as P_CR_REPO <<port>>
     }
     UC_CR_COMPILE -[hidden]right- UC_CR_PUB
     UC_CR_PUB -[hidden]right- UC_CR_DRAIN
-    UC_CR_DRAIN -[hidden]down- P_CR_READ
+    UC_CR_DRAIN -[hidden]right- UC_CR_VALID
+    UC_CR_VALID -[hidden]down- P_CR_READ
     P_CR_READ -[hidden]right- P_CR_REPO
   }
 
