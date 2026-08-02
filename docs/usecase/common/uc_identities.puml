@@ -41,14 +41,14 @@
 !$TITLE_GUIDANCE      = "**UC-007 — Guidance**\nfindings_application read models"
 !$TITLE_CERTIFICATION = "**UC-008 — Certification**\ncertification_tool (offline · not peer)"
 
-!$FOOTER_DIRECTIVES    = "UC-001 · Directives · Contract 1.1.0 · Selma"
-!$FOOTER_COMPILATION   = "UC-002 · Compilation · Contract 1.1.0 · Selma"
-!$FOOTER_INSPECTION    = "UC-003 · Inspection · Contract 1.1.0 · Selma"
-!$FOOTER_FINDINGS      = "UC-004 · Findings · Contract 1.1.0 · Selma"
-!$FOOTER_CONFLICT      = "UC-005 · Conflict · Contract 1.1.0 · Selma"
-!$FOOTER_AUTHORIZATION = "UC-006 · Authorization · Contract 1.1.0 · Selma"
-!$FOOTER_GUIDANCE      = "UC-007 · Guidance · Contract 1.1.0 · Selma"
-!$FOOTER_CERTIFICATION = "UC-008 · Certification · Contract 1.1.0 · Selma"
+!$FOOTER_DIRECTIVES    = "UC-001 · Directives · Contract 1.2.0 · Selma"
+!$FOOTER_COMPILATION   = "UC-002 · Compilation · Contract 1.2.0 · Selma"
+!$FOOTER_INSPECTION    = "UC-003 · Inspection · Contract 1.2.0 · Selma"
+!$FOOTER_FINDINGS      = "UC-004 · Findings · Contract 1.2.0 · Selma"
+!$FOOTER_CONFLICT      = "UC-005 · Conflict · Contract 1.2.0 · Selma"
+!$FOOTER_AUTHORIZATION = "UC-006 · Authorization · Contract 1.2.0 · Selma"
+!$FOOTER_GUIDANCE      = "UC-007 · Guidance · Contract 1.2.0 · Selma"
+!$FOOTER_CERTIFICATION = "UC-008 · Certification · Contract 1.2.0 · Selma"
 
 ' ── C4 peer IDs (registry only) ─────────────────────────────
 !$C4_API = "api"
