@@ -75,6 +75,7 @@
 !$TABLE_PIPELINE_TRACES = "PipelineTraces"
 !$TABLE_CONFLICT_ARTIFACTS = "ConflictArtifacts"
 !$TABLE_EVIDENCE_ARTIFACTS = "EvidenceArtifacts"
+!$TABLE_CERTIFICATION_RUNS = "CertificationRuns"
 !$TABLE_CERTIFICATION_ARTIFACTS = "CertificationArtifacts"
 
 ' ── Product terms (full words on diagrams) ──────────────────
@@ -104,11 +105,20 @@
 !$ENUM_NODE_KIND = "NodeKind"
 !$ENUM_EDGE_KIND = "EdgeKind"
 !$ENUM_FINDING_EVENT_TYPE = "FindingEventType"
+!$ENUM_FINDING_STATE = "FindingState"
+!$ENUM_FINDING_DISPOSITION = "FindingDisposition"
 !$ENUM_INSPECTION_STATUS = "InspectionStatus"
 !$ENUM_PIPELINE_STAGE = "PipelineStage"
 !$ENUM_TRACE_STATUS = "TraceStatus"
 !$ENUM_CONFLICT_TYPE = "ConflictType"
 !$ENUM_BINDING_STATUS = "BindingStatus"
+!$ENUM_CERTIFICATION_RUN_STATUS = "CertificationRunStatus"
+
+' ── State-machine mapping vocabulary (ERD models facts, not graphs) ──
+' Trigger  → durable event row | outbox status | versioned artifact row
+' Guard    → queryable column / enum / projection fact (not transition edges)
+' Action   → column write co-committed with the trigger row
+' Capability / lock / pure-compute guards → not ERD (api / engine / process)
 
 ' ── Legend snippets ─────────────────────────────────────────
 !$LEGEND_ERD = "mutable=#E0F2F1 · append_only=#FFF3E0 · immutable/content_addressed=#FFFDE7 · projection/index=#E1F5FE · outbox=#E0F2F1 · store boundary=#E8F5E9"

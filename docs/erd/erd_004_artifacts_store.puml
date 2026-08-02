@@ -3,11 +3,15 @@
 ' Title:     ERD-004 Artifacts Store
 ' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
 '            docs/spec/contracts/inspection/pipeline.yaml
+'            docs/spec/contracts/conflict/detection.yaml
 '            docs/spec/contracts/certification/gates.yaml
 ' C4:        artifacts_store ← artifacts_repository
 '            (inspections_application · findings_application · certification_tool)
 ' Package:   artifacts_infrastructure (C4: artifacts_repository)
 ' Contract:  1.3.0
+'
+' State machines supported by durable facts (not drawn here):
+'   004 Inspection · 005 Conflict · 006 Certification · 008 Artifact lifecycle
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -31,6 +35,7 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     status : $ENUM_INSPECTION_STATUS
     finding_count : INTEGER
     skipped_nodes : JSONB <<ordered node_id array>>
+    evaluate_retry_count : INTEGER <<default 0>>
     system_state_hash : CHAR(64) <<SHA-256>>
     object_key : TEXT <<object store locator>>
     content_hash : CHAR(64) <<SHA-256, nullable>>
@@ -46,6 +51,7 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     started_at : TIMESTAMPTZ
     completed_at : TIMESTAMPTZ
     status : $ENUM_TRACE_STATUS
+    trigger_name : TEXT <<nullable, stage pass|fault|retry>>
     error : TEXT <<nullable>>
     duration_ms : INTEGER
   }
@@ -56,10 +62,15 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     --
     conflict_type : $ENUM_CONFLICT_TYPE
     binding_status : $ENUM_BINDING_STATUS
+    lineage_id_a : UUID
+    lineage_id_b : UUID
     rule_a_id : TEXT <<execution_id>>
     rule_b_id : TEXT <<execution_id>>
+    cg_ir_snapshot_hash : CHAR(64) <<frozen snapshot, SHA-256>>
     resolution_type : TEXT <<override|priority|specificity|recency|artifact>>
     resolution_trace : JSONB
+    requires_human_action : BOOLEAN
+    decision_actor : TEXT <<nullable>>
     created_at : TIMESTAMPTZ
     created_by : TEXT
     object_key : TEXT <<nullable>>
@@ -72,14 +83,25 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     content_hash : CHAR(64) <<SHA-256>>
     object_key : TEXT
     media_type : TEXT <<nullable>>
+    submitted_by : TEXT <<evidence submitter>>
     created_by : TEXT
     created_at : TIMESTAMPTZ
+  }
+
+  entity "$TABLE_CERTIFICATION_RUNS" as CertificationRuns <<mutable>> {
+    * **run_id** : UUID <<PK>>
+    --
+    status : $ENUM_CERTIFICATION_RUN_STATUS
+    trigger_source : TEXT <<ci|manual|retrigger>>
+    started_at : TIMESTAMPTZ
+    completed_at : TIMESTAMPTZ <<nullable>>
+    overall_pass : BOOLEAN <<nullable>>
   }
 
   entity "$TABLE_CERTIFICATION_ARTIFACTS" as CertificationArtifacts <<write_once>> {
     * **cert_id** : UUID <<PK>>
     --
-    run_id : UUID <<indexed>>
+    o **run_id** : UUID <<FK → CertificationRuns>>
     gate_id : TEXT <<AA-01 .. AA-09>>
     pass_fail : BOOLEAN
     evidence_ref : TEXT
@@ -121,22 +143,34 @@ package "$PKG_ARTIFACTS_STORE" as PKG_ART $ERD_PKG_STORE {
     archived
     advisory
   }
+
+  enum "$ENUM_CERTIFICATION_RUN_STATUS" as CertificationRunStatus {
+    triggered
+    collecting_evidence
+    validating_gates
+    passed
+    failed
+    remediation_required
+    certified
+    archived
+  }
 }
 
 InspectionSnapshots ||--o{ PipelineTraces : "inspection_id"
+CertificationRuns ||--o{ CertificationArtifacts : "run_id"
 InspectionSnapshots }o..|| InspectionStatus : "status domain"
 PipelineTraces }o..|| PipelineStage : "stage domain"
 PipelineTraces }o..|| TraceStatus : "status domain"
 ConflictArtifacts }o..|| ConflictType : "conflict_type domain"
 ConflictArtifacts }o..|| BindingStatus : "binding_status domain"
+CertificationRuns }o..|| CertificationRunStatus : "status domain"
 
 legend bottom
   |= Stereotype |= Meaning |
-  | <<write_once>> | Completed blob never modified (inspection, evidence, certification) |
-  | <<append_only>> | Conflict state transitions add a new version row |
-  | Reproducibility | system_state_hash pins five dimensions (see store contract) |
-  | Cross-store | cg_ir_snapshot_hash → compiled_rules_store; finding_id → events by id |
-  | Ports | InspectionArtifactPort · FindingArtifactPort · CertificationArtifactPort |
+  | <<write_once>> | Completed blob never modified |
+  | <<append_only>> | Conflict trigger → new version (binding_status advance) |
+  | Guard facts | skipped_nodes · same/different lineage · frozen hash · binding_status |
+  | Trigger effects | stage trace · conflict version · gate artifact · run status |
   | $LEGEND_ERD |
 endlegend
 

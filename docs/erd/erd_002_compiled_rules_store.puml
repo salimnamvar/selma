@@ -7,6 +7,9 @@
 '            (compilation_application publish path)
 ' Package:   compiled_rules_infrastructure (C4: compiled_rules_repository)
 ' Contract:  1.3.0
+'
+' State machines supported by durable facts (not drawn here):
+'   003 Compilation · 010 Hash composition · 005 Conflict (frozen body) · 008 Artifact
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -24,6 +27,7 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     directive_graph_version : TEXT
     compiled_at : TIMESTAMPTZ <<excluded from hash>>
     provenance : JSONB
+    conflicts_domain_version : TEXT <<nullable>>
     manifest_ref : TEXT
   }
 
@@ -32,10 +36,15 @@ package "$PKG_COMPILED_RULES_STORE" as PKG_CR $ERD_PKG_CAS {
     --
     node_id : TEXT <<logical control identity>>
     node_kind : $ENUM_NODE_KIND
+    lineage_id : UUID <<indexed>>
+    execution_id : TEXT <<indexed>>
+    priority_level : INTEGER <<nullable, cascade input>>
+    authored_at : TIMESTAMPTZ <<nullable, recency cascade>>
     node_body : JSONB
     semantic_hash : CHAR(64) <<SHA-256>>
     presentation_hash : CHAR(64) <<SHA-256>>
     creator_provenance : TEXT
+    deprecated : BOOLEAN <<default false>>
   }
 
   entity "$TABLE_EDGES" as Edges <<immutable>> <<content_addressed>> {
@@ -93,8 +102,8 @@ legend bottom
   |= Stereotype |= Meaning |
   | <<immutable>> <<content_addressed>> | Blob identity = hash; never updated in place |
   | <<secondary_index>> | lineage_id → head_snapshot_hash (mirrors directives head) |
-  | Hash composition | node_hash = SHA-256(semantic ∥ presentation); snapshot excludes compiled_at |
-  | Cross-store | lineage_id joins directives_store heads by identifier only |
+  | Guard facts | sameHashAndFrozenEnv · sameLineageId · priority/recency columns |
+  | Trigger effects | publish snapshot · head advance · node deprecated flag |
   | $LEGEND_ERD |
 endlegend
 

@@ -56,11 +56,61 @@ across failure domains). Pointers such as `head_snapshot_hash` and
 | :--- | :--- | :--- |
 | Table/column shape | Domain aggregates & value objects ([`../class/`](../class/README.md)); store contracts | Class method signatures |
 | Outbox columns (`worker_id`, `lease_expires_at`, status enum) | Compilation / directive store contracts; state machine 003 pipeline drain | Locking algorithm narrative |
-| `fsm_state` / disposition on projections | Finding lifecycle contracts; class `Finding` / `FindingProjection` | Transition guards (state view) |
+| `fsm_state` / disposition on projections | Finding lifecycle contracts; class `Finding` / `FindingProjection` | Transition **edges** (state view) |
 | Hybrid logical clock columns + `RetiredNodes` | Finding events store + state machine 009 | Deployment PVC sizing |
 | Lineage head index | Compiled rules store `lineage_head_index`; directives `head_snapshot_hash` | CAS publish linearization prose |
 | Artifact types | Ports: Inspection / Finding / Certification artifact ports (package + class) | Pipeline stage inventory as process (activity/state) |
 | Enum domains | Domain enums in class; lifecycle contracts | Actor goal catalogs (use case) |
+
+## Modeling state-machine triggers and guards in ERD
+
+State diagrams own **graphs** (states, edges, guards, actions). ERD owns **facts**
+those graphs read and write. Never redraw transitions on an ERD.
+
+| FSM element | ERD modeling pattern | Not on ERD |
+| :--- | :--- | :--- |
+| **Trigger** (named event on edge) | Append-only event row · outbox status change · new revision/version row · write-once artifact | Transition inventory |
+| **Guard** `[predicate]` | Queryable column, enum domain, or projection denormalization of stream facts | Predicate expression text |
+| **Action** `/ effect()` | Column write co-committed with the trigger row (same store TX when possible) | Procedural algorithm |
+| **Capability** `[capability: …]` | Denial audit event only (`CapabilityDenied` / `SoDDenied`) | Role/capability matrix |
+| **Lock / lease** | Lease columns on outbox (`worker_id`, `lease_expires_at`); not DB lock graphs | FOR SHARE / FIFO narrative |
+| **Ephemeral pipeline stage** | Optional stage row in trace tables when audit needs it; not a second FSM table | In-memory gate order |
+
+### Per state machine → store facts
+
+| State machine | Primary store | Triggers become | Guards need (columns) |
+| :--- | :--- | :--- | :--- |
+| **001 Finding lifecycle** | `finding_events_store` | `Events.event_type` + `trigger_command` + `from_fsm_state`/`to_fsm_state` + `atomic_batch_id` | `FindingProjections.fsm_state`, `creator_provenance`, `evidence_submitter`, `last_reopen_comments`, disposition enum |
+| **002 Directive lifecycle** | `directives_store` | revision `change_trigger`, status write, `LineageOperations` | `status`, `superseded_by_execution_id`, `head_snapshot_hash` (publish), `restore_from_revision` |
+| **003 Compilation** | `directives_store` outbox + `compiled_rules_store` | `CompileRequests.status` transitions; snapshot publish | `status`, lease expiry, `published_snapshot_hash`, `failure_class`; CAS existence by hash |
+| **004 Inspection** | `artifacts_store` | snapshot status; `PipelineTraces` rows | `skipped_nodes` (partial vs completed), `evaluate_retry_count`, pin hashes |
+| **005 Conflict** | `artifacts_store` (+ frozen CG-IR read) | conflict artifact version rows | `lineage_id_a/b` (same/different lineage), `binding_status`, `cg_ir_snapshot_hash`, `requires_human_action`; cascade inputs on `Nodes` (`priority_level`, `authored_at`, `lineage_id`) |
+| **006 Certification** | `artifacts_store` | `CertificationRuns.status`; per-gate artifacts | run status; `pass_fail` per `gate_id` |
+| **007 Authorization** | `finding_events_store` (denials only) | `CapabilityDenied` / `SoDDenied` events | No grant table — matrix is contract; denials are the durable side-effect |
+| **008 Artifact lifecycle** | `artifacts_store` / CAS | write-once publish; conflict version archive | content hash identity; `binding_status=archived` |
+| **009 Hybrid logical clock** | `finding_events_store` | HLC fields on every event; watermark upsert | `HybridLogicalClockState`, `RetiredNodes`, event HLC tuple monotonicity |
+| **010 Hash composition** | `compiled_rules_store` | node/edge/snapshot hash columns | `semantic_hash` / `presentation_hash` / snapshot hash; `compiled_at` excluded from identity |
+| **011 Interaction** | cross-store pointers only | outbox enqueue, pin hash, finding birth, artifact write | no multi-store FK edges |
+
+### Guard classes (what ERD refuses)
+
+| Guard class | Examples | Durable model |
+| :--- | :--- | :--- |
+| **State predicate** | `fsm_state ∈ {Open,…}`, `status=active` | Enum column on head/projection |
+| **Provenance / SoD** | `actorNotInCreatorProvenance`, `actorNotEvidenceSubmitter` | Projection fields + stream SoR |
+| **Content / pin** | `hermeticCompileSuccess`, `sameHashAndFrozenEnv` | `head_snapshot_hash`, CAS PK, pin columns |
+| **Identity scope** | `sameLineageId`, `supersededByActiveOrDraftId` | lineage columns; successor id + status |
+| **Batch atomicity** | `atomicWithTriggerBatch` | `Events.atomic_batch_id` |
+| **Clock fence** | `pvcCorruptedOrLost`, non-decreasing HLC | `RetiredNodes`, watermark table |
+| **Capability** | `[capability: finding.waive]` | **Not a table** — evaluated at `api`; failure may append denial event |
+| **Runtime lock** | `writeLockHeldOrWritePending` | Process/DB lock; outbox may record `failure_class=lock_deferred` |
+
+### Atomic batches (INV-FL-020)
+
+Human trigger + system auto-successor (e.g. `WaiverGranted` + `FindingClosed`) share one
+`atomic_batch_id` on multiple `Events` rows in a single DB transaction. The projection
+applies only after the full batch commits. ERD models the batch key; state owns which
+edges are atomic.
 
 ## Rendering
 

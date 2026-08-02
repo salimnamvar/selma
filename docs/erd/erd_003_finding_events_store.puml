@@ -4,10 +4,14 @@
 ' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
 '            docs/spec/contracts/finding_lifecycle/states.yaml
 '            docs/spec/contracts/finding_lifecycle/transitions.yaml
+'            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
 ' C4:        finding_events_store ← finding_events_repository
 '            (findings_application · DenialAuditPort)
 ' Package:   findings_infrastructure (C4: finding_events_repository)
 ' Contract:  1.3.0
+'
+' State machines supported by durable facts (not drawn here):
+'   001 Finding Lifecycle · 007 Authorization denials · 009 Hybrid logical clock
 ' ============================================================
 
 !include common/erd_styles.puml
@@ -22,12 +26,16 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
     --
     finding_id : UUID <<nullable, indexed>>
     event_type : $ENUM_FINDING_EVENT_TYPE
+    trigger_command : TEXT <<nullable, finding.*|evidence.*|system>>
+    from_fsm_state : TEXT <<nullable>>
+    to_fsm_state : TEXT <<nullable>>
     timestamp : TIMESTAMPTZ <<ISO 8601 UTC>>
     physical_time : TIMESTAMPTZ <<hybrid logical clock wall>>
     logical_counter : INTEGER <<hybrid logical clock counter>>
     node_id : TEXT <<hybrid logical clock node>>
     actor : TEXT
     payload : JSONB
+    atomic_batch_id : UUID <<nullable, INV-FL-020>>
     event_hash : CHAR(64) <<SHA-256>>
     prev_event_hash : CHAR(64) <<SHA-256, nullable>>
     chain_hash : CHAR(64) <<SHA-256>>
@@ -37,13 +45,18 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
   entity "$TABLE_FINDING_PROJECTIONS" as FindingProjections <<projection>> <<mutable>> {
     * **finding_id** : UUID <<PK>>
     --
-    fsm_state : TEXT
-    disposition : TEXT <<nullable>>
+    fsm_state : $ENUM_FINDING_STATE
+    disposition : $ENUM_FINDING_DISPOSITION <<nullable>>
     severity : TEXT
+    creator_provenance : TEXT <<segregation of duties>>
+    evidence_submitter : TEXT <<nullable, segregation of duties>>
+    evidence_ref : TEXT <<nullable>>
     paired_policy_ref : TEXT <<pinned doctrine revision>>
     inspection_id : UUID
     control_id : TEXT
     target_hash : CHAR(64) <<SHA-256>>
+    last_trigger_command : TEXT <<nullable>>
+    last_reopen_comments : TEXT <<nullable>>
     chain_head_hash : CHAR(64) <<SHA-256>>
     last_applied_event_id : UUID
     event_count : INTEGER
@@ -93,21 +106,45 @@ package "$PKG_FINDING_EVENTS_STORE" as PKG_FE $ERD_PKG_APPEND {
     ConflictResolved
     ResolutionDecided
   }
+
+  enum "$ENUM_FINDING_STATE" as FindingState {
+    Created
+    Open
+    Acknowledged
+    EvidenceSubmitted
+    PendingVerification
+    Verified
+    Rejected
+    Dismissed
+    Waived
+    Superseded
+    Closed
+  }
+
+  enum "$ENUM_FINDING_DISPOSITION" as FindingDisposition {
+    valid
+    invalid
+    waived
+    dismissed
+    superseded
+  }
 }
 
 Events ||--o| FindingProjections : "finding_id"
 Events ||--o| IdempotencyRecords : "event_id"
 FindingProjections ||--o| FindingOpenKeys : "finding_id"
 Events }o..|| FindingEventType : "event_type domain"
+FindingProjections }o..|| FindingState : "fsm_state domain"
+FindingProjections }o..|| FindingDisposition : "disposition domain"
 HybridLogicalClockState ||--o| RetiredNodes : "node_id fence"
 
 legend bottom
   |= Stereotype |= Meaning |
-  | <<append_only>> <<system_of_record>> | Event stream never rewritten; chain_hash contiguous |
-  | <<projection>> | Materialized cache; rebuild by hybrid logical clock fold |
-  | <<secondary_index>> | Open-finding uniqueness · client idempotency |
-  | Total order | physical_time → logical_counter → node_id → event_id |
-  | Cross-store | paired_policy_ref → directives_store revision by text key only |
+  | <<append_only>> <<system_of_record>> | Trigger = new event row; never rewritten |
+  | <<projection>> | Guard inputs denormalized for bounded read (SoD · state) |
+  | Guard facts | fsm_state · creator_provenance · evidence_submitter · comments |
+  | Trigger effects | event_type · from/to · atomic_batch_id · chain advance |
+  | Not stored | capability matrix · lock wait (api / process) |
   | $LEGEND_ERD |
 endlegend
 
