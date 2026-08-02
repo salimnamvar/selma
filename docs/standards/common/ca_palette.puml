@@ -1,7 +1,8 @@
 ' ============================================================
 ' Title:     Selma — Clean Architecture color palette (SSoT)
 ' Purpose:   MACRO layer colors + MICRO concern colors shared by
-'            C4, package, class, deployment, state, use-case, and ERD diagrams.
+'            C4, package, class, deployment, state, use-case, ERD,
+'            sequence, and activity diagrams.
 ' Contract:  docs/standards/VERSION
 ' Include:
 '   !include ../../standards/common/ca_palette.puml

@@ -1,0 +1,81 @@
+@startuml act_004_finding_disposition
+' ============================================================
+' Title:     ACT-004 Finding disposition
+' Source:    docs/spec/contracts/finding_lifecycle/
+'            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
+' C4:        findings_application → finding_events_repository → finding_events_store
+' Package:   findings_application · findings_domain.FindingFsm
+' API:       GET /findings · GET /findings/{finding_id}
+'            POST :transitionFinding · POST :attachEvidence
+'            GET /findings/{finding_id}/events
+' UseCase:   GetFinding · ListFindings · TransitionFinding · AttachEvidence
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_FINDING
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+:Authenticate;
+
+if (operation?) then (ListFindings or GetFinding)
+  :Authorize finding.view;
+  |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+  :GetFinding or ListFindings.execute;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :read finding_projections;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Finding or page;
+  stop
+elseif (ListFindingEvents) then
+  :Authorize finding.view or audit.view;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :select append-only events;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 FindingEvent page;
+  stop
+elseif (AttachEvidence\n:attachEvidence) then
+  :Authorize evidence.submit · Idempotency-Key;
+  |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+  :AttachEvidence.execute;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+  :write_once evidence_artifacts;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :append DispositionChanged · auto PendingVerification;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Finding;
+  stop
+else (TransitionFinding\n:transitionFinding)
+endif
+
+:Authorize finding.* capability · Idempotency-Key;
+|#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+:TransitionFinding.execute;
+:FindingFsm.allowedTransitions;
+if (transition legal?) then (no)
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_ABORT:Respond 400 FSMError;
+  stop
+else (yes)
+endif
+
+:FindingFsm.checkSegregationOfDuties;
+if (segregation of duties ok?) then (no)
+  :DenialAuditPort.AppendDenial;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_ABORT:Respond 403 SoDDenied;
+  stop
+else (yes)
+endif
+
+|#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+:append DispositionChanged · chain_hash · hybrid logical clock;
+:apply atomic auto-close batch when contract requires;
+|#$ACT_LANE_INTERFACE|$LANE_API|
+#$ACT_OK:Respond 200 Finding;
+stop
+
+footer $DIAGRAM_ID_ACT_FINDING · $FOOTER_ACT
+@enduml

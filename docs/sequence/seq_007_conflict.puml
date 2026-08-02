@@ -1,0 +1,86 @@
+@startuml seq_007_conflict
+' ============================================================
+' Title:     SEQ-007 Conflict
+' Source:    docs/spec/contracts/conflict/
+' C4:        ResolveConflict (domain · not peer) used by compilation_application
+'            and inspections_application; human path via findings_application
+' Package:   conflicts_domain · findings_application · artifacts_infrastructure
+' API:       GET /artifacts · GET /artifacts/{artifact_id}
+'            POST /artifacts/{artifact_id}:reviewConflictArtifact
+' UseCase:   ResolveConflict · ReviewConflictArtifact
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_CONFLICT
+
+actor "$ACTOR_RO" as RO
+actor "$ACTOR_SYS" as SYS
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_CR_APP" as CR #$SEQ_HERMETIC
+  participant "$P_INS_APP" as INS #$SEQ_APPLICATION
+  participant "$P_FIND_APP" as FIND #$SEQ_APPLICATION
+end box
+box "Domain" #$SEQ_DOMAIN
+  participant "$P_RESOLVE" as RES #$SEQ_DOMAIN
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_ART_REPO" as ART #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_ART_STORE" as ASTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== ResolveConflict during CompileDirectives / RunInspectionPipeline (not freestanding API) ==
+SYS -> CR: CompileDirectives / evaluate path
+activate CR
+CR -> RES: ResolveConflict.detect_and_resolve
+activate RES
+RES --> CR: deterministic outcome or open conflict
+deactivate RES
+alt human action required
+  CR -> ART: write conflict artifact kind=conflict
+  ART -> ASTORE: append_only conflict_artifacts
+  ASTORE --> ART: artifact_id
+  ART --> CR: ConflictArtifact
+end
+deactivate CR
+
+== Get conflict artifact · $API_GET_ARTIFACT ==
+RO -> CL: inspect conflict
+CL -> API: $API_GET_ARTIFACT
+activate API
+API -> FIND: load via artifacts read
+FIND -> ART: Get
+ART -> ASTORE: read
+ASTORE --> ART: ConflictArtifact
+ART --> FIND: ConflictArtifact
+FIND --> API: Artifact / ConflictArtifact
+API --> CL: 200 Artifact
+deactivate API
+
+== ReviewConflictArtifact · $API_REVIEW_CONFLICT · operationId reviewConflictArtifact ==
+RO -> CL: ReviewConflictArtifact
+CL -> API: $API_REVIEW_CONFLICT\nReviewConflictArtifactRequest · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(conflict.resolve)
+API -> FIND: ReviewConflictArtifact.execute(artifact_id, decision)
+activate FIND
+FIND -> ART: append resolution version
+ART -> ASTORE: append_only new version · binding_status resolved
+ASTORE --> ART: ConflictArtifact
+ART --> FIND: ConflictArtifact
+FIND --> API: ConflictArtifact
+deactivate FIND
+API --> CL: 200 ConflictArtifact
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_CONFLICT · $FOOTER_SEQ
+@enduml

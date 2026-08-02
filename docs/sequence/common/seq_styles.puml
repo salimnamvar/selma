@@ -1,84 +1,76 @@
-' Selma Sequence Diagram Styles
-' Common skinparam and styling definitions for all sequence diagrams
+' ============================================================
+' Title:     Selma — Sequence Diagram Styles
+' Purpose:   Sequence view chrome + CA MACRO colors (ca_palette).
+' Contract:  docs/standards/VERSION
+' Include order:
+'   !include ./common/seq_styles.puml
+'   !include ./common/seq_identities.puml
+' ============================================================
 
-skinparam backgroundColor #FEFEFE
-skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
+!include ../../standards/common/ca_palette.puml
+
+skinparam defaultFontName       "Arial"
+skinparam defaultFontSize       11
+skinparam shadowing             false
+skinparam backgroundColor       $CA_CANVAS
+skinparam titleFontSize         16
+skinparam titleFontStyle        bold
+skinparam titleFontColor        $CA_INK
 
 skinparam sequence {
-    ArrowColor #3B4252
-    ArrowFontColor #2E3440
-    ArrowFontSize 11
-    ArrowThickness 1.5
+  ArrowColor                  $CA_ARROW
+  ArrowFontColor              $CA_INK
+  ArrowFontSize               10
+  ArrowThickness              1.5
 
-    LifeLineBorderColor #5E81AC
-    LifeLineBackgroundColor #ECEFF4
-    LifeLineFontSize 11
+  LifeLineBorderColor         $CA_BORDER_INTERFACE
+  LifeLineBackgroundColor     $CA_FILL_INTERFACE
 
-    ParticipantBorderColor #5E81AC
-    ParticipantBackgroundColor #EBCB8B
-    ParticipantFontColor #2E3440
-    ParticipantFontSize 12
+  ParticipantBorderColor      $CA_BORDER_INTERFACE
+  ParticipantBackgroundColor  $CA_FILL_INTERFACE
+  ParticipantFontColor        $CA_INK
+  ParticipantFontSize         11
 
-    GroupBorderColor #88C0D0
-    GroupBackgroundColor #E8F4F8
-    GroupFontColor #2E3440
-    GroupFontSize 12
-    GroupHeaderFontColor #5E81AC
+  ActorBorderColor            $CA_BORDER_ACTOR
+  ActorBackgroundColor        $CA_FILL_ACTOR
+  ActorFontColor              $CA_INK
 
-    DividerBorderColor #81A1C1
-    DividerBackgroundColor #ECEFF4
-    DividerFontColor #5E81AC
-    DividerFontSize 12
+  GroupBorderColor            $CA_BORDER_APPLICATION
+  GroupBackgroundColor        $CA_FILL_APPLICATION
+  GroupFontColor              $CA_INK
+  GroupHeaderFontColor        $CA_SOLID_APPLICATION
 
-    BoxBorderColor #4C566A
-    BoxBackgroundColor #ECEFF4
+  DividerBorderColor          $CA_BORDER_NEUTRAL
+  DividerBackgroundColor      $CA_LEGEND_BG
+  DividerFontColor            $CA_SOLID_INTERFACE
 
-    NoteBorderColor #D08770
-    NoteBackgroundColor #FFF3E0
-    NoteFontColor #2E3440
-    NoteFontSize 11
+  BoxBorderColor              $CA_BORDER_NEUTRAL
+  BoxBackgroundColor          $CA_LEGEND_BG
 
-    ReferenceBorderColor #88C0D0
-    ReferenceBackgroundColor #E8F4F8
-    ReferenceFontColor #2E3440
-    ReferenceFontSize 11
-
-    SequenceGroupBorderThickness 1.5
-    SequenceDividerBorderThickness 1
-    SequenceReferenceBorderThickness 1
+  ReferenceBorderColor        $CA_BORDER_INTERFACE
+  ReferenceBackgroundColor    $CA_FILL_INTERFACE
+  ReferenceFontColor          $CA_INK
 }
 
-skinparam note {
-    BorderColor #D08770
-    BackgroundColor #FFF3E0
-    FontColor #2E3440
-    FontSize 11
-}
-
-skinparam header {
-    FontColor #5E81AC
-    FontSize 14
-    BackgroundColor transparent
+skinparam database {
+  BackgroundColor             $CA_FILL_FRAMEWORKS
+  BorderColor                 $CA_BORDER_FRAMEWORKS
+  FontColor                   $CA_INK
 }
 
 skinparam footer {
-    FontColor #4C566A
-    FontSize 10
-    BackgroundColor transparent
+  FontColor                   $CA_BORDER_NEUTRAL
+  FontSize                    10
 }
 
-skinparam title {
-    FontColor #2E3440
-    FontSize 16
-    FontStyle bold
-}
-
-' Highlight colors for critical paths
-skinparam sequence {
-    ArrowColor #3B4252
-    LifeLineBorderColor #5E81AC
-}
-
-' Constraint: render limit
-skinparam maxMessageSize 200
+' MICRO aliases for sequence (no invented hex in diagram bodies)
+' Bare hex (no #) for use as: participant X #$SEQ_INTERFACE
+!$SEQ_ACTOR          = "E8EAF6"
+!$SEQ_INTERFACE      = "E1F5FE"
+!$SEQ_APPLICATION    = "E0F2F1"
+!$SEQ_DOMAIN         = "F3E5F5"
+!$SEQ_INFRASTRUCTURE = "FFF3E0"
+!$SEQ_FRAMEWORKS     = "E8F5E9"
+!$SEQ_EXTERNAL       = "ECEFF1"
+!$SEQ_GATE           = "FFEBEE"
+!$SEQ_HERMETIC       = "FFFDE7"

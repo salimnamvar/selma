@@ -1,0 +1,77 @@
+@startuml seq_008_authorization
+' ============================================================
+' Title:     SEQ-008 Authorization gate
+' Source:    docs/spec/contracts/authorization/
+'            docs/spec/contracts/interfaces/rest_api.yaml
+' C4:        api → DenialAuditPort (findings path) · not raw store I/O
+' Package:   rest_interface · findings_infrastructure.DenialAuditAdapter
+' API:       all routes (Bearer required except probes)
+' UseCase:   AuthenticateActor · CheckCapability · EnforceSegregationOfDuties · AppendDenial
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_AUTH
+
+actor "$ACTOR_RO" as RO
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_DENY" as DENY #$SEQ_GATE
+  participant "target use case\n(directives|findings|…)" as UC #$SEQ_APPLICATION
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_FE_REPO" as FEREP #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_FE_STORE" as FSTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== AuthenticateActor on mutating request ==
+RO -> CL: any authorized operation
+CL -> API: Bearer JWT · HTTP request
+activate API
+API -> API: JwtAuthenticator.Authenticate(token)
+alt invalid or expired token
+  API --> CL: 401 Error Unauthorized
+else ActorId resolved
+  API -> API: CapabilityEnforcer.Authorize(actor, capability)
+  alt CapabilityDenied
+    API -> DENY: DenialAuditPort.AppendDenial
+    activate DENY
+    DENY -> FEREP: DenialAuditAdapter
+    FEREP -> FSTORE: append denial window record
+    FSTORE --> FEREP: ok
+    FEREP --> DENY: ok
+    deactivate DENY
+    API --> CL: 403 Error CapabilityDenied
+  else allow
+    API -> API: IdempotencyFilter.Check when mutating POST or PATCH
+    alt duplicate Idempotency-Key different body
+      API --> CL: 409 Conflict
+    else proceed
+      API -> UC: dispatch ROD use case
+      activate UC
+      opt segregation of duties on finding transitions
+        UC -> UC: EnforceSegregationOfDuties
+        alt SoDDenied
+          UC --> API: SoDDenied
+          API -> DENY: AppendDenial
+          API --> CL: 403 Error SoDDenied
+        end
+      end
+      UC --> API: resource or error
+      deactivate UC
+      API --> CL: 2xx resource or 4xx/5xx Error envelope
+    end
+  end
+end
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_AUTH · $FOOTER_SEQ
+@enduml

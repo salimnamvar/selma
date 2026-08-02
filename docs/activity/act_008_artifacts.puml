@@ -1,0 +1,44 @@
+@startuml act_008_artifacts
+' ============================================================
+' Title:     ACT-008 Artifacts
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+'            docs/spec/contracts/certification/gates.yaml
+' C4:        artifacts_repository → artifacts_store
+'            certification_tool (offline · not peer)
+' Package:   artifacts_infrastructure
+' API:       GET /artifacts · GET /artifacts/{artifact_id}
+' UseCase:   list/get Artifact · RunArchitecturalCertification (offline)
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_ARTIFACT
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+if (entry?) then (client GET list or get)
+  :Authenticate;
+  if (kind inspection?) then (yes)
+    :Authorize inspection.view;
+  else (other kinds)
+  endif
+  |#$ACT_LANE_INFRASTRUCTURE|$LANE_ART_REPO|
+  :List or Get Artifact;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+  :read write-once metadata and payload;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Artifact or page;
+  stop
+else (offline certification)
+  |#$ACT_LANE_INTERFACE|$LANE_CERT|
+  :RunArchitecturalCertification AA-01 through AA-09;
+  |#$ACT_LANE_INFRASTRUCTURE|$LANE_ART_REPO|
+  :CertificationArtifactPort write kind=certification;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+  :write_once CertificationResult;
+  stop
+endif
+
+footer $DIAGRAM_ID_ACT_ARTIFACT · $FOOTER_ACT
+@enduml

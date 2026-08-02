@@ -25,7 +25,10 @@ comment block that enables investigation without opening the figure.
 
 **State diagram files:** `docs/state/state_machine_NNN_*.puml` (aligned with `pkg_NNN`, `dep_NNN`, `seq_NNN`, `act_NNN`, `uc_NNN`, `cd_NNN`).  
 **Use case diagram files:** `docs/usecase/uc_NNN_*.puml` / diagram ID `UC-NNN`. Shared includes: `usecase/common/uc_styles.puml` + `uc_identities.puml` + `uc_section_*`. ROD oval names identical to package application leaves and class `<<Use Case>>` types.  
-**Notes forbidden** on state, package, class, C4, deployment, use-case, and ERD diagrams — encode invariants as state body / guards / actions / associations / include edges / stereotypes, or leave them in Source contracts.
+**Notes forbidden** on state, package, class, C4, deployment, use-case, ERD, **sequence**, and **activity** diagrams — encode invariants as state body / guards / actions / associations / include edges / stereotypes / messages / alt groups / decision labels, or leave them in Source contracts.
+
+**Sequence headers** MAY include `API:` (paths/operationIds) and `UseCase:` (ROD ovals). Files: `seq_NNN_*.puml` / `SEQ-NNN`.  
+**Activity headers** MAY include `API:` and `UseCase:`. Files: `act_NNN_*.puml` / `ACT-NNN`.
 
 ## Allowed C4 line patterns
 

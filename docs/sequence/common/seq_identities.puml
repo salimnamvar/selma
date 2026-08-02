@@ -1,0 +1,85 @@
+' ============================================================
+' Title:     Selma — Sequence Diagram Identities
+' Purpose:   C4 peers, package titles, ROD use cases, API paths
+'            identical to package / use case / class / api.
+' Contract:  docs/standards/VERSION
+' Include AFTER seq_styles.puml.
+' ============================================================
+
+!include ../../package/common/pkg_identities.puml
+
+' ── Diagram catalog ─────────────────────────────────────────
+!$DIAGRAM_ID_SEQ_DIR_STD     = "SEQ-001"
+!$DIAGRAM_ID_SEQ_DIR_LIFE    = "SEQ-002"
+!$DIAGRAM_ID_SEQ_COMPILE     = "SEQ-003"
+!$DIAGRAM_ID_SEQ_INSPECT     = "SEQ-004"
+!$DIAGRAM_ID_SEQ_FINDING     = "SEQ-005"
+!$DIAGRAM_ID_SEQ_GUIDANCE    = "SEQ-006"
+!$DIAGRAM_ID_SEQ_CONFLICT    = "SEQ-007"
+!$DIAGRAM_ID_SEQ_AUTH        = "SEQ-008"
+!$DIAGRAM_ID_SEQ_ARTIFACT    = "SEQ-009"
+
+!$TITLE_SEQ_DIR_STD  = "**SEQ-001 — Directive standard methods**\nCreateDirective · ListDirectives · GetDirective · UpdateDirective · Retire"
+!$TITLE_SEQ_DIR_LIFE = "**SEQ-002 — Directive lifecycle custom methods**\nLifecycleTransitions Fork · Merge · Split · Restore"
+!$TITLE_SEQ_COMPILE  = "**SEQ-003 — Compilation**\nCompileDirectives · Get · List Compilation"
+!$TITLE_SEQ_INSPECT  = "**SEQ-004 — Inspection**\nCreateInspection · GetInspection · List · OpenFindings"
+!$TITLE_SEQ_FINDING  = "**SEQ-005 — Finding lifecycle**\nGetFinding · ListFindings · TransitionFinding · AttachEvidence · events"
+!$TITLE_SEQ_GUIDANCE = "**SEQ-006 — Guidance and aggregates**\nGetFindingGuidance · ListFindingAggregates"
+!$TITLE_SEQ_CONFLICT = "**SEQ-007 — Conflict**\nResolveConflict (domain) · ReviewConflictArtifact"
+!$TITLE_SEQ_AUTH     = "**SEQ-008 — Authorization gate**\nAuthenticateActor · CheckCapability · EnforceSegregationOfDuties · AppendDenial"
+!$TITLE_SEQ_ARTIFACT = "**SEQ-009 — Artifacts**\nListArtifacts · GetArtifact · certification_tool write"
+
+!$FOOTER_SEQ = "Contract docs/standards/VERSION · Clean Architecture · Resource-oriented design · Selma"
+
+' ── Participant labels (C4 ID + CA role) ────────────────────
+!$P_CLIENTS = "clients\n(C4)"
+!$P_API = "rest_interface\n(C4: api)"
+!$P_DIR_APP = "directives_application\n(C4)"
+!$P_CR_APP = "compiled_rules_application\n(C4: compilation_application)"
+!$P_INS_APP = "inspections_application\n(C4)"
+!$P_FIND_APP = "findings_application\n(C4)"
+!$P_DIR_REPO = "directives_repository\n(C4)"
+!$P_CR_REPO = "compiled_rules_repository\n(C4)"
+!$P_FE_REPO = "finding_events_repository\n(C4)"
+!$P_ART_REPO = "artifacts_repository\n(C4)"
+!$P_TGT_GW = "target_sources_gateway\n(C4 · optional)"
+!$P_DIR_STORE = "directives_store\n(C4)"
+!$P_CR_STORE = "compiled_rules_store\n(C4)"
+!$P_FE_STORE = "finding_events_store\n(C4)"
+!$P_ART_STORE = "artifacts_store\n(C4)"
+!$P_RESOLVE = "ResolveConflict\n(domain · not peer)"
+!$P_CERT = "certification_tool\n(offline · not peer)"
+!$P_DENY = "DenialAuditPort\n(application port)"
+
+' ── Actors ──────────────────────────────────────────────────
+!$ACTOR_RO = "Regulatory Official"
+!$ACTOR_CR = "Compliance Representative"
+!$ACTOR_SYS = "System"
+
+' ── API path fragments (must match docs/api) ────────────────
+!$API_POST_DIRECTIVES = "POST /directives"
+!$API_GET_DIRECTIVES = "GET /directives"
+!$API_GET_DIRECTIVE = "GET /directives/{lineage_id}"
+!$API_PATCH_DIRECTIVE = "PATCH /directives/{lineage_id}"
+!$API_DELETE_DIRECTIVE = "DELETE /directives/{lineage_id}"
+!$API_GET_REVISION = "GET /directives/{lineage_id}/revisions/{revision}"
+!$API_FORK = "POST /directives/{lineage_id}:fork"
+!$API_MERGE = "POST /directives/{lineage_id}:merge"
+!$API_SPLIT = "POST /directives/{lineage_id}:split"
+!$API_RESTORE = "POST /directives/{lineage_id}:restore"
+!$API_POST_COMPILATIONS = "POST /compilations"
+!$API_GET_COMPILATIONS = "GET /compilations"
+!$API_GET_COMPILATION = "GET /compilations/{hash}"
+!$API_POST_INSPECTIONS = "POST /inspections"
+!$API_GET_INSPECTIONS = "GET /inspections"
+!$API_GET_INSPECTION = "GET /inspections/{inspection_id}"
+!$API_GET_FINDINGS = "GET /findings"
+!$API_GET_FINDING = "GET /findings/{finding_id}"
+!$API_TRANSITION = "POST /findings/{finding_id}:transitionFinding"
+!$API_EVIDENCE = "POST /findings/{finding_id}:attachEvidence"
+!$API_EVENTS = "GET /findings/{finding_id}/events"
+!$API_GUIDANCE = "GET /findings/{finding_id}/guidance"
+!$API_AGGREGATES = "GET /findings:listFindingAggregates"
+!$API_GET_ARTIFACTS = "GET /artifacts"
+!$API_GET_ARTIFACT = "GET /artifacts/{artifact_id}"
+!$API_REVIEW_CONFLICT = "POST /artifacts/{artifact_id}:reviewConflictArtifact"

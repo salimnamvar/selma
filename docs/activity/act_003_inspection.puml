@@ -1,0 +1,71 @@
+@startuml act_003_inspection
+' ============================================================
+' Title:     ACT-003 Inspection pipeline
+' Source:    docs/spec/contracts/inspection/pipeline.yaml
+'            docs/spec/contracts/inspection/finding_contract.yaml
+' C4:        inspections_application → compiled_rules_repository
+'            · artifacts_repository · FindingOpenPort
+' Package:   inspections_application · findings_application
+' API:       POST|GET /inspections · GET /inspections/{inspection_id}
+' UseCase:   CreateInspection · GetInspection · RunInspectionPipeline · OpenFindings
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_INSPECT
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+if (operation?) then (Get or List)
+  :Authorize inspection.view;
+  |#$ACT_LANE_APPLICATION|$LANE_INS_APP|
+  :GetInspection or list snapshots;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+  :read write-once inspection_snapshots;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Inspection;
+  stop
+else (CreateInspection\nPOST /inspections)
+endif
+
+:Authenticate · Authorize inspection.submit · Idempotency-Key;
+|#$ACT_LANE_APPLICATION|$LANE_INS_APP|
+:CreateInspection.execute(InspectRequest);
+if (target_ref remote?) then (yes)
+  :TargetSourcesGateway.Fetch;
+  if (gateway ok?) then (no)
+    |#$ACT_LANE_INTERFACE|$LANE_API|
+    #$ACT_ABORT:Respond 504 UpstreamTimeout;
+    stop
+  else (yes)
+  endif
+else (inline TargetSubmission)
+endif
+
+:load frozen CgIrSnapshot;
+|#$ACT_LANE_FRAMEWORKS|$LANE_CR_STORE|
+:CAS get compiled rules;
+|#$ACT_LANE_APPLICATION|$LANE_INS_APP|
+:RunInspectionPipeline.execute;
+:normalize · classify · select controls;
+fork
+  :evaluate controls (parallel where contract allows);
+fork again
+  :ResolveConflict on evaluate set;
+end fork
+:aggregate outcomes;
+|#$ACT_LANE_INFRASTRUCTURE|$LANE_ART_REPO|
+:InspectionArtifactPort.WriteOnce;
+|#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+:write_once inspection + pipeline_traces;
+|#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+:OpenFindings.open_findings;
+|#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+:append FindingCreated · open keys;
+|#$ACT_LANE_INTERFACE|$LANE_API|
+#$ACT_OK:Respond 201 Inspection · Location;
+stop
+
+footer $DIAGRAM_ID_ACT_INSPECT · $FOOTER_ACT
+@enduml

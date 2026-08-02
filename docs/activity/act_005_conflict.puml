@@ -1,0 +1,55 @@
+@startuml act_005_conflict
+' ============================================================
+' Title:     ACT-005 Conflict resolution
+' Source:    docs/spec/contracts/conflict/
+' C4:        ResolveConflict (domain · not peer);
+'            ReviewConflictArtifact via findings_application + artifacts
+' Package:   conflicts_domain · findings_application
+' API:       GET /artifacts · GET /artifacts/{artifact_id}
+'            POST :reviewConflictArtifact
+' UseCase:   ResolveConflict · ReviewConflictArtifact
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_CONFLICT
+
+|#$ACT_LANE_HERMETIC|compiled_rules_application / inspections_application|
+start
+if (entry?) then (pipeline detect)
+  :CompileDirectives or RunInspectionPipeline detect conflict;
+  |#$ACT_LANE_DOMAIN|$LANE_DOMAIN_CON|
+  :ResolveConflict.detect_and_resolve;
+  if (deterministic closed?) then (yes)
+    :return resolved set to pipeline;
+    stop
+  else (requires human action)
+    |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+    :append conflict_artifacts kind=conflict open;
+    stop
+  endif
+else (HTTP Artifact)
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  :GET Artifact or POST :reviewConflictArtifact;
+  :Authenticate;
+  if (review?) then (yes)
+    :Authorize conflict.resolve · Idempotency-Key;
+    |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+    :ReviewConflictArtifact.execute;
+    |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+    :append version · binding_status resolved;
+    |#$ACT_LANE_INTERFACE|$LANE_API|
+    #$ACT_OK:Respond 200 ConflictArtifact;
+    stop
+  else (get only)
+    |#$ACT_LANE_FRAMEWORKS|$LANE_ART_STORE|
+    :read artifact;
+    |#$ACT_LANE_INTERFACE|$LANE_API|
+    #$ACT_OK:Respond 200 Artifact;
+    stop
+  endif
+endif
+
+footer $DIAGRAM_ID_ACT_CONFLICT · $FOOTER_ACT
+@enduml

@@ -1,0 +1,48 @@
+' ============================================================
+' Title:     Selma — Activity Diagram Identities
+' Purpose:   Swim-lane titles and ROD/API labels identical to
+'            package / use case / class / api / sequence.
+' Contract:  docs/standards/VERSION
+' Include AFTER act_styles.puml.
+' ============================================================
+
+!include ../../package/common/pkg_identities.puml
+
+!$DIAGRAM_ID_ACT_DIR      = "ACT-001"
+!$DIAGRAM_ID_ACT_COMPILE  = "ACT-002"
+!$DIAGRAM_ID_ACT_INSPECT  = "ACT-003"
+!$DIAGRAM_ID_ACT_FINDING  = "ACT-004"
+!$DIAGRAM_ID_ACT_CONFLICT = "ACT-005"
+!$DIAGRAM_ID_ACT_GUIDANCE = "ACT-006"
+!$DIAGRAM_ID_ACT_AUTH     = "ACT-007"
+!$DIAGRAM_ID_ACT_ARTIFACT = "ACT-008"
+
+!$TITLE_ACT_DIR      = "**ACT-001 — Directive mutations**\nCreateDirective · UpdateDirective · LifecycleTransitions · outbox"
+!$TITLE_ACT_COMPILE  = "**ACT-002 — Compilation pipeline**\nCompileDirectives · ValidateDirectiveDocuments · PublishCompiledRules · DrainOutbox"
+!$TITLE_ACT_INSPECT  = "**ACT-003 — Inspection pipeline**\nCreateInspection · RunInspectionPipeline · OpenFindings"
+!$TITLE_ACT_FINDING  = "**ACT-004 — Finding disposition**\nTransitionFinding · AttachEvidence · segregation of duties"
+!$TITLE_ACT_CONFLICT = "**ACT-005 — Conflict resolution**\nResolveConflict · ReviewConflictArtifact"
+!$TITLE_ACT_GUIDANCE = "**ACT-006 — Guidance and aggregates**\nGetFindingGuidance · ListFindingAggregates"
+!$TITLE_ACT_AUTH     = "**ACT-007 — Authorization gate**\nAuthenticateActor · CheckCapability · AppendDenial"
+!$TITLE_ACT_ARTIFACT = "**ACT-008 — Artifacts**\nListArtifacts · GetArtifact · certification write-once"
+
+!$FOOTER_ACT = "Contract docs/standards/VERSION · Clean Architecture · Resource-oriented design · Selma"
+
+' Swim-lane titles (CA layer · C4 peer)
+!$LANE_ACTOR = "Actors"
+!$LANE_CLIENTS = "clients (C4)"
+!$LANE_API = "rest_interface (C4: api)"
+!$LANE_DIR_APP = "directives_application (C4)"
+!$LANE_CR_APP = "compiled_rules_application\n(C4: compilation_application)"
+!$LANE_INS_APP = "inspections_application (C4)"
+!$LANE_FIND_APP = "findings_application (C4)"
+!$LANE_DOMAIN_CON = "conflicts_domain (not peer)"
+!$LANE_DIR_REPO = "directives_repository (C4)"
+!$LANE_CR_REPO = "compiled_rules_repository (C4)"
+!$LANE_FE_REPO = "finding_events_repository (C4)"
+!$LANE_ART_REPO = "artifacts_repository (C4)"
+!$LANE_DIR_STORE = "directives_store (C4)"
+!$LANE_CR_STORE = "compiled_rules_store (C4)"
+!$LANE_FE_STORE = "finding_events_store (C4)"
+!$LANE_ART_STORE = "artifacts_store (C4)"
+!$LANE_CERT = "certification_tool (offline · not peer)"

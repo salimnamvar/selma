@@ -1,0 +1,127 @@
+@startuml seq_005_finding_lifecycle
+' ============================================================
+' Title:     SEQ-005 Finding lifecycle
+' Source:    docs/spec/contracts/finding_lifecycle/
+'            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
+' C4:        api → findings_application → finding_events_repository → finding_events_store
+'            artifacts_repository for evidence blobs
+' Package:   findings_application · findings_domain.FindingFsm
+' API:       GET /findings · GET /findings/{finding_id}
+'            POST :transitionFinding · POST :attachEvidence
+'            GET /findings/{finding_id}/events
+' UseCase:   GetFinding · ListFindings · TransitionFinding · AttachEvidence
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_FINDING
+
+actor "$ACTOR_RO" as RO
+actor "$ACTOR_CR" as CRU
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_FIND_APP" as FIND #$SEQ_APPLICATION
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_FE_REPO" as FEREP #$SEQ_INFRASTRUCTURE
+  participant "$P_ART_REPO" as ART #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_FE_STORE" as FSTORE #$SEQ_FRAMEWORKS
+  database "$P_ART_STORE" as ASTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== ListFindings · $API_GET_FINDINGS · operationId listFindings ==
+RO -> CL: ListFindings
+CL -> API: $API_GET_FINDINGS · fsm_state · severity · page_token
+activate API
+API -> API: CapabilityEnforcer.Authorize(finding.view)
+API -> FIND: ListFindings.execute(filter)
+activate FIND
+FIND -> FEREP: project list
+FEREP -> FSTORE: select finding_projections
+FSTORE --> FEREP: rows
+FEREP --> FIND: List~Finding~
+FIND --> API: ListFindingsResponse
+deactivate FIND
+API --> CL: 200 items
+deactivate API
+
+== GetFinding · $API_GET_FINDING · operationId getFinding ==
+RO -> CL: GetFinding
+CL -> API: $API_GET_FINDING
+activate API
+API -> FIND: GetFinding.execute(finding_id)
+FIND -> FEREP: fold projection
+FEREP -> FSTORE: read projection · chain head
+FSTORE --> FEREP: Finding
+FEREP --> FIND: Finding
+FIND --> API: Finding
+API --> CL: 200 Finding
+deactivate API
+
+== TransitionFinding · $API_TRANSITION · operationId transitionFinding ==
+RO -> CL: TransitionFinding (e.g. action=waive)
+CL -> API: $API_TRANSITION\nFindingTransitionRequest · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(finding.*)
+API -> FIND: TransitionFinding.execute(req, actor)
+activate FIND
+FIND -> FIND: FindingFsm.transition · checkSegregationOfDuties
+alt segregation of duties or illegal transition
+  FIND --> API: SoDDenied / FSMError
+  API --> CL: 403 or 400 Error
+else allow
+  FIND -> FEREP: append DispositionChanged · auto-close batch
+  activate FEREP
+  FEREP -> FSTORE: append_only · chain_hash · hybrid logical clock
+  FSTORE --> FEREP: committed
+  FEREP --> FIND: Finding
+  deactivate FEREP
+  FIND --> API: Finding
+  API --> CL: 200 Finding
+end
+deactivate FIND
+deactivate API
+
+== AttachEvidence · $API_EVIDENCE · operationId attachEvidence ==
+CRU -> CL: AttachEvidence
+CL -> API: $API_EVIDENCE\nAttachEvidenceRequest · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(evidence.submit)
+API -> FIND: AttachEvidence.execute(finding_id, evidence)
+activate FIND
+FIND -> ART: FindingArtifactPort store evidence
+ART -> ASTORE: write_once evidence_artifacts
+ASTORE --> ART: evidence_id
+ART --> FIND: EvidenceRef
+FIND -> FEREP: append DispositionChanged (EvidenceSubmitted path)
+FEREP -> FSTORE: append · auto PendingVerification
+FSTORE --> FEREP: Finding
+FEREP --> FIND: Finding
+FIND --> API: Finding
+deactivate FIND
+API --> CL: 200 Finding
+deactivate API
+
+== ListFindingEvents · $API_EVENTS ==
+RO -> CL: audit stream
+CL -> API: $API_EVENTS · page_token
+activate API
+API -> FIND: list events
+FIND -> FEREP: stream by finding_id
+FEREP -> FSTORE: select events
+FSTORE --> FEREP: page
+FEREP --> FIND: List~FindingEvent~
+FIND --> API: ListFindingEventsResponse
+API --> CL: 200 items
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_FINDING · $FOOTER_SEQ
+@enduml

@@ -1,71 +1,68 @@
 ' ============================================================
-' Selma — Shared Activity Diagram Theme
-' Contract: docs/standards/VERSION
-' Usage:    !include ../common/act_styles.puml
-'
-' Governance:
-'   Doctrine:      .nasim/rules/state-machine-policy-doctrine.md
-'   Specification: .nasim/rules/state-machine-specification.md
+' Title:     Selma — Activity Diagram Styles
+' Purpose:   Activity view chrome + CA MACRO colors (ca_palette).
+' Contract:  docs/standards/VERSION
+' Include order:
+'   !include ./common/act_styles.puml
+'   !include ./common/act_identities.puml
 ' ============================================================
 
-skinparam defaultFontName       "Segoe UI"
+!include ../../standards/common/ca_palette.puml
+
+skinparam defaultFontName       "Arial"
 skinparam defaultFontSize       11
 skinparam defaultTextAlignment  center
 skinparam shadowing             false
 skinparam roundCorner           8
 skinparam handwritten           false
-skinparam backgroundColor       #FAFBFC
+skinparam backgroundColor       $CA_CANVAS
 skinparam titleFontSize         16
 skinparam titleFontStyle        bold
-skinparam titleFontColor        #1A2332
+skinparam titleFontColor        $CA_INK
 
-' Activity diagram elements
 skinparam activity {
-  BorderColor                #2C3E50
-  FontColor                  #2E3440
-  BackgroundColor            #ECEFF4
+  BorderColor                $CA_INK
+  FontColor                  $CA_INK
+  BackgroundColor            $CA_FILL_APPLICATION
   BorderThickness            2
-  StartColor                 #00897B
-  EndColor                   #37474F
-  ArrowColor                 #34495E
+  StartColor                 $CA_SOLID_APPLICATION
+  EndColor                   $CA_SOLID_TERMINAL
+  ArrowColor                 $CA_ARROW
   ArrowThickness             1.5
-  DiamondBorderColor         #2C3E50
-  DiamondBackgroundColor     #EBCB8B
-  DiamondFontColor           #2E3440
+  DiamondBorderColor         $CA_BORDER_HERMETIC
+  DiamondBackgroundColor     $CA_FILL_HERMETIC
+  DiamondFontColor           $CA_INK
 }
 
-' Partition (swim-lane) styling
 skinparam partition {
-  BorderColor                #5E81AC
-  BackgroundColor            #E8F4F8
-  FontColor                  #2E3440
+  BorderColor                $CA_BORDER_INTERFACE
+  BackgroundColor            $CA_FILL_INTERFACE
+  FontColor                  $CA_INK
   FontSize                   12
   FontStyle                  bold
 }
 
-' Note styling
-skinparam note {
-  BorderColor                #D08770
-  BackgroundColor            #FFF3E0
-  FontColor                  #2E3440
-  FontSize                   10
-}
-
-' Arrow / connector styling
 skinparam arrow {
-  Color                      #34495E
+  Color                      $CA_ARROW
   Thickness                  1.5
-  FontColor                  #4C566A
+  FontColor                  $CA_BORDER_NEUTRAL
   FontSize                   10
 }
 
-' Semantic palette (matching state_styles.puml):
-'   System action          teal       #00897B
-'   Human action           blue       #0288D1
-'   Decision / branch      amber      #EBCB8B
-'   Error / abort           red        #C62828
-'   Success / terminal      green      #2E7D32
-'   Neutral / wait          grey       #37474F
+skinparam footer {
+  FontColor                  $CA_BORDER_NEUTRAL
+  FontSize                   10
+}
 
-' Constraint: render limit
-skinparam maxActivitySize 200
+' Partition color aliases (set via |#hex|partition|)
+' Bare hex for |#$ACT_LANE_*| and #$ACT_OK:
+!$ACT_LANE_ACTOR          = "E8EAF6"
+!$ACT_LANE_INTERFACE      = "E1F5FE"
+!$ACT_LANE_APPLICATION    = "E0F2F1"
+!$ACT_LANE_DOMAIN         = "F3E5F5"
+!$ACT_LANE_INFRASTRUCTURE = "FFF3E0"
+!$ACT_LANE_FRAMEWORKS     = "E8F5E9"
+!$ACT_LANE_GATE           = "FFEBEE"
+!$ACT_LANE_HERMETIC       = "FFFDE7"
+!$ACT_ABORT               = "C62828"
+!$ACT_OK                  = "2E7D32"

@@ -1,0 +1,90 @@
+@startuml seq_009_artifacts
+' ============================================================
+' Title:     SEQ-009 Artifacts
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+'            docs/spec/contracts/certification/gates.yaml
+' C4:        api → artifacts_repository → artifacts_store
+'            certification_tool (offline · not peer) writes kind=certification
+' Package:   artifacts_infrastructure · findings_application (review)
+' API:       GET /artifacts · GET /artifacts/{artifact_id}
+' UseCase:   list/get Artifact · RunArchitecturalCertification (offline)
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_ARTIFACT
+
+actor "$ACTOR_RO" as RO
+actor "$ACTOR_SYS" as SYS
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application / offline" #$SEQ_APPLICATION
+  participant "$P_FIND_APP" as FIND #$SEQ_APPLICATION
+  participant "$P_CERT" as CERT #$SEQ_EXTERNAL
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_ART_REPO" as ART #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_ART_STORE" as ASTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== ListArtifacts · $API_GET_ARTIFACTS · operationId listArtifacts ==
+RO -> CL: list
+CL -> API: $API_GET_ARTIFACTS · kind filter
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> FIND: list artifacts (read facade)
+FIND -> ART: List(kind)
+ART -> ASTORE: query metadata
+ASTORE --> ART: items
+ART --> FIND: List~Artifact~
+FIND --> API: ListArtifactsResponse
+API --> CL: 200 items
+deactivate API
+
+== GetArtifact · $API_GET_ARTIFACT · operationId getArtifact ==
+RO -> CL: get
+CL -> API: $API_GET_ARTIFACT
+activate API
+opt kind=inspection
+  API -> API: CapabilityEnforcer.Authorize(inspection.view)
+end
+API -> FIND: get artifact
+FIND -> ART: Get(artifact_id)
+ART -> ASTORE: read object
+ASTORE --> ART: Artifact
+ART --> FIND: Artifact
+FIND --> API: Artifact
+API --> CL: 200 Artifact
+deactivate API
+
+== RunArchitecturalCertification (offline · not client API) ==
+SYS -> CERT: RunArchitecturalCertification AA-01..AA-09
+activate CERT
+CERT -> ART: CertificationArtifactPort write kind=certification
+ART -> ASTORE: write_once CertificationResult payload
+ASTORE --> ART: artifact_id
+ART --> CERT: stored
+CERT --> SYS: CertificationResult
+deactivate CERT
+
+RO -> CL: read certification result
+CL -> API: $API_GET_ARTIFACTS?kind=certification or Get by id
+activate API
+API -> FIND: list/get
+FIND -> ART: query
+ART -> ASTORE: read
+ASTORE --> ART: Artifact
+ART --> FIND: Artifact
+FIND --> API: Artifact
+API --> CL: 200 Artifact (payload CertificationResult)
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_ARTIFACT · $FOOTER_SEQ
+@enduml

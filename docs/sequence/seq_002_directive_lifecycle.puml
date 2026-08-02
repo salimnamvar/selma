@@ -1,0 +1,101 @@
+@startuml seq_002_directive_lifecycle
+' ============================================================
+' Title:     SEQ-002 Directive lifecycle custom methods
+' Source:    docs/spec/contracts/directive/lifecycle.yaml
+'            docs/spec/contracts/directive/amendment.yaml
+' C4:        clients → api → directives_application → directives_repository → directives_store
+' Package:   rest_interface · directives_application · directives_domain.LineageService
+' API:       POST /directives/{lineage_id}:fork|:merge|:split|:restore
+' UseCase:   LifecycleTransitions (Fork · Merge · Split · Restore)
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_DIR_LIFE
+
+actor "$ACTOR_RO" as RO
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_DIR_APP" as DIR #$SEQ_APPLICATION
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_DIR_REPO" as REPO #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_DIR_STORE" as STORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== Fork · $API_FORK · operationId forkDirective ==
+RO -> CL: LifecycleTransitions.Fork
+CL -> API: $API_FORK · Idempotency-Key · If-Match
+activate API
+API -> API: CapabilityEnforcer.Authorize(directive.fork)
+API -> DIR: LifecycleTransitions.Fork(source)
+activate DIR
+DIR -> DIR: LineageService.fork
+DIR -> REPO: persist new execution · lineage_operations
+REPO -> STORE: write_lock · insert · compile_request outbox
+STORE --> REPO: directives
+REPO --> DIR: List~Directive~
+DIR --> API: DirectiveLifecycleResponse
+deactivate DIR
+API --> CL: 200 directives
+deactivate API
+
+== Merge · $API_MERGE · operationId mergeDirective ==
+RO -> CL: LifecycleTransitions.Merge
+CL -> API: $API_MERGE · other_lineage_id · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(directive.merge)
+API -> DIR: LifecycleTransitions.Merge(left, right)
+activate DIR
+DIR -> DIR: LineageService.merge
+DIR -> REPO: persist merge · provenance
+REPO -> STORE: write_lock · lineage_operations · outbox
+STORE --> REPO: result
+REPO --> DIR: DirectiveLifecycleResponse
+DIR --> API: DirectiveLifecycleResponse
+deactivate DIR
+API --> CL: 200 directives
+deactivate API
+
+== Split · $API_SPLIT · operationId splitDirective ==
+RO -> CL: LifecycleTransitions.Split
+CL -> API: $API_SPLIT · Idempotency-Key
+activate API
+API -> DIR: LifecycleTransitions.Split(source)
+activate DIR
+DIR -> DIR: LineageService.split
+DIR -> REPO: persist split children
+REPO -> STORE: write_lock · outbox
+STORE --> REPO: children
+REPO --> DIR: List~Directive~
+DIR --> API: DirectiveLifecycleResponse
+deactivate DIR
+API --> CL: 200 directives
+deactivate API
+
+== Restore · $API_RESTORE · operationId restoreDirective ==
+RO -> CL: LifecycleTransitions.Restore
+CL -> API: $API_RESTORE · revision · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(directive.restore)
+API -> DIR: LifecycleTransitions.Restore(lineage_id, revision)
+activate DIR
+DIR -> REPO: materialize historical dual documents as new head
+REPO -> STORE: write_lock · new revision · restore_from_revision · outbox
+STORE --> REPO: Directive
+REPO --> DIR: Directive
+DIR --> API: DirectiveLifecycleResponse
+deactivate DIR
+API --> CL: 200 directives
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_DIR_LIFE · $FOOTER_SEQ
+@enduml

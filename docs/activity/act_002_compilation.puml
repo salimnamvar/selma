@@ -1,0 +1,65 @@
+@startuml act_002_compilation
+' ============================================================
+' Title:     ACT-002 Compilation pipeline
+' Source:    docs/spec/contracts/compilation/
+' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
+' Package:   compiled_rules_application (C4: compilation_application)
+' API:       POST /compilations · GET /compilations · GET /compilations/{hash}
+' UseCase:   CompileDirectives · ValidateDirectiveDocuments · PublishCompiledRules · DrainOutbox
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_COMPILE
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+if (trigger?) then (POST /compilations\ncompileDirectives)
+  :Authenticate · Authorize · Idempotency-Key;
+  |#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+  :CompileDirectives.execute(lineage_ids);
+elseif (System DrainOutbox) then
+  |#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+  :DrainOutbox.execute;
+  :claim compile_request outbox row;
+else (GET list or get by hash)
+  |#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+  :read Compilation / CgIrSnapshot;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_CR_STORE|
+  :content-addressed get or list;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Compilation;
+  stop
+endif
+
+|#$ACT_LANE_INFRASTRUCTURE|$LANE_DIR_REPO|
+:CompilerReadPort materialize executables;
+|#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+:short read_lock · release before CPU;
+|#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+:ValidateDirectiveDocuments.execute;
+if (valid?) then (no)
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_ABORT:Respond SchemaError or CompileFailure;
+  stop
+else (yes)
+endif
+
+|#$ACT_LANE_DOMAIN|$LANE_DOMAIN_CON|
+:ResolveConflict declared pairs;
+|#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+:hermetic compile → CgIrSnapshot;
+:PublishCompiledRules.execute;
+|#$ACT_LANE_INFRASTRUCTURE|$LANE_CR_REPO|
+:CompiledRulesRepository.Publish;
+|#$ACT_LANE_FRAMEWORKS|$LANE_CR_STORE|
+:immutable put cg_ir_snapshot_hash;
+|#$ACT_LANE_HERMETIC|$LANE_CR_APP|
+:mark outbox completed when drained;
+|#$ACT_LANE_INTERFACE|$LANE_API|
+#$ACT_OK:Respond 201 Compilation · Location;
+stop
+
+footer $DIAGRAM_ID_ACT_COMPILE · $FOOTER_ACT
+@enduml

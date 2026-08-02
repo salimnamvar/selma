@@ -1,0 +1,82 @@
+@startuml seq_006_guidance_aggregates
+' ============================================================
+' Title:     SEQ-006 Guidance and aggregates
+' Source:    docs/spec/contracts/interfaces/rest_api.yaml
+'            docs/spec/contracts/data_stores/directives_store.yaml
+' C4:        api → findings_application → GuidanceReadPort → directives_repository
+'            finding_events_repository for aggregates
+' Package:   findings_application
+' API:       GET /findings/{finding_id}/guidance
+'            GET /findings:listFindingAggregates
+' UseCase:   GetFindingGuidance · ListFindingAggregates
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_GUIDANCE
+
+actor "$ACTOR_CR" as CRU
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_FIND_APP" as FIND #$SEQ_APPLICATION
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_FE_REPO" as FEREP #$SEQ_INFRASTRUCTURE
+  participant "$P_DIR_REPO" as DREPO #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_FE_STORE" as FSTORE #$SEQ_FRAMEWORKS
+  database "$P_DIR_STORE" as DSTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== GetFindingGuidance · $API_GUIDANCE · operationId getFindingGuidance ==
+CRU -> CL: GetFindingGuidance
+CL -> API: $API_GUIDANCE
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> FIND: GetFindingGuidance.execute(finding_id)
+activate FIND
+FIND -> FEREP: load Finding projection · paired_policy_ref
+FEREP -> FSTORE: read projection
+FSTORE --> FEREP: Finding
+FEREP --> FIND: paired_policy_ref pin
+FIND -> DREPO: GuidanceReadPort doctrine at pin (guidance_only)
+activate DREPO
+DREPO -> DSTORE: read policy_doctrine_document for paired_policy_ref
+DSTORE --> DREPO: doctrine revision
+DREPO --> FIND: PolicyDoctrineDoc
+deactivate DREPO
+FIND -> FIND: GuidanceResolver.materialize
+FIND --> API: Guidance
+deactivate FIND
+API --> CL: 200 Guidance
+deactivate API
+
+== ListFindingAggregates · $API_AGGREGATES · operationId listFindingAggregates ==
+CRU -> CL: ListFindingAggregates
+CL -> API: $API_AGGREGATES · scope · period_start · period_end
+activate API
+API -> API: CapabilityEnforcer.Authorize(analytics.view)
+alt CapabilityDenied
+  API --> CL: 403 Error CapabilityDenied
+else allow
+  API -> FIND: ListFindingAggregates.execute(AggregateQueryRequest)
+  activate FIND
+  FIND -> FEREP: aggregate over events / projections
+  FEREP -> FSTORE: query read models
+  FSTORE --> FEREP: buckets
+  FEREP --> FIND: AggregateReport
+  FIND --> API: AggregateReport
+  deactivate FIND
+  API --> CL: 200 AggregateReport
+end
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_GUIDANCE · $FOOTER_SEQ
+@enduml

@@ -1,0 +1,117 @@
+@startuml seq_003_compilation
+' ============================================================
+' Title:     SEQ-003 Compilation
+' Source:    docs/spec/contracts/compilation/
+'            docs/spec/contracts/data_stores/directives_store.yaml
+' C4:        api → compilation_application → compiled_rules_repository → compiled_rules_store
+'            compile_request outbox on directives_store
+' Package:   compiled_rules_application (C4: compilation_application)
+' API:       POST /compilations · GET /compilations · GET /compilations/{hash}
+' UseCase:   CompileDirectives · PublishCompiledRules · DrainOutbox · ValidateDirectiveDocuments
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_COMPILE
+
+actor "$ACTOR_RO" as RO
+actor "$ACTOR_SYS" as SYS
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_CR_APP" as CR #$SEQ_HERMETIC
+end box
+box "Domain" #$SEQ_DOMAIN
+  participant "$P_RESOLVE" as RES #$SEQ_DOMAIN
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_DIR_REPO" as DREPO #$SEQ_INFRASTRUCTURE
+  participant "$P_CR_REPO" as CREPO #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_DIR_STORE" as DSTORE #$SEQ_FRAMEWORKS
+  database "$P_CR_STORE" as CSTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== CompileDirectives · $API_POST_COMPILATIONS · operationId compileDirectives ==
+RO -> CL: CompileDirectives intent
+CL -> API: $API_POST_COMPILATIONS\nCompilationRequest.lineage_ids · Idempotency-Key
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> API: CapabilityEnforcer.Authorize
+API -> CR: CompileDirectives.execute(lineage_ids)
+activate CR
+CR -> DREPO: CompilerReadPort read executables
+activate DREPO
+DREPO -> DSTORE: short read_lock · materialize executable documents
+DSTORE --> DREPO: executables
+DREPO --> CR: documents
+deactivate DREPO
+CR -> CR: ValidateDirectiveDocuments.execute
+alt schema invalid
+  CR --> API: CompileFailure / SchemaError
+  API --> CL: 400 Error
+else valid
+  CR -> RES: ResolveConflict (declared pairs)
+  activate RES
+  RES --> CR: resolution set
+  deactivate RES
+  CR -> CR: hermetic compile to CgIrSnapshot
+  CR -> CR: PublishCompiledRules.execute(snapshot)
+  CR -> CREPO: CompiledRulesRepository.Publish
+  activate CREPO
+  CREPO -> CSTORE: content-addressed put cg_ir_snapshot_hash
+  CSTORE --> CREPO: ok
+  CREPO --> CR: published
+  deactivate CREPO
+  CR --> API: Compilation
+  deactivate CR
+  API --> CL: 201 Compilation · Location
+end
+deactivate API
+
+== DrainOutbox · System (composition OutboxDrainScheduler) ==
+SYS -> CR: DrainOutbox.execute
+activate CR
+CR -> DREPO: claim compile_request
+DREPO -> DSTORE: status in_progress · lease
+DSTORE --> DREPO: request
+CR -> CR: CompileDirectives.execute (include Validate · Publish)
+CR -> DREPO: mark compile_request completed · published_snapshot_hash
+DREPO -> DSTORE: update outbox
+CR --> SYS: drained count
+deactivate CR
+
+== ListCompilations · $API_GET_COMPILATIONS ==
+RO -> CL: list
+CL -> API: $API_GET_COMPILATIONS · lineage_id filter
+activate API
+API -> CR: list snapshot status
+CR -> CREPO: query
+CREPO -> CSTORE: list
+CSTORE --> CREPO: items
+CREPO --> CR: List~Compilation~
+CR --> API: ListCompilationsResponse
+API --> CL: 200 items
+deactivate API
+
+== GetCompilation · $API_GET_COMPILATION ==
+RO -> CL: get by hash
+CL -> API: $API_GET_COMPILATION
+activate API
+API -> CR: get CgIrSnapshot
+CR -> CREPO: Get(hash)
+CREPO -> CSTORE: CAS get
+CSTORE --> CREPO: snapshot
+CREPO --> CR: Compilation
+CR --> API: Compilation
+API --> CL: 200 Compilation
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_COMPILE · $FOOTER_SEQ
+@enduml

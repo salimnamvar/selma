@@ -1,0 +1,53 @@
+@startuml act_006_guidance_aggregates
+' ============================================================
+' Title:     ACT-006 Guidance and aggregates
+' Source:    docs/spec/contracts/interfaces/rest_api.yaml
+'            docs/spec/contracts/data_stores/directives_store.yaml
+' C4:        findings_application · GuidanceReadPort · directives_repository
+' Package:   findings_application
+' API:       GET /findings/{finding_id}/guidance
+'            GET /findings:listFindingAggregates
+' UseCase:   GetFindingGuidance · ListFindingAggregates
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_GUIDANCE
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+:Authenticate;
+
+if (operation?) then (GetFindingGuidance)
+  |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+  :GetFindingGuidance.execute;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :load Finding · paired_policy_ref pin;
+  |#$ACT_LANE_INFRASTRUCTURE|$LANE_DIR_REPO|
+  :GuidanceReadPort doctrine at pin guidance_only;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :read policy_doctrine_document revision;
+  |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+  :GuidanceResolver.materialize;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Guidance;
+  stop
+else (ListFindingAggregates)
+  :Authorize analytics.view;
+  if (allowed?) then (no)
+    #$ACT_ABORT:Respond 403 CapabilityDenied;
+    stop
+  else (yes)
+  endif
+  |#$ACT_LANE_APPLICATION|$LANE_FIND_APP|
+  :ListFindingAggregates.execute;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :aggregate projections / events;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 AggregateReport;
+  stop
+endif
+
+footer $DIAGRAM_ID_ACT_GUIDANCE · $FOOTER_ACT
+@enduml

@@ -1,0 +1,65 @@
+@startuml act_007_authorization
+' ============================================================
+' Title:     ACT-007 Authorization gate
+' Source:    docs/spec/contracts/authorization/
+'            docs/spec/contracts/interfaces/rest_api.yaml
+' C4:        api · DenialAuditPort
+' Package:   rest_interface
+' API:       all Bearer routes
+' UseCase:   AuthenticateActor · CheckCapability · EnforceSegregationOfDuties · AppendDenial
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_AUTH
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+:Receive request with Authorization Bearer;
+:JwtAuthenticator.Authenticate;
+if (JWT valid?) then (no)
+  #$ACT_ABORT:Respond 401 Unauthorized\n(no DenialAuditPort write);
+  stop
+else (ActorId)
+endif
+
+:CapabilityEnforcer.Authorize(capability);
+if (allow?) then (no)
+  |#$ACT_LANE_GATE|DenialAuditPort|
+  :AppendDenial;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_FE_STORE|
+  :append denial window record;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_ABORT:Respond 403 CapabilityDenied;
+  stop
+else (yes)
+endif
+
+if (mutating POST or PATCH?) then (yes)
+  :IdempotencyFilter.Check;
+  if (same key different body?) then (yes)
+    #$ACT_ABORT:Respond 409 Conflict;
+    stop
+  else (ok)
+  endif
+else (read)
+endif
+
+if (finding transition?) then (yes)
+  :EnforceSegregationOfDuties;
+  if (segregation of duties ok?) then (no)
+    :AppendDenial;
+    #$ACT_ABORT:Respond 403 SoDDenied;
+    stop
+  else (yes)
+  endif
+else (other)
+endif
+
+:dispatch ROD use case;
+#$ACT_OK:Respond use-case result;
+stop
+
+footer $DIAGRAM_ID_ACT_AUTH · $FOOTER_ACT
+@enduml

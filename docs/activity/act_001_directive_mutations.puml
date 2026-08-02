@@ -1,0 +1,90 @@
+@startuml act_001_directive_mutations
+' ============================================================
+' Title:     ACT-001 Directive mutations
+' Source:    docs/spec/contracts/directive/
+'            docs/spec/contracts/data_stores/directives_store.yaml
+' C4:        clients → api → directives_application → directives_repository → directives_store
+' Package:   rest_interface · directives_application
+' API:       POST|GET /directives · GET|PATCH|DELETE /directives/{lineage_id}
+'            :fork|:merge|:split|:restore · revisions
+' UseCase:   CreateDirective · ListDirectives · GetDirective · UpdateDirective · LifecycleTransitions
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/act_styles.puml
+!include common/act_identities.puml
+
+title $TITLE_ACT_DIR
+
+|#$ACT_LANE_INTERFACE|$LANE_API|
+start
+:Receive HTTP request\n(path + operationId from docs/api);
+
+:JwtAuthenticator.Authenticate;
+if (token valid?) then (no)
+  #$ACT_ABORT:Respond 401 Unauthorized;
+  stop
+else (yes)
+endif
+
+:CapabilityEnforcer.Authorize;
+if (allowed?) then (no)
+  :DenialAuditPort.AppendDenial;
+  #$ACT_ABORT:Respond 403 CapabilityDenied;
+  stop
+else (yes)
+endif
+
+if (method family?) then (CreateDirective\nPOST /directives)
+  |#$ACT_LANE_APPLICATION|$LANE_DIR_APP|
+  :CreateDirective.execute;
+  |#$ACT_LANE_INFRASTRUCTURE|$LANE_DIR_REPO|
+  :DirectiveRepository.Save dual documents;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :write_lock · insert · compile_request outbox;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 201 Directive · ETag · Location;
+  stop
+elseif (ListDirectives / GetDirective / GetRevision) then
+  |#$ACT_LANE_APPLICATION|$LANE_DIR_APP|
+  :GetDirective or ListDirectives.execute;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :read_lock · select;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Directive or page · ETag on Get;
+  stop
+elseif (UpdateDirective\nPATCH) then
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  :ETagFilter.Match If-Match;
+  if (match and status allows modify?) then (no)
+    #$ACT_ABORT:Respond 409 Conflict;
+    stop
+  else (yes)
+  endif
+  |#$ACT_LANE_APPLICATION|$LANE_DIR_APP|
+  :UpdateDirective.execute(changes);
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :write_lock · new revision · outbox;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Directive · ETag;
+  stop
+elseif (Retire DELETE) then
+  |#$ACT_LANE_APPLICATION|$LANE_DIR_APP|
+  :LifecycleTransitions.Retire;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :write_lock · status deprecated;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 Directive;
+  stop
+else (AIP-136 custom\nfork merge split restore)
+  |#$ACT_LANE_APPLICATION|$LANE_DIR_APP|
+  :LifecycleTransitions.Fork or Merge or Split or Restore;
+  :LineageService operation;
+  |#$ACT_LANE_FRAMEWORKS|$LANE_DIR_STORE|
+  :write_lock · lineage_operations · outbox;
+  |#$ACT_LANE_INTERFACE|$LANE_API|
+  #$ACT_OK:Respond 200 DirectiveLifecycleResponse;
+  stop
+endif
+
+footer $DIAGRAM_ID_ACT_DIR · $FOOTER_ACT
+@enduml

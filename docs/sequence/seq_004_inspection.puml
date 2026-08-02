@@ -1,0 +1,114 @@
+@startuml seq_004_inspection
+' ============================================================
+' Title:     SEQ-004 Inspection
+' Source:    docs/spec/contracts/inspection/
+' C4:        api → inspections_application → compiled_rules_repository
+'            · artifacts_repository · FindingOpenPort → findings_application
+' Package:   inspections_application · findings_application
+' API:       POST|GET /inspections · GET /inspections/{inspection_id}
+' UseCase:   CreateInspection · GetInspection · RunInspectionPipeline · OpenFindings
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_INSPECT
+
+actor "$ACTOR_CR" as CR
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_INS_APP" as INS #$SEQ_APPLICATION
+  participant "$P_FIND_APP" as FIND #$SEQ_APPLICATION
+end box
+box "Domain" #$SEQ_DOMAIN
+  participant "$P_RESOLVE" as RES #$SEQ_DOMAIN
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_CR_REPO" as CREPO #$SEQ_INFRASTRUCTURE
+  participant "$P_ART_REPO" as ART #$SEQ_INFRASTRUCTURE
+  participant "$P_TGT_GW" as TGT #$SEQ_EXTERNAL
+  participant "$P_FE_REPO" as FEREP #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_CR_STORE" as CSTORE #$SEQ_FRAMEWORKS
+  database "$P_ART_STORE" as ASTORE #$SEQ_FRAMEWORKS
+  database "$P_FE_STORE" as FSTORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== CreateInspection · $API_POST_INSPECTIONS · operationId createInspection ==
+CR -> CL: CreateInspection intent
+CL -> API: $API_POST_INSPECTIONS\nTargetSubmission · Idempotency-Key
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> API: CapabilityEnforcer.Authorize(inspection.submit)
+alt CapabilityDenied
+  API --> CL: 403 Error CapabilityDenied
+else allow
+  API -> INS: CreateInspection.execute(InspectRequest)
+  activate INS
+  opt remote target_ref
+    INS -> TGT: TargetSourcesGateway.Fetch
+    TGT --> INS: payload
+  end
+  INS -> CREPO: load frozen CgIrSnapshot
+  CREPO -> CSTORE: CAS get
+  CSTORE --> CREPO: snapshot
+  CREPO --> INS: CgIrSnapshot
+  INS -> INS: RunInspectionPipeline.execute
+  INS -> RES: ResolveConflict on evaluate outcomes
+  RES --> INS: resolved set
+  INS -> ART: InspectionArtifactPort.WriteOnce(Inspection)
+  ART -> ASTORE: write_once inspection_snapshots · pipeline_traces
+  ASTORE --> ART: ok
+  ART --> INS: stored
+  INS -> FIND: FindingOpenPort / OpenFindings.open_findings
+  activate FIND
+  FIND -> FEREP: append FindingCreated events
+  FEREP -> FSTORE: append_only · open keys
+  FSTORE --> FEREP: committed
+  FEREP --> FIND: ok
+  FIND --> INS: Result
+  deactivate FIND
+  INS --> API: Inspection
+  deactivate INS
+  API --> CL: 201 Inspection · Location
+end
+deactivate API
+
+== ListInspections · $API_GET_INSPECTIONS ==
+CR -> CL: list
+CL -> API: $API_GET_INSPECTIONS · filters
+activate API
+API -> API: CapabilityEnforcer.Authorize(inspection.view)
+API -> INS: list projections
+INS -> ART: list inspection snapshots
+ART -> ASTORE: query
+ASTORE --> ART: items
+ART --> INS: List~Inspection~
+INS --> API: ListInspectionsResponse
+API --> CL: 200 items
+deactivate API
+
+== GetInspection · $API_GET_INSPECTION · operationId getInspection ==
+CR -> CL: GetInspection
+CL -> API: $API_GET_INSPECTION
+activate API
+API -> API: CapabilityEnforcer.Authorize(inspection.view)
+API -> INS: GetInspection.execute(id)
+activate INS
+INS -> ART: Get snapshot
+ART -> ASTORE: read write-once
+ASTORE --> ART: Inspection
+ART --> INS: Inspection
+INS --> API: Inspection
+deactivate INS
+API --> CL: 200 Inspection
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_INSPECT · $FOOTER_SEQ
+@enduml

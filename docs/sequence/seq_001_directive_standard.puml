@@ -1,0 +1,141 @@
+@startuml seq_001_directive_standard
+' ============================================================
+' Title:     SEQ-001 Directive standard methods
+' Source:    docs/spec/contracts/directive/
+'            docs/spec/contracts/interfaces/rest_api.yaml
+' C4:        clients → api → directives_application → directives_repository → directives_store
+' Package:   rest_interface · directives_application · directives_infrastructure
+' API:       POST|GET /directives · GET|PATCH|DELETE /directives/{lineage_id}
+'            GET /directives/{lineage_id}/revisions/{revision}
+' UseCase:   CreateDirective · ListDirectives · GetDirective · UpdateDirective · LifecycleTransitions.Retire
+' Contract:  docs/standards/VERSION
+' ============================================================
+!include common/seq_styles.puml
+!include common/seq_identities.puml
+
+title $TITLE_SEQ_DIR_STD
+
+actor "$ACTOR_RO" as RO
+box "Interface" #$SEQ_INTERFACE
+  participant "$P_CLIENTS" as CL #$SEQ_INTERFACE
+  participant "$P_API" as API #$SEQ_INTERFACE
+end box
+box "Application" #$SEQ_APPLICATION
+  participant "$P_DIR_APP" as DIR #$SEQ_APPLICATION
+end box
+box "Infrastructure" #$SEQ_INFRASTRUCTURE
+  participant "$P_DIR_REPO" as REPO #$SEQ_INFRASTRUCTURE
+end box
+box "Frameworks" #$SEQ_FRAMEWORKS
+  database "$P_DIR_STORE" as STORE #$SEQ_FRAMEWORKS
+end box
+
+autonumber
+
+== CreateDirective · $API_POST_DIRECTIVES ==
+RO -> CL: CreateDirective intent
+CL -> API: $API_POST_DIRECTIVES\nDirectiveCreate · Idempotency-Key
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> API: CapabilityEnforcer.Authorize(directive.create)
+alt CapabilityDenied
+  API --> CL: 403 Error CapabilityDenied
+else allow
+  API -> DIR: CreateDirective.execute(DirectiveCreateRequest)
+  activate DIR
+  DIR -> REPO: DirectiveRepository.Save(Directive)
+  activate REPO
+  REPO -> STORE: write_lock · insert dual documents · compile_request outbox
+  STORE --> REPO: lineage_id · revision · execution_id
+  REPO --> DIR: Directive
+  deactivate REPO
+  DIR --> API: Directive
+  deactivate DIR
+  API --> CL: 201 Directive · ETag · Location
+end
+deactivate API
+CL --> RO: Directive resource
+
+== ListDirectives · $API_GET_DIRECTIVES ==
+RO -> CL: ListDirectives intent
+CL -> API: $API_GET_DIRECTIVES · filters · page_token
+activate API
+API -> API: JwtAuthenticator.Authenticate
+API -> DIR: ListDirectives.execute(filter)
+activate DIR
+DIR -> REPO: DirectiveRepository.List
+REPO -> STORE: read_lock · select
+STORE --> REPO: rows
+REPO --> DIR: List~Directive~
+DIR --> API: ListDirectivesResponse
+deactivate DIR
+API --> CL: 200 items · next_page_token
+deactivate API
+
+== GetDirective · $API_GET_DIRECTIVE ==
+RO -> CL: GetDirective intent
+CL -> API: $API_GET_DIRECTIVE
+activate API
+API -> DIR: GetDirective.execute(lineage_id)
+activate DIR
+DIR -> REPO: DirectiveRepository.Get
+REPO -> STORE: read
+STORE --> REPO: head revision
+REPO --> DIR: Directive
+DIR --> API: Directive
+deactivate DIR
+API --> CL: 200 Directive · ETag W/"{lineage_id}:{revision}"
+deactivate API
+
+== UpdateDirective · $API_PATCH_DIRECTIVE ==
+RO -> CL: UpdateDirective intent
+CL -> API: $API_PATCH_DIRECTIVE\nDirectiveUpdate.changes · If-Match · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(directive.modify)
+API -> API: ETagFilter.Match(If-Match)
+alt If-Match mismatch or status blocks modify
+  API --> CL: 409 Conflict
+else allow
+  API -> DIR: UpdateDirective.execute(DirectiveUpdateRequest)
+  activate DIR
+  DIR -> REPO: Save new revision · enqueue compile_request
+  REPO -> STORE: write_lock · append revision · outbox
+  STORE --> REPO: new revision
+  REPO --> DIR: Directive
+  DIR --> API: Directive
+  deactivate DIR
+  API --> CL: 200 Directive · ETag
+end
+deactivate API
+
+== LifecycleTransitions.Retire · $API_DELETE_DIRECTIVE ==
+RO -> CL: Retire intent
+CL -> API: $API_DELETE_DIRECTIVE · If-Match · Idempotency-Key
+activate API
+API -> API: CapabilityEnforcer.Authorize(directive.retire)
+API -> DIR: LifecycleTransitions.Retire(lineage_id)
+activate DIR
+DIR -> REPO: status deprecated
+REPO -> STORE: write_lock · update status
+STORE --> REPO: Directive
+REPO --> DIR: Directive
+DIR --> API: Directive
+deactivate DIR
+API --> CL: 200 Directive (soft deleted)
+deactivate API
+
+== Get revision · $API_GET_REVISION ==
+RO -> CL: historical Get
+CL -> API: $API_GET_REVISION
+activate API
+API -> DIR: GetDirective revision
+DIR -> REPO: GetRevision
+REPO -> STORE: select revision
+STORE --> REPO: dual documents
+REPO --> DIR: Directive
+DIR --> API: Directive
+API --> CL: 200 Directive
+deactivate API
+
+footer $DIAGRAM_ID_SEQ_DIR_STD · $FOOTER_SEQ
+@enduml
