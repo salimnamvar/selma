@@ -1,0 +1,29 @@
+' ============================================================
+' Section: uc_section_certification.puml
+' Group:   certification_tool (offline · not peer)
+' Gates AA-01 … AA-09 as included validation use cases
+' ============================================================
+
+rectangle "$PKG_CERTIFICATION_TOOL" as GRP_CERT $UC_PKG_EXTERNAL {
+
+  usecase "$UC_NAME_RUN_ARCHITECTURAL_CERTIFICATION" as UC_CERT_RUN $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_MEDIATED_FEEDBACK" as UC_CERT_AA01 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_DECLARATIVE_GOVERNANCE" as UC_CERT_AA02 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_EVALUATOR_PURITY" as UC_CERT_AA03 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_SEGREGATION_OF_DUTIES" as UC_CERT_AA04 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_CONFLICT_DETERMINISM" as UC_CERT_AA05 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_DISCRIMINATOR_COMPLETENESS" as UC_CERT_AA06 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_PORTABLE_SERIALIZATION" as UC_CERT_AA07 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_HERMETICITY_COMPLETENESS" as UC_CERT_AA08 $CA_FILL_EXTERNAL
+  usecase "$UC_NAME_VALIDATE_EVENT_CHAIN_INTEGRITY" as UC_CERT_AA09 $CA_FILL_EXTERNAL
+
+  UC_CERT_RUN ..> UC_CERT_AA01 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA02 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA03 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA04 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA05 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA06 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA07 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA08 : <<include>>
+  UC_CERT_RUN ..> UC_CERT_AA09 : <<include>>
+}

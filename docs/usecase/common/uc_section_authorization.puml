@@ -1,0 +1,17 @@
+' ============================================================
+' Section: uc_section_authorization.puml
+' Group:   rest_interface (C4: api) — capability / segregation gate
+' Actor-visible ingress goals; not *_application use-case classes.
+' ============================================================
+
+rectangle "$PKG_REST_INTERFACE" as GRP_AUTH $UC_PKG_INTERFACE {
+
+  usecase "$UC_NAME_AUTHENTICATE_ACTOR" as UC_AUTH_AUTHN $CA_FILL_INTERFACE
+  usecase "$UC_NAME_CHECK_CAPABILITY" as UC_AUTH_CHECK $CA_FILL_GATE
+  usecase "$UC_NAME_APPEND_DENIAL" as UC_AUTH_DENY $CA_FILL_GATE
+  usecase "$UC_NAME_ENFORCE_SEGREGATION_OF_DUTIES" as UC_AUTH_SOD $CA_FILL_GATE
+
+  UC_AUTH_AUTHN ..> UC_AUTH_CHECK : <<include>>
+  UC_AUTH_CHECK ..> UC_AUTH_SOD : <<include>>
+  UC_AUTH_CHECK ..> UC_AUTH_DENY : <<extend>>
+}

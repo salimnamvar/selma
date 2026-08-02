@@ -1,0 +1,9 @@
+' ============================================================
+' Section: uc_section_actors.puml
+' C4 context persons + system / optional continuous-integration
+' ============================================================
+
+actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
+actor "$ACTOR_COMPLIANCE_REPRESENTATIVE" as ACTOR_CR $CA_FILL_ACTOR
+actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
+actor "$ACTOR_OPTIONAL_CI_CLIENT" as ACTOR_CI $CA_FILL_EXTERNAL

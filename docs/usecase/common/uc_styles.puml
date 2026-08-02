@@ -1,69 +1,108 @@
 ' ============================================================
-' Selma — Use Case Diagram Style Sheet
-' ============================================================
-' Shared skinparam definitions for all UC-00x diagrams.
-' Include at the top of every use case diagram:
-'   !include common/uc_styles.puml
+' Title:     Selma — Use Case Diagram Styles
+' Purpose:   Use-case chrome + aliases to CA palette.
+'            MACRO = Clean Architecture layers; MICRO = UC roles.
+' Contract:  1.1.0
+'
+' Include order (orchestrator):
+'   !include common/uc_styles.puml   (pulls ca_palette)
+'   !include common/uc_identities.puml
+'   !include common/uc_section_*.puml
 ' ============================================================
 
-skinparam backgroundColor #FEFEFE
+!include ../../standards/common/ca_palette.puml
+
+!theme plain
+skinparam backgroundColor $CA_CANVAS
 skinparam shadowing false
 skinparam roundCorner 8
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 11
+skinparam defaultFontColor $CA_INK
+skinparam handwritten false
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor $CA_INK
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 40
 
-' ---- default font ----
-skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
-
-' ---- actor ----
+' ---- actor (MACRO actors) ----
 skinparam actor {
-  BackgroundColor #E3F2FD
-  BorderColor #1565C0
-  FontColor #0D47A1
-  FontSize 13
+  BackgroundColor $CA_FILL_ACTOR
+  BorderColor $CA_BORDER_ACTOR
+  FontColor $CA_INK
+  FontSize 12
   Style awesome
 }
 
-' ---- use case (oval) ----
+' ---- use case oval (MACRO application) ----
 skinparam usecase {
-  BackgroundColor #FFF8E1
-  BorderColor #F9A825
-  FontColor #3E2723
+  BackgroundColor $CA_FILL_APPLICATION
+  BorderColor $CA_SOLID_APPLICATION
+  FontColor $CA_INK
   FontSize 11
-  ArrowColor #546E7A
-  ArrowThickness 1
+  ArrowColor $CA_ARROW
+  ArrowThickness 1.5
 }
 
 ' ---- rectangle / system boundary ----
 skinparam rectangle {
-  BackgroundColor #F5F5F5
-  BorderColor #78909C
+  BackgroundColor $CA_BOUNDARY_DEFAULT_FILL
+  BorderColor $CA_BORDER_NEUTRAL
   BorderStyle dashed
-  FontColor #263238
-  FontSize 14
+  FontColor $CA_INK
+  FontSize 12
   FontStyle bold
 }
 
-' ---- package ----
+' ---- package (group chrome) ----
 skinparam package {
-  BackgroundColor #FAFAFA
-  BorderColor #90A4AE
+  BackgroundColor $CA_BOUNDARY_DEFAULT_FILL
+  BorderColor $CA_BORDER_NEUTRAL
+  FontSize 11
+  FontStyle bold
+  FontColor $CA_INK
 }
 
-' ---- note ----
-skinparam note {
-  BackgroundColor #FFFDE7
-  BorderColor #FFB300
-  FontSize 10
-  FontColor #4E342E
-}
+skinparam ArrowColor $CA_ARROW
+skinparam ArrowThickness 1.5
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor $CA_INK
 
-' ---- arrow (association / dependency) ----
-skinparam ArrowColor #546E7A
-skinparam ArrowThickness 1
-
-' ---- legend ----
 skinparam legend {
-  BackgroundColor #FAFAFA
-  BorderColor #B0BEC5
+  BackgroundColor $CA_LEGEND_BG
+  BorderColor $CA_LEGEND_BORDER
   FontSize 10
 }
+
+' ── MACRO aliases (CA layers) ───────────────────────────────
+!$UC_LAYER_ACTOR_FILL        = $CA_FILL_ACTOR
+!$UC_LAYER_ACTOR_BORDER      = $CA_BORDER_ACTOR
+!$UC_LAYER_INTERFACE_FILL    = $CA_FILL_INTERFACE
+!$UC_LAYER_INTERFACE_BORDER  = $CA_SOLID_INTERFACE
+!$UC_LAYER_APPLICATION_FILL  = $CA_FILL_APPLICATION
+!$UC_LAYER_APPLICATION_BORDER = $CA_SOLID_APPLICATION
+!$UC_LAYER_DOMAIN_FILL       = $CA_FILL_DOMAIN
+!$UC_LAYER_DOMAIN_BORDER     = $CA_SOLID_DOMAIN
+!$UC_LAYER_EXTERNAL_FILL     = $CA_FILL_EXTERNAL
+!$UC_LAYER_EXTERNAL_BORDER   = $CA_SOLID_EXTERNAL
+
+' Package ring strings (must match package / class diagrams)
+!$UC_PKG_APPLICATION       = $CA_PKG_APPLICATION
+!$UC_PKG_APPLICATION_NEST  = $CA_PKG_APPLICATION_NEST
+!$UC_PKG_INTERFACE         = $CA_PKG_INTERFACE
+!$UC_PKG_INTERFACE_NEST    = $CA_PKG_INTERFACE_NEST
+!$UC_PKG_DOMAIN            = $CA_PKG_DOMAIN
+!$UC_PKG_DOMAIN_NEST       = $CA_PKG_DOMAIN_NEST
+!$UC_PKG_EXTERNAL          = $CA_PKG_EXTERNAL
+!$UC_PKG_GATE              = $CA_PKG_GATE
+!$UC_PKG_HERMETIC          = $CA_PKG_HERMETIC
+!$UC_PKG_ACTOR             = $CA_PKG_ACTOR
+
+' ── MICRO aliases ───────────────────────────────────────────
+!$UC_ARCH_USECASE = $CA_PKG_APPLICATION
+!$UC_ARCH_GATE    = $CA_PKG_GATE
+!$UC_ARCH_DOMAIN  = $CA_PKG_DOMAIN
+!$UC_ARCH_OFFLINE = $CA_PKG_EXTERNAL
+!$UC_ARCH_HERMETIC = $CA_PKG_HERMETIC

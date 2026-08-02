@@ -1,0 +1,26 @@
+' ============================================================
+' Section: uc_section_directives.puml
+' Group:   directives_application (C4: directives_application)
+' ROD use cases — identical to package APP_DIR and class UC_DIR
+' ============================================================
+
+rectangle "$PKG_DIRECTIVES_APPLICATION" as GRP_DIR $UC_PKG_APPLICATION {
+
+  usecase "$UC_NAME_CREATE_DIRECTIVE" as UC_DIR_CREATE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_GET_DIRECTIVE" as UC_DIR_GET $CA_FILL_APPLICATION
+  usecase "$UC_NAME_LIST_DIRECTIVES" as UC_DIR_LIST $CA_FILL_APPLICATION
+  usecase "$UC_NAME_UPDATE_DIRECTIVE" as UC_DIR_UPD $CA_FILL_APPLICATION
+  usecase "$UC_NAME_LIFECYCLE_TRANSITIONS" as UC_DIR_LIFE $CA_FILL_APPLICATION
+
+  usecase "$UC_NAME_RETIRE_DIRECTIVE" as UC_DIR_RETIRE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_FORK_DIRECTIVE" as UC_DIR_FORK $CA_FILL_APPLICATION
+  usecase "$UC_NAME_MERGE_DIRECTIVE" as UC_DIR_MERGE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_SPLIT_DIRECTIVE" as UC_DIR_SPLIT $CA_FILL_APPLICATION
+  usecase "$UC_NAME_RESTORE_DIRECTIVE" as UC_DIR_RESTORE $CA_FILL_APPLICATION
+
+  UC_DIR_LIFE ..> UC_DIR_RETIRE : <<include>>
+  UC_DIR_LIFE ..> UC_DIR_FORK : <<include>>
+  UC_DIR_LIFE ..> UC_DIR_MERGE : <<include>>
+  UC_DIR_LIFE ..> UC_DIR_SPLIT : <<include>>
+  UC_DIR_LIFE ..> UC_DIR_RESTORE : <<include>>
+}

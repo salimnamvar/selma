@@ -1,0 +1,14 @@
+' ============================================================
+' Section: uc_section_inspection.puml
+' Group:   inspections_application (C4: inspections_application)
+' ROD use cases — identical to package APP_INS and class UC_INS
+' ============================================================
+
+rectangle "$PKG_INSPECTIONS_APPLICATION" as GRP_INS $UC_PKG_APPLICATION {
+
+  usecase "$UC_NAME_CREATE_INSPECTION" as UC_INS_CREATE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_GET_INSPECTION" as UC_INS_GET $CA_FILL_APPLICATION
+  usecase "$UC_NAME_RUN_INSPECTION_PIPELINE" as UC_INS_PIPE $CA_FILL_APPLICATION
+
+  UC_INS_CREATE ..> UC_INS_PIPE : <<include>>
+}

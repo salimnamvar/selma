@@ -1,0 +1,17 @@
+' ============================================================
+' Section: uc_section_findings.puml
+' Group:   findings_application (C4: findings_application)
+' ROD use cases — identical to package APP_FIND and class UC_FIND
+' ============================================================
+
+rectangle "$PKG_FINDINGS_APPLICATION" as GRP_FIND $UC_PKG_APPLICATION {
+
+  usecase "$UC_NAME_GET_FINDING" as UC_FIND_GET $CA_FILL_APPLICATION
+  usecase "$UC_NAME_LIST_FINDINGS" as UC_FIND_LIST $CA_FILL_APPLICATION
+  usecase "$UC_NAME_TRANSITION_FINDING" as UC_FIND_TRANS $CA_FILL_APPLICATION
+  usecase "$UC_NAME_GET_FINDING_GUIDANCE" as UC_FIND_GUIDE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_ATTACH_EVIDENCE" as UC_FIND_EVID $CA_FILL_APPLICATION
+  usecase "$UC_NAME_OPEN_FINDINGS" as UC_FIND_OPEN $CA_FILL_APPLICATION
+  usecase "$UC_NAME_LIST_FINDING_AGGREGATES" as UC_FIND_AGGR $CA_FILL_APPLICATION
+  usecase "$UC_NAME_REVIEW_CONFLICT_ARTIFACT" as UC_FIND_CONFLICT $CA_FILL_APPLICATION
+}

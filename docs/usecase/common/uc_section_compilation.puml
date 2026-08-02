@@ -1,0 +1,17 @@
+' ============================================================
+' Section: uc_section_compilation.puml
+' Group:   compiled_rules_application (C4: compilation_application)
+' ROD use cases — identical to package APP_CR and class UC_CR
+' ============================================================
+
+rectangle "$PKG_COMPILED_RULES_APPLICATION" as GRP_CR $UC_PKG_APPLICATION {
+
+  usecase "$UC_NAME_COMPILE_DIRECTIVES" as UC_CR_COMPILE $CA_FILL_APPLICATION
+  usecase "$UC_NAME_PUBLISH_COMPILED_RULES" as UC_CR_PUB $CA_FILL_APPLICATION
+  usecase "$UC_NAME_DRAIN_OUTBOX" as UC_CR_DRAIN $CA_FILL_APPLICATION
+  usecase "$UC_NAME_VALIDATE_DIRECTIVE_DOCUMENTS" as UC_CR_VALID $CA_FILL_HERMETIC
+
+  UC_CR_DRAIN ..> UC_CR_COMPILE : <<include>>
+  UC_CR_COMPILE ..> UC_CR_VALID : <<include>>
+  UC_CR_COMPILE ..> UC_CR_PUB : <<include>>
+}
