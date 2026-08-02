@@ -9,57 +9,91 @@
 | | |
 | :--- | :--- |
 | **Answers** | *What types and methods* realize each Clean Architecture package? |
-| **Owns 100%** | Aggregate/entity/VO/event members; domain service signatures; ISP **port method shapes**; ROD use-case classes; DTO fields; adapter method implements; interface router/command/screen types; composition-root types |
+| **Owns 100%** | Aggregate/entity/VO/event members; domain service signatures; ISP **port method shapes**; ROD use-case classes; DTO fields; adapter method implements; interface router/command/screen types; composition-root types; shared `common/cd_*` identities and C4-aligned colors |
 | **Does not own** | Package module trees / dependency edges (package/) · peer inventing / Component Rel (c4-model/) · zones / TLS / RPO (deployment/) · FSM transition tables as normative text (state/ + spec/) · store mutability / capability catalog (spec/) |
-| **Join key** | C4 peer IDs in headers; package module names on package boxes |
+| **Join key** | C4 peer IDs + package module names (identical strings to package / state / deployment identities) |
 
-PlantUML class diagrams are an **implementation type view**. They must **not** restate package layout as the product graph, deployment topology, or contract prose. **No PlantUML `note` blocks** — unfinished design smell; encode as stereotypes, fields, methods, or invariants on types.
+**No PlantUML `note` blocks.** Encode design as types, stereotypes, fields, and methods.
 
-## Prerequisites
+## Source layout (like C4 / package / state / deployment `common/`)
 
-- [PlantUML](https://plantuml.com/) (v1.2022.1+)
-- Java Runtime (for PlantUML rendering)
+| Path | Role | Edit when… |
+| :--- | :--- | :--- |
+| [`common/cd_styles.puml`](common/cd_styles.puml) | Skinparams + **semantic color macros** (C4-identical hex) | Visual language / harmony |
+| [`common/cd_identities.puml`](common/cd_identities.puml) | Diagram titles, package module titles, C4 IDs, port names | Rename labels / peers |
+| [`common/cd_section_domain_*.puml`](common/) | Domain modules by package | Aggregates / VOs / services |
+| [`common/cd_section_domain_connections.puml`](common/cd_section_domain_connections.puml) | Domain type edges | Relationships |
+| [`common/cd_section_app_*.puml`](common/) | Ports, DTOs, use cases | Application layer |
+| [`common/cd_section_app_connections.puml`](common/cd_section_app_connections.puml) | Use case → port edges | Wiring |
+| [`common/cd_section_infra_*.puml`](common/) | Adapters by infrastructure package | Implementers |
+| [`common/cd_section_infra_connections.puml`](common/cd_section_infra_connections.puml) | `..|>` implements + platform | Adapter wiring |
+| [`common/cd_section_iface_*.puml`](common/) | REST/CLI/TUI + composition | Driving adapters |
+| [`common/cd_section_iface_connections.puml`](common/cd_section_iface_connections.puml) | Gate pipeline + UC edges | Interface wiring |
+| [`cd_00N_*.puml`](.) | Orchestrators only | Include order |
 
-## Usage
+**Include order:** `cd_styles` → `cd_identities` → `cd_section_*` → `*_connections`.
 
 ```bash
 plantuml docs/class/*.puml
-plantuml -tsvg docs/class/*.puml
 python scripts/check_design_alignment.py
 ```
 
+## Color harmony (C4 · package · deployment · state · class)
+
+| Archetype | Fill / border | C4 / state meaning |
+| :--- | :--- | :--- |
+| Aggregate Root | `#E8F5E9` / `#2C6E49` | Data store |
+| Value Object / DTO / Read Model | `#EEF4FC` / `#3B7DD8` | Container / resource |
+| Domain Service / Use Case | `#E8F5E9` / `#1B7A6E` | System / process |
+| Port | `#FDEDEC` / `#A93226` | Capability gate |
+| Domain Event / Enum | `#FEF5E7` / `#B9770E` | Hermetic / pending |
+| Adapter / platform | `#FEF5E7` / `#B9770E` | Hermetic amber |
+| Interface adapter | `#EEF4FC` / `#3B7DD8` | Container |
+| Composition root | `#F5EEF8` / `#8E44AD` | Domain / mediated |
+| Entity | `#ECEFF1` / `#546E7A` | Neutral |
+| Domain package ring | `#F0F4F8` / `#78909C` | Package domain layer |
+| Application package ring | `#E8F5E9` / `#1B7A6E` | Package application layer |
+| Infrastructure package ring | `#FEF5E7` / `#B9770E` | Package infrastructure layer |
+
+**Rule:** same semantic → same hex. Change colors only in `cd_styles.puml` / section archetype tags, never invent ad-hoc hex in new types.
+
+## Naming (aligned with other views)
+
+| View | File pattern | Example |
+| :--- | :--- | :--- |
+| C4 | `c4_selma_{level}.puml` | `c4_selma_component.puml` |
+| Package | `pkg_NNN_*.puml` | `pkg_001_clean_architecture.puml` |
+| Deployment | `dep_NNN_*.puml` | `dep_001_production.puml` |
+| State | `state_machine_NNN_*.puml` | `state_machine_001_finding_lifecycle.puml` |
+| **Class** | `cd_NNN_*.puml` | `cd_001_domain_model.puml` |
+
+| Element | Convention |
+| :--- | :--- |
+| Diagram ID | `CLS-NNN` / `Class NNN` in title and footer |
+| Package boxes | Exact `*_domain` / `*_application` / `*_infrastructure` / `*_interface` strings from package identities |
+| C4 subtitles | e.g. `compiled_rules_application` + `(C4: compilation_application)` |
+| Port names | `DirectiveRepository`, `FindingOpenPort`, … (package `$PORT_*`) |
+| Full words | Prefer `segregation of duties`, `hybrid logical clock`, `content-addressed storage` in stereotypes/prose |
+| Type aliases | Stable PascalCase (`Directive`, `SqlDirectiveWriter`) |
+
 ## Diagram index
 
-| ID | File | Clean Architecture layer | Responsibility |
-|----|------|--------------------------|----------------|
-| CLS-001 | [cd_001_domain_model.puml](cd_001_domain_model.puml) | Domain | Aggregates, entities, VOs, domain services, domain events — by `*_domain` package |
-| CLS-002 | [cd_002_application_services.puml](cd_002_application_services.puml) | Application | ISP ports (full methods), ROD use cases, DTOs — by `*_application` package |
-| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure | One adapter class per port + platform Hasher/HLC |
-| CLS-004 | [cd_004_interface_composition.puml](cd_004_interface_composition.puml) | Interface + Composition | REST/CLI/TUI driving adapters, gate pipeline, DI wiring |
+| ID | File | Clean Architecture layer | Sections |
+|----|------|--------------------------|----------|
+| CLS-001 | [cd_001_domain_model.puml](cd_001_domain_model.puml) | Domain | `cd_section_domain_*` |
+| CLS-002 | [cd_002_application_services.puml](cd_002_application_services.puml) | Application | `cd_section_app_*` |
+| CLS-003 | [cd_003_infrastructure_adapters.puml](cd_003_infrastructure_adapters.puml) | Infrastructure | `cd_section_infra_*` |
+| CLS-004 | [cd_004_interface_composition.puml](cd_004_interface_composition.puml) | Interface + Composition | `cd_section_iface_*` |
 
 ## Layer coverage (Clean Architecture A–Z)
 
 | CA layer | Diagram | Package modules covered |
 |----------|---------|-------------------------|
-| Entities / domain | CLS-001 | `shared_domain`, `directives_domain`, `compiled_rules_domain`, `inspections_domain`, `findings_domain`, `conflicts_domain`, auth grants, certification **payload types** |
+| Entities / domain | CLS-001 | `shared_domain`, `directives_domain`, `compiled_rules_domain`, `inspections_domain`, `findings_domain`, `conflicts_domain`, auth grants, certification payload types |
 | Use cases | CLS-002 | `directives_application`, `compiled_rules_application` (C4: `compilation_application`), `inspections_application`, `findings_application` |
 | Interface adapters (driven) | CLS-003 | `*_infrastructure` including `DetectionEvaluator`, `DenialAuditAdapter` |
 | Interface adapters (driving) | CLS-004 | `rest_interface`, `cli_interface`, `tui_interface` |
-| Frameworks & drivers | CLS-003 (implements only) | Store **access** via adapters; store **semantics** remain in spec |
-| Composition / main | CLS-004 | `composition_root` (`ApplicationContainer`, `PortBindings`, `OutboxDrainScheduler`) |
-
-## Resource-oriented design (ROD)
-
-Use cases are **Verb + Resource** types (or a lifecycle façade with explicit verb methods):
-
-| Resource cluster | Use cases (CLS-002) |
-|------------------|---------------------|
-| Directives | `CreateDirective`, `GetDirective`, `ListDirectives`, `UpdateDirective`, `LifecycleTransitions` (Retire/Fork/Merge/Split/Restore) |
-| Compilation | `CompileDirectives`, `PublishCompiledRules`, `DrainOutbox`, `ValidateDirectiveDocuments` |
-| Inspections | `CreateInspection`, `GetInspection`, `RunInspectionPipeline` |
-| Findings | `GetFinding`, `ListFindings`, `TransitionFinding`, `GetFindingGuidance`, `AttachEvidence`, `OpenFindings`, `ListFindingAggregates`, `ReviewConflictArtifact` |
-
-Port methods use the same Verb+Resource vocabulary (`GetDirective`, `SaveDirective`, `AppendFindingEvent`, …).
+| Composition / main | CLS-004 | `composition_root` |
 
 ## ISP ports (method authority = this view)
 
@@ -78,21 +112,6 @@ Port methods use the same Verb+Resource vocabulary (`GetDirective`, `SaveDirecti
 | `TargetSourcesGateway` | `inspections_application` | `HttpTargetSourcesGateway` |
 
 Module ownership of ports: [`../package/README.md`](../package/README.md). Peer graph: [`../c4-model/`](../c4-model/README.md).
-
-## Shared styles
-
-[`common/cd_styles.puml`](common/cd_styles.puml) — local `!include` only (no `!includeurl`).
-
-| Archetype | Background |
-|-----------|------------|
-| Aggregate Root | `#E0F2F1` |
-| Value Object / DTO / Read Model | `#E8EAF6` |
-| Domain Event / Enum | `#FFF8E1` |
-| Domain Service / Use Case | `#E8F5E9` |
-| Port | `#FCE4EC` |
-| Entity | `#ECEFF1` |
-| Adapter | `#FFE0B2` |
-| Interface adapter | `#BBDEFB` |
 
 ## Related
 

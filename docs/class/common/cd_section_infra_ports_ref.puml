@@ -1,0 +1,15 @@
+' Section: cd_section_infra_ports_ref.puml
+
+package "application.ports (ref)" as PORTS #FDEDEC/A93226 {
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
+  interface "**CompilerReadPort**" as CompilerReadPort <<Port>>
+  interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>>
+  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>>
+  interface "**FindingEventRepository**" as FindingEventRepository <<Port>>
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
+  interface "**InspectionArtifactPort**" as InspectionArtifactPort <<Port>>
+  interface "**FindingArtifactPort**" as FindingArtifactPort <<Port>>
+  interface "**CertificationArtifactPort**" as CertificationArtifactPort <<Port>>
+  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>>
+}
+

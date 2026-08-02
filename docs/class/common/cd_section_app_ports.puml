@@ -1,0 +1,105 @@
+' Section: cd_section_app_ports.puml
+
+package "application.ports" as PORTS #FDEDEC/A93226 {
+
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>> {
+    + GetDirective(lineage_id: LineageId): Directive
+    + ListDirectives(filter: Map): List~Directive~
+    + SaveDirective(directive: Directive, if_match: ETag): void
+    + AllocateExecutionId(): ExecutionId
+    + EnqueueCompileRequest(lineage_id: LineageId, revision: Revision): void
+    --
+    <<owner>> directives_application
+    <<implementer>> directives_infrastructure.SqlDirectiveWriter
+  }
+
+  interface "**CompilerReadPort**" as CompilerReadPort <<Port>> {
+    + GetDirectiveExecutableDocument(id: LineageId | ExecutionId): ExecutableRuleDoc
+    --
+    <<owner>> compiled_rules_application
+    <<c4>> compilation_application
+    <<implementer>> directives_infrastructure.SqlCompilerReader
+  }
+
+  interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>> {
+    + GetDirectivePolicyDoctrine(ref: PairedPolicyRef): GuidancePayload
+    --
+    <<owner>> findings_application
+    <<implementer>> directives_infrastructure.SqlGuidanceReader
+  }
+
+  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>> {
+    + GetCompiledRules(snapshot_hash: SnapshotHash): CgIrSnapshot
+    + GetLatestCompiledRules(lineage_id: LineageId): CgIrSnapshot
+    + PublishCompiledRules(snapshot: CgIrSnapshot): void
+    --
+    <<owner>> compiled_rules_application
+    <<consumers>> inspections_application · findings_application (segregation of duties)
+    <<implementer>> compiled_rules_infrastructure
+  }
+
+  interface "**FindingEventRepository**" as FindingEventRepository <<Port>> {
+    + AppendFindingEvent(event: DomainEvent, expected_chain_head: String?): void
+    + ListFindingEvents(finding_id: FindingId): List~DomainEvent~
+    + ListFindingEventsSince(from: HlcTimestamp): List~DomainEvent~
+    + GetFindingProjection(finding_id: FindingId): FindingProjection
+    --
+    <<owner>> findings_application
+    <<implementer>> findings_infrastructure.AppendOnlyFindingEventRepository
+  }
+
+  interface "**FindingOpenPort**" as FindingOpenPort <<Port>> {
+    + open_findings(inspection_id: UUID, findings: List~DetectionOutcome~): Result
+    --
+    <<owner>> findings_application
+    <<implementer>> findings_application.OpenFindings
+    <<consumer>> inspections_application
+    <<atomic>> FindingCreated + Open
+  }
+
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>> {
+    + AppendDenial(actor: ActorId, capability: String, action: String, reason: String, timestamp: HlcTimestamp): void
+    --
+    <<owner>> findings_application
+    <<consumer>> rest|cli|tui_interface only
+    <<implementer>> findings_infrastructure.DenialAuditAdapter
+  }
+
+  interface "**InspectionArtifactPort**" as InspectionArtifactPort <<Port>> {
+    + SaveInspectionArtifact(snapshot: Inspection): void
+    + GetInspectionArtifact(id: UUID): Inspection
+    --
+    <<owner>> inspections_application
+    <<implementer>> artifacts_infrastructure.InspectionArtifactAdapter
+  }
+
+  interface "**FindingArtifactPort**" as FindingArtifactPort <<Port>> {
+    + SaveConflictArtifact(artifact: ConflictArtifact): void
+    + GetConflictArtifact(id: UUID): ConflictArtifact
+    + SaveEvidenceArtifact(artifact: EvidenceRef): void
+    --
+    <<owner>> findings_application
+    <<implementer>> artifacts_infrastructure.FindingArtifactAdapter
+  }
+
+  interface "**CertificationArtifactPort**" as CertificationArtifactPort <<Port>> {
+    + SaveCertificationArtifact(run: CertificationRun): void
+    --
+    <<owner>> composition binds offline certification_tool
+    <<implementer>> artifacts_infrastructure.CertificationArtifactAdapter
+  }
+
+  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>> {
+    + GetTarget(target_ref: String): Target
+    + HashTarget(target: Target): TargetHash
+    --
+    <<owner>> inspections_application
+    <<implementer>> inspections_infrastructure.HttpTargetSourcesGateway
+    <<resilience>> timeout · retries · circuit breaker · bulkhead
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  DTOs
+' ═══════════════════════════════════════════════════════════
+

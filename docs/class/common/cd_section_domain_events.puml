@@ -1,0 +1,80 @@
+' ============================================================
+' Section: cd_section_domain_events.puml
+' ============================================================
+
+package "domain_events" as EVT_PKG #FEF5E7/B9770E {
+
+  abstract class "**DomainEvent**" as DomainEvent <<Domain Event>> #FEF5E7/B9770E {
+    + event_id: EventId
+    + occurred_at: HlcTimestamp
+  }
+
+  class "**FindingCreated**" as FindingCreated <<Domain Event>> #FEF5E7/B9770E {
+    + finding_id: FindingId
+    + inspection_id: UUID
+    + severity: Severity
+  }
+
+  class "**FindingStateChanged**" as FindingStateChanged <<Domain Event>> #FEF5E7/B9770E {
+    + finding_id: FindingId
+    + from_state: FindingState
+    + to_state: FindingState
+    + actor_id: ActorId
+  }
+
+  class "**DispositionChanged**" as DispositionChanged <<Domain Event>> #FEF5E7/B9770E {
+    + finding_id: FindingId
+    + old_disposition: Disposition
+    + new_disposition: Disposition
+  }
+
+  class "**FindingClosed**" as FindingClosed <<Domain Event>> #FEF5E7/B9770E {
+    + finding_id: FindingId
+    + final_disposition: Disposition
+  }
+
+  class "**CapabilityDenied**" as CapabilityDenied <<Domain Event>> #FEF5E7/B9770E {
+    + capability_id: CapabilityId
+    + actor_id: ActorId
+    + action: String
+    + reason: String
+  }
+
+  class "**CgIrPublished**" as CgIrPublished <<Domain Event>> #FEF5E7/B9770E {
+    + cg_ir_snapshot_hash: SnapshotHash
+    + engine_version: String
+  }
+
+  class "**InspectionCompleted**" as InspectionCompleted <<Domain Event>> #FEF5E7/B9770E {
+    + inspection_id: UUID
+    + finding_count: int
+    + status: InspectionStatus
+  }
+
+  class "**ConflictEscalated**" as ConflictEscalated <<Domain Event>> #FEF5E7/B9770E {
+    + conflict_kind: ConflictKind
+    + directive_a: LineageId
+    + directive_b: LineageId
+  }
+
+  class "**DirectiveLifecycleChanged**" as DirectiveLifecycleChanged <<Domain Event>> #FEF5E7/B9770E {
+    + lineage_id: LineageId
+    + from_status: DirectiveStatus
+    + to_status: DirectiveStatus
+  }
+
+  FindingCreated --|> DomainEvent
+  FindingStateChanged --|> DomainEvent
+  DispositionChanged --|> DomainEvent
+  FindingClosed --|> DomainEvent
+  CapabilityDenied --|> DomainEvent
+  CgIrPublished --|> DomainEvent
+  InspectionCompleted --|> DomainEvent
+  ConflictEscalated --|> DomainEvent
+  DirectiveLifecycleChanged --|> DomainEvent
+}
+
+' ═══════════════════════════════════════════════════════════
+'  Certification payload types (offline tool · not peer)
+' ═══════════════════════════════════════════════════════════
+

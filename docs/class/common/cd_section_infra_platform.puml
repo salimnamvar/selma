@@ -1,0 +1,15 @@
+' Section: cd_section_infra_platform.puml
+
+package "platform_infrastructure" as INFRA_PLAT #FEF5E7/B9770E {
+
+  class "**Hasher**" as Hasher <<Platform>> #FEF5E7/B9770E {
+    + ComputeSha256(data: bytes): String
+    + ComposeHashes(parts: List~String~): String
+  }
+
+  class "**HybridLogicalClock**" as HybridLogicalClock <<Platform>> #FEF5E7/B9770E {
+    + Now(): HlcTimestamp
+    + Advance(remote: HlcTimestamp): HlcTimestamp
+  }
+}
+

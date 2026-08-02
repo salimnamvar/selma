@@ -1,0 +1,8 @@
+' Section: cd_section_iface_ports_ref.puml
+
+package "application.ports (ref)" as PORTS #FDEDEC/A93226 {
+  interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
+  interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
+  interface "**FindingOpenPort**" as FindingOpenPort <<Port>>
+}
+

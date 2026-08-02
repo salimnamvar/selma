@@ -1,0 +1,46 @@
+' Section: cd_section_app_directives.puml
+
+package "directives_application" as UC_DIR #E8F5F3/1B7A6E {
+
+  class "**CreateDirective**" as CreateDirective <<Use Case>> #E8F5F3/1B7A6E {
+    - repo: DirectiveRepository
+    - lineage: LineageService
+    + execute(req: DirectiveCreateRequest): Directive
+    --
+    <<requires>> directive.create
+  }
+
+  class "**GetDirective**" as GetDirective <<Use Case>> #E8F5F3/1B7A6E {
+    - repo: DirectiveRepository
+    + execute(lineage_id: LineageId): Directive
+  }
+
+  class "**ListDirectives**" as ListDirectives <<Use Case>> #E8F5F3/1B7A6E {
+    - repo: DirectiveRepository
+    + execute(filter: Map): List~Directive~
+  }
+
+  class "**UpdateDirective**" as UpdateDirective <<Use Case>> #E8F5F3/1B7A6E {
+    - repo: DirectiveRepository
+    + execute(req: DirectiveUpdateRequest): Directive
+    --
+    <<requires>> directive.modify
+  }
+
+  class "**LifecycleTransitions**" as LifecycleTransitions <<Use Case>> #E8F5F3/1B7A6E {
+    - repo: DirectiveRepository
+    - lineage: LineageService
+    + Retire(lineage_id: LineageId): Directive
+    + Fork(source: LineageId): Directive
+    + Merge(left: LineageId, right: LineageId): Directive
+    + Split(source: LineageId): List~Directive~
+    + Restore(lineage_id: LineageId, revision: Revision): Directive
+    --
+    <<requires>> directive.retire|fork|merge|restore
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  compiled_rules_application (C4: compilation_application)
+' ═══════════════════════════════════════════════════════════
+

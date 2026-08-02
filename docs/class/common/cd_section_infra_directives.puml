@@ -1,0 +1,27 @@
+' Section: cd_section_infra_directives.puml
+
+package "directives_infrastructure\n(C4: directives_repository)" as INFRA_DIR #FEF5E7/B9770E {
+
+  class "**SqlDirectiveWriter**" as SqlDirectiveWriter <<Adapter>> #FEF5E7/B9770E {
+    + GetDirective(lineage_id): Directive
+    + ListDirectives(filter): List~Directive~
+    + SaveDirective(directive, if_match): void
+    + AllocateExecutionId(): ExecutionId
+    + EnqueueCompileRequest(lineage_id, revision): void
+    --
+    <<implements>> DirectiveRepository
+  }
+
+  class "**SqlCompilerReader**" as SqlCompilerReader <<Adapter>> #FEF5E7/B9770E {
+    + GetDirectiveExecutableDocument(id): ExecutableRuleDoc
+    --
+    <<implements>> CompilerReadPort
+  }
+
+  class "**SqlGuidanceReader**" as SqlGuidanceReader <<Adapter>> #FEF5E7/B9770E {
+    + GetDirectivePolicyDoctrine(ref): GuidancePayload
+    --
+    <<implements>> GuidanceReadPort
+  }
+}
+

@@ -1,0 +1,54 @@
+' Application relationships (CLS-002)
+
+' ═══════════════════════════════════════════════════════════
+'  RELATIONSHIPS
+' ═══════════════════════════════════════════════════════════
+
+CreateDirective --> DirectiveRepository
+CreateDirective ..> LineageService
+GetDirective --> DirectiveRepository
+ListDirectives --> DirectiveRepository
+UpdateDirective --> DirectiveRepository
+LifecycleTransitions --> DirectiveRepository
+LifecycleTransitions ..> LineageService
+
+CompileDirectives --> CompilerReadPort
+CompileDirectives --> CompiledRulesRepository
+CompileDirectives ..> ResolveConflict
+PublishCompiledRules --> CompiledRulesRepository
+DrainOutbox --> CompileDirectives
+ValidateDirectiveDocuments ..> Directive
+
+CreateInspection --> TargetSourcesGateway
+CreateInspection --> CompiledRulesRepository
+CreateInspection --> InspectionArtifactPort
+CreateInspection --> RunInspectionPipeline
+GetInspection --> InspectionArtifactPort
+RunInspectionPipeline --> CompiledRulesRepository
+RunInspectionPipeline --> InspectionArtifactPort
+RunInspectionPipeline --> FindingOpenPort
+RunInspectionPipeline ..> ResolveConflict
+
+GetFinding --> FindingEventRepository
+ListFindings --> FindingEventRepository
+TransitionFinding --> FindingEventRepository
+TransitionFinding ..> FindingFsm
+TransitionFinding --> CompiledRulesRepository
+GetFindingGuidance --> FindingEventRepository
+GetFindingGuidance --> GuidanceReadPort
+AttachEvidence --> FindingEventRepository
+AttachEvidence --> FindingArtifactPort
+OpenFindings ..|> FindingOpenPort
+OpenFindings --> FindingEventRepository
+OpenFindings ..> FindingFsm
+ListFindingAggregates --> FindingEventRepository
+ReviewConflictArtifact --> FindingArtifactPort
+ReviewConflictArtifact --> FindingEventRepository
+
+CreateDirective ..> DirectiveCreateRequest
+UpdateDirective ..> DirectiveUpdateRequest
+CreateInspection ..> InspectRequest
+CreateInspection ..> InspectResponse
+TransitionFinding ..> FindingTransitionRequest
+ListFindingAggregates ..> AggregateQueryRequest
+OpenFindings ..> DetectionOutcome

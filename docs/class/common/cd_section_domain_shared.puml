@@ -1,0 +1,159 @@
+' ============================================================
+' Section: cd_section_domain_shared.puml
+' ============================================================
+
+package "shared_domain" as DOM_SHARED #F0F4F8/78909C {
+
+  class "**LineageId**" as LineageId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String
+    --
+    <<invariant>> matches ^[A-Z]{2,5}-\\d{3}[A-Z]?$
+  }
+
+  class "**ExecutionId**" as ExecutionId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: UUID
+  }
+
+  class "**Revision**" as Revision <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: int {> 0}
+  }
+
+  class "**FindingId**" as FindingId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: UUID
+  }
+
+  class "**ActorId**" as ActorId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String
+  }
+
+  class "**HlcTimestamp**" as HlcTimestamp <<Value Object>> #EEF4FC/3B7DD8 {
+    + wall_time: DateTime
+    + logical: int
+  }
+
+  class "**PairedPolicyRef**" as PairedPolicyRef <<Value Object>> #EEF4FC/3B7DD8 {
+    + policy_id: String
+    + version: String
+    + uri: URI
+  }
+
+  class "**SnapshotHash**" as SnapshotHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**NodeHash**" as NodeHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**EdgeHash**" as EdgeHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**FrozenEnvHash**" as FrozenEnvHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**TargetHash**" as TargetHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**SystemStateHash**" as SystemStateHash <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String {SHA-256}
+  }
+
+  class "**CapabilityId**" as CapabilityId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: String
+    + scope: String
+  }
+
+  class "**EventId**" as EventId <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: UUID
+  }
+
+  class "**DeonticModality**" as DeonticModality <<Value Object>> #EEF4FC/3B7DD8 {
+    + modality: ModalityKind
+    + strength: int
+  }
+
+  enum "**ModalityKind**" as ModalityKind #FEF5E7/B9770E {
+    must
+    may
+    should
+    shall
+  }
+
+  class "**Subject**" as Subject <<Value Object>> #EEF4FC/3B7DD8 {
+    + subject_type: String
+    + identifier: String
+  }
+
+  class "**Predicate**" as Predicate <<Value Object>> #EEF4FC/3B7DD8 {
+    + verb: String
+    + object_ref: String
+    + constraints: Map
+  }
+
+  class "**Applicability**" as Applicability <<Value Object>> #EEF4FC/3B7DD8 {
+    + scope: String
+    + specificity: int
+    + constraints: Map
+  }
+
+  class "**Priority**" as Priority <<Value Object>> #EEF4FC/3B7DD8 {
+    + value: int
+    + tier: String
+  }
+
+  class "**DetectionSpec**" as DetectionSpec <<Value Object>> #EEF4FC/3B7DD8 {
+    + strategy_ref: String
+    + parameters: Map
+    + adapter_hint: String
+  }
+
+  class "**DetectionStrategy**" as DetectionStrategy <<Value Object>> #EEF4FC/3B7DD8 {
+    + strategy_id: String
+    + adapter_key: String
+    + parameters: Map
+  }
+
+  class "**EvidenceRef**" as EvidenceRef <<Value Object>> #EEF4FC/3B7DD8 {
+    + artifact_uri: URI
+    + hash: String {SHA-256}
+    + collected_at: HlcTimestamp
+  }
+
+  class "**GuidancePayload**" as GuidancePayload <<Value Object>> #EEF4FC/3B7DD8 {
+    + doctrine_text: String
+    + remediation_steps: List~String~
+    + references: List~URI~
+  }
+
+  class "**ResolutionTrace**" as ResolutionTrace <<Value Object>> #EEF4FC/3B7DD8 {
+    + steps: List~ResolutionStep~
+    + winner: LineageId
+    + reason: String
+  }
+
+  class "**Provenance**" as Provenance <<Value Object>> #EEF4FC/3B7DD8 {
+    + source_ref: String
+    + author: ActorId
+    + created_at: HlcTimestamp
+  }
+
+  class "**PipelineTraceEntry**" as PipelineTraceEntry <<Value Object>> #EEF4FC/3B7DD8 {
+    + stage: String
+    + started_at: DateTime
+    + completed_at: DateTime
+    + status: String
+  }
+
+  class "**SkippedNode**" as SkippedNode <<Value Object>> #EEF4FC/3B7DD8 {
+    + node_id: String
+    + reason: String
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  directives_domain
+' ═══════════════════════════════════════════════════════════
+

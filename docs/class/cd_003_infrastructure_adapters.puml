@@ -6,181 +6,38 @@
 ' Package:   directives|compiled_rules|findings|artifacts|
 '            inspections|platform_infrastructure
 ' Contract:  1.1.0
+'
+' Structure:
+'   common/cd_styles.puml · cd_identities.puml
+'   common/cd_section_infra_*.puml · cd_section_infra_connections.puml
 ' ============================================================
-' Owns: adapter classes, shared clients, platform services,
-'       implements relationships to application ports.
-' Does not own: port method catalogs (CLS-002), store mutability
-' semantics (spec), zones/TLS/RPO (deployment), package edges (package/).
 
 !include common/cd_styles.puml
+!include common/cd_identities.puml
 
-title **CLS-003 — Infrastructure Adapters**\nISP one-adapter-per-port · platform services\n
+title $TITLE_INFRASTRUCTURE
 
-package "application.ports (ref)" as PORTS #FCE4EC/C62828 {
-  interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
-  interface "**CompilerReadPort**" as CompilerReadPort <<Port>>
-  interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>>
-  interface "**CompiledRulesRepository**" as CompiledRulesRepository <<Port>>
-  interface "**FindingEventRepository**" as FindingEventRepository <<Port>>
-  interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
-  interface "**InspectionArtifactPort**" as InspectionArtifactPort <<Port>>
-  interface "**FindingArtifactPort**" as FindingArtifactPort <<Port>>
-  interface "**CertificationArtifactPort**" as CertificationArtifactPort <<Port>>
-  interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>>
-}
+!include common/cd_section_infra_ports_ref.puml
+!include common/cd_section_infra_directives.puml
+!include common/cd_section_infra_compiled_rules.puml
+!include common/cd_section_infra_findings.puml
+!include common/cd_section_infra_artifacts.puml
+!include common/cd_section_infra_inspections.puml
+!include common/cd_section_infra_platform.puml
 
-package "directives_infrastructure\n(C4: directives_repository)" as INFRA_DIR #FFE0B2/F57C00 {
-
-  class "**SqlDirectiveWriter**" as SqlDirectiveWriter <<Adapter>> #FFE0B2/F57C00 {
-    + GetDirective(lineage_id): Directive
-    + ListDirectives(filter): List~Directive~
-    + SaveDirective(directive, if_match): void
-    + AllocateExecutionId(): ExecutionId
-    + EnqueueCompileRequest(lineage_id, revision): void
-    --
-    <<implements>> DirectiveRepository
-  }
-
-  class "**SqlCompilerReader**" as SqlCompilerReader <<Adapter>> #FFE0B2/F57C00 {
-    + GetDirectiveExecutableDocument(id): ExecutableRuleDoc
-    --
-    <<implements>> CompilerReadPort
-  }
-
-  class "**SqlGuidanceReader**" as SqlGuidanceReader <<Adapter>> #FFE0B2/F57C00 {
-    + GetDirectivePolicyDoctrine(ref): GuidancePayload
-    --
-    <<implements>> GuidanceReadPort
-  }
-}
-
-package "compiled_rules_infrastructure\n(C4: compiled_rules_repository)" as INFRA_CR #FFE0B2/F57C00 {
-
-  class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> #FFE0B2/F57C00 {
-    + GetCompiledRules(snapshot_hash): CgIrSnapshot
-    + GetLatestCompiledRules(lineage_id): CgIrSnapshot
-    + PublishCompiledRules(snapshot): void
-    --
-    <<implements>> CompiledRulesRepository
-    <<index>> lineage_head_index (revision-monotonic)
-  }
-}
-
-package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #FFE0B2/F57C00 {
-
-  class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> #FFE0B2/F57C00 {
-    + AppendFindingEvent(event, expected_chain_head): void
-    + ListFindingEvents(finding_id): List~DomainEvent~
-    + ListFindingEventsSince(from): List~DomainEvent~
-    + GetFindingProjection(finding_id): FindingProjection
-    --
-    <<implements>> FindingEventRepository
-  }
-
-  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> #FFE0B2/F57C00 {
-    + AppendDenial(actor, capability, action, reason, timestamp): void
-    --
-    <<implements>> DenialAuditPort
-    <<bulkhead>> dedicated pool; no FindingEventRepository surface
-  }
-}
-
-package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FFE0B2/F57C00 {
-
-  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> #FFE0B2/F57C00 {
-    + PutOnce(key, bytes, content_type): void
-    + Get(key): bytes
-  }
-
-  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
-    + SaveInspectionArtifact(snapshot): void
-    + GetInspectionArtifact(id): Inspection
-    --
-    <<implements>> InspectionArtifactPort
-  }
-
-  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
-    + SaveConflictArtifact(artifact): void
-    + GetConflictArtifact(id): ConflictArtifact
-    + SaveEvidenceArtifact(evidence): void
-    --
-    <<implements>> FindingArtifactPort
-  }
-
-  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
-    + SaveCertificationArtifact(run): void
-    --
-    <<implements>> CertificationArtifactPort
-  }
-}
-
-package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FFE0B2/F57C00 {
-
-  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> #FFE0B2/F57C00 {
-    + GetTarget(target_ref): Target
-    + HashTarget(target): TargetHash
-    --
-    <<implements>> TargetSourcesGateway
-    <<resilience>> timeout ≤5s · retries ≤2 · circuit breaker · SSRF allowlist
-  }
-
-  class "**DetectionEvaluator**" as DetectionEvaluator <<Adapter>> #FFE0B2/F57C00 {
-    + ValidateDetectionSpec(spec: DetectionSpec): void
-    + EvaluateControls(snapshot: CgIrSnapshot, target: Target): List~DetectionOutcome~
-    --
-    <<pure>> no I/O · no randomness
-    <<non-peer>> not a C4 component
-  }
-}
-
-package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
-
-  class "**Hasher**" as Hasher <<Platform>> #FFE0B2/F57C00 {
-    + ComputeSha256(data: bytes): String
-    + ComposeHashes(parts: List~String~): String
-  }
-
-  class "**HybridLogicalClock**" as HybridLogicalClock <<Platform>> #FFE0B2/F57C00 {
-    + Now(): HlcTimestamp
-    + Advance(remote: HlcTimestamp): HlcTimestamp
-  }
-}
-
-' ── implements ──────────────────────────────────────────────
-SqlDirectiveWriter ..|> DirectiveRepository
-SqlCompilerReader ..|> CompilerReadPort
-SqlGuidanceReader ..|> GuidanceReadPort
-ContentAddressedCompiledRulesRepository ..|> CompiledRulesRepository
-AppendOnlyFindingEventRepository ..|> FindingEventRepository
-DenialAuditAdapter ..|> DenialAuditPort
-InspectionArtifactAdapter ..|> InspectionArtifactPort
-FindingArtifactAdapter ..|> FindingArtifactPort
-CertificationArtifactAdapter ..|> CertificationArtifactPort
-HttpTargetSourcesGateway ..|> TargetSourcesGateway
-
-' ── shared client / platform ────────────────────────────────
-InspectionArtifactAdapter --> ObjectStoreClient
-FindingArtifactAdapter --> ObjectStoreClient
-CertificationArtifactAdapter --> ObjectStoreClient
-SqlDirectiveWriter --> Hasher
-SqlCompilerReader --> Hasher
-SqlGuidanceReader --> Hasher
-ContentAddressedCompiledRulesRepository --> Hasher
-AppendOnlyFindingEventRepository --> Hasher
-AppendOnlyFindingEventRepository --> HybridLogicalClock
-DenialAuditAdapter --> Hasher
-DenialAuditAdapter --> HybridLogicalClock
+!include common/cd_section_infra_connections.puml
 
 legend bottom
-  |= Module |= Adapter classes |= Port(s) |
-  | directives_infrastructure | SqlDirectiveWriter · SqlCompilerReader · SqlGuidanceReader | one port each (ISP) |
-  | compiled_rules_infrastructure | ContentAddressedCompiledRulesRepository | CompiledRulesRepository |
-  | findings_infrastructure | AppendOnlyFindingEventRepository · DenialAuditAdapter | FindingEventRepository · DenialAuditPort |
-  | artifacts_infrastructure | *ArtifactAdapter ×3 + ObjectStoreClient | Inspection · Finding · Certification |
-  | inspections_infrastructure | HttpTargetSourcesGateway · DetectionEvaluator | TargetSourcesGateway (+ pure evaluator) |
-  | platform_infrastructure | Hasher · HybridLogicalClock | shared by adapters |
+  |= Module |= C4 peer |
+  | directives_infrastructure | directives_repository |
+  | compiled_rules_infrastructure | compiled_rules_repository |
+  | findings_infrastructure | finding_events_repository |
+  | artifacts_infrastructure | artifacts_repository |
+  | inspections_infrastructure | target_sources_gateway |
+  | platform_infrastructure | (not a peer) |
+  | Adapter color | hermetic amber #B9770E |
 endlegend
 
-footer CLS-003 · Infrastructure Adapters · Selma · Clean Architecture
+footer $FOOTER_INFRASTRUCTURE
 
 @enduml

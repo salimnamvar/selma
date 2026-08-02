@@ -1,0 +1,24 @@
+' Section: cd_section_iface_usecases_ref.puml
+
+package "application.use_cases (ref)" as UCS #E8F5E9/1B7A6E {
+  class "**CreateDirective**" as CreateDirective <<Use Case>>
+  class "**GetDirective**" as GetDirective <<Use Case>>
+  class "**ListDirectives**" as ListDirectives <<Use Case>>
+  class "**UpdateDirective**" as UpdateDirective <<Use Case>>
+  class "**LifecycleTransitions**" as LifecycleTransitions <<Use Case>>
+  class "**CompileDirectives**" as CompileDirectives <<Use Case>>
+  class "**PublishCompiledRules**" as PublishCompiledRules <<Use Case>>
+  class "**DrainOutbox**" as DrainOutbox <<Use Case>>
+  class "**CreateInspection**" as CreateInspection <<Use Case>>
+  class "**GetInspection**" as GetInspection <<Use Case>>
+  class "**GetFinding**" as GetFinding <<Use Case>>
+  class "**ListFindings**" as ListFindings <<Use Case>>
+  class "**TransitionFinding**" as TransitionFinding <<Use Case>>
+  class "**GetFindingGuidance**" as GetFindingGuidance <<Use Case>>
+  class "**AttachEvidence**" as AttachEvidence <<Use Case>>
+}
+
+' ═══════════════════════════════════════════════════════════
+'  rest_interface (C4: api)
+' ═══════════════════════════════════════════════════════════
+

@@ -1,0 +1,36 @@
+' ============================================================
+' Section: cd_section_domain_conflicts.puml
+' ============================================================
+
+package "conflicts_domain" as DOM_CON #F0F4F8/78909C {
+
+  class "**ResolveConflict**" as ResolveConflict <<Domain Service>> #E8F5F3/1B7A6E {
+    + resolve(a: Directive, b: Directive): ConflictArtifact
+    + resolveControlPair(a: ControlNode, b: ControlNode): ConflictArtifact
+  }
+
+  class "**ConflictArtifact**" as ConflictArtifact <<Aggregate Root>> #E8F5E9/2C6E49 {
+    + artifact_id: UUID
+    + conflict_kind: ConflictKind
+    + binding_status: BindingStatus
+    + resolution_trace: ResolutionTrace
+    + parties: List~LineageId~
+  }
+
+  enum "**ConflictKind**" as ConflictKind #FEF5E7/B9770E {
+    within_lineage
+    cross_lineage_advisory
+  }
+
+  enum "**BindingStatus**" as BindingStatus #FEF5E7/B9770E {
+    unresolved
+    advisory
+    bound
+    superseded
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  Domain events (raised by aggregates / services)
+' ═══════════════════════════════════════════════════════════
+

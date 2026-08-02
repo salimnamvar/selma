@@ -1,0 +1,26 @@
+' Infrastructure implements + platform edges (CLS-003)
+
+' ── implements ──────────────────────────────────────────────
+SqlDirectiveWriter ..|> DirectiveRepository
+SqlCompilerReader ..|> CompilerReadPort
+SqlGuidanceReader ..|> GuidanceReadPort
+ContentAddressedCompiledRulesRepository ..|> CompiledRulesRepository
+AppendOnlyFindingEventRepository ..|> FindingEventRepository
+DenialAuditAdapter ..|> DenialAuditPort
+InspectionArtifactAdapter ..|> InspectionArtifactPort
+FindingArtifactAdapter ..|> FindingArtifactPort
+CertificationArtifactAdapter ..|> CertificationArtifactPort
+HttpTargetSourcesGateway ..|> TargetSourcesGateway
+
+' ── shared client / platform ────────────────────────────────
+InspectionArtifactAdapter --> ObjectStoreClient
+FindingArtifactAdapter --> ObjectStoreClient
+CertificationArtifactAdapter --> ObjectStoreClient
+SqlDirectiveWriter --> Hasher
+SqlCompilerReader --> Hasher
+SqlGuidanceReader --> Hasher
+ContentAddressedCompiledRulesRepository --> Hasher
+AppendOnlyFindingEventRepository --> Hasher
+AppendOnlyFindingEventRepository --> HybridLogicalClock
+DenialAuditAdapter --> Hasher
+DenialAuditAdapter --> HybridLogicalClock

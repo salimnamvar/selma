@@ -1,38 +1,53 @@
 ' ============================================================
-' Title:     Class diagram shared styles
-' Package:   docs/class/common
+' Title:     Selma — Class Diagram Styles (shared)
+' Purpose:   ONE visual language for all cd_NNN_*.puml diagrams.
+'            Palette locked to C4 / package / deployment / state.
 ' Contract:  1.1.0
+'
+' Include order (every class diagram):
+'   !include common/cd_styles.puml
+'   !include common/cd_identities.puml
+'   !include common/cd_section_*.puml
+'   !include common/cd_section_*_connections.puml
+'
+' PlantUML note blocks are FORBIDDEN in class .puml files.
 ' ============================================================
-' Include: !include common/cd_styles.puml
-' Class diagrams must not use note blocks — encode design in types.
 
+!theme plain
 skinparam backgroundColor #FAFBFC
 skinparam shadowing false
-skinparam roundCorner 6
-skinparam defaultFontName "Inter,Segoe UI,Helvetica,Arial,sans-serif"
-skinparam defaultFontSize 12
-skinparam defaultFontColor #2C3E50
+skinparam roundCorner 8
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 11
+skinparam defaultFontColor #1A2332
+skinparam defaultTextAlignment left
+skinparam handwritten false
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #1A2332
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 40
 
+skinparam packageStyle rectangle
 skinparam package {
-  BackgroundColor #F0F4F8
-  BorderColor #5B7BA5
-  BorderStyle solid
-  FontSize 13
+  FontSize 12
   FontStyle bold
-  FontColor #2C3E50
-  StereotypeFontSize 11
-  StereotypeFontColor #5B7BA5
+  FontColor #1A2332
+  BorderThickness 2
+  StereotypeFontSize 10
 }
 
 skinparam class {
   BackgroundColor #FFFFFF
-  BorderColor #7F8C9A
-  FontSize 12
+  BorderColor #5B7BA5
+  FontSize 11
   FontStyle bold
-  HeaderBackgroundColor #E8EDF2
-  AttributeFontSize 11
-  StereotypeFontSize 10
+  HeaderBackgroundColor #F0F4F8
+  AttributeFontSize 10
+  StereotypeFontSize 9
   StereotypeFontColor #5B7BA5
+  BorderThickness 1.5
 }
 
 skinparam abstract {
@@ -42,48 +57,67 @@ skinparam abstract {
 }
 
 skinparam enum {
-  BackgroundColor #FFF8E7
-  BorderColor #D4A843
-  StereotypeFontColor #B8860B
+  BackgroundColor #FEF5E7
+  BorderColor #B9770E
+  StereotypeFontColor #7D4E00
 }
 
 skinparam interface {
-  BackgroundColor #EAF7F0
-  BorderColor #3DAA6D
-  StereotypeFontColor #2E8B57
+  BackgroundColor #FDEDEC
+  BorderColor #A93226
+  StereotypeFontColor #641E16
 }
 
-skinparam ArrowColor #5B7BA5
-skinparam ArrowThickness 1
-skinparam Linetype ortho
+skinparam ArrowColor #3D4F5F
+skinparam ArrowThickness 1.5
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor #2C3E50
 
 skinparam legend {
-  BackgroundColor #F5F7FA
-  BorderColor #B0BEC5
+  BackgroundColor #FFFFFF
+  BorderColor #D0D7DE
   FontSize 10
 }
 
-!define AGGREGATE_BG    #E0F2F1
-!define AGGREGATE_BD    #00897B
-!define VO_BG           #E8EAF6
-!define VO_BD           #3F51B5
-!define EVENT_BG        #FFF8E1
-!define EVENT_BD        #FF8F00
-!define SERVICE_BG      #E8F5E9
-!define SERVICE_BD      #2E7D32
-!define PORT_BG         #FCE4EC
-!define PORT_BD         #C62828
-!define ENTITY_BG       #ECEFF1
-!define ENTITY_BD       #546E7A
-!define ENUM_BG         #FFF8E1
-!define ENUM_BD         #F9A825
-!define USECASE_BG      #E8F5E9
-!define USECASE_BD      #2E7D32
-!define ADAPTER_BG      #FFE0B2
-!define ADAPTER_BD      #F57C00
-!define DTO_BG          #E8EAF6
-!define DTO_BD          #3F51B5
-!define IFACE_BG        #BBDEFB
-!define IFACE_BD        #1976D2
-!define WIRE_BG         #E8EAF6
-!define WIRE_BD         #3F51B5
+' ------------------------------------------------------------
+' Semantic colors (identical hex to C4 / state / deployment)
+' ------------------------------------------------------------
+' C4 person / actor            indigo   #4A6FA5
+' C4 container / resource      blue     #3B7DD8
+' C4 system / process          teal     #1B7A6E
+' C4 store                     green    #2C6E49
+' C4 gate                      red      #A93226
+' C4 hermetic / pending        amber    #B9770E
+' Terminal / retired           grey     #4A4A4A
+' Mediated / domain-only       purple   #8E44AD
+' C4 external                  grey     #8A9199
+' ------------------------------------------------------------
+
+!$CD_COLOR_ACTOR     = "#4A6FA5"
+!$CD_COLOR_CONTAINER = "#3B7DD8"
+!$CD_COLOR_PROCESS   = "#1B7A6E"
+!$CD_COLOR_STORE     = "#2C6E49"
+!$CD_COLOR_GATE      = "#A93226"
+!$CD_COLOR_PENDING   = "#B9770E"
+!$CD_COLOR_TERMINAL  = "#4A4A4A"
+!$CD_COLOR_DOMAIN    = "#8E44AD"
+!$CD_COLOR_EXTERNAL  = "#8A9199"
+
+' Archetype fill/border (use inline on class packages)
+' Aggregate Root     store green family     #E8F5E9/2C6E49
+' Value Object/DTO   container blue family  #EEF4FC/3B7DD8
+' Domain Service     process teal family    #E8F5F3/1B7A6E
+' Use Case           process teal family    #E8F5E9/1B7A6E
+' Port               gate red family        #FDEDEC/A93226
+' Entity             neutral grey           #ECEFF1/546E7A
+' Enum / Event       pending amber          #FEF5E7/B9770E
+' Adapter            hermetic amber         #FEF5E7/B9770E
+' Interface adapter  container blue         #EEF4FC/3B7DD8
+' Composition        domain purple          #F5EEF8/8E44AD
+'
+' Package rings (match package diagram CA layers):
+' Domain             #F0F4F8/78909C
+' Application        #E8F5E9/1B7A6E
+' Infrastructure     #FEF5E7/B9770E
+' Interface          #EEF4FC/3B7DD8
+' Composition        #F5EEF8/8E44AD

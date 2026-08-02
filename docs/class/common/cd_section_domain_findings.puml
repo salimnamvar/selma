@@ -1,0 +1,88 @@
+' ============================================================
+' Section: cd_section_domain_findings.puml
+' ============================================================
+
+package "findings_domain" as DOM_FIND #F0F4F8/78909C {
+
+  class "**Finding**" as Finding <<Aggregate Root>> #E8F5E9/2C6E49 {
+    + finding_id: FindingId
+    + inspection_id: UUID
+    + control_id: String
+    + target_hash: TargetHash
+    + fsm_state: FindingState
+    + disposition: Disposition
+    + severity: Severity
+    + evidence_ref: EvidenceRef
+    + paired_policy_ref: PairedPolicyRef
+    + creator_provenance: Provenance
+    --
+    <<invariant>> disposition requires terminal state
+  }
+
+  class "**FindingProjection**" as FindingProjection <<Read Model>> #EEF4FC/3B7DD8 {
+    + finding_id: FindingId
+    + fsm_state: FindingState
+    + disposition: Disposition
+    + severity: Severity
+    + chain_head: String
+    + updated_at: HlcTimestamp
+  }
+
+  class "**FindingFsm**" as FindingFsm <<Domain Service>> #E8F5F3/1B7A6E {
+    + transition(finding: Finding, target: FindingState, actor: ActorId): boolean
+    + allowedTransitions(current: FindingState): Set~FindingState~
+    + checkSegregationOfDuties(finding: Finding, actor: ActorId, action: String): boolean
+  }
+
+  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #E8F5F3/1B7A6E {
+    + materialize(ref: PairedPolicyRef, doctrine: PolicyDoctrineDoc): GuidancePayload
+  }
+
+  class "**GuidanceView**" as GuidanceView <<Read Model>> #EEF4FC/3B7DD8 {
+    + directive_lineage_id: LineageId
+    + doctrine_text: String
+    + paired_policy_ref: PairedPolicyRef
+  }
+
+  class "**AggregateReport**" as AggregateReport <<Read Model>> #EEF4FC/3B7DD8 {
+    + scope: String
+    + period: DateRange
+    + finding_counts: Map~Severity,int~
+    + directive_coverage: double
+  }
+
+  enum "**FindingState**" as FindingState #FEF5E7/B9770E {
+    Created
+    Open
+    Acknowledged
+    EvidenceSubmitted
+    PendingVerification
+    Verified
+    Rejected
+    Dismissed
+    Waived
+    Superseded
+    Closed
+  }
+
+  enum "**Disposition**" as Disposition #FEF5E7/B9770E {
+    valid
+    invalid
+    waived
+    dismissed
+    superseded
+  }
+
+  enum "**Severity**" as Severity #FEF5E7/B9770E {
+    critical
+    high
+    medium
+    low
+    informational
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  conflicts_domain (not C4 peer)
+' ═══════════════════════════════════════════════════════════
+

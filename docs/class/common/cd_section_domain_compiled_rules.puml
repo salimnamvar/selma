@@ -1,0 +1,55 @@
+' ============================================================
+' Section: cd_section_domain_compiled_rules.puml
+' ============================================================
+
+package "compiled_rules_domain" as DOM_CR #F0F4F8/78909C {
+
+  class "**CgIrSnapshot**" as CgIrSnapshot <<Aggregate Root>> #E8F5E9/2C6E49 {
+    + cg_ir_snapshot_hash: SnapshotHash
+    + frozen_env_hash: FrozenEnvHash
+    + engine_version: String
+    + compiled_at: DateTime
+    + provenance: Provenance
+    --
+    <<invariant>> hash == SHA-256(controls ∥ edges ∥ env)
+  }
+
+  class "**ControlNode**" as ControlNode <<Entity>> #ECEFF1/546E7A {
+    + node_id: String
+    + node_hash: NodeHash
+    + kind: NodeKind
+    + payload: Map
+  }
+
+  class "**DependencyEdge**" as DependencyEdge <<Entity>> #ECEFF1/546E7A {
+    + edge_hash: EdgeHash
+    + source_id: String
+    + target_id: String
+    + kind: EdgeKind
+  }
+
+  class "**LineageHead**" as LineageHead <<Entity>> #ECEFF1/546E7A {
+    + lineage_id: LineageId
+    + head_snapshot_hash: SnapshotHash
+    + revision: Revision
+    --
+    <<role>> revision-monotonic head index
+  }
+
+  enum "**NodeKind**" as NodeKind #FEF5E7/B9770E {
+    control
+    gateway
+    join
+  }
+
+  enum "**EdgeKind**" as EdgeKind #FEF5E7/B9770E {
+    depends_on
+    sequence
+    conflict
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  inspections_domain
+' ═══════════════════════════════════════════════════════════
+

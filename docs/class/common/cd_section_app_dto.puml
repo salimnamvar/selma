@@ -1,0 +1,68 @@
+' Section: cd_section_app_dto.puml
+
+package "application.dto" as DTO_PKG #EEF4FC/3B7DD8 {
+
+  class "**DirectiveCreateRequest**" as DirectiveCreateRequest <<DTO>> #EEF4FC/3B7DD8 {
+    + lineage_id: LineageId
+    + subject: Subject
+    + predicate: Predicate
+    + detection_spec: DetectionSpec
+    + paired_policy_ref: PairedPolicyRef
+    + applicability: Applicability
+    + priority: Priority
+    + modality: DeonticModality
+  }
+
+  class "**DirectiveUpdateRequest**" as DirectiveUpdateRequest <<DTO>> #EEF4FC/3B7DD8 {
+    + lineage_id: LineageId
+    + if_match: ETag
+    + changes: Map
+  }
+
+  class "**InspectRequest**" as InspectRequest <<DTO>> #EEF4FC/3B7DD8 {
+    + target_id: String
+    + target_payload: Map
+    + directive_lineage_ids: List~LineageId~
+  }
+
+  class "**InspectResponse**" as InspectResponse <<DTO>> #EEF4FC/3B7DD8 {
+    + inspection_id: UUID
+    + finding_count: int
+    + status: InspectionStatus
+    + findings: List~FindingSummary~
+  }
+
+  class "**FindingTransitionRequest**" as FindingTransitionRequest <<DTO>> #EEF4FC/3B7DD8 {
+    + finding_id: FindingId
+    + target_state: FindingState
+    + reason: String
+    + comments: String
+  }
+
+  class "**AggregateQueryRequest**" as AggregateQueryRequest <<DTO>> #EEF4FC/3B7DD8 {
+    + scope: String
+    + period: DateRange
+    + filters: Map
+  }
+
+  class "**DetectionOutcome**" as DetectionOutcome <<DTO>> #EEF4FC/3B7DD8 {
+    + control_id: String
+    + severity: Severity
+    + evidence: Map
+  }
+
+  class "**FindingSummary**" as FindingSummary <<DTO>> #EEF4FC/3B7DD8 {
+    + finding_id: FindingId
+    + fsm_state: FindingState
+    + severity: Severity
+  }
+
+  class "**ETag**" as ETag <<DTO>> #EEF4FC/3B7DD8 {
+    + value: String
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  directives_application
+' ═══════════════════════════════════════════════════════════
+

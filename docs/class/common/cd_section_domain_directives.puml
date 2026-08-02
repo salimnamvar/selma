@@ -1,0 +1,71 @@
+' ============================================================
+' Section: cd_section_domain_directives.puml
+' ============================================================
+
+package "directives_domain" as DOM_DIR #F0F4F8/78909C {
+
+  class "**Directive**" as Directive <<Aggregate Root>> #E8F5E9/2C6E49 {
+    + lineage_id: LineageId
+    + execution_id: ExecutionId
+    + status: DirectiveStatus
+    + revision: Revision
+    + executable_document: ExecutableRuleDoc
+    + policy_doctrine_document: PolicyDoctrineDoc
+    + paired_policy_ref: PairedPolicyRef
+    + subject: Subject
+    + predicate: Predicate
+    + detection_spec: DetectionSpec
+    + applicability: Applicability
+    + priority: Priority
+    + modality: DeonticModality
+    + metadata: Map
+    --
+    <<invariant>> dual documents co-versioned per revision
+    <<invariant>> paired_policy_ref resolves within lineage
+  }
+
+  class "**DirectiveRevision**" as DirectiveRevision <<Entity>> #ECEFF1/546E7A {
+    + revision: Revision
+    + changed_at: HlcTimestamp
+    + changed_by: ActorId
+    + executable_document: ExecutableRuleDoc
+    + policy_doctrine_document: PolicyDoctrineDoc
+    + paired_policy_ref: PairedPolicyRef
+  }
+
+  class "**ExecutableRuleDoc**" as ExecutableRuleDoc <<Value Object>> #EEF4FC/3B7DD8 {
+    + content: Map
+    --
+    <<schema>> docs/schema/rule_schema.json
+    <<role>> compile-time evaluation only
+  }
+
+  class "**PolicyDoctrineDoc**" as PolicyDoctrineDoc <<Value Object>> #EEF4FC/3B7DD8 {
+    + content: Map
+    --
+    <<schema>> docs/schema/policy_doctrine.yaml
+    <<role>> guidance_only after findings
+  }
+
+  enum "**DirectiveStatus**" as DirectiveStatus #FEF5E7/B9770E {
+    draft
+    active
+    deprecated
+    superseded
+  }
+
+  class "**LineageService**" as LineageService <<Domain Service>> #E8F5F3/1B7A6E {
+    + fork(lineage: LineageId): LineageId
+    + merge(left: LineageId, right: LineageId): LineageId
+    + split(lineage: LineageId): List~LineageId~
+  }
+
+  class "**DetectionDiscriminator**" as DetectionDiscriminator <<Domain Service>> #E8F5F3/1B7A6E {
+    + resolve(spec: DetectionSpec, active: Directive): DetectionStrategy
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  compiled_rules_domain
+' ═══════════════════════════════════════════════════════════
+

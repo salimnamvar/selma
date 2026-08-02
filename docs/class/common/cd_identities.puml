@@ -1,0 +1,112 @@
+' ============================================================
+' Title:     Selma — Class Diagram Identities (canonical labels)
+' Purpose:   Stable diagram titles, package module names, C4 peer
+'            IDs, port names — same role as c4_identities.puml,
+'            pkg_identities.puml, dep_identities.puml,
+'            state_identities.puml. Sections MUST use these strings.
+' Contract:  1.1.0
+'
+' Include AFTER cd_styles.puml.
+' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
+' Package module names identical to docs/package/common/pkg_identities.puml.
+' ============================================================
+
+' ── Diagram catalog ─────────────────────────────────────────
+!$DIAGRAM_DOMAIN = "Class 001 — Domain Model"
+!$DIAGRAM_APPLICATION = "Class 002 — Application Services"
+!$DIAGRAM_INFRASTRUCTURE = "Class 003 — Infrastructure Adapters"
+!$DIAGRAM_INTERFACE = "Class 004 — Interface Adapters and Composition"
+!$DIAGRAM_ID_DOMAIN = "CLS-001"
+!$DIAGRAM_ID_APPLICATION = "CLS-002"
+!$DIAGRAM_ID_INFRASTRUCTURE = "CLS-003"
+!$DIAGRAM_ID_INTERFACE = "CLS-004"
+
+!$TITLE_DOMAIN = "**CLS-001 — Domain Model**\nClean Architecture entities · package-aligned domain modules"
+!$TITLE_APPLICATION = "**CLS-002 — Application Services**\nROD use cases · ISP ports · DTOs"
+!$TITLE_INFRASTRUCTURE = "**CLS-003 — Infrastructure Adapters**\nISP one-adapter-per-port · platform services"
+!$TITLE_INTERFACE = "**CLS-004 — Interface Adapters and Composition**\nDriving adapters · capability gate · DI wiring"
+
+!$FOOTER_DOMAIN = "CLS-001 · Domain Model · Contract 1.1.0 · Selma"
+!$FOOTER_APPLICATION = "CLS-002 · Application Services · Contract 1.1.0 · Selma"
+!$FOOTER_INFRASTRUCTURE = "CLS-003 · Infrastructure Adapters · Contract 1.1.0 · Selma"
+!$FOOTER_INTERFACE = "CLS-004 · Interface and Composition · Contract 1.1.0 · Selma"
+
+' ── C4 peer IDs (registry only; identical across views) ─────
+!$C4_API = "api"
+!$C4_CLIENTS = "clients"
+!$C4_APPLICATION = "application"
+!$C4_DIRECTIVES_APPLICATION = "directives_application"
+!$C4_COMPILATION_APPLICATION = "compilation_application"
+!$C4_INSPECTIONS_APPLICATION = "inspections_application"
+!$C4_FINDINGS_APPLICATION = "findings_application"
+!$C4_DIRECTIVES_REPOSITORY = "directives_repository"
+!$C4_COMPILED_RULES_REPOSITORY = "compiled_rules_repository"
+!$C4_FINDING_EVENTS_REPOSITORY = "finding_events_repository"
+!$C4_ARTIFACTS_REPOSITORY = "artifacts_repository"
+!$C4_TARGET_SOURCES_GATEWAY = "target_sources_gateway"
+!$C4_DIRECTIVES_STORE = "directives_store"
+!$C4_COMPILED_RULES_STORE = "compiled_rules_store"
+!$C4_FINDING_EVENTS_STORE = "finding_events_store"
+!$C4_ARTIFACTS_STORE = "artifacts_store"
+!$C4_TARGET_SOURCES = "target_sources"
+
+' ── Non-peers (full words) ──────────────────────────────────
+!$NONPEER_RESOLVE_CONFLICT = "ResolveConflict (domain · not peer)"
+!$NONPEER_CERTIFICATION_TOOL = "certification_tool (offline · not peer)"
+!$NONPEER_DENIAL_AUDIT_PORT = "DenialAuditPort"
+!$NONPEER_FINDING_OPEN_PORT = "FindingOpenPort"
+
+' ── Package module titles (identical to package diagram) ────
+!$PKG_SHARED_DOMAIN = "shared_domain"
+!$PKG_DIRECTIVES_DOMAIN = "directives_domain"
+!$PKG_COMPILED_RULES_DOMAIN = "compiled_rules_domain"
+!$PKG_INSPECTIONS_DOMAIN = "inspections_domain"
+!$PKG_FINDINGS_DOMAIN = "findings_domain"
+!$PKG_CONFLICTS_DOMAIN = "conflicts_domain"
+!$PKG_DOMAIN_EVENTS = "domain_events"
+!$PKG_CERTIFICATION_PAYLOADS = "certification_payloads"
+!$PKG_AUTHORIZATION_DOMAIN = "authorization_domain"
+
+!$PKG_DIRECTIVES_APPLICATION = "directives_application"
+!$PKG_COMPILED_RULES_APPLICATION = "compiled_rules_application\n(C4: compilation_application)"
+!$PKG_INSPECTIONS_APPLICATION = "inspections_application"
+!$PKG_FINDINGS_APPLICATION = "findings_application"
+!$PKG_APPLICATION_PORTS = "application.ports"
+!$PKG_APPLICATION_DTO = "application.dto"
+
+!$PKG_DIRECTIVES_INFRASTRUCTURE = "directives_infrastructure\n(C4: directives_repository)"
+!$PKG_COMPILED_RULES_INFRASTRUCTURE = "compiled_rules_infrastructure\n(C4: compiled_rules_repository)"
+!$PKG_FINDINGS_INFRASTRUCTURE = "findings_infrastructure\n(C4: finding_events_repository)"
+!$PKG_ARTIFACTS_INFRASTRUCTURE = "artifacts_infrastructure\n(C4: artifacts_repository)"
+!$PKG_INSPECTIONS_INFRASTRUCTURE = "inspections_infrastructure\n(C4: target_sources_gateway)"
+!$PKG_PLATFORM_INFRASTRUCTURE = "platform_infrastructure"
+
+!$PKG_REST_INTERFACE = "rest_interface\n(C4: api)"
+!$PKG_CLI_INTERFACE = "cli_interface\n(C4: clients)"
+!$PKG_TUI_INTERFACE = "tui_interface\n(C4: clients)"
+!$PKG_COMPOSITION_ROOT = "composition_root"
+
+' ── Port names (ISP; identical to package !$PORT_*) ─────────
+!$PORT_DIR_REPO = "DirectiveRepository"
+!$PORT_CR_READ = "CompilerReadPort"
+!$PORT_CR_REPO = "CompiledRulesRepository"
+!$PORT_INS_ART = "InspectionArtifactPort"
+!$PORT_INS_TGT = "TargetSourcesGateway"
+!$PORT_FIND_EVT = "FindingEventRepository"
+!$PORT_FIND_DENY = "DenialAuditPort"
+!$PORT_FIND_GUIDE = "GuidanceReadPort"
+!$PORT_FIND_ART = "FindingArtifactPort"
+!$PORT_FIND_OPEN = "FindingOpenPort"
+!$PORT_CERT_ART = "CertificationArtifactPort"
+
+' ── Product terms (full words on diagrams) ──────────────────
+!$TERM_HYBRID_LOGICAL_CLOCK = "hybrid logical clock"
+!$TERM_CONTENT_ADDRESSED_STORAGE = "content-addressed storage"
+!$TERM_SEGREGATION_OF_DUTIES = "segregation of duties"
+!$TERM_COMPILED_RULES_IR = "compiled rules intermediate representation"
+
+' ── Legend snippets (C4 hex) ────────────────────────────────
+!$LEGEND_DOMAIN = "Aggregate=#E8F5E9/2C6E49 · VO=#EEF4FC/3B7DD8 · Service=#E8F5F3/1B7A6E · Event=#FEF5E7/B9770E · Entity=#ECEFF1/546E7A"
+!$LEGEND_APP = "Port=#FDEDEC/A93226 · UseCase=#E8F5E9/1B7A6E · DTO=#EEF4FC/3B7DD8"
+!$LEGEND_INFRA = "Adapter=#FEF5E7/B9770E · Port ref=#FDEDEC/A93226"
+!$LEGEND_IFACE = "Interface=#EEF4FC/3B7DD8 · Composition=#F5EEF8/8E44AD · Port=#FDEDEC/A93226"

@@ -1,0 +1,32 @@
+' Section: cd_section_app_compile.puml
+
+package "compiled_rules_application\n(C4: compilation_application)" as UC_CR #E8F5F3/1B7A6E {
+
+  class "**CompileDirectives**" as CompileDirectives <<Use Case>> #E8F5F3/1B7A6E {
+    - compilerRead: CompilerReadPort
+    - compiledRules: CompiledRulesRepository
+    - resolveConflict: ResolveConflict
+    + execute(lineage_ids: List~LineageId~): CgIrSnapshot
+  }
+
+  class "**PublishCompiledRules**" as PublishCompiledRules <<Use Case>> #E8F5F3/1B7A6E {
+    - compiledRules: CompiledRulesRepository
+    + execute(snapshot: CgIrSnapshot): void
+  }
+
+  class "**DrainOutbox**" as DrainOutbox <<Use Case>> #E8F5F3/1B7A6E {
+    - compile: CompileDirectives
+    + execute(): int
+    --
+    <<role>> drains compile_request outbox
+  }
+
+  class "**ValidateDirectiveDocuments**" as ValidateDirectiveDocuments <<Use Case>> #E8F5F3/1B7A6E {
+    + execute(directive: Directive): ValidationResult
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  inspections_application
+' ═══════════════════════════════════════════════════════════
+

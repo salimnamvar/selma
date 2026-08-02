@@ -1,257 +1,41 @@
 @startuml cd_004_interface_composition
 ' ============================================================
-' Title:     CLS-004 Interface Adapters & Composition Root
+' Title:     CLS-004 Interface Adapters and Composition Root
 ' Source:    docs/spec/contracts/interfaces/ + authorization/
 ' C4:        clients · api
 ' Package:   rest_interface | cli_interface | tui_interface |
 '            composition_root
 ' Contract:  1.1.0
+'
+' Structure:
+'   common/cd_styles.puml · cd_identities.puml
+'   common/cd_section_iface_*.puml · cd_section_iface_connections.puml
 ' ============================================================
-' Owns: driving adapters (routers/commands/screens), gate pipeline
-'       types, composition-root wiring types.
-' Does not own: use-case method bodies (CLS-002), package edges
-' (package/), TLS/zones (deployment/), capability catalog (spec/).
 
 !include common/cd_styles.puml
+!include common/cd_identities.puml
 
-title **CLS-004 — Interface Adapters & Composition Root**\nDriving adapters · capability gate · DI wiring\n
+title $TITLE_INTERFACE
 
-package "application ports (ref)" as PORTS #FCE4EC/C62828 {
-  interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
-  interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
-  interface "**FindingOpenPort**" as FindingOpenPort <<Port>>
-}
+!include common/cd_section_iface_ports_ref.puml
+!include common/cd_section_iface_usecases_ref.puml
+!include common/cd_section_iface_rest.puml
+!include common/cd_section_iface_cli.puml
+!include common/cd_section_iface_tui.puml
+!include common/cd_section_iface_composition.puml
 
-package "application use cases (ref)" as UCS #E8F5E9/2E7D32 {
-  class "**CreateDirective**" as CreateDirective <<Use Case>>
-  class "**GetDirective**" as GetDirective <<Use Case>>
-  class "**ListDirectives**" as ListDirectives <<Use Case>>
-  class "**UpdateDirective**" as UpdateDirective <<Use Case>>
-  class "**LifecycleTransitions**" as LifecycleTransitions <<Use Case>>
-  class "**CompileDirectives**" as CompileDirectives <<Use Case>>
-  class "**PublishCompiledRules**" as PublishCompiledRules <<Use Case>>
-  class "**DrainOutbox**" as DrainOutbox <<Use Case>>
-  class "**CreateInspection**" as CreateInspection <<Use Case>>
-  class "**GetInspection**" as GetInspection <<Use Case>>
-  class "**GetFinding**" as GetFinding <<Use Case>>
-  class "**ListFindings**" as ListFindings <<Use Case>>
-  class "**TransitionFinding**" as TransitionFinding <<Use Case>>
-  class "**GetFindingGuidance**" as GetFindingGuidance <<Use Case>>
-  class "**AttachEvidence**" as AttachEvidence <<Use Case>>
-}
-
-' ═══════════════════════════════════════════════════════════
-'  rest_interface (C4: api)
-' ═══════════════════════════════════════════════════════════
-package "rest_interface\n(C4: api)" as IF_REST #BBDEFB/1976D2 {
-
-  class "**DirectiveRouter**" as DirectiveRouter <<Interface>> #BBDEFB/1976D2 {
-    + POST /directives
-    + GET /directives/{lineage_id}
-    + GET /directives
-    + PATCH /directives/{lineage_id}
-    + lifecycle routes
-  }
-
-  class "**CompilationRouter**" as CompilationRouter <<Interface>> #BBDEFB/1976D2 {
-    + POST /compilations
-    + GET /compilations/{hash}
-  }
-
-  class "**InspectionRouter**" as InspectionRouter <<Interface>> #BBDEFB/1976D2 {
-    + POST /inspections
-    + GET /inspections/{id}
-  }
-
-  class "**FindingRouter**" as FindingRouter <<Interface>> #BBDEFB/1976D2 {
-    + GET /findings/{id}
-    + GET /findings
-    + POST /findings/{id}/transitions
-    + GET /findings/{id}/guidance
-    + POST /findings/{id}/evidence
-  }
-
-  class "**ArtifactRouter**" as ArtifactRouter <<Interface>> #BBDEFB/1976D2 {
-    + GET /artifacts
-    + GET /artifacts/{id}
-  }
-
-  class "**JwtAuthenticator**" as JwtAuthenticator <<Interface>> #BBDEFB/1976D2 {
-    + Authenticate(token: String): ActorId
-  }
-
-  class "**CapabilityEnforcer**" as RestCapabilityEnforcer <<Interface>> #BBDEFB/1976D2 {
-    + Authorize(actor: ActorId, capability: String): Decision
-  }
-
-  class "**IdempotencyFilter**" as IdempotencyFilter <<Interface>> #BBDEFB/1976D2 {
-    + Check(key: String): IdempotencyResult
-  }
-
-  class "**ETagFilter**" as ETagFilter <<Interface>> #BBDEFB/1976D2 {
-    + Match(if_match: String, current: ETag): boolean
-  }
-
-  class "**DenialAuditClient**" as DenialAuditClient <<Interface>> #BBDEFB/1976D2 {
-    + RecordDenial(actor, capability, action, reason): void
-    --
-    <<port>> DenialAuditPort only
-  }
-
-  enum "**Decision**" as Decision #FFF8E1/F9A825 {
-    allow
-    deny
-  }
-}
-
-' ═══════════════════════════════════════════════════════════
-'  cli_interface (C4: clients)
-' ═══════════════════════════════════════════════════════════
-package "cli_interface\n(C4: clients)" as IF_CLI #BBDEFB/1976D2 {
-
-  class "**DirectiveCommands**" as DirectiveCommands <<Interface>> #BBDEFB/1976D2 {
-    + create(...)
-    + get(...)
-    + list(...)
-  }
-
-  class "**InspectionCommands**" as InspectionCommands <<Interface>> #BBDEFB/1976D2 {
-    + submit(...)
-    + get(...)
-  }
-
-  class "**FindingCommands**" as FindingCommands <<Interface>> #BBDEFB/1976D2 {
-    + get(...)
-    + list(...)
-    + transition(...)
-  }
-
-  class "**CapabilityEnforcer**" as CliCapabilityEnforcer <<Interface>> #BBDEFB/1976D2 {
-    + Authorize(actor, capability): Decision
-  }
-}
-
-' ═══════════════════════════════════════════════════════════
-'  tui_interface (C4: clients)
-' ═══════════════════════════════════════════════════════════
-package "tui_interface\n(C4: clients)" as IF_TUI #BBDEFB/1976D2 {
-
-  class "**DirectiveScreens**" as DirectiveScreens <<Interface>> #BBDEFB/1976D2 {
-    + showList()
-    + showDetail(lineage_id)
-  }
-
-  class "**FindingScreens**" as FindingScreens <<Interface>> #BBDEFB/1976D2 {
-    + showList()
-    + showDetail(finding_id)
-    + showGuidance(finding_id)
-  }
-
-  class "**CapabilityEnforcer**" as TuiCapabilityEnforcer <<Interface>> #BBDEFB/1976D2 {
-    + Authorize(actor, capability): Decision
-  }
-}
-
-' ═══════════════════════════════════════════════════════════
-'  composition_root
-' ═══════════════════════════════════════════════════════════
-package "composition_root" as WIRE #E8EAF6/3F51B5 {
-
-  class "**ApplicationContainer**" as ApplicationContainer <<Composition>> #E8EAF6/3F51B5 {
-    + build(): ApplicationContainer
-    + rest_app(): RestApplication
-    + cli_app(): CliApplication
-    + tui_app(): TuiApplication
-  }
-
-  class "**PortBindings**" as PortBindings <<Composition>> #E8EAF6/3F51B5 {
-    + bind_directive_ports()
-    + bind_compile_ports()
-    + bind_inspection_ports()
-    + bind_finding_ports()
-    + bind_artifact_ports()
-    + bind_gate(DenialAuditPort)
-  }
-
-  class "**OutboxDrainScheduler**" as OutboxDrainScheduler <<Composition>> #E8EAF6/3F51B5 {
-    + start()
-    + tick(): int
-    --
-    <<invokes>> DrainOutbox
-  }
-}
-
-' ── REST gate pipeline ──────────────────────────────────────
-DirectiveRouter --> JwtAuthenticator
-CompilationRouter --> JwtAuthenticator
-InspectionRouter --> JwtAuthenticator
-FindingRouter --> JwtAuthenticator
-ArtifactRouter --> JwtAuthenticator
-JwtAuthenticator --> RestCapabilityEnforcer
-RestCapabilityEnforcer --> IdempotencyFilter
-RestCapabilityEnforcer --> ETagFilter
-RestCapabilityEnforcer --> DenialAuditClient
-DenialAuditClient --> DenialAuditPort
-RestCapabilityEnforcer --> Decision
-
-' ── REST → use cases ────────────────────────────────────────
-DirectiveRouter --> CreateDirective
-DirectiveRouter --> GetDirective
-DirectiveRouter --> ListDirectives
-DirectiveRouter --> UpdateDirective
-DirectiveRouter --> LifecycleTransitions
-CompilationRouter --> CompileDirectives
-CompilationRouter --> PublishCompiledRules
-InspectionRouter --> CreateInspection
-InspectionRouter --> GetInspection
-FindingRouter --> GetFinding
-FindingRouter --> ListFindings
-FindingRouter --> TransitionFinding
-FindingRouter --> GetFindingGuidance
-FindingRouter --> AttachEvidence
-ArtifactRouter --> GetInspection
-ArtifactRouter --> AttachEvidence
-
-' ── CLI ─────────────────────────────────────────────────────
-DirectiveCommands --> CliCapabilityEnforcer
-InspectionCommands --> CliCapabilityEnforcer
-FindingCommands --> CliCapabilityEnforcer
-CliCapabilityEnforcer --> DenialAuditPort
-DirectiveCommands --> CreateDirective
-DirectiveCommands --> GetDirective
-DirectiveCommands --> ListDirectives
-InspectionCommands --> CreateInspection
-InspectionCommands --> GetInspection
-FindingCommands --> GetFinding
-FindingCommands --> ListFindings
-FindingCommands --> TransitionFinding
-
-' ── TUI ─────────────────────────────────────────────────────
-DirectiveScreens --> TuiCapabilityEnforcer
-FindingScreens --> TuiCapabilityEnforcer
-TuiCapabilityEnforcer --> DenialAuditPort
-DirectiveScreens --> GetDirective
-DirectiveScreens --> ListDirectives
-FindingScreens --> GetFinding
-FindingScreens --> ListFindings
-FindingScreens --> GetFindingGuidance
-
-' ── Composition ─────────────────────────────────────────────
-ApplicationContainer --> PortBindings
-ApplicationContainer --> OutboxDrainScheduler
-PortBindings ..> DenialAuditPort
-PortBindings ..> DirectiveRepository
-PortBindings ..> FindingOpenPort
-OutboxDrainScheduler --> DrainOutbox
+!include common/cd_section_iface_connections.puml
 
 legend bottom
-  |= Package |= Types |= C4 |
-  | rest_interface | Routers · JwtAuthenticator · CapabilityEnforcer · filters · DenialAuditClient | api |
-  | cli_interface | Commands · CapabilityEnforcer | clients |
-  | tui_interface | Screens · CapabilityEnforcer | clients |
-  | composition_root | ApplicationContainer · PortBindings · OutboxDrainScheduler | (wiring) |
+  |= Package |= C4 |
+  | rest_interface | api |
+  | cli_interface · tui_interface | clients |
+  | composition_root | (wiring · not a peer) |
+  | Interface color | container blue #3B7DD8 |
+  | Composition color | domain purple #8E44AD |
+  | Port color | gate red #A93226 |
 endlegend
 
-footer CLS-004 · Interface & Composition · Selma · Clean Architecture
+footer $FOOTER_INTERFACE
 
 @enduml

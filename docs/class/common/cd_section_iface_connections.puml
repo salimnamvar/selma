@@ -1,0 +1,64 @@
+' Interface + composition edges (CLS-004)
+
+' ── REST gate pipeline ──────────────────────────────────────
+DirectiveRouter --> JwtAuthenticator
+CompilationRouter --> JwtAuthenticator
+InspectionRouter --> JwtAuthenticator
+FindingRouter --> JwtAuthenticator
+ArtifactRouter --> JwtAuthenticator
+JwtAuthenticator --> RestCapabilityEnforcer
+RestCapabilityEnforcer --> IdempotencyFilter
+RestCapabilityEnforcer --> ETagFilter
+RestCapabilityEnforcer --> DenialAuditClient
+DenialAuditClient --> DenialAuditPort
+RestCapabilityEnforcer --> Decision
+
+' ── REST → use cases ────────────────────────────────────────
+DirectiveRouter --> CreateDirective
+DirectiveRouter --> GetDirective
+DirectiveRouter --> ListDirectives
+DirectiveRouter --> UpdateDirective
+DirectiveRouter --> LifecycleTransitions
+CompilationRouter --> CompileDirectives
+CompilationRouter --> PublishCompiledRules
+InspectionRouter --> CreateInspection
+InspectionRouter --> GetInspection
+FindingRouter --> GetFinding
+FindingRouter --> ListFindings
+FindingRouter --> TransitionFinding
+FindingRouter --> GetFindingGuidance
+FindingRouter --> AttachEvidence
+ArtifactRouter --> GetInspection
+ArtifactRouter --> AttachEvidence
+
+' ── CLI ─────────────────────────────────────────────────────
+DirectiveCommands --> CliCapabilityEnforcer
+InspectionCommands --> CliCapabilityEnforcer
+FindingCommands --> CliCapabilityEnforcer
+CliCapabilityEnforcer --> DenialAuditPort
+DirectiveCommands --> CreateDirective
+DirectiveCommands --> GetDirective
+DirectiveCommands --> ListDirectives
+InspectionCommands --> CreateInspection
+InspectionCommands --> GetInspection
+FindingCommands --> GetFinding
+FindingCommands --> ListFindings
+FindingCommands --> TransitionFinding
+
+' ── TUI ─────────────────────────────────────────────────────
+DirectiveScreens --> TuiCapabilityEnforcer
+FindingScreens --> TuiCapabilityEnforcer
+TuiCapabilityEnforcer --> DenialAuditPort
+DirectiveScreens --> GetDirective
+DirectiveScreens --> ListDirectives
+FindingScreens --> GetFinding
+FindingScreens --> ListFindings
+FindingScreens --> GetFindingGuidance
+
+' ── Composition ─────────────────────────────────────────────
+ApplicationContainer --> PortBindings
+ApplicationContainer --> OutboxDrainScheduler
+PortBindings ..> DenialAuditPort
+PortBindings ..> DirectiveRepository
+PortBindings ..> FindingOpenPort
+OutboxDrainScheduler --> DrainOutbox

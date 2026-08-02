@@ -1,0 +1,21 @@
+' Section: cd_section_infra_inspections.puml
+
+package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FEF5E7/B9770E {
+
+  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> #FEF5E7/B9770E {
+    + GetTarget(target_ref): Target
+    + HashTarget(target): TargetHash
+    --
+    <<implements>> TargetSourcesGateway
+    <<resilience>> timeout ≤5s · retries ≤2 · circuit breaker · SSRF allowlist
+  }
+
+  class "**DetectionEvaluator**" as DetectionEvaluator <<Adapter>> #FEF5E7/B9770E {
+    + ValidateDetectionSpec(spec: DetectionSpec): void
+    + EvaluateControls(snapshot: CgIrSnapshot, target: Target): List~DetectionOutcome~
+    --
+    <<pure>> no I/O · no randomness
+    <<non-peer>> not a C4 component
+  }
+}
+

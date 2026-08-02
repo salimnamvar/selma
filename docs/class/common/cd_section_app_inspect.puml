@@ -1,0 +1,32 @@
+' Section: cd_section_app_inspect.puml
+
+package "inspections_application" as UC_INS #E8F5F3/1B7A6E {
+
+  class "**CreateInspection**" as CreateInspection <<Use Case>> #E8F5F3/1B7A6E {
+    - targets: TargetSourcesGateway
+    - compiledRules: CompiledRulesRepository
+    - artifacts: InspectionArtifactPort
+    - pipeline: RunInspectionPipeline
+    + execute(req: InspectRequest): InspectResponse
+    --
+    <<requires>> inspection.submit
+  }
+
+  class "**GetInspection**" as GetInspection <<Use Case>> #E8F5F3/1B7A6E {
+    - artifacts: InspectionArtifactPort
+    + execute(id: UUID): Inspection
+  }
+
+  class "**RunInspectionPipeline**" as RunInspectionPipeline <<Use Case>> #E8F5F3/1B7A6E {
+    - compiledRules: CompiledRulesRepository
+    - artifacts: InspectionArtifactPort
+    - findingOpen: FindingOpenPort
+    - resolveConflict: ResolveConflict
+    + execute(inspection: Inspection, snapshot: CgIrSnapshot): InspectResponse
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  findings_application
+' ═══════════════════════════════════════════════════════════
+

@@ -1,0 +1,47 @@
+' ============================================================
+' Section: cd_section_domain_inspections.puml
+' ============================================================
+
+package "inspections_domain" as DOM_INS #F0F4F8/78909C {
+
+  class "**Inspection**" as Inspection <<Aggregate Root>> #E8F5E9/2C6E49 {
+    + inspection_id: UUID
+    + target: Target
+    + target_hash: TargetHash
+    + cg_ir_snapshot_hash: SnapshotHash
+    + frozen_env_hash: FrozenEnvHash
+    + engine_version: String
+    + inspector: ActorId
+    + started_at: DateTime
+    + completed_at: DateTime
+    + status: InspectionStatus
+    + finding_count: int
+    + skipped_nodes: List~SkippedNode~
+    + pipeline_trace: List~PipelineTraceEntry~
+    + system_state_hash: SystemStateHash
+    --
+    <<invariant>> completed ⇒ completed_at >= started_at
+  }
+
+  class "**Target**" as Target <<Value Object>> #EEF4FC/3B7DD8 {
+    + target_id: String
+    + target_hash: TargetHash
+    + kind: String
+    + payload_ref: String
+  }
+
+  enum "**InspectionStatus**" as InspectionStatus #FEF5E7/B9770E {
+    completed
+    partial
+    failed
+  }
+
+  class "**ScopeMatcher**" as ScopeMatcher <<Domain Service>> #E8F5F3/1B7A6E {
+    + match(applicability: Applicability, target: Target): int
+  }
+}
+
+' ═══════════════════════════════════════════════════════════
+'  findings_domain
+' ═══════════════════════════════════════════════════════════
+

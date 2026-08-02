@@ -1,0 +1,65 @@
+' Section: cd_section_app_findings.puml
+
+package "findings_application" as UC_FIND #E8F5F3/1B7A6E {
+
+  class "**GetFinding**" as GetFinding <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    + execute(finding_id: FindingId): FindingProjection
+    --
+    <<requires>> finding.view
+  }
+
+  class "**ListFindings**" as ListFindings <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    + execute(filter: Map): List~FindingProjection~
+    --
+    <<requires>> finding.view
+  }
+
+  class "**TransitionFinding**" as TransitionFinding <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    - fsm: FindingFsm
+    - compiledRules: CompiledRulesRepository
+    + execute(req: FindingTransitionRequest, actor: ActorId): FindingProjection
+    --
+    <<requires>> finding.acknowledge|waive|dismiss|verify
+  }
+
+  class "**GetFindingGuidance**" as GetFindingGuidance <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    - guidance: GuidanceReadPort
+    + execute(finding_id: FindingId): GuidancePayload
+  }
+
+  class "**AttachEvidence**" as AttachEvidence <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    - artifacts: FindingArtifactPort
+    + execute(finding_id: FindingId, evidence: EvidenceRef): FindingProjection
+    --
+    <<requires>> evidence.submit
+  }
+
+  class "**OpenFindings**" as OpenFindings <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    - fsm: FindingFsm
+    + open_findings(inspection_id: UUID, findings: List~DetectionOutcome~): Result
+    --
+    <<implements>> FindingOpenPort
+  }
+
+  class "**ListFindingAggregates**" as ListFindingAggregates <<Use Case>> #E8F5F3/1B7A6E {
+    - events: FindingEventRepository
+    + execute(req: AggregateQueryRequest): AggregateReport
+    --
+    <<requires>> analytics.view
+  }
+
+  class "**ReviewConflictArtifact**" as ReviewConflictArtifact <<Use Case>> #E8F5F3/1B7A6E {
+    - artifacts: FindingArtifactPort
+    - events: FindingEventRepository
+    + execute(artifact_id: UUID, decision: String): ConflictArtifact
+    --
+    <<requires>> conflict.resolve
+  }
+}
+

@@ -1,0 +1,102 @@
+' ============================================================
+' Domain type relationships (CLS-001)
+' ============================================================
+
+' ═══════════════════════════════════════════════════════════
+'  RELATIONSHIPS
+' ═══════════════════════════════════════════════════════════
+
+Directive *-- "0..*" DirectiveRevision
+Directive *-- ExecutableRuleDoc
+Directive *-- PolicyDoctrineDoc
+Directive --> LineageId
+Directive --> ExecutionId
+Directive --> Revision
+Directive --> PairedPolicyRef
+Directive --> Subject
+Directive --> Predicate
+Directive --> DetectionSpec
+Directive --> Applicability
+Directive --> Priority
+Directive --> DeonticModality
+Directive --> DirectiveStatus
+DeonticModality --> ModalityKind
+DirectiveRevision *-- ExecutableRuleDoc
+DirectiveRevision *-- PolicyDoctrineDoc
+
+CgIrSnapshot *-- "0..*" ControlNode
+CgIrSnapshot *-- "0..*" DependencyEdge
+CgIrSnapshot --> SnapshotHash
+CgIrSnapshot --> FrozenEnvHash
+CgIrSnapshot --> Provenance
+ControlNode --> NodeHash
+ControlNode --> NodeKind
+DependencyEdge --> EdgeHash
+DependencyEdge --> EdgeKind
+LineageHead --> LineageId
+LineageHead --> SnapshotHash
+LineageHead --> CgIrSnapshot
+
+Inspection --> Target
+Inspection --> TargetHash
+Inspection --> SnapshotHash
+Inspection --> FrozenEnvHash
+Inspection --> SystemStateHash
+Inspection --> "0..*" SkippedNode
+Inspection --> "0..*" PipelineTraceEntry
+Inspection --> InspectionStatus
+Target --> TargetHash
+
+Finding --> FindingId
+Finding --> FindingState
+Finding --> Disposition
+Finding --> Severity
+Finding --> EvidenceRef
+Finding --> PairedPolicyRef
+Finding --> Provenance
+Finding --> TargetHash
+FindingProjection --> FindingId
+FindingProjection --> FindingState
+
+ConflictArtifact --> ConflictKind
+ConflictArtifact --> BindingStatus
+ConflictArtifact --> ResolutionTrace
+ConflictArtifact --> "2..*" LineageId
+
+CertificationRun *-- "1..9" GateResult
+CertificationRun --> PassFail
+
+Finding ..> Inspection : inspection_id
+Inspection ..> CgIrSnapshot : cg_ir_snapshot_hash
+ConflictArtifact ..> Directive : parties
+Finding ..> GuidancePayload : guidance materialization
+
+LineageService ..> Directive
+DetectionDiscriminator ..> Directive
+DetectionDiscriminator ..> DetectionStrategy
+ResolveConflict ..> Directive
+ResolveConflict ..> ControlNode
+ResolveConflict ..> ConflictArtifact
+FindingFsm ..> Finding
+FindingFsm ..> FindingState
+ScopeMatcher ..> Applicability
+ScopeMatcher ..> Target
+GuidanceResolver ..> PairedPolicyRef
+GuidanceResolver ..> PolicyDoctrineDoc
+GuidanceResolver ..> GuidancePayload
+CapabilityGate ..> CapabilityId
+CapabilityGate ..> ActorCapabilityGrant
+
+Finding ..> FindingCreated
+Finding ..> FindingStateChanged
+Finding ..> DispositionChanged
+Finding ..> FindingClosed
+CapabilityGate ..> CapabilityDenied
+CgIrSnapshot ..> CgIrPublished
+Inspection ..> InspectionCompleted
+ResolveConflict ..> ConflictEscalated
+Directive ..> DirectiveLifecycleChanged
+
+GuidanceView ..> PairedPolicyRef
+GuidanceView ..> LineageId
+AggregateReport ..> Severity
