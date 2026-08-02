@@ -23,8 +23,9 @@ comment block that enables investigation without opening the figure.
 | **Package** | Optional; package module map for behavior views (`findings_application`, `conflicts_domain`, …) |
 | **Contract** | Exactly the SemVer in [`VERSION`](VERSION). Not a per-diagram version. Bump `VERSION` + `python scripts/check_design_alignment.py --fix` |
 
-**State diagram files:** `docs/state/state_machine_NNN_*.puml` (aligned with `pkg_NNN`, `dep_NNN`, `seq_NNN`, `act_NNN`).  
-**Notes forbidden** on state diagrams — encode invariants as state body / guards / actions or leave them in Source contracts.
+**State diagram files:** `docs/state/state_machine_NNN_*.puml` (aligned with `pkg_NNN`, `dep_NNN`, `seq_NNN`, `act_NNN`, `uc_NNN`, `cd_NNN`).  
+**Use case diagram files:** `docs/usecase/uc_NNN_*.puml` / diagram ID `UC-NNN`. Shared includes: `usecase/common/uc_styles.puml` + `uc_identities.puml` + `uc_section_*`. ROD oval names identical to package application leaves and class `<<Use Case>>` types.  
+**Notes forbidden** on state, package, class, C4, deployment, and use-case diagrams — encode invariants as state body / guards / actions / associations / include edges, or leave them in Source contracts.
 
 ## Allowed C4 line patterns
 

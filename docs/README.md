@@ -43,7 +43,7 @@ All design work MUST follow [`standards/`](standards/README.md):
 | [`standards/VERSION`](standards/VERSION) | **Sole SSoT** for design freeze SemVer | `python scripts/check_design_alignment.py` |
 | [`standards/CHANGELOG.md`](standards/CHANGELOG.md) | Design-line history | review with bumps |
 | [`standards/c4_registry.yaml`](standards/c4_registry.yaml) | Canonical C4 IDs, non-peers, API resources, forbidden aliases | same checker |
-| [`standards/view_concerns.md`](standards/view_concerns.md) | Exclusive ownership: C4 / package / deployment / state | design review |
+| [`standards/view_concerns.md`](standards/view_concerns.md) | Exclusive ownership: C4 / package / class / deployment / state / use case | design review |
 | [`standards/contract.schema.json`](standards/contract.schema.json) | Spec contract front-matter | same checker |
 | [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract:` = `VERSION`, C4, Source) | same |
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
@@ -70,7 +70,7 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **Schemas** | [`schema/`](schema/) | Design SSoT for rule + policy structure (v1.0.0). Root `schema/` is a synced mirror for runtime paths. |
 | **C4 architecture** | [`c4-model/`](c4-model/README.md) | **Structural SSoT** — *what* peers exist and how they depend |
 | **State machines** | [`state/`](state/README.md) | FSMs and pipelines |
-| **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor / epic index |
+| **Use case diagrams** | [`usecase/`](usecase/README.md) | Actor goals · ROD use cases · groups by application package |
 | **Sequence diagrams** | [`sequence/`](sequence/README.md) | Resource workflow sequences |
 | **Class diagrams** | [`class/`](class/README.md) | Types inside packages (domain / app / infra) |
 | **Package diagrams** | [`package/`](package/README.md) | *How* code modules layer (CA rings, ports) |
