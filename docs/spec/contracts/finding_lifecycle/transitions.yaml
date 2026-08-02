@@ -130,12 +130,12 @@ transitions:
     to: "Open"
     trigger: "finding.reopen"
     actor: "regulatory_official"
-    capability: "finding.reject_remediation"
+    capability: "finding.reopen"
     sod_check: null
     story_ref: "US-FL-010"
     notes: >
       Regulatory Official reopens with comments.
-      Gating capability is finding.reject_remediation (same as reject).
+      Gating capability is finding.reopen (first-class; NOT finding.reject_remediation).
       Requires comments field on transition.
 
   - id: "TR-FL-010"
@@ -249,6 +249,67 @@ invariants:
     enforcement: "findings_application"
     failure_chain: >
       Without a sweeper, a crash between non-atomic appends permanently strands findings in Created.
+
+  - id: "INV-FL-022"
+    statement: >
+      Terminal-state reconciliation sweeper: any finding whose projection/stream shows
+      Verified without FindingClosed, or Waived without FindingClosed, older than
+      terminal_close_grace (default 30s) MUST idempotently append the missing Closed
+      transition (TR-FL-010 / TR-FL-011) with system actor. Sweep interval ≤ grace.
+      Extends INV-FL-020 recovery for human→auto close paths (not only Created→Open).
+    enforcement: "findings_application"
+    failure_chain: >
+      Without this sweeper, a crash after Verified/Waived human events leaves ghost
+      pre-terminal findings invisible to closed-queue analytics and SLA reports.
+
+  - id: "INV-FL-023"
+    statement: >
+      Open first-action mutex: concurrent human transitions from Open (or any
+      exclusive source state) serialize per finding_id. If the source state changes
+      before the lock is acquired, the second request MUST return 409 Conflict
+      (not retry-as-success, not silent no-op). Idempotent retries with the same
+      client_idempotency_key MAY return the original outcome.
+    enforcement: "findings_application + finding_events_store append_concurrency"
+
+  - id: "INV-FL-024"
+    statement: >
+      Human finding transitions MUST accept an optional client_idempotency_key
+      (request header or body). Within the idempotency retention window, a retry
+      with the same (finding_id, capability, actor sod_identity, client_idempotency_key)
+      MUST NOT append a second disposition event; return the original result.
+    enforcement: "findings_application"
+
+  - id: "INV-FL-025"
+    statement: >
+      Cross-store inspection completion: inspection snapshot write to artifacts_store
+      and finding birth via FindingOpenPort (finding_events_store) MUST use a saga or
+      outbox pattern so "Completed" is never visible with zero findings when the
+      evaluator produced Fail|Partial|NeedsReview detections. Patterns (one required):
+      (a) write artifact as pending, birth findings, then mark artifact completed; or
+      (b) birth findings first then write artifact, with a sweeper that retries
+      incomplete pairs. Backfill into the same inspection_id is forbidden only after
+      both sides are durably Completed; incomplete pairs MUST be retried or marked
+      Failed (not Completed). Orphaned blobs MUST be GC'd by reconciliation job.
+    enforcement: "inspections_application + findings_application"
+    failure_chain: >
+      Report commit + failed finding birth without saga = permanent data loss
+      (reinspect requires new id; completed inspection with zero findings).
+
+  - id: "INV-FL-026"
+    statement: >
+      Legacy Dismissed→Closed events may appear on replay of pre-v1 streams only.
+      The live FSM MUST NOT emit Dismissed→Closed. On replay, treat as accepted
+      no-op (state remains Dismissed terminal). Operators MUST document migration
+      of any historical Closed-after-Dismissed projections before upgrading.
+    enforcement: "findings_application replay"
+
+  - id: "INV-FL-027"
+    statement: >
+      Open-state SLA: findings remaining in Open longer than open_state_sla
+      (default 30 days, environment-configurable) MUST emit OpenSlaBreached
+      telemetry (and optional operator notification). Auto-dismiss is NOT required
+      by default; operators MAY configure auto-disposition with a documented reason.
+    enforcement: "findings_application sweeper"
 
 stories:
   - story_id: "US-FL-010"

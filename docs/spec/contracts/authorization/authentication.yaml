@@ -20,16 +20,28 @@ authentication:
 jwt_claims:
   required:
     - claim: "sub"
-      description: "Stable actor identifier (human, AI agent, or service principal)"
+      description: "Stable account/session principal identifier (human account, AI agent, or service principal)"
     - claim: "exp"
       description: "Expiration (unix seconds); expired tokens MUST be rejected"
     - claim: "iat"
       description: "Issued-at; used for clock-skew and replay windows"
-  recommended:
+  production_required:
+    - claim: "natural_person_id"
+      description: >
+        Stable cross-account natural-person (or legal-entity principal) identifier
+        used for SoD predicates and rate-limit identity keys. MUST be stable across
+        multiple IdP accounts held by the same human (e.g. employee_id, ppid, or
+        IdP pairwise subject that collates accounts). For service/AI principals
+        without a natural person, MUST equal a stable service principal id
+        distinct from ad-hoc JWT sub renames. Production deployments MUST require
+        this claim; non-production MAY fall back to sub with an explicit
+        environment flag (sod_identity_fallback=sub) that is non-conformant for
+        regulatory certification.
     - claim: "iss"
       description: "Issuer; MUST match configured trusted IdP issuer list"
     - claim: "aud"
       description: "Audience; MUST include the Selma API audience value"
+  recommended:
     - claim: "capabilities"
       type: "array of string"
       description: >
@@ -42,13 +54,43 @@ jwt_claims:
     - claim: "roles"
       type: "array of string"
       description: "Role names expanded via role_matrix.yaml when capabilities claim is absent"
+    - claim: "jti"
+      description: "Unique token id for deny-list revocation"
+
+identity_model:
+  description: >
+    SoD and multi-account resistance require a person-stable identity distinct
+    from JWT sub. Two IdP accounts for the same natural person MUST share one
+    natural_person_id so SOD-001/002/003 cannot be defeated by account hopping.
+  sod_identity: "natural_person_id (production); sub only with non-prod fallback flag"
+  authored_by_binding: >
+    metadata.audit.authored_by and creator_provenance entries MUST store
+    natural_person_id (not bare sub) at directive authoring time so SoD remains
+    valid if the author's sub is renamed or a second account is issued.
+  rate_limit_identity: "natural_person_id with sub fallback (capabilities.yaml rate_limits.identity_key)"
+  agent_rename_policy: >
+    Renaming an AI agent (new sub) MUST NOT clear SoD: authored_by remains the
+    natural_person_id / service principal id recorded at authoring. Operators
+    rotating service principals MUST treat the new principal as a different
+    SoD identity (documented handoff) or map both to the same natural_person_id.
 
 token_lifecycle:
   issuance: "External IdP or platform identity service; Selma does not mint user passwords"
   validation: >
     api MUST verify signature (asymmetric preferred; JWKS from IdP), iss, aud,
-    exp (with ≤60s clock skew), and that the token is not on the production
-    deny-list (see revocation).
+    exp (with ≤60s clock skew), production-required claims (including
+    natural_person_id when production policy applies), and that the token is
+    not on the production deny-list (see revocation).
+  role_claim_trust: >
+    JWT roles and capabilities claims are NOT sole source of truth for
+    authorization. api MUST intersect claimed roles/capabilities with a
+    server-side binding: either (1) IdP userinfo / introspection that returns
+    assigned roles for sub, or (2) a locally provisioned actor registry keyed
+    by sub (or natural_person_id) maintained out-of-band. Claimed roles absent
+    from the server-side binding are DROPPED. A compromised IdP that issues
+    arbitrary roles is mitigated by short-lived tokens + deny-list + optional
+    second factor on role elevation; production MUST document the chosen
+    binding mechanism.
   refresh: "Client-driven via IdP; Selma does not issue refresh tokens"
   revocation: >
     Production MUST implement at least one of: (1) short-lived access tokens
@@ -58,27 +100,35 @@ token_lifecycle:
     On revocation signal, subsequent requests with that jti/sub+iat window
     fail 401. Exact max lifetime and deny-list TTL are environment-owned
     (not fixed in this contract); operators MUST document chosen bounds.
+    Deny-list MUST define max_entries and eviction (oldest jti first) to bound
+    memory; when full, reject new admissions with 503 AuthzUnavailable rather
+    than silently accepting revoked tokens.
   production_requirement: >
     Relying solely on exp without a deny-list or short-lived token policy is
-    non-conformant for production deployments.
+    non-conformant for production deployments. Omitting natural_person_id in
+    production is non-conformant for SoD certification (AA-04).
 
 capability_resolution:
   steps:
-    - "Authenticate JWT → actor_id (sub)"
+    - "Authenticate JWT → actor_id (sub) + sod_identity (natural_person_id or fallback)"
+    - "Bind roles via server-side IdP/user registry (role_claim_trust); drop unbound role claims"
     - >
       If capabilities claim present: intersect with the server-side capability
       catalog (capabilities.yaml) and role-expanded capability set
       (role_matrix.yaml). Claimed IDs absent from the catalog, retired, or
       inconsistent with the actor's assigned role are DROPPED — never
       honored — and recorded as audit telemetry (capability_claim_unknown_total).
-    - "Else expand roles claim via role_matrix.yaml → effective capability set"
+    - "Else expand bound roles via role_matrix.yaml → effective capability set"
     - "Intersect with any environment deny-list (e.g. retired capabilities)"
-    - "Pass effective set to capability enforcement gates (capabilities.yaml)"
+    - "Pass effective set + sod_identity to capability enforcement gates (capabilities.yaml)"
   module: >
     Capability resolution and enforcement MUST live in a reusable
     authorization library (package authorization under api support), not
     duplicated in rest_interface / cli_interface / tui_interface. Every driving
-    adapter reuses the same module.
+    adapter reuses the same module. CapabilityEnforcer is one shared class
+    (not per-adapter subclasses with divergent logic); adapters may hold
+    separate instances of the same class for DI, but MUST share configuration
+    and catalog version.
 
 failure_semantics:
   - "Missing/invalid token → 401 Unauthorized; no capability check; no domain mutation"
@@ -102,6 +152,19 @@ invariants:
       catalog and role expansion; unrecognized, retired, or role-inconsistent
       capability IDs MUST NOT be honored and MUST be logged as audit telemetry
     enforcement: "api + shared CapabilityEnforcer module"
+
+  - id: "INV-AUTH-005"
+    statement: >
+      Production SoD identity MUST be natural_person_id (or mapped service
+      principal id); SoD predicates MUST NOT use bare JWT sub when
+      natural_person_id is present
+    enforcement: "api + FindingFsm"
+
+  - id: "INV-AUTH-006"
+    statement: >
+      Role claims MUST be bound to a server-side IdP/user registry (or
+      equivalent); unbound role claims MUST be dropped
+    enforcement: "api"
 
 stories:
   - story_id: "US-AUTH-001"

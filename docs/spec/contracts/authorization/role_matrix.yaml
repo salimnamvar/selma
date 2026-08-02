@@ -49,9 +49,12 @@ roles:
       - "finding.waive"
       - "finding.approve_remediation"
       - "finding.reject_remediation"
+      - "finding.reopen"
       - "finding.supersede"
+      - "inspection.view"
       - "analytics.view"
       - "conflict.resolve"
+      - "audit.view"
     ai_agent_constraint: "Same capabilities as humans. All actions audit-logged with actor identity."
 
   - role_id: "compliance_representative"
@@ -66,6 +69,7 @@ roles:
     capabilities:
       - "inspection.submit"
       - "inspection.reinspect"
+      - "inspection.view"
       - "finding.view"
       - "finding.acknowledge"
       - "evidence.submit"
@@ -76,6 +80,8 @@ roles:
       - "directive.retire"
       - "finding.waive"
       - "finding.dismiss"
+      - "finding.reopen"
+      - "audit.view"
 
   - role_id: "system"
     name: "System"
@@ -83,28 +89,48 @@ roles:
     actor_type: "Service Account"
     capabilities:
       - "inspection.submit"
+      - "inspection.view"
       - "finding.view"
       - "analytics.view"
+
+  - role_id: "auditor"
+    name: "Auditor"
+    description: >
+      Read-only audit principal for denial telemetry and finding event streams.
+      Cannot mutate directives, findings, or inspections.
+    actor_type: "Human or Service Account"
+    acts_on_behalf_of: "Audit / Oversight"
+    capabilities:
+      - "finding.view"
+      - "inspection.view"
+      - "analytics.view"
+      - "audit.view"
+    non_capabilities:
+      - "directive.create"
+      - "directive.modify"
+      - "finding.waive"
+      - "finding.dismiss"
+      - "evidence.submit"
 
 sod_constraints:
   - constraint_id: "SOD-001"
     name: "Creator Cannot Waive Own Findings"
     capability: "finding.waive"
-    check: "actor NOT IN creator_provenance(finding.control_id)"
+    check: "sod_identity(actor) NOT IN creator_provenance(finding)"
     enforcement: "findings_application"
     story_refs: ["US-SD-001"]
 
   - constraint_id: "SOD-002"
     name: "Evidence Submitter Cannot Approve Own Remediation"
     capability: "finding.approve_remediation"
-    check: "actor != evidence_submitter(finding_id)"
+    check: "sod_identity(actor) != evidence_submitter(finding_id)"
     enforcement: "findings_application"
     story_refs: ["US-SD-002"]
 
   - constraint_id: "SOD-003"
     name: "Creator Cannot Supersede Own Findings"
     capability: "finding.supersede"
-    check: "actor NOT IN creator_provenance(finding.control_id)"
+    check: "sod_identity(actor) NOT IN creator_provenance(finding)"
     enforcement: "findings_application"
     story_refs: ["US-SD-003"]
 

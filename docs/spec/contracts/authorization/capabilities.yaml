@@ -47,6 +47,14 @@ capabilities:
       description: "Reinspect a previously inspected target"
       enforcement_gate: "inspection_submit"
       failure: "403 CapabilityDenied"
+    - cap_id: "inspection.view"
+      description: >
+        Read inspection resources and inspection-scoped artifacts
+        (GET /inspections/{id}, inspection snapshots/traces). Distinct from
+        finding.view so artifact-router misrouting cannot grant inspection
+        read via findings capabilities alone.
+      enforcement_gate: "inspection_view"
+      failure: "403 CapabilityDenied"
 
   finding:
     - cap_id: "finding.view"
@@ -79,6 +87,12 @@ capabilities:
       description: "Reject remediation evidence (Pending Verification → Rejected)"
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
+    - cap_id: "finding.reopen"
+      description: >
+        Reopen a finding after remediation rejection (Rejected → Open).
+        Distinct from finding.reject_remediation. Requires mandatory comments.
+      enforcement_gate: "finding_fsm_transitions"
+      failure: "403 CapabilityDenied"
     - cap_id: "finding.supersede"
       description: >
         Mark finding as superseded (Open | Acknowledged | Evidence Submitted |
@@ -86,6 +100,13 @@ capabilities:
       enforcement_gate: "finding_fsm_transitions"
       failure: "403 CapabilityDenied"
       sod_check: "creator_cannot_supersede"
+    - cap_id: "audit.view"
+      description: >
+        Read denial-audit and finding-event audit streams (meta-audit).
+        Separate from finding.view so operational viewers cannot read
+        full capability-denial telemetry without an auditor role assignment.
+      enforcement_gate: "audit_read"
+      failure: "403 CapabilityDenied"
 
   evidence:
     - cap_id: "evidence.submit"
@@ -121,6 +142,11 @@ enforcement_gates:
     description: "inspection.submit, inspection.reinspect checked"
     failure: "Reject before target validation"
 
+  - gate: "inspection_view"
+    location: "api → inspections_application (artifact GET)"
+    description: "inspection.view checked for inspection-scoped reads"
+    failure: "Reject before artifact I/O; MUST NOT accept finding.view as substitute"
+
   - gate: "finding_fsm_transitions"
     location: "findings_application"
     description: "Per-transition capability + SoD checks"
@@ -136,6 +162,11 @@ enforcement_gates:
     description: "analytics.view checked"
     failure: "Reject; no aggregate data returned"
 
+  - gate: "audit_read"
+    location: "api → findings_application (denied_actions / event audit views)"
+    description: "audit.view checked for denial and stream audit reads"
+    failure: "Reject; no audit telemetry returned"
+
 failure_semantics:
   rules:
     - "Deny = hard reject; no partial writes, no compensating events"
@@ -144,6 +175,10 @@ failure_semantics:
     - "Escalation is NOT automatic on denial; caller receives error and decides next action"
     - "Delegation model: not supported in v8.2.2; capabilities bind directly to actor identity"
     - "CapabilityEnforcer is a reusable module used by all driving adapters (not HTTP-only ad-hoc checks)"
+    - >
+      SoD and rate limits key on natural_person_id when present (see
+      authentication.yaml); JWT sub alone MUST NOT be the sole SoD identity
+      for multi-account humans
 
 rate_limits:
   description: >
@@ -151,9 +186,13 @@ rate_limits:
     Complements directives_store write-queue fairness (503 when queue full):
     rate limits reject before lock acquisition so AI agents cannot flood
     admissions until the queue bound is hit.
+  identity_key: >
+    Prefer natural_person_id when the JWT provides it; otherwise JWT sub.
+    Multi-account humans sharing one natural_person_id share one quota bucket
+    so SoD-bypass accounts cannot double the rate budget.
   rules:
     - capability: "directive.modify"
-      scope: "per actor identity (JWT sub)"
+      scope: "per natural_person_id (fallback: JWT sub)"
       default_quota:
         max_requests: 30
         window_seconds: 60
@@ -166,12 +205,67 @@ rate_limits:
         before write_lock. Exceeding the limit MUST NOT enqueue compile work
         and MUST NOT mutate directive revisions.
     - capability: "directive.create"
-      scope: "per actor identity (JWT sub)"
+      scope: "per natural_person_id (fallback: JWT sub)"
       default_quota:
         max_requests: 30
         window_seconds: 60
       response_on_exceed: "429 RateLimited (retryable: true)"
       notes: "Same default as modify; prevents create storms from agents."
+    - capability: "finding.waive"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 60
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true) with Retry-After"
+      notes: "Bounds append-only growth from waive floods / agent loops."
+    - capability: "finding.approve_remediation"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 60
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "finding.dismiss"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 60
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "finding.supersede"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 60
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "finding.reopen"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 30
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "evidence.submit"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 60
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "conflict.resolve"
+      scope: "per natural_person_id (fallback: JWT sub)"
+      default_quota:
+        max_requests: 30
+        window_seconds: 60
+      response_on_exceed: "429 RateLimited (retryable: true)"
+    - capability: "denial_audit_write"
+      scope: "per natural_person_id (fallback: JWT sub) and global bulkhead"
+      default_quota:
+        max_requests: 120
+        window_seconds: 60
+      response_on_exceed: >
+        429 RateLimited; DenialAuditPort MUST aggregate or drop with metric
+        (never unbounded append). Dedicated connection pool bulkhead from
+        FindingEventRepository path.
+      notes: >
+        Capability denials themselves are rate-limited so invalid-capability
+        floods cannot DoS the finding_events_store connection pool.
   interaction_with_fairness: >
     Rate limit (429) is the first backpressure signal. If a request is admitted
     but the directives_store writer-preference queue is full, the store returns
@@ -193,9 +287,22 @@ invariants:
 
   - id: "INV-CA-004"
     statement: >
-      directive.modify and directive.create MUST enforce per-actor rate limits
-      (rate_limits) before write_lock; excess returns 429 RateLimited
+      High-amplification mutating capabilities listed in rate_limits (including
+      directive.create/modify and finding.* dispositions) MUST enforce per-identity
+      rate limits before mutation; excess returns 429 RateLimited
     enforcement: "api_rate_limiter"
+
+  - id: "INV-CA-005"
+    statement: >
+      finding.reopen is a first-class catalog capability; Rejected→Open MUST NOT
+      be gated solely by finding.reject_remediation
+    enforcement: "capability_catalog + finding_fsm"
+
+  - id: "INV-CA-006"
+    statement: >
+      inspection.view is required for inspection-scoped artifact reads;
+      finding.view MUST NOT authorize inspection artifact GET
+    enforcement: "api artifact router"
 
 stories:
   - story_id: "US-CA-001"

@@ -60,7 +60,7 @@ Rejected --> Waived : <b>WaiverGranted</b>\n[capability: finding.waive]\n[sod1]\
 Rejected --> Superseded : <b>Superseded</b>\n[capability: finding.supersede]\n[sod1]\nTR-FL-012
 
 ' Exit remediation composite
-Rejected --> Open : <b>ReopenDeclared</b>\nactor: Regulatory Official\ncommand: finding.reopen\n[capability: finding.reject_remediation]\n[hasMandatoryComments]\nstream: DispositionChanged\nstory: US-FL-010
+Rejected --> Open : <b>ReopenDeclared</b>\nactor: Regulatory Official\ncommand: finding.reopen\n[capability: finding.reopen]\n[hasMandatoryComments]\nstream: DispositionChanged\nstory: US-FL-010
 Verified --> Closed : <b>FindingClosed</b>\nactor: System\ncommand: auto-close\nstream: FindingClosed
 Waived --> Closed : <b>FindingClosed</b>\nactor: System\ncommand: auto-close\nstream: FindingClosed\nnote right of Waived --> Closed\n  INV-FL-020: Auto-transitions MUST be\n  appended atomically with the triggering\n  human transition in one DB transaction.\nend note
 
