@@ -3,63 +3,25 @@
 ' Title:     UC-003 Inspection
 ' Source:    docs/spec/contracts/inspection/
 ' C4:        inspections_application
+' Package:   inspections_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-003 — Inspection**\n(Bounded Context: Inspection · C4: inspections_application)
+title $TITLE_INSPECTION
 
 left to right direction
 
-actor "Compliance\nRepresentative" as CR #E8EAF6
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Inspection\n(inspections_application)" as BOUNDED {
-
-    usecase "Submit Target\nfor Inspection"  as UC1
-    usecase "Normalize Target"               as UC2
-    usecase "Classify Target"                as UC3
-    usecase "Select Controls"                as UC4
-    usecase "Evaluate Rules"                 as UC5
-    usecase "Aggregate Results"              as UC6
-    usecase "Generate Report"                as UC7
-    usecase "Fetch Remote Target\n(optional)" as UC_REF
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_inspection.puml
 }
 
-' Optional external — not a required product peer
-rectangle "Optional External" as EXT {
-  usecase "Target Sources"  as EXT1
-}
+ACTOR_CR --> UC_INS_CREATE
+ACTOR_CR --> UC_INS_GET
 
-' ---- associations ----
-CR --> UC1
-CR --> UC7
-
-UC1 ..> UC2 : <<include>>
-UC2 ..> UC3 : <<include>>
-UC3 ..> UC4 : <<include>>
-UC4 ..> UC5 : <<include>>
-UC5 ..> UC6 : <<include>>
-UC6 ..> UC7 : <<include>>
-
-UC1 ..> UC_REF : <<extend>>\nwhen target_ref
-UC_REF ..> EXT1 : <<include>>\ntarget_sources_gateway
-
-' ---- notes ----
-note right of UC1
-  **Pre:** Compliance Representative authenticated;
-  target body **or** optional target_ref
-  **Post:** Inspection created; pipeline runs against
-  frozen Compiled Rules only
-  **C4:** primary path is inline target payload;
-  Target Sources is optional pull via gateway
-end note
-
-note bottom of UC7
-  **Pre:** Evaluation complete
-  **Post:** Report + artifacts written;
-  findings opened via findings use case
-end note
+footer $FOOTER_INSPECTION
 
 @enduml

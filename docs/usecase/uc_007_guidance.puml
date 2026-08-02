@@ -2,48 +2,28 @@
 ' ============================================================
 ' Title:     UC-007 Guidance
 ' Source:    docs/schema/policy_doctrine.yaml
-' C4:        findings_application + directives_repository (guidance_only)
+' C4:        findings_application
+' Package:   findings_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-007 — Finding Guidance**\n(C4: findings_application + directives_repository · guidance_only)
+title $TITLE_GUIDANCE
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
-actor "Compliance\nRepresentative" as CR #E8EAF6
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Findings guidance & read models\n(findings_application · not a guidance engine)" as BOUNDED {
-
-    usecase "Get Finding Guidance"          as UC1
-    usecase "List Finding Aggregates"       as UC2
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_guidance.puml
 }
 
-' ---- associations ----
-RO --> UC1
-RO --> UC2
+ACTOR_RO --> UC_FIND_GUIDE
+ACTOR_RO --> UC_FIND_AGGR
+ACTOR_CR --> UC_FIND_GUIDE
+ACTOR_CR --> UC_FIND_AGGR
 
-CR --> UC1
-CR --> UC2
-
-' ---- notes ----
-note right of UC1
-  **Pre:** Finding exists with paired_policy_ref
-  **Post:** Doctrine loaded via directives_repository
-  (guidance_only); never used for evaluation or FSM
-  **Path:** GET /findings/{id}/guidance
-  **C4:** not a freestanding guidance/analytics engine
-end note
-
-note bottom of UC2
-  **Pre:** Actor has analytics.view
-  **Post:** Read-only aggregates over
-  finding_events_store (no write path to
-  compiled_rules or finding FSM — AA-01)
-  **C4:** findings_application read model
-end note
+footer $FOOTER_GUIDANCE
 
 @enduml

@@ -3,56 +3,28 @@
 ' Title:     UC-005 Conflict
 ' Source:    docs/spec/contracts/conflict/
 ' C4:        ResolveConflict (domain · not peer)
+' Package:   conflicts_domain · findings_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-005 — Conflict Resolution**\n(Domain service ResolveConflict · not a C4 peer)\nUsed by compilation_application / inspections_application
+title $TITLE_CONFLICT
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Conflict (domain service + artifacts)" as BOUNDED {
-
-    usecase "Detect Conflict"                as UC1
-    usecase "Resolve Conflict\n(deterministic)" as UC2
-    usecase "Escalate to\nHuman Review"      as UC3
-    usecase "Review Conflict\nArtifact"      as UC4
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_conflict.puml
 }
 
-' ---- associations ----
-RO --> UC4
+' Domain ResolveConflict invoked by compile / inspect pipelines (system)
+ACTOR_SYS --> UC_CON_RESOLVE
 
-UC1 ..> UC2 : <<include>>
-UC2 ..> UC3 : <<extend>>
-UC3 ..> UC4 : <<include>>
+' Human review of escalated conflict artifacts
+ACTOR_RO --> UC_FIND_CONFLICT
 
-' ---- notes ----
-note right of UC1
-  **Pre:** Multiple directives or rules overlap
-  on the same target scope
-  **Post:** Conflict artifact may be written
-  to artifacts_store (kind=conflict)
-  **Contract:** conflict/detection.yaml
-  **C4:** not a freestanding conflict engine
-end note
-
-note right of UC2
-  **Pre:** Conflict detected, strategy available
-  **Post:** Deterministic precedence applied
-  (in-process during compile/inspect)
-  **Contract:** conflict/precedence.yaml
-end note
-
-note bottom of UC3
-  **Pre:** Deterministic resolution not possible
-  **Post:** Artifact escalated; human review via
-  POST /artifacts/{id}/resolutions
-  [capability conflict.resolve]
-  **Contract:** conflict/precedence.yaml
-end note
+footer $FOOTER_CONFLICT
 
 @enduml

@@ -3,64 +3,29 @@
 ' Title:     UC-002 Compilation
 ' Source:    docs/spec/contracts/compilation/
 ' C4:        compilation_application
+' Package:   compiled_rules_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-002 — Compilation**\n(Bounded Context: Compilation · C4: compilation_application)
+title $TITLE_COMPILATION
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
-actor "Optional\nCompile Client" as OPT #E8F5E9
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Compilation\n(compilation_application)" as BOUNDED {
-
-    usecase "Trigger Compilation"             as UC1
-    usecase "Validate Rule Schema"            as UC2
-    usecase "Detect Strategy Discriminator"   as UC3
-    usecase "Validate Complexity"             as UC4
-    usecase "Validate Portability"            as UC5
-    usecase "Materialize CG-IR"              as UC6
-    usecase "Publish Snapshot"                as UC7
-    usecase "Reuse Incremental"              as UC8
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_compilation.puml
 }
 
-' ---- associations ----
-RO --> UC1 : via directive change\n(api → compilation)
-OPT --> UC1 : optional client\n(not a C4 peer)
+' DrainOutbox is system-driven (outbox); Compile may also be system-triggered
+ACTOR_SYS --> UC_CR_DRAIN
+ACTOR_SYS --> UC_CR_COMPILE
 
-UC1 ..> UC2 : <<include>>
-UC1 ..> UC3 : <<include>>
-UC1 ..> UC4 : <<include>>
-UC1 ..> UC5 : <<include>>
-UC2 ..> UC6 : <<include>>
-UC3 ..> UC6 : <<include>>
-UC4 ..> UC6 : <<include>>
-UC5 ..> UC6 : <<include>>
-UC6 ..> UC7 : <<include>>
+' Regulatory Official changes directives that enqueue compile (indirect)
+ACTOR_RO --> UC_CR_COMPILE
 
-UC8 ..> UC6 : <<extend>>
-
-' ---- notes ----
-note right of UC1
-  **Pre:** Executable documents in Directives;
-  directive change or explicit compile request
-  **Post:** Compilation pipeline initiated
-  **C4:** compilation_application reads via directives_repository;
-  publishes via compiled_rules_repository
-end note
-
-note right of UC6
-  **Pre:** All validations pass
-  **Post:** CG-IR snapshot produced
-end note
-
-note bottom of UC7
-  **Pre:** CG-IR materialized
-  **Post:** Snapshot published to compiled_rules_store (CAS)
-end note
+footer $FOOTER_COMPILATION
 
 @enduml

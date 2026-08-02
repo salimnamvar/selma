@@ -3,69 +3,22 @@
 ' Title:     UC-008 Certification
 ' Source:    docs/spec/contracts/certification/gates.yaml
 ' C4:        certification_tool (offline · not peer)
+' Package:   offline certification_tool
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-008 — Architectural Certification**\n(Offline/CI tool · not an in-process C4 peer)
+title $TITLE_CERTIFICATION
 
 left to right direction
 
-actor "Optional\nCI Client" as CICLIENT #E8F5E9
+!include common/uc_section_actors.puml
 
-rectangle "Certification Tool Suite\n(certification_tool · offline/CI)" as TOOL {
+!include common/uc_section_certification.puml
 
-  usecase "Run Architectural\nCertification"          as UC0
-  usecase "Validate Mediated\nFeedback"               as UC1
-  usecase "Validate Declarative\nGovernance"          as UC2
-  usecase "Validate Evaluator\nPurity"                as UC3
-  usecase "Validate Segregation\nof Duties"           as UC4
-  usecase "Validate Conflict\nDeterminism"            as UC5
-  usecase "Validate Discriminator\nCompleteness"      as UC6
-  usecase "Validate Portability"                      as UC7
-  usecase "Validate Hermeticity\nCompleteness"        as UC8
-}
+ACTOR_CI --> UC_CERT_RUN
 
-' ---- associations ----
-CICLIENT --> UC0
-
-UC0 ..> UC1 : <<include>>
-UC0 ..> UC2 : <<include>>
-UC0 ..> UC3 : <<include>>
-UC0 ..> UC4 : <<include>>
-UC0 ..> UC5 : <<include>>
-UC0 ..> UC6 : <<include>>
-UC0 ..> UC7 : <<include>>
-UC0 ..> UC8 : <<include>>
-
-' ---- notes ----
-note right of UC0
-  **Pre:** Compiled Rules samples available;
-  optional CI or local tool invocation
-  **Post:** Certification report produced;
-  pass/fail per gate; may write Artifacts
-  **Contract:** certification/gates.yaml
-  **C4:** not a context/container peer —
-  optional client of API / certify tool
-end note
-
-note right of UC3
-  **Pre:** CG-IR snapshot available
-  **Post:** Purity validated
-  **Contract:** certification/gates.yaml (AA-03)
-end note
-
-note bottom of UC7
-  **Pre:** CG-IR snapshot available
-  **Post:** Portability validated
-  **Contract:** certification/gates.yaml (AA-07)
-end note
-
-note bottom of UC8
-  **Pre:** frozen_environment + compile path available
-  **Post:** Hermetic pins and runtime_preimage validated
-  **Contract:** certification/gates.yaml (AA-08);
-  hermetic_boundary HERM-008
-end note
+footer $FOOTER_CERTIFICATION
 
 @enduml

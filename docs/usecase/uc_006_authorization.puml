@@ -3,58 +3,27 @@
 ' Title:     UC-006 Authorization
 ' Source:    docs/spec/contracts/authorization/
 ' C4:        api
+' Package:   rest_interface
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-006 — Authorization**\n(Bounded Context: Authorization · C4: api)
+title $TITLE_AUTHORIZATION
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
-actor "Compliance\nRepresentative" as CR #E8EAF6
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Authorization\n(api)" as BOUNDED {
-
-    usecase "Authenticate User"             as UC1
-    usecase "Check Capability"              as UC2
-    usecase "Deny Capability\n(audit)"      as UC3
-    usecase "Enforce Segregation\nof Duties" as UC4
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_authorization.puml
 }
 
-' ---- associations ----
-RO --> UC1
-CR --> UC1
-RO --> UC2
-CR --> UC2
+ACTOR_RO --> UC_AUTH_AUTHN
+ACTOR_CR --> UC_AUTH_AUTHN
+ACTOR_RO --> UC_AUTH_CHECK
+ACTOR_CR --> UC_AUTH_CHECK
 
-UC1 ..> UC2 : <<include>>
-UC2 ..> UC3 : <<extend>>
-UC2 ..> UC4 : <<include>>
-
-' ---- notes ----
-note right of UC1
-  **Pre:** User presents credentials or token
-  **Post:** Identity established; session created
-  **Contract:** authorization/capabilities.yaml
-end note
-
-note right of UC4
-  **Pre:** Capability check against role bindings
-  **Post:** SoD invariant enforced; conflicting
-  role combinations denied
-  **Contract:** authorization/role_matrix.yaml, sod_contract.yaml
-end note
-
-note bottom of UC3
-  **Pre:** Capability not granted for requested action
-  **Post:** CapabilityDenied appended via
-  finding_events_repository → finding_events;
-  403 returned to caller (no partial mutation)
-  **C4:** long-term audit export is ops only, not a peer
-  **Contract:** authorization/capabilities.yaml (failure_semantics)
-end note
+footer $FOOTER_AUTHORIZATION
 
 @enduml

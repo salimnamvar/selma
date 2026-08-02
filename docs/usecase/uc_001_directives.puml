@@ -3,59 +3,29 @@
 ' Title:     UC-001 Directives
 ' Source:    docs/spec/contracts/directive/
 ' C4:        api → directives_application
+' Package:   directives_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-001 — Directives**\n(C4: api → directives_application → directives_repository)
+title $TITLE_DIRECTIVES
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Directives\n(directives_application, api)" as BOUNDED {
-
-    usecase "Create Directive"          as UC1
-    usecase "Modify Directive"          as UC2
-    usecase "Retire Directive"          as UC3
-    usecase "Fork Directive"            as UC4
-    usecase "Merge Directive"           as UC5
-    usecase "Split Directive"           as UC6
-    usecase "Restore Directive"         as UC7
-    usecase "View Directive History"    as UC8
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_directives.puml
 }
 
-' ---- associations ----
-RO --> UC1
-RO --> UC2
-RO --> UC3
-RO --> UC4
-RO --> UC5
-RO --> UC6
-RO --> UC7
-RO --> UC8
+' ---- actor associations (Regulatory Official) ----
+ACTOR_RO --> UC_DIR_CREATE
+ACTOR_RO --> UC_DIR_GET
+ACTOR_RO --> UC_DIR_LIST
+ACTOR_RO --> UC_DIR_UPD
+ACTOR_RO --> UC_DIR_LIFE
 
-' ---- includes / extends ----
-UC5 ..> UC4 : <<include>>
-UC6 ..> UC2 : <<include>>
-UC7 ..> UC8 : <<include>>
-
-' ---- notes ----
-note right of UC1
-  **Pre:** Regulatory Official authenticated
-  **Post:** New directive persisted in draft state
-end note
-
-note right of UC3
-  **Pre:** Directive in active state
-  **Post:** Directive state → retired
-end note
-
-note bottom of UC8
-  **Pre:** Directive exists
-  **Post:** Full version chain displayed
-end note
+footer $FOOTER_DIRECTIVES
 
 @enduml

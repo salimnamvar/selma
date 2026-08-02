@@ -1,68 +1,110 @@
 # Selma — Use Case Diagrams
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **View concerns:** [`../standards/view_concerns.md`](../standards/view_concerns.md)  
+> **design_contract_version:** `1.1.0` · Structural SSoT for **peers:** [`../c4-model/`](../c4-model/README.md)
 
-Normative acceptance criteria live as `stories:` inside [`../spec/contracts/`](../spec/contracts/) (`US-DOMAIN-NNN`). This file is a navigational index only — no use case prose lives here.
+## View concern (this directory owns)
 
-PlantUML use case diagrams for each bounded context. Actors and components
-align with [`../c4-model/`](../c4-model/README.md).
+| | |
+| :--- | :--- |
+| **Answers** | *What actor goals* the product fulfills and how they **group** |
+| **Owns 100%** | Actor catalog (C4 persons); use-case **groups** by `{resource}_application` / gate / offline tool; **ROD use-case names** identical to package leaves and class `<<Use Case>>` types; actor associations; `<<include>>` / `<<extend>>` among use cases; shared `common/uc_*` styles and identities |
+| **Does not own** | Peer inventing (C4) · package trees/ports (package/) · method signatures (class/) · zones/TLS/RPO (deployment/) · FSM states/transitions (state/) · capability catalog / pre-post acceptance (spec/) · pipeline stage inventories (state/activity) |
+| **Join key** | C4 peer IDs + package module names + ROD use-case PascalCase names (identical strings across package / class / use case) |
 
-## Prerequisites
+**No PlantUML `note` blocks.** Preconditions, postconditions, and stories live under [`../spec/contracts/`](../spec/contracts/) (`stories:` / `US-*`). No short-form actor labels (`RO`, `CR`).
 
-- PlantUML ≥ 1.2024
-- Java 17+ (or the PlantUML Docker image)
-- Common styles: `common/uc_styles.puml` (auto-included by each diagram)
+## Source layout (like package / class / state `common/`)
 
-## Quick Render
+| Path | Role | Edit when… |
+| :--- | :--- | :--- |
+| [`common/uc_styles.puml`](common/uc_styles.puml) | Skinparams + **CA palette** aliases | Visual language / harmony |
+| [`common/uc_identities.puml`](common/uc_identities.puml) | Actors, group titles, ROD names, diagram IDs | Rename labels / peers / use cases |
+| [`common/uc_section_*.puml`](common/) | Use-case ovals + include edges by group | Inventory of goals per package |
+| [`uc_NNN_*.puml`](.) | Orchestrators only (actors + associations) | Actor participation |
+
+**Include order:** `uc_styles` → `uc_identities` → `uc_section_actors` → `uc_section_*` → associations in orchestrator.
 
 ```bash
-# Single diagram
-plantuml docs/usecase/uc_001_directives.puml
-
-# All diagrams
 plantuml docs/usecase/uc_*.puml
+python scripts/check_design_alignment.py
 ```
 
-## Actor Catalog (C4)
+## Color harmony (CA MACRO)
 
-| Actor | Type | Description |
-|-------|------|-------------|
-| Regulatory Official | Human / AI agent | Authors directives; resolves findings; reads guidance |
-| Compliance Representative | Human / AI / service | Submits targets and inspections; acknowledges findings; submits evidence; reads guidance |
-| AI Agent | (acts as official or rep) | Same capabilities as the human principal it represents |
+**SSoT:** [`../standards/common/ca_palette.puml`](../standards/common/ca_palette.puml) via [`common/uc_styles.puml`](common/uc_styles.puml).
 
-### Not C4 context peers
+| Element | CA MACRO | Fill / border |
+| :--- | :--- | :--- |
+| Actors | Actors | `#E8EAF6` / `#3F51B5` |
+| Application use cases / groups | Application | `#E0F2F1` / `#00897B` |
+| Interface gate group | Interface | `#E1F5FE` / `#0288D1` |
+| Domain service group | Domain | `#F3E5F5` / `#7B1FA2` |
+| Offline / system / external actors | External | `#ECEFF1` / `#607D8B` |
+| Gate use cases (deny / segregation) | Gate (micro) | `#FFEBEE` / `#C62828` |
+| Hermetic validation use case | Hermetic (micro) | `#FFFDE7` / `#F9A825` |
+
+**Rule:** never invent hex in diagram bodies — only palette macros / `$UC_*` aliases.
+
+## Naming (ROD + Clean Architecture)
+
+| Element | Convention | Examples |
+| :--- | :--- | :--- |
+| Diagram ID | `UC-NNN` / `Use Case NNN` | `UC-001`, `Use Case 001 — Directives` |
+| File | `uc_NNN_{resource}.puml` | `uc_004_findings.puml` |
+| Group rectangle | Package title (dual for compile) | `directives_application`, `compiled_rules_application` + `(C4: compilation_application)` |
+| Use-case oval | PascalCase **Verb + Resource** = class / package leaf | `CreateDirective`, `TransitionFinding`, `CompileDirectives` |
+| Actors | Full C4 person names | `Regulatory Official`, `Compliance Representative` |
+| Non-peers | Full words + label | `ResolveConflict (domain · not peer)`, `certification_tool (offline · not peer)` |
+
+**Forbidden on this view:** pipeline stage names as use cases (`NormalizeTarget`, `Materialize…`), FSM state names (`PendingVerification`), store mutability prose, capability catalog tables, C4 Rel graphs, short forms (`CG-IR`, `SoD`, `RO`).
+
+## Actor catalog (C4 persons)
+
+| Actor | Type | Primary goals |
+| :--- | :--- | :--- |
+| Regulatory Official | Human / AI agent | Directives, dispositions, conflict review, guidance |
+| Compliance Representative | Human / AI / service | Inspections, evidence, acknowledge, guidance |
+| System | Automated | Outbox drain, compile, open findings, domain resolve |
+| Optional Continuous Integration Client | Optional client | Offline architectural certification |
+
+### Not C4 context peers (do not invent actors for them)
 
 | Concern | How it appears |
-|---------|----------------|
-| CI/CD | Optional **client** of API / `certification_tool` (not a product actor) |
-| Certification runner | Offline/CI tool suite (AA-01…AA-09); writes Artifacts when run |
-| Target Sources | Optional external pull for inspection targets (primary path is inline) |
-| Audit export / remediation ticketing | Ops exports / optional notify — not product peers |
+| :--- | :--- |
+| Continuous integration host | Optional client of `certification_tool` |
+| Target Sources | Optional external pull (gateway) — not a product actor |
+| Audit export / remediation ticketing | Ops only — not product peers |
 
-## Diagram & Epic Index
+## Diagram & use-case inventory
 
-| Epic / ID | Context | Primary Actor(s) | C4 / design owner | File | Primary contracts |
-|-----------|---------|-------------------|-------------------|------|-------------------|
-| UC-001 | Directives | Regulatory Official | `api`, `directives_application` | [uc_001_directives.puml](uc_001_directives.puml) | `directive/*` |
-| UC-002 | Compilation | Regulatory Official (via directive change) | `compilation_application` | [uc_002_compilation.puml](uc_002_compilation.puml) | `compilation/*` |
-| UC-003 | Inspection | Compliance Representative | `inspections_application` | [uc_003_inspection.puml](uc_003_inspection.puml) | `inspection/*` |
-| UC-004 | Finding Lifecycle | Both actors | `findings_application` | [uc_004_findings.puml](uc_004_findings.puml) | `finding_lifecycle/*` |
-| UC-005 | Conflict | Regulatory Official | Domain `ResolveConflict` (used by compilation / inspections); artifacts via `artifacts_repository` | [uc_005_conflict.puml](uc_005_conflict.puml) | `conflict/*` |
-| UC-006 | Authorization | Both actors | `api` | [uc_006_authorization.puml](uc_006_authorization.puml) | `authorization/*`, `finding_lifecycle/sod_contract.yaml` |
-| UC-007 | Finding guidance | Both actors | `findings_application` + doctrine via `directives_repository` (`guidance_only`) | [uc_007_guidance.puml](uc_007_guidance.puml) | `inspection/finding_contract.yaml`, `schema/policy_doctrine.yaml` |
-| UC-008 | Certification | Optional CI client | `certification_tool` offline/CI (**not** in-process C4 peer); writes `artifacts_store` | [uc_008_certification.puml](uc_008_certification.puml) | `certification/gates.yaml` |
+| ID | File | Group (package) | C4 | ROD use cases (must match package + class) |
+| :--- | :--- | :--- | :--- | :--- |
+| **UC-001** | [uc_001_directives.puml](uc_001_directives.puml) | `directives_application` | `directives_application` | `CreateDirective`, `GetDirective`, `ListDirectives`, `UpdateDirective`, `LifecycleTransitions` (+ `Retire` / `Fork` / `Merge` / `Split` / `Restore` methods) |
+| **UC-002** | [uc_002_compilation.puml](uc_002_compilation.puml) | `compiled_rules_application` | `compilation_application` | `CompileDirectives`, `PublishCompiledRules`, `DrainOutbox`, `ValidateDirectiveDocuments` |
+| **UC-003** | [uc_003_inspection.puml](uc_003_inspection.puml) | `inspections_application` | `inspections_application` | `CreateInspection`, `GetInspection`, `RunInspectionPipeline` |
+| **UC-004** | [uc_004_findings.puml](uc_004_findings.puml) | `findings_application` | `findings_application` | `GetFinding`, `ListFindings`, `TransitionFinding`, `GetFindingGuidance`, `AttachEvidence`, `OpenFindings`, `ListFindingAggregates`, `ReviewConflictArtifact` |
+| **UC-005** | [uc_005_conflict.puml](uc_005_conflict.puml) | `conflicts_domain` + findings | `ResolveConflict` (domain · not peer) | `ResolveConflict`, `ReviewConflictArtifact` |
+| **UC-006** | [uc_006_authorization.puml](uc_006_authorization.puml) | `rest_interface` | `api` | `AuthenticateActor`, `CheckCapability`, `AppendDenial`, `EnforceSegregationOfDuties` |
+| **UC-007** | [uc_007_guidance.puml](uc_007_guidance.puml) | `findings_application` | `findings_application` | `GetFindingGuidance`, `ListFindingAggregates` |
+| **UC-008** | [uc_008_certification.puml](uc_008_certification.puml) | offline tool | `certification_tool` (offline · not peer) | `RunArchitecturalCertification` + AA-01…AA-09 validators |
 
 ## Conventions
 
-- `-->` solid arrow = association (actor participates in use case)
-- `..>` dashed arrow = `<<include>>` (mandatory sub-flow) or `<<extend>>` (optional/conditional sub-flow)
-- Notes contain **Pre** (precondition) and **Post** (postcondition) for each use case
-- System boundary rectangles group use cases by bounded context
-- All diagrams share styling from `common/uc_styles.puml`
+| Arrow | Meaning |
+| :--- | :--- |
+| `-->` solid | Actor participates in use case |
+| `..>` dashed `<<include>>` | Mandatory sub-goal |
+| `..>` dashed `<<extend>>` | Optional / conditional sub-goal |
 
-## Related Documents
+## Related views
 
-- C4 structure: [`../c4-model/README.md`](../c4-model/README.md)
-- Specification contracts: [`../spec/contracts/`](../spec/contracts/)
+| View | Relationship |
+| :--- | :--- |
+| [C4](../c4-model/README.md) | Peer IDs and actor persons |
+| [Package](../package/README.md) | Application packages and UC component leaves |
+| [Class](../class/README.md) | `<<Use Case>>` types and method shapes |
+| [State](../state/README.md) | How lifecycle / pipelines evolve (not actor goals) |
+| [Deployment](../deployment/README.md) | Where processes run (not goals) |
+| [Spec contracts](../spec/contracts/) | Normative pre/post and stories |

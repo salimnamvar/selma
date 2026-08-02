@@ -3,94 +3,45 @@
 ' Title:     UC-004 Findings
 ' Source:    docs/spec/contracts/finding_lifecycle/
 ' C4:        findings_application
+' Package:   findings_application
 ' Contract:  1.1.0
 ' ============================================================
 !include common/uc_styles.puml
+!include common/uc_identities.puml
 
-title **UC-004 — Finding Lifecycle**\n(Bounded Context: Finding Lifecycle · C4: findings_application)
+title $TITLE_FINDINGS
 
 left to right direction
 
-actor "Regulatory\nOfficial" as RO #E3F2FD
-actor "Compliance\nRepresentative" as CR #E8EAF6
+!include common/uc_section_actors.puml
 
-rectangle "Selma Application" as SYS {
-  rectangle "Finding Lifecycle\n(findings_application)" as BOUNDED {
-
-    usecase "Create Finding\n(auto from inspection)" as UC1
-    usecase "Open Finding"              as UC2
-    usecase "Submit Evidence"           as UC3
-    usecase "Validate Finding"          as UC4
-    usecase "Remediate Finding"         as UC5
-    usecase "Verify Finding"            as UC6
-    usecase "Waive Finding"             as UC7
-    usecase "Dismiss Finding"           as UC8
-    usecase "Close Finding"             as UC9
-    usecase "View Finding Details"      as UC10
-    usecase "Supersede Finding"         as UC11
-  }
+rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
+  !include common/uc_section_findings.puml
 }
 
-' ---- Regulatory Official associations ----
-RO --> UC4
-RO --> UC6
-RO --> UC7
-RO --> UC8
-RO --> UC10
-RO --> UC11
+' System opens findings from inspection pipeline
+ACTOR_SYS --> UC_FIND_OPEN
 
-' ---- Compliance Representative associations ----
-CR --> UC3
-CR --> UC5
-CR --> UC10
+' Both actors read findings
+ACTOR_RO --> UC_FIND_GET
+ACTOR_RO --> UC_FIND_LIST
+ACTOR_CR --> UC_FIND_GET
+ACTOR_CR --> UC_FIND_LIST
 
-' ---- includes / extends ----
-UC1 ..> UC2 : <<include>>
-UC3 ..> UC4 : <<include>>
-UC6 ..> UC9 : <<include>>
-UC7 ..> UC9 : <<include>>
-UC8 ..> UC9 : <<include>>
-UC11 ..> UC9 : <<include>>
+' Regulatory Official: dispositions via TransitionFinding
+ACTOR_RO --> UC_FIND_TRANS
+ACTOR_RO --> UC_FIND_CONFLICT
 
-' ---- notes ----
-note right of UC1
-  **Pre:** Inspection completed with non-conformances
-  **Post:** Finding created; event appended to finding_events
-  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-001)
-  **C4:** inspections_application → findings_application → finding_events_repository
-end note
+' Compliance Representative: evidence and acknowledge path via TransitionFinding
+ACTOR_CR --> UC_FIND_TRANS
+ACTOR_CR --> UC_FIND_EVID
 
-note right of UC6
-  **Pre:** Finding in Pending Verification state,
-  Regulatory Official has approve_remediation capability
-  **Post:** Finding state → verified → closed
-  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-007)
-  **SoD:** SOD-002 — submitter cannot approve own remediation
-end note
+' Read models (also on UC-007)
+ACTOR_RO --> UC_FIND_GUIDE
+ACTOR_RO --> UC_FIND_AGGR
+ACTOR_CR --> UC_FIND_GUIDE
+ACTOR_CR --> UC_FIND_AGGR
 
-note right of UC7
-  **Pre:** Finding in open/validated state,
-  Regulatory Official has waive capability
-  **Post:** Finding state → waived → closed
-  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-004)
-  **SoD:** SOD-001 — creator cannot waive own findings
-end note
-
-note right of UC11
-  **Pre:** Finding in Open state,
-  Regulatory Official has supersede capability
-  **Post:** Finding state → superseded (terminal)
-  **Contract:** finding_lifecycle/transitions.yaml (TR-FL-012)
-  **SoD:** SOD-003 — creator cannot supersede own findings
-end note
-
-note bottom of UC9
-  **Pre:** Finding in terminal-ready state
-  **Post:** Finding state → closed;
-  audit entry in finding_events
-  **Contract:** finding_lifecycle/transitions.yaml
-  **Note:** Remediation ticketing / long-term audit export
-  are optional ops integrations, not product peers
-end note
+footer $FOOTER_FINDINGS
 
 @enduml
