@@ -109,7 +109,7 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden: registry `forbidd
 
 **ISP rule:** one physical pool MAY back multiple adapters; each port MUST be a **separate adapter class** so a `CompilerReadPort` reference cannot mutate directives, and `api` cannot use full `FindingEventRepository` via `DenialAuditPort`.
 
-Method shapes: [`../class/cd_002_application_services.puml`](../class/cd_002_application_services.puml).  
+**Port and use-case method shapes:** [`../class/`](../class/README.md) (CLS-002 owns signatures; this view owns module ownership only).  
 Denial-audit **wire path** on Component diagram: [`../c4-model/`](../c4-model/README.md). Normative denial fields: [`../spec/contracts/finding_lifecycle/sod_contract.yaml`](../spec/contracts/finding_lifecycle/sod_contract.yaml).
 
 ## Module edges vs C4 component edges

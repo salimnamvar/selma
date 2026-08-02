@@ -2,15 +2,21 @@
 ' ============================================================
 ' Title:     CLS-003 Infrastructure Adapters
 ' Source:    docs/spec/contracts/data_stores/
-' C4:        *_repository / target_sources_gateway → *_store
+' C4:        *_repository | target_sources_gateway → *_store
+' Package:   directives|compiled_rules|findings|artifacts|
+'            inspections|platform_infrastructure
 ' Contract:  1.1.0
 ' ============================================================
-' CLS-003 · Infrastructure — {resource}_infrastructure adapters
+' Owns: adapter classes, shared clients, platform services,
+'       implements relationships to application ports.
+' Does not own: port method catalogs (CLS-002), store mutability
+' semantics (spec), zones/TLS/RPO (deployment), package edges (package/).
+
 !include common/cd_styles.puml
 
-title **CLS-003 — Infrastructure Adapters**\nROD port methods · {resource}_infrastructure modules\n
+title **CLS-003 — Infrastructure Adapters**\nISP one-adapter-per-port · platform services\n
 
-package "<<ports>>\nApplication ports (ISP)" as PORTS #FCE4EC/C62828 {
+package "application.ports (ref)" as PORTS #FCE4EC/C62828 {
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
   interface "**CompilerReadPort**" as CompilerReadPort <<Port>>
   interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>>
@@ -23,101 +29,124 @@ package "<<ports>>\nApplication ports (ISP)" as PORTS #FCE4EC/C62828 {
   interface "**TargetSourcesGateway**" as TargetSourcesGateway <<Port>>
 }
 
-package "directives_infrastructure" as INFRA_DIR #FFE0B2/F57C00 {
-  class "**SqlDirectiveWriter**" as SqlDirectiveWriter <<Adapter>> {
-    + GetDirective(...)
-    + SaveDirective(... If-Match)
-    + EnqueueCompileRequest(...)
-    --
-    <<implements>> DirectiveRepository only
-    write path; same PG pool optional
-  }
-  class "**SqlCompilerReader**" as SqlCompilerReader <<Adapter>> {
-    + GetDirectiveExecutableDocument(...)
-    --
-    <<implements>> CompilerReadPort only
-    no SaveDirective / doctrine methods
-  }
-  class "**SqlGuidanceReader**" as SqlGuidanceReader <<Adapter>> {
-    + GetDirectivePolicyDoctrine(...)
-    --
-    <<implements>> GuidanceReadPort only
-    revision-pinned doctrine reads
-  }
-  note right of SqlCompilerReader
-    ISP: three adapter classes (or narrow façades).
-    Composition root injects the port type, never
-    a shared multi-port concrete into compile path.
-    God-adapter SqlDirectiveRepository is **forbidden**.
-  end note
-}
+package "directives_infrastructure\n(C4: directives_repository)" as INFRA_DIR #FFE0B2/F57C00 {
 
-package "compiled_rules_infrastructure" as INFRA_CR #FFE0B2/F57C00 {
-  class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> {
-    + GetCompiledRules(snapshot_hash)
-    + GetLatestCompiledRules(lineage_id)
-    + PublishCompiledRules(... revision-monotonic head)
+  class "**SqlDirectiveWriter**" as SqlDirectiveWriter <<Adapter>> #FFE0B2/F57C00 {
+    + GetDirective(lineage_id): Directive
+    + ListDirectives(filter): List~Directive~
+    + SaveDirective(directive, if_match): void
+    + AllocateExecutionId(): ExecutionId
+    + EnqueueCompileRequest(lineage_id, revision): void
     --
-    GetLatest resolves head_snapshot_hash
-    via lineage_head_index (not compiled_at)
+    <<implements>> DirectiveRepository
+  }
+
+  class "**SqlCompilerReader**" as SqlCompilerReader <<Adapter>> #FFE0B2/F57C00 {
+    + GetDirectiveExecutableDocument(id): ExecutableRuleDoc
+    --
+    <<implements>> CompilerReadPort
+  }
+
+  class "**SqlGuidanceReader**" as SqlGuidanceReader <<Adapter>> #FFE0B2/F57C00 {
+    + GetDirectivePolicyDoctrine(ref): GuidancePayload
+    --
+    <<implements>> GuidanceReadPort
   }
 }
 
-package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
-  class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> {
-    + AppendFindingEvent(... expected_chain_head)
-    + ListFindingEvents(...)
-    + GetFindingProjection(...)
+package "compiled_rules_infrastructure\n(C4: compiled_rules_repository)" as INFRA_CR #FFE0B2/F57C00 {
+
+  class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> #FFE0B2/F57C00 {
+    + GetCompiledRules(snapshot_hash): CgIrSnapshot
+    + GetLatestCompiledRules(lineage_id): CgIrSnapshot
+    + PublishCompiledRules(snapshot): void
     --
-    <<implements>> FindingEventRepository only
+    <<implements>> CompiledRulesRepository
+    <<index>> lineage_head_index (revision-monotonic)
   }
-  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> {
-    + AppendDenial(...)
+}
+
+package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #FFE0B2/F57C00 {
+
+  class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> #FFE0B2/F57C00 {
+    + AppendFindingEvent(event, expected_chain_head): void
+    + ListFindingEvents(finding_id): List~DomainEvent~
+    + ListFindingEventsSince(from): List~DomainEvent~
+    + GetFindingProjection(finding_id): FindingProjection
     --
-    <<implements>> DenialAuditPort only
-    dedicated pool bulkhead; no full repo surface
+    <<implements>> FindingEventRepository
   }
-  note right of DenialAuditAdapter
-    api receives DenialAuditPort only.
-    MUST NOT inject FindingEventRepository into api.
-  end note
-}
 
-package "artifacts_infrastructure" as INFRA_ART #FFE0B2/F57C00 {
-  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> {
-    + PutOnce(...)
-    + Get(...)
-  }
-  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> {
-    + SaveInspectionArtifact(...)
-    + GetInspectionArtifact(...)
-  }
-  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> {
-    + SaveConflictArtifact(...)
-    + SaveEvidenceArtifact(...)
-  }
-  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> {
-    + SaveCertificationArtifact(...)
-  }
-}
-
-package "inspections_infrastructure" as INFRA_INS #FFE0B2/F57C00 {
-  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> {
-    + GetTarget(... timeout, circuit breaker)
-    + HashTarget(...)
-  }
-}
-
-package "authorization (api support)" as INFRA_AUTH_MOD #FFE0B2/F57C00 {
-  class "**CapabilityEnforcer**" as CapabilityEnforcer {
-    + Authenticate(jwt): Actor
-    + Authorize(actor, capability): Decision
-    + AuditDenial(decision): void
+  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> #FFE0B2/F57C00 {
+    + AppendDenial(actor, capability, action, reason, timestamp): void
     --
-    <<shared>> all driving adapters
+    <<implements>> DenialAuditPort
+    <<bulkhead>> dedicated pool; no FindingEventRepository surface
   }
 }
 
+package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FFE0B2/F57C00 {
+
+  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> #FFE0B2/F57C00 {
+    + PutOnce(key, bytes, content_type): void
+    + Get(key): bytes
+  }
+
+  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
+    + SaveInspectionArtifact(snapshot): void
+    + GetInspectionArtifact(id): Inspection
+    --
+    <<implements>> InspectionArtifactPort
+  }
+
+  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
+    + SaveConflictArtifact(artifact): void
+    + GetConflictArtifact(id): ConflictArtifact
+    + SaveEvidenceArtifact(evidence): void
+    --
+    <<implements>> FindingArtifactPort
+  }
+
+  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> #FFE0B2/F57C00 {
+    + SaveCertificationArtifact(run): void
+    --
+    <<implements>> CertificationArtifactPort
+  }
+}
+
+package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FFE0B2/F57C00 {
+
+  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> #FFE0B2/F57C00 {
+    + GetTarget(target_ref): Target
+    + HashTarget(target): TargetHash
+    --
+    <<implements>> TargetSourcesGateway
+    <<resilience>> timeout ≤5s · retries ≤2 · circuit breaker · SSRF allowlist
+  }
+
+  class "**DetectionEvaluator**" as DetectionEvaluator <<Adapter>> #FFE0B2/F57C00 {
+    + ValidateDetectionSpec(spec: DetectionSpec): void
+    + EvaluateControls(snapshot: CgIrSnapshot, target: Target): List~DetectionOutcome~
+    --
+    <<pure>> no I/O · no randomness
+    <<non-peer>> not a C4 component
+  }
+}
+
+package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
+
+  class "**Hasher**" as Hasher <<Platform>> #FFE0B2/F57C00 {
+    + ComputeSha256(data: bytes): String
+    + ComposeHashes(parts: List~String~): String
+  }
+
+  class "**HybridLogicalClock**" as HybridLogicalClock <<Platform>> #FFE0B2/F57C00 {
+    + Now(): HlcTimestamp
+    + Advance(remote: HlcTimestamp): HlcTimestamp
+  }
+}
+
+' ── implements ──────────────────────────────────────────────
 SqlDirectiveWriter ..|> DirectiveRepository
 SqlCompilerReader ..|> CompilerReadPort
 SqlGuidanceReader ..|> GuidanceReadPort
@@ -127,40 +156,31 @@ DenialAuditAdapter ..|> DenialAuditPort
 InspectionArtifactAdapter ..|> InspectionArtifactPort
 FindingArtifactAdapter ..|> FindingArtifactPort
 CertificationArtifactAdapter ..|> CertificationArtifactPort
+HttpTargetSourcesGateway ..|> TargetSourcesGateway
+
+' ── shared client / platform ────────────────────────────────
 InspectionArtifactAdapter --> ObjectStoreClient
 FindingArtifactAdapter --> ObjectStoreClient
 CertificationArtifactAdapter --> ObjectStoreClient
-HttpTargetSourcesGateway ..|> TargetSourcesGateway
-
-' Detection evaluators live under inspections path (not a C4 peer engine).
-package "inspections_infrastructure\n(evaluators)" as INFRA_DET #FFE0B2/F57C00 {
-  class "**DetectionEvaluator**" as DetectionEvaluator {
-    + ValidateDetectionSpec(...)
-    + EvaluateControls(...)
-    --
-    <<pure>> no I/O · no randomness (AA-03)
-  }
-}
-
-package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
-  class "**Hasher**" as Hasher {
-    + ComputeSha256(data): String
-    + ComposeHashes(parts): String
-  }
-  class "**HybridLogicalClock**" as HybridLogicalClock {
-    + Now(): HlcTimestamp
-    + Advance(remote): HlcTimestamp
-  }
-}
+SqlDirectiveWriter --> Hasher
+SqlCompilerReader --> Hasher
+SqlGuidanceReader --> Hasher
+ContentAddressedCompiledRulesRepository --> Hasher
+AppendOnlyFindingEventRepository --> Hasher
+AppendOnlyFindingEventRepository --> HybridLogicalClock
+DenialAuditAdapter --> Hasher
+DenialAuditAdapter --> HybridLogicalClock
 
 legend bottom
-  |= Module |= Implements (ISP ports) |
-  | directives_infrastructure | SqlDirectiveWriter / SqlCompilerReader / SqlGuidanceReader (one port each) |
-  | compiled_rules_infrastructure | CompiledRulesRepository |
-  | findings_infrastructure | FindingEventRepository + DenialAuditAdapter (ISP-split) |
-  | artifacts_infrastructure | InspectionArtifactPort + FindingArtifactPort + CertificationArtifactPort (shared ObjectStoreClient) |
-  | inspections_infrastructure | TargetSourcesGateway (resilient HTTP + SSRF allowlist) |
-  | authorization (api support) | CapabilityEnforcer (shared class; all driving adapters) |
+  |= Module |= Adapter classes |= Port(s) |
+  | directives_infrastructure | SqlDirectiveWriter · SqlCompilerReader · SqlGuidanceReader | one port each (ISP) |
+  | compiled_rules_infrastructure | ContentAddressedCompiledRulesRepository | CompiledRulesRepository |
+  | findings_infrastructure | AppendOnlyFindingEventRepository · DenialAuditAdapter | FindingEventRepository · DenialAuditPort |
+  | artifacts_infrastructure | *ArtifactAdapter ×3 + ObjectStoreClient | Inspection · Finding · Certification |
+  | inspections_infrastructure | HttpTargetSourcesGateway · DetectionEvaluator | TargetSourcesGateway (+ pure evaluator) |
+  | platform_infrastructure | Hasher · HybridLogicalClock | shared by adapters |
 endlegend
+
+footer CLS-003 · Infrastructure Adapters · Selma · Clean Architecture
 
 @enduml
