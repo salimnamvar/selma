@@ -82,11 +82,14 @@
 !$PKG_CERTIFICATION_TOOL = "certification_tool\n(offline · not peer)"
 !$PKG_SYSTEM_BOUNDARY = "Selma Application"
 
-' ── Actors (full C4 person names; never short roles) ────────
+' ── Actors (identical to C4 persons + System for automation) ─
+' C4 peers.actors: regulatory_official | compliance_representative
+' Only these two persons may appear as human/service actors.
+' System is allowed for automated goals (outbox, open findings, …).
+' Never invent optional continuous-integration / ops actors.
 !$ACTOR_REGULATORY_OFFICIAL = "Regulatory Official"
 !$ACTOR_COMPLIANCE_REPRESENTATIVE = "Compliance Representative"
 !$ACTOR_SYSTEM = "System"
-!$ACTOR_OPTIONAL_CI_CLIENT = "Optional Continuous Integration Client"
 
 ' ── ROD use-case names (package leaf == class <<Use Case>>) ─
 ' directives_application

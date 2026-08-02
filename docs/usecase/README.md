@@ -24,7 +24,7 @@
 | [`common/uc_section_*.puml`](common/) | Use-case ovals + include edges by group | Inventory of goals per package |
 | [`uc_NNN_*.puml`](.) | Orchestrators only (actors + associations) | Actor participation |
 
-**Include order:** `uc_styles` → `uc_identities` → `uc_section_actors` → `uc_section_*` → associations in orchestrator.
+**Include order:** `uc_styles` → `uc_identities` → declare **only connected** C4/System actors → `uc_section_*` → associations in orchestrator.
 
 ```bash
 plantuml docs/usecase/uc_*.puml
@@ -60,22 +60,24 @@ python scripts/check_design_alignment.py
 
 **Forbidden on this view:** pipeline stage names as use cases (`NormalizeTarget`, `Materialize…`), FSM state names (`PendingVerification`), store mutability prose, capability catalog tables, C4 Rel graphs, short forms (`CG-IR`, `SoD`, `RO`).
 
-## Actor catalog (C4 persons)
+## Actor catalog (identical to C4)
 
-| Actor | Type | Primary goals |
-| :--- | :--- | :--- |
-| Regulatory Official | Human / AI agent | Directives, dispositions, conflict review, guidance |
-| Compliance Representative | Human / AI / service | Inspections, evidence, acknowledge, guidance |
-| System | Automated | Outbox drain, compile, open findings, domain resolve |
-| Optional Continuous Integration Client | Optional client | Offline architectural certification |
+C4 context/registry persons are the **only** product actors. Names match
+[`../c4-model/common/c4_identities.puml`](../c4-model/common/c4_identities.puml)
+and `c4_registry.yaml` `peers.actors`.
 
-### Not C4 context peers (do not invent actors for them)
+| Actor | C4 peer ID | Type | Rule |
+| :--- | :--- | :--- | :--- |
+| Regulatory Official | `regulatory_official` | Person | C4 only |
+| Compliance Representative | `compliance_representative` | Person | C4 only |
+| System | — (not a C4 person) | Automated | Allowed for automated goals only |
 
-| Concern | How it appears |
-| :--- | :--- |
-| Continuous integration host | Optional client of `certification_tool` |
-| Target Sources | Optional external pull (gateway) — not a product actor |
-| Audit export / remediation ticketing | Ops only — not product peers |
+**Rules:**
+
+1. Do **not** invent persons (no continuous-integration client, no ops roles).
+2. Each diagram declares **only** actors that have at least one association to a use case — no floating actors.
+3. `System` is not a C4 person peer; it may appear when the goal is automated (outbox, open findings, offline certification run, domain resolve during pipeline).
+4. Target Sources, certification tool, and stores are **not** actors (C4 external/system/offline placement only).
 
 ## Diagram & use-case inventory
 
@@ -88,7 +90,7 @@ python scripts/check_design_alignment.py
 | **UC-005** | [uc_005_conflict.puml](uc_005_conflict.puml) | `conflicts_domain` + findings | `ResolveConflict` (domain · not peer) | `ResolveConflict`, `ReviewConflictArtifact` |
 | **UC-006** | [uc_006_authorization.puml](uc_006_authorization.puml) | `rest_interface` | `api` | `AuthenticateActor`, `CheckCapability`, `AppendDenial`, `EnforceSegregationOfDuties` |
 | **UC-007** | [uc_007_guidance.puml](uc_007_guidance.puml) | `findings_application` | `findings_application` | `GetFindingGuidance`, `ListFindingAggregates` |
-| **UC-008** | [uc_008_certification.puml](uc_008_certification.puml) | offline tool | `certification_tool` (offline · not peer) | `RunArchitecturalCertification` + AA-01…AA-09 validators |
+| **UC-008** | [uc_008_certification.puml](uc_008_certification.puml) | offline tool | `certification_tool` (offline · not peer) | `RunArchitecturalCertification` + AA-01…AA-09 validators · actor: System only |
 
 ## Conventions
 

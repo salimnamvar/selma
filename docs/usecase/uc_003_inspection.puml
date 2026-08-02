@@ -13,7 +13,7 @@ title $TITLE_INSPECTION
 
 left to right direction
 
-!include common/uc_section_actors.puml
+actor "$ACTOR_COMPLIANCE_REPRESENTATIVE" as ACTOR_CR $CA_FILL_ACTOR
 
 rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_inspection.puml

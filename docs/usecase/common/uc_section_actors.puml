@@ -1,9 +1,18 @@
 ' ============================================================
 ' Section: uc_section_actors.puml
-' C4 context persons + system / optional continuous-integration
+' C4 person peers only (+ System for automated goals).
+'
+' C4 registry peers.actors:
+'   regulatory_official | compliance_representative
+'
+' DO NOT declare actors here for every diagram — each orchestrator
+' MUST declare only the actors it associates to a use case
+' (no unconnected actors). Use macros from uc_identities.puml:
+'
+'   actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
+'   actor "$ACTOR_COMPLIANCE_REPRESENTATIVE" as ACTOR_CR $CA_FILL_ACTOR
+'   actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
+'
+' Forbidden: optional continuous-integration clients, inventing
+' persons not in C4 context.
 ' ============================================================
-
-actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
-actor "$ACTOR_COMPLIANCE_REPRESENTATIVE" as ACTOR_CR $CA_FILL_ACTOR
-actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
-actor "$ACTOR_OPTIONAL_CI_CLIENT" as ACTOR_CI $CA_FILL_EXTERNAL

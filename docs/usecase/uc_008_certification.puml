@@ -13,11 +13,12 @@ title $TITLE_CERTIFICATION
 
 left to right direction
 
-!include common/uc_section_actors.puml
+' C4 defines no certification person peer; System runs offline tool
+actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
 
 !include common/uc_section_certification.puml
 
-ACTOR_CI --> UC_CERT_RUN
+ACTOR_SYS --> UC_CERT_RUN
 
 footer $FOOTER_CERTIFICATION
 

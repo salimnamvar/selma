@@ -13,13 +13,12 @@ title $TITLE_DIRECTIVES
 
 left to right direction
 
-!include common/uc_section_actors.puml
+actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
 
 rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_directives.puml
 }
 
-' ---- actor associations (Regulatory Official) ----
 ACTOR_RO --> UC_DIR_CREATE
 ACTOR_RO --> UC_DIR_GET
 ACTOR_RO --> UC_DIR_LIST

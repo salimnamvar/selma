@@ -13,13 +13,14 @@ title $TITLE_CONFLICT
 
 left to right direction
 
-!include common/uc_section_actors.puml
+actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
+actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
 
 rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_conflict.puml
 }
 
-' Domain ResolveConflict invoked by compile / inspect pipelines (system)
+' Domain ResolveConflict invoked by compile / inspect pipelines
 ACTOR_SYS --> UC_CON_RESOLVE
 
 ' Human review of escalated conflict artifacts

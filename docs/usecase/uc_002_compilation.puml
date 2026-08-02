@@ -13,18 +13,19 @@ title $TITLE_COMPILATION
 
 left to right direction
 
-!include common/uc_section_actors.puml
+actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
+actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
 
 rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_compilation.puml
 }
 
-' DrainOutbox is system-driven (outbox); Compile may also be system-triggered
+' Regulatory Official changes that enqueue compile (indirect trigger)
+ACTOR_RO --> UC_CR_COMPILE
+
+' Outbox drain and automated compile are system-driven
 ACTOR_SYS --> UC_CR_DRAIN
 ACTOR_SYS --> UC_CR_COMPILE
-
-' Regulatory Official changes directives that enqueue compile (indirect)
-ACTOR_RO --> UC_CR_COMPILE
 
 footer $FOOTER_COMPILATION
 

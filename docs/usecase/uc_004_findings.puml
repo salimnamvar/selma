@@ -13,7 +13,9 @@ title $TITLE_FINDINGS
 
 left to right direction
 
-!include common/uc_section_actors.puml
+actor "$ACTOR_REGULATORY_OFFICIAL" as ACTOR_RO $CA_FILL_ACTOR
+actor "$ACTOR_COMPLIANCE_REPRESENTATIVE" as ACTOR_CR $CA_FILL_ACTOR
+actor "$ACTOR_SYSTEM" as ACTOR_SYS $CA_FILL_EXTERNAL
 
 rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
   !include common/uc_section_findings.puml
@@ -22,7 +24,7 @@ rectangle "$PKG_SYSTEM_BOUNDARY" as SYS $UC_PKG_APPLICATION {
 ' System opens findings from inspection pipeline
 ACTOR_SYS --> UC_FIND_OPEN
 
-' Both actors read findings
+' Both C4 persons read findings
 ACTOR_RO --> UC_FIND_GET
 ACTOR_RO --> UC_FIND_LIST
 ACTOR_CR --> UC_FIND_GET
@@ -32,11 +34,11 @@ ACTOR_CR --> UC_FIND_LIST
 ACTOR_RO --> UC_FIND_TRANS
 ACTOR_RO --> UC_FIND_CONFLICT
 
-' Compliance Representative: evidence and acknowledge path via TransitionFinding
+' Compliance Representative: evidence and acknowledge path
 ACTOR_CR --> UC_FIND_TRANS
 ACTOR_CR --> UC_FIND_EVID
 
-' Read models (also on UC-007)
+' Read models
 ACTOR_RO --> UC_FIND_GUIDE
 ACTOR_RO --> UC_FIND_AGGR
 ACTOR_CR --> UC_FIND_GUIDE
