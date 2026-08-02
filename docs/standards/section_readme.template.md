@@ -2,7 +2,8 @@
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **View concerns:** [`view_concerns.md`](../standards/view_concerns.md)  
-> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)  
+> *(banner stamp of [`VERSION`](VERSION) — not a section-local version; bump VERSION + `--fix`)*
 
 {One-paragraph purpose: what this section shows and what it must not invent.}
 {State exclusive ownership: Answers / Owns 100% / Does not own / Join key — do not restate sibling views' design principles.}
@@ -25,13 +26,15 @@
 ## Conventions
 
 - IDs from `c4_registry.yaml` only
-- Diagram headers per [`diagram_header.schema.md`](../standards/diagram_header.schema.md)
+- Diagram headers per [`diagram_header.schema.md`](diagram_header.schema.md)
 - Non-peers labeled explicitly
+- Design freeze line from [`VERSION`](VERSION) only (no per-document design versions)
 
 ## Rendering / lint
 
 ```bash
 # PlantUML or Redocly as applicable
+python scripts/check_design_alignment.py
 ```
 
 ## Related

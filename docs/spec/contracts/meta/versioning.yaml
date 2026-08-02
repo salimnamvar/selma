@@ -7,13 +7,33 @@ schema_version: "1.0.0"
 design_contract_version: "1.1.0"
 owner: null
 description: >
-  Defines how versions work across all contract layers.
+  Defines how versions work across all contract layers and the design freeze line.
   All contracts in this tree MUST follow these rules.
 
 version_format:
   pattern: "MAJOR.MINOR.PATCH"
   regex: "^\\d+\\.\\d+\\.\\d+$"
   description: "Semantic versioning per SemVer 2.0.0"
+
+design_freeze_line:
+  name: design_contract_version
+  ssot: "docs/standards/VERSION"
+  changelog: "docs/standards/CHANGELOG.md"
+  description: >
+    The whole design under docs/ shares one freeze line. Any material change to
+    design meaning bumps VERSION once; stamps everywhere else are rewritten by
+    scripts/check_design_alignment.py --fix. Individual contracts, diagrams,
+    and section READMEs MUST NOT carry independent design revisions.
+  stamps:
+    - "docs/standards/c4_registry.yaml design_contract_version"
+    - "docs/spec/contracts/**/*.yaml design_contract_version"
+    - "docs/**/*.puml Contract: header"
+    - "docs/**/README.md design_contract_version banner"
+    - "docs/api/openapi.yaml info.version"
+  forbidden:
+    - "Per-diagram Version fields as independent SemVer"
+    - "Per-contract design revision distinct from VERSION"
+    - "Editing stamps without bumping VERSION (use --fix after VERSION change)"
 
 compatibility_rules:
   - rule_id: "VER-001"
@@ -42,10 +62,27 @@ compatibility_rules:
     statement: "Contract files with different schema_version values MUST NOT be mixed"
     scope: "within-layer"
 
+  - rule_id: "VER-007"
+    statement: >
+      design_contract_version on every contract MUST equal docs/standards/VERSION.
+      This is the design freeze line, not a per-file design version.
+    scope: "design-freeze"
+    enforcement: "scripts/check_design_alignment.py"
+
+  - rule_id: "VER-008"
+    statement: >
+      Bumping design_contract_version is done only by editing docs/standards/VERSION
+      once per change set, then running check_design_alignment.py --fix.
+    scope: "design-freeze"
+
 layer_versioning:
+  design_contract:
+    ssot: "docs/standards/VERSION"
+    note: "Whole-design freeze; stamps only elsewhere"
+
   specification_contracts:
     current_major: 1
-    note: "Breaking from 8.x (markdown) to 1.x (structured contracts)"
+    note: "Breaking from 8.x (markdown) to 1.x (structured contracts); schema_version is file-body SemVer"
 
   schema_contracts:
     current_major: 1

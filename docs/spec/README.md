@@ -12,12 +12,14 @@ See [`contracts/meta/authority.yaml`](contracts/meta/authority.yaml) for the ful
 hierarchy (design standards → C4 → contracts → schema → API → views).
 
 Contract front-matter MUST include `contract_id`, `schema_version`,
-`design_contract_version: "1.1.0"`, and `owner_component` from
+`design_contract_version` (stamp of [`../standards/VERSION`](../standards/VERSION)),
+and `owner_component` from
 [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)
 ([`contract.schema.json`](../standards/contract.schema.json)).
 
 ```bash
-python scripts/check_design_alignment.py
+python scripts/check_design_alignment.py          # verify stamps == VERSION
+python scripts/check_design_alignment.py --fix   # after bumping VERSION
 ```
 
 ## Contract Tree

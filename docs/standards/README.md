@@ -5,7 +5,9 @@ and version line**. This directory is the **checkable schema** for that discipli
 
 | Artifact | Role |
 | :--- | :--- |
-| [`c4_registry.yaml`](c4_registry.yaml) | Canonical C4 IDs, non-peers, API resource surface, forbidden aliases |
+| [`VERSION`](VERSION) | **Sole SSoT** for `design_contract_version` (one SemVer line) |
+| [`CHANGELOG.md`](CHANGELOG.md) | Design-line history (Keep a Changelog) |
+| [`c4_registry.yaml`](c4_registry.yaml) | Canonical C4 IDs, non-peers, API resource surface, forbidden aliases; carries a **stamp** of `VERSION` |
 | [`view_concerns.md`](view_concerns.md) | Exclusive ownership matrix for C4 / package / deployment / state (no principle duplication) |
 | [`contract.schema.json`](contract.schema.json) | Front-matter schema for `docs/spec/contracts/**/*.yaml` |
 | [`diagram_header.schema.md`](diagram_header.schema.md) | Required PlantUML header fields |
@@ -28,7 +30,8 @@ and version line**. This directory is the **checkable schema** for that discipli
 | OpenAPI + wire schemas | **Redocly** (`docs/api/redocly.yaml`) | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 | Spec contract front-matter | **JSON Schema** (`contract.schema.json`) | `python scripts/check_design_alignment.py` |
 | C4 IDs in contracts/diagrams/prose | **Registry** (`c4_registry.yaml`) | same checker (forbidden IDs + owner enum) |
-| Diagram headers | **Header schema** | checker warns on `Contract:` ≠ 1.1.0 and stale sources |
+| Design freeze version stamps | **`VERSION`** | same checker; rewrite with `--fix` |
+| Diagram headers | **Header schema** | checker errors if `Contract:` ≠ `VERSION` |
 
 ## Naming principles (strict)
 
@@ -66,13 +69,40 @@ clients → api → *_application → *_repository | *_gateway → *_store | ext
 
 See `package_aliases` in [`c4_registry.yaml`](c4_registry.yaml).
 
-## Design contract version
+## Design contract version (single source of truth)
 
-**`design_contract_version: 1.1.0`** is shared by:
+Pattern used by large projects: **one version file**, many **stamps**, CI **rejects drift**.
 
-- C4 PlantUML headers
-- `docs/api/openapi.yaml` `info.version` (API surface revision may track this)
-- Spec contracts field `design_contract_version`
-- Diagram headers `Contract: 1.1.0`
+| Role | Location | Editable? |
+| :--- | :--- | :--- |
+| **Authority** | [`VERSION`](VERSION) | **Yes — only here** |
+| History | [`CHANGELOG.md`](CHANGELOG.md) | Yes (with every bump) |
+| Registry stamp | `c4_registry.yaml` → `design_contract_version` | No (use `--fix`) |
+| Contract stamp | every `docs/spec/contracts/**/*.yaml` | No (use `--fix`) |
+| Diagram stamp | PlantUML `Contract: X.Y.Z` | No (use `--fix`) |
+| Section stamp | README banners `design_contract_version` | No (use `--fix`) |
+| API stamp | `docs/api/openapi.yaml` `info.version` | No (use `--fix`) |
 
-Bump only with coordinated C4 + registry + contract schema enum updates.
+### Workflow
+
+1. Change any design content under `docs/` as needed.
+2. If the change should move the freeze line, edit **`VERSION` once** (SemVer; see CHANGELOG bump table).
+3. Add a CHANGELOG entry under `[Unreleased]` or the new version section.
+4. Propagate stamps:
+
+```bash
+python scripts/check_design_alignment.py --fix
+python scripts/check_design_alignment.py --strict
+```
+
+5. Optional publish tag: `design/vX.Y.Z`.
+
+### What is *not* the design freeze line
+
+| Field | Meaning |
+| :--- | :--- |
+| Contract `schema_version` | Shape of that contract **file body** (may differ by file) |
+| Rule/policy dataset `version` | Product/runtime data revision |
+| Per-diagram local versions | **Forbidden** — use `Contract:` stamp of `VERSION` only |
+
+Bump policy and history: [`CHANGELOG.md`](CHANGELOG.md).

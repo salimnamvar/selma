@@ -14,10 +14,11 @@ authority_hierarchy:
   - layer: design_standards
     location: "docs/standards/"
     description: >
-      Checkable design discipline: C4 ID registry (c4_registry.yaml), contract
-      front-matter schema (contract.schema.json), diagram header rules, and
-      alignment checker (scripts/check_design_alignment.py). Does not define
-      domain behavior; enforces consistent IDs and ownership for investigation.
+      Checkable design discipline: design freeze SSoT (VERSION + CHANGELOG.md),
+      C4 ID registry (c4_registry.yaml), contract front-matter schema
+      (contract.schema.json), diagram header rules, and alignment checker
+      (scripts/check_design_alignment.py). Does not define domain behavior;
+      enforces consistent IDs, ownership, and a single design_contract_version.
     authority_over:
       - layer: structural_architecture
       - layer: specification_contracts
@@ -27,7 +28,8 @@ authority_hierarchy:
     location: "docs/c4-model/"
     description: >
       Structural source of truth for peers (context/container/component).
-      design_contract_version 1.1.0. IDs must match docs/standards/c4_registry.yaml.
+      design_contract_version stamp of docs/standards/VERSION. IDs must match
+      docs/standards/c4_registry.yaml.
     authority_over:
       - layer: behavior_views
       - layer: implementation_views

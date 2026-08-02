@@ -18,8 +18,8 @@
     },
     "design_contract_version": {
       "type": "string",
-      "const": "1.1.0",
-      "description": "Must match docs/standards/c4_registry.yaml design_contract_version"
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Stamp of the design freeze line. MUST equal docs/standards/VERSION (enforced by scripts/check_design_alignment.py). Not an independent per-contract version."
     },
     "owner_component": {
       "description": "C4 component/repository ID, certification_tool, or null for meta",
