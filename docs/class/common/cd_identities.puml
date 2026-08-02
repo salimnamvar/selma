@@ -106,7 +106,7 @@
 !$TERM_COMPILED_RULES_IR = "compiled rules intermediate representation"
 
 ' ── Legend snippets (C4 hex) ────────────────────────────────
-!$LEGEND_DOMAIN = "Aggregate=#E8F5E9/2C6E49 · VO=#EEF4FC/3B7DD8 · Service=#E8F5F3/1B7A6E · Event=#FEF5E7/B9770E · Entity=#ECEFF1/546E7A"
-!$LEGEND_APP = "Port=#FDEDEC/A93226 · UseCase=#E8F5E9/1B7A6E · DTO=#EEF4FC/3B7DD8"
-!$LEGEND_INFRA = "Adapter=#FEF5E7/B9770E · Port ref=#FDEDEC/A93226"
-!$LEGEND_IFACE = "Interface=#EEF4FC/3B7DD8 · Composition=#F5EEF8/8E44AD · Port=#FDEDEC/A93226"
+!$LEGEND_DOMAIN = "Aggregate=#E8F5E9/2E7D32 · VO=#E1F5FE/0288D1 · Service=#E0F2F1/1B7A6E · Event=#FFF3E0/EF6C00 · Entity=#ECEFF1/546E7A"
+!$LEGEND_APP = "Port=#FFEBEE/C62828 · UseCase=#E0F2F1/00897B · DTO=#E1F5FE/0288D1"
+!$LEGEND_INFRA = "Adapter=#FFF3E0/EF6C00 · Port ref=#FFEBEE/C62828"
+!$LEGEND_IFACE = "Interface=#E1F5FE/0288D1 · Composition=#E8EAF6/283593 · Port=#FFEBEE/C62828"

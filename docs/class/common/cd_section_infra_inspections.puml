@@ -1,8 +1,8 @@
 ' Section: cd_section_infra_inspections.puml
 
-package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FEF5E7/B9770E {
+package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS #FFF3E0/EF6C00 {
 
-  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> #FEF5E7/B9770E {
+  class "**HttpTargetSourcesGateway**" as HttpTargetSourcesGateway <<Adapter>> #FFF3E0/EF6C00 {
     + GetTarget(target_ref): Target
     + HashTarget(target): TargetHash
     --
@@ -10,7 +10,7 @@ package "inspections_infrastructure\n(C4: target_sources_gateway)" as INFRA_INS 
     <<resilience>> timeout ≤5s · retries ≤2 · circuit breaker · SSRF allowlist
   }
 
-  class "**DetectionEvaluator**" as DetectionEvaluator <<Adapter>> #FEF5E7/B9770E {
+  class "**DetectionEvaluator**" as DetectionEvaluator <<Adapter>> #FFF3E0/EF6C00 {
     + ValidateDetectionSpec(spec: DetectionSpec): void
     + EvaluateControls(snapshot: CgIrSnapshot, target: Target): List~DetectionOutcome~
     --

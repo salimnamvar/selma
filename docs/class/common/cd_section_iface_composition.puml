@@ -1,15 +1,15 @@
 ' Section: cd_section_iface_composition.puml
 
-package "composition_root" as WIRE #EDE7F6/5E35B1 {
+package "composition_root" as WIRE #E8EAF6/283593 {
 
-  class "**ApplicationContainer**" as ApplicationContainer <<Composition>> #EDE7F6/5E35B1 {
+  class "**ApplicationContainer**" as ApplicationContainer <<Composition>> #E8EAF6/283593 {
     + build(): ApplicationContainer
     + rest_app(): RestApplication
     + cli_app(): CliApplication
     + tui_app(): TuiApplication
   }
 
-  class "**PortBindings**" as PortBindings <<Composition>> #EDE7F6/5E35B1 {
+  class "**PortBindings**" as PortBindings <<Composition>> #E8EAF6/283593 {
     + bind_directive_ports()
     + bind_compile_ports()
     + bind_inspection_ports()
@@ -18,7 +18,7 @@ package "composition_root" as WIRE #EDE7F6/5E35B1 {
     + bind_gate(DenialAuditPort)
   }
 
-  class "**OutboxDrainScheduler**" as OutboxDrainScheduler <<Composition>> #EDE7F6/5E35B1 {
+  class "**OutboxDrainScheduler**" as OutboxDrainScheduler <<Composition>> #E8EAF6/283593 {
     + start()
     + tick(): int
     --

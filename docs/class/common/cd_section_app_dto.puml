@@ -1,8 +1,8 @@
 ' Section: cd_section_app_dto.puml
 
-package "application.dto" as DTO_PKG #EEF4FC/3B7DD8 {
+package "application.dto" as DTO_PKG #E1F5FE/0288D1 {
 
-  class "**DirectiveCreateRequest**" as DirectiveCreateRequest <<DTO>> #EEF4FC/3B7DD8 {
+  class "**DirectiveCreateRequest**" as DirectiveCreateRequest <<DTO>> #E1F5FE/0288D1 {
     + lineage_id: LineageId
     + subject: Subject
     + predicate: Predicate
@@ -13,51 +13,51 @@ package "application.dto" as DTO_PKG #EEF4FC/3B7DD8 {
     + modality: DeonticModality
   }
 
-  class "**DirectiveUpdateRequest**" as DirectiveUpdateRequest <<DTO>> #EEF4FC/3B7DD8 {
+  class "**DirectiveUpdateRequest**" as DirectiveUpdateRequest <<DTO>> #E1F5FE/0288D1 {
     + lineage_id: LineageId
     + if_match: ETag
     + changes: Map
   }
 
-  class "**InspectRequest**" as InspectRequest <<DTO>> #EEF4FC/3B7DD8 {
+  class "**InspectRequest**" as InspectRequest <<DTO>> #E1F5FE/0288D1 {
     + target_id: String
     + target_payload: Map
     + directive_lineage_ids: List~LineageId~
   }
 
-  class "**InspectResponse**" as InspectResponse <<DTO>> #EEF4FC/3B7DD8 {
+  class "**InspectResponse**" as InspectResponse <<DTO>> #E1F5FE/0288D1 {
     + inspection_id: UUID
     + finding_count: int
     + status: InspectionStatus
     + findings: List~FindingSummary~
   }
 
-  class "**FindingTransitionRequest**" as FindingTransitionRequest <<DTO>> #EEF4FC/3B7DD8 {
+  class "**FindingTransitionRequest**" as FindingTransitionRequest <<DTO>> #E1F5FE/0288D1 {
     + finding_id: FindingId
     + target_state: FindingState
     + reason: String
     + comments: String
   }
 
-  class "**AggregateQueryRequest**" as AggregateQueryRequest <<DTO>> #EEF4FC/3B7DD8 {
+  class "**AggregateQueryRequest**" as AggregateQueryRequest <<DTO>> #E1F5FE/0288D1 {
     + scope: String
     + period: DateRange
     + filters: Map
   }
 
-  class "**DetectionOutcome**" as DetectionOutcome <<DTO>> #EEF4FC/3B7DD8 {
+  class "**DetectionOutcome**" as DetectionOutcome <<DTO>> #E1F5FE/0288D1 {
     + control_id: String
     + severity: Severity
     + evidence: Map
   }
 
-  class "**FindingSummary**" as FindingSummary <<DTO>> #EEF4FC/3B7DD8 {
+  class "**FindingSummary**" as FindingSummary <<DTO>> #E1F5FE/0288D1 {
     + finding_id: FindingId
     + fsm_state: FindingState
     + severity: Severity
   }
 
-  class "**ETag**" as ETag <<DTO>> #EEF4FC/3B7DD8 {
+  class "**ETag**" as ETag <<DTO>> #E1F5FE/0288D1 {
     + value: String
   }
 }

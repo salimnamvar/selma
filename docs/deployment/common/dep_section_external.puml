@@ -3,7 +3,7 @@
 ' Aliases: ZONE_EXT, NODE_TARGET_SOURCES
 ' ============================================================
 
-' Zone fill/border = DEP_ZONE_EXT_* (#F0F0F0 / #8A9199 · C4 external)
-package "$ZONE_EXTERNAL" as ZONE_EXT #F0F0F0/8A9199 {
+' Zone fill/border = DEP_ZONE_EXT_* (#ECEFF1 / #607D8B · C4 external)
+package "$ZONE_EXTERNAL" as ZONE_EXT #ECEFF1/607D8B {
   cloud "$NODE_TARGET_SOURCES" as NODE_TARGET_SOURCES
 }

@@ -1,8 +1,8 @@
 ' Section: cd_section_infra_findings.puml
 
-package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #FEF5E7/B9770E {
+package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #FFF3E0/EF6C00 {
 
-  class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> #FEF5E7/B9770E {
+  class "**AppendOnlyFindingEventRepository**" as AppendOnlyFindingEventRepository <<Adapter>> #FFF3E0/EF6C00 {
     + AppendFindingEvent(event, expected_chain_head): void
     + ListFindingEvents(finding_id): List~DomainEvent~
     + ListFindingEventsSince(from): List~DomainEvent~
@@ -11,7 +11,7 @@ package "findings_infrastructure\n(C4: finding_events_repository)" as INFRA_FE #
     <<implements>> FindingEventRepository
   }
 
-  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> #FEF5E7/B9770E {
+  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> #FFF3E0/EF6C00 {
     + AppendDenial(actor, capability, action, reason, timestamp): void
     --
     <<implements>> DenialAuditPort

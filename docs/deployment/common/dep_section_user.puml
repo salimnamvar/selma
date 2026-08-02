@@ -3,7 +3,7 @@
 ' Aliases: ZONE_USER, NODE_CLIENTS
 ' ============================================================
 
-' Zone fill/border = DEP_ZONE_USER_* (#E8EEF5 / #4A6FA5 · C4 actor)
-package "$ZONE_USER" as ZONE_USER #E8EEF5/4A6FA5 {
+' Zone fill/border = DEP_ZONE_USER_* (#E8EAF6 / #3F51B5 · C4 actor)
+package "$ZONE_USER" as ZONE_USER #E8EAF6/3F51B5 {
   node "$NODE_CLIENTS" as NODE_CLIENTS
 }

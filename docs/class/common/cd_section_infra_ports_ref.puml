@@ -1,6 +1,6 @@
 ' Section: cd_section_infra_ports_ref.puml
 
-package "application.ports (ref)" as PORTS #FDEDEC/A93226 {
+package "application.ports (ref)" as PORTS #FFEBEE/C62828 {
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
   interface "**CompilerReadPort**" as CompilerReadPort <<Port>>
   interface "**GuidanceReadPort**" as GuidanceReadPort <<Port>>

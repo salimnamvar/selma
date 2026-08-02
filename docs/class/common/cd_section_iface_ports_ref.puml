@@ -1,6 +1,6 @@
 ' Section: cd_section_iface_ports_ref.puml
 
-package "application.ports (ref)" as PORTS #FDEDEC/A93226 {
+package "application.ports (ref)" as PORTS #FFEBEE/C62828 {
   interface "**DenialAuditPort**" as DenialAuditPort <<Port>>
   interface "**DirectiveRepository**" as DirectiveRepository <<Port>>
   interface "**FindingOpenPort**" as FindingOpenPort <<Port>>

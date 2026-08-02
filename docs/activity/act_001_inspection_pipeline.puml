@@ -19,7 +19,7 @@ title ACT-001: Inspection Pipeline\n<size:12><i>Receive → Normalize → Classi
 start
 :Receive Target Submission;
 
-:Authenticate & Check Capability\n<color:#1B7A6E><b>inspection.submit</b></color>;
+:Authenticate & Check Capability\n<color:#00897B><b>inspection.submit</b></color>;
 
 note right
   Capability enforced at ingress.
@@ -39,7 +39,7 @@ end note
 :Validate Target Schema;
 
 if (Schema Valid?) then (no)
-  #A93226:Abort with Schema Error;
+  #C62828:Abort with Schema Error;
   stop
 else (yes)
 endif
@@ -135,9 +135,9 @@ end note
 
 |#E8F4F8|Outcome|
 if (Skipped Nodes Present?) then (yes)
-  #B9770E:Status = Partial;
+  #F9A825:Status = Partial;
 else (no)
-  #2C6E49:Status = Completed;
+  #2E7D32:Status = Completed;
 endif
 
 stop

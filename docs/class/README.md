@@ -46,24 +46,24 @@ python scripts/check_design_alignment.py
 
 | Package ring | CA layer | Fill / border |
 | :--- | :--- | :--- |
-| `*_domain` | Domain | `#F3E5F5` / `#8E44AD` |
-| `*_application` | Application | `#E8F5E9` / `#1B7A6E` |
-| `*_infrastructure` | Infrastructure | `#FEF5E7` / `#B9770E` |
-| `*_interface` | Interface | `#EEF4FC` / `#3B7DD8` |
-| `composition_root` | Composition | `#EDE7F6` / `#5E35B1` |
-| `application.ports` | Gate (micro) | `#FDEDEC` / `#A93226` |
+| `*_domain` | Domain | `#F3E5F5` / `#7B1FA2` |
+| `*_application` | Application | `#E8F5E9` / `#00897B` |
+| `*_infrastructure` | Infrastructure | `#FFF3E0` / `#EF6C00` |
+| `*_interface` | Interface | `#E1F5FE` / `#0288D1` |
+| `composition_root` | Composition | `#E8EAF6` / `#283593` |
+| `application.ports` | Gate (micro) | `#FFEBEE` / `#C62828` |
 
 ### MICRO — type archetypes
 
 | Archetype | CA mapping | Fill / border |
 | :--- | :--- | :--- |
-| Aggregate Root | Frameworks (durable) | `#E8F5E9` / `#2C6E49` |
-| Value Object / DTO | Interface | `#EEF4FC` / `#3B7DD8` |
-| Domain Service | Domain | `#F3E5F5` / `#8E44AD` |
-| Use Case | Application | `#E8F5E9` / `#1B7A6E` |
-| Port | Gate | `#FDEDEC` / `#A93226` |
-| Domain Event / Enum | Infrastructure / hermetic | `#FEF5E7` / `#B9770E` |
-| Adapter | Infrastructure | `#FEF5E7` / `#B9770E` |
+| Aggregate Root | Frameworks (durable) | `#E8F5E9` / `#2E7D32` |
+| Value Object / DTO | Interface | `#E1F5FE` / `#0288D1` |
+| Domain Service | Domain | `#F3E5F5` / `#7B1FA2` |
+| Use Case | Application | `#E8F5E9` / `#00897B` |
+| Port | Gate | `#FFEBEE` / `#C62828` |
+| Domain Event / Enum | Infrastructure / hermetic | `#FFF3E0` / `#EF6C00` |
+| Adapter | Infrastructure | `#FFF3E0` / `#EF6C00` |
 | Entity | micro entity | `#ECEFF1` / `#546E7A` |
 
 **Rule:** change hex only in `ca_palette.puml`.

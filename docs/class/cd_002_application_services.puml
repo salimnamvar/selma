@@ -28,10 +28,10 @@ title $TITLE_APPLICATION
 
 legend bottom
   |= Archetype |= CA MACRO / MICRO |
-  | Package ring `*_application` | **Application** teal #1B7A6E |
-  | Port | **Gate** micro #A93226 |
-  | Use Case | **Application** #1B7A6E |
-  | DTO | **Interface** blue #3B7DD8 |
+  | Package ring `*_application` | **Application** teal #00897B |
+  | Port | **Gate** micro #C62828 |
+  | Use Case | **Application** #00897B |
+  | DTO | **Interface** blue #0288D1 |
   | Palette | docs/standards/common/ca_palette.puml |
 endlegend
 

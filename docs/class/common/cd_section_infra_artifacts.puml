@@ -1,20 +1,20 @@
 ' Section: cd_section_infra_artifacts.puml
 
-package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FEF5E7/B9770E {
+package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FFF3E0/EF6C00 {
 
-  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> #FEF5E7/B9770E {
+  class "**ObjectStoreClient**" as ObjectStoreClient <<SharedClient>> #FFF3E0/EF6C00 {
     + PutOnce(key, bytes, content_type): void
     + Get(key): bytes
   }
 
-  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> #FEF5E7/B9770E {
+  class "**InspectionArtifactAdapter**" as InspectionArtifactAdapter <<Adapter>> #FFF3E0/EF6C00 {
     + SaveInspectionArtifact(snapshot): void
     + GetInspectionArtifact(id): Inspection
     --
     <<implements>> InspectionArtifactPort
   }
 
-  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> #FEF5E7/B9770E {
+  class "**FindingArtifactAdapter**" as FindingArtifactAdapter <<Adapter>> #FFF3E0/EF6C00 {
     + SaveConflictArtifact(artifact): void
     + GetConflictArtifact(id): ConflictArtifact
     + SaveEvidenceArtifact(evidence): void
@@ -22,7 +22,7 @@ package "artifacts_infrastructure\n(C4: artifacts_repository)" as INFRA_ART #FEF
     <<implements>> FindingArtifactPort
   }
 
-  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> #FEF5E7/B9770E {
+  class "**CertificationArtifactAdapter**" as CertificationArtifactAdapter <<Adapter>> #FFF3E0/EF6C00 {
     + SaveCertificationArtifact(run): void
     --
     <<implements>> CertificationArtifactPort

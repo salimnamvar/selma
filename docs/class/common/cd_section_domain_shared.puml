@@ -2,152 +2,152 @@
 ' Section: cd_section_domain_shared.puml
 ' ============================================================
 
-package "shared_domain" as DOM_SHARED #F3E5F5/8E44AD {
+package "shared_domain" as DOM_SHARED #F3E5F5/7B1FA2 {
 
-  class "**LineageId**" as LineageId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**LineageId**" as LineageId <<Value Object>> #E1F5FE/0288D1 {
     + value: String
     --
     <<invariant>> matches ^[A-Z]{2,5}-\\d{3}[A-Z]?$
   }
 
-  class "**ExecutionId**" as ExecutionId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**ExecutionId**" as ExecutionId <<Value Object>> #E1F5FE/0288D1 {
     + value: UUID
   }
 
-  class "**Revision**" as Revision <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Revision**" as Revision <<Value Object>> #E1F5FE/0288D1 {
     + value: int {> 0}
   }
 
-  class "**FindingId**" as FindingId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**FindingId**" as FindingId <<Value Object>> #E1F5FE/0288D1 {
     + value: UUID
   }
 
-  class "**ActorId**" as ActorId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**ActorId**" as ActorId <<Value Object>> #E1F5FE/0288D1 {
     + value: String
   }
 
-  class "**HlcTimestamp**" as HlcTimestamp <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**HlcTimestamp**" as HlcTimestamp <<Value Object>> #E1F5FE/0288D1 {
     + wall_time: DateTime
     + logical: int
   }
 
-  class "**PairedPolicyRef**" as PairedPolicyRef <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**PairedPolicyRef**" as PairedPolicyRef <<Value Object>> #E1F5FE/0288D1 {
     + policy_id: String
     + version: String
     + uri: URI
   }
 
-  class "**SnapshotHash**" as SnapshotHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**SnapshotHash**" as SnapshotHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**NodeHash**" as NodeHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**NodeHash**" as NodeHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**EdgeHash**" as EdgeHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**EdgeHash**" as EdgeHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**FrozenEnvHash**" as FrozenEnvHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**FrozenEnvHash**" as FrozenEnvHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**TargetHash**" as TargetHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**TargetHash**" as TargetHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**SystemStateHash**" as SystemStateHash <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**SystemStateHash**" as SystemStateHash <<Value Object>> #E1F5FE/0288D1 {
     + value: String {SHA-256}
   }
 
-  class "**CapabilityId**" as CapabilityId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**CapabilityId**" as CapabilityId <<Value Object>> #E1F5FE/0288D1 {
     + value: String
     + scope: String
   }
 
-  class "**EventId**" as EventId <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**EventId**" as EventId <<Value Object>> #E1F5FE/0288D1 {
     + value: UUID
   }
 
-  class "**DeonticModality**" as DeonticModality <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**DeonticModality**" as DeonticModality <<Value Object>> #E1F5FE/0288D1 {
     + modality: ModalityKind
     + strength: int
   }
 
-  enum "**ModalityKind**" as ModalityKind #FEF5E7/B9770E {
+  enum "**ModalityKind**" as ModalityKind #FFFDE7/F9A825 {
     must
     may
     should
     shall
   }
 
-  class "**Subject**" as Subject <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Subject**" as Subject <<Value Object>> #E1F5FE/0288D1 {
     + subject_type: String
     + identifier: String
   }
 
-  class "**Predicate**" as Predicate <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Predicate**" as Predicate <<Value Object>> #E1F5FE/0288D1 {
     + verb: String
     + object_ref: String
     + constraints: Map
   }
 
-  class "**Applicability**" as Applicability <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Applicability**" as Applicability <<Value Object>> #E1F5FE/0288D1 {
     + scope: String
     + specificity: int
     + constraints: Map
   }
 
-  class "**Priority**" as Priority <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Priority**" as Priority <<Value Object>> #E1F5FE/0288D1 {
     + value: int
     + tier: String
   }
 
-  class "**DetectionSpec**" as DetectionSpec <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**DetectionSpec**" as DetectionSpec <<Value Object>> #E1F5FE/0288D1 {
     + strategy_ref: String
     + parameters: Map
     + adapter_hint: String
   }
 
-  class "**DetectionStrategy**" as DetectionStrategy <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**DetectionStrategy**" as DetectionStrategy <<Value Object>> #E1F5FE/0288D1 {
     + strategy_id: String
     + adapter_key: String
     + parameters: Map
   }
 
-  class "**EvidenceRef**" as EvidenceRef <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**EvidenceRef**" as EvidenceRef <<Value Object>> #E1F5FE/0288D1 {
     + artifact_uri: URI
     + hash: String {SHA-256}
     + collected_at: HlcTimestamp
   }
 
-  class "**GuidancePayload**" as GuidancePayload <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**GuidancePayload**" as GuidancePayload <<Value Object>> #E1F5FE/0288D1 {
     + doctrine_text: String
     + remediation_steps: List~String~
     + references: List~URI~
   }
 
-  class "**ResolutionTrace**" as ResolutionTrace <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**ResolutionTrace**" as ResolutionTrace <<Value Object>> #E1F5FE/0288D1 {
     + steps: List~ResolutionStep~
     + winner: LineageId
     + reason: String
   }
 
-  class "**Provenance**" as Provenance <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**Provenance**" as Provenance <<Value Object>> #E1F5FE/0288D1 {
     + source_ref: String
     + author: ActorId
     + created_at: HlcTimestamp
   }
 
-  class "**PipelineTraceEntry**" as PipelineTraceEntry <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**PipelineTraceEntry**" as PipelineTraceEntry <<Value Object>> #E1F5FE/0288D1 {
     + stage: String
     + started_at: DateTime
     + completed_at: DateTime
     + status: String
   }
 
-  class "**SkippedNode**" as SkippedNode <<Value Object>> #EEF4FC/3B7DD8 {
+  class "**SkippedNode**" as SkippedNode <<Value Object>> #E1F5FE/0288D1 {
     + node_id: String
     + reason: String
   }

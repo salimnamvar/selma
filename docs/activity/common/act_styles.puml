@@ -25,8 +25,8 @@ skinparam activity {
   FontColor                  #2E3440
   BackgroundColor            #ECEFF4
   BorderThickness            2
-  StartColor                 #1B7A6E
-  EndColor                   #4A4A4A
+  StartColor                 #00897B
+  EndColor                   #37474F
   ArrowColor                 #34495E
   ArrowThickness             1.5
   DiamondBorderColor         #2C3E50
@@ -60,12 +60,12 @@ skinparam arrow {
 }
 
 ' Semantic palette (matching state_styles.puml):
-'   System action          teal       #1B7A6E
-'   Human action           blue       #3B7DD8
+'   System action          teal       #00897B
+'   Human action           blue       #0288D1
 '   Decision / branch      amber      #EBCB8B
-'   Error / abort           red        #A93226
-'   Success / terminal      green      #2C6E49
-'   Neutral / wait          grey       #4A4A4A
+'   Error / abort           red        #C62828
+'   Success / terminal      green      #2E7D32
+'   Neutral / wait          grey       #37474F
 
 ' Constraint: render limit
 skinparam maxActivitySize 200

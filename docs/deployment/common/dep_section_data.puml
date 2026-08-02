@@ -5,8 +5,8 @@
 '          NODE_COMPILED_RULES_STORE, NODE_ARTIFACTS_STORE
 ' ============================================================
 
-' Zone fill/border = DEP_ZONE_DATA_* (#E8F5E9 / #2C6E49 · C4 store)
-package "$ZONE_DATA" as ZONE_DATA #E8F5E9/2C6E49 {
+' Zone fill/border = DEP_ZONE_DATA_* (#E8F5E9 / #2E7D32 · C4 store)
+package "$ZONE_DATA" as ZONE_DATA #E8F5E9/2E7D32 {
   node "$NODE_PG_A" as NODE_PG_A {
     database "$NODE_DIRECTIVES_STORE" as NODE_DIRECTIVES_STORE
   }

@@ -18,12 +18,12 @@ title ACT-003: Directive Amendment\n<size:12><i>Amend → Validate → Persist �
 start
 :Receive Amendment Request;
 
-:Authenticate & Check Capability\n<color:#1B7A6E><b>directive.modify</b></color>;
+:Authenticate & Check Capability\n<color:#00897B><b>directive.modify</b></color>;
 
 :Load status for target lineage;
 
 if (status deprecated or superseded?) then (yes)
-  #A93226:Reject 409 Conflict\nINV-DL-004 no content modify;
+  #C62828:Reject 409 Conflict\nINV-DL-004 no content modify;
   stop
 else (no — draft or active)
 endif
@@ -71,7 +71,7 @@ endif
 
 if (Amendment Valid?) then (no)
   :Release Write Lock;
-  #A93226:Return Validation Error;
+  #C62828:Return Validation Error;
   stop
 else (yes)
 endif
@@ -91,14 +91,14 @@ fork
 end fork
 
 if (Compilation Succeeded?) then (yes)
-  #2C6E49:Return Success\n+ New Snapshot Hash;
+  #2E7D32:Return Success\n+ New Snapshot Hash;
   stop
 else (no)
   :Acquire Write Lock\non Directive Graph;
   :Create Revert Revision\n(compensating write);
   :Persist Revert to Directives store;
   :Release Write Lock;
-  #A93226:Return Error\nwith Compilation Failure Details;
+  #C62828:Return Error\nwith Compilation Failure Details;
   stop
 endif
 

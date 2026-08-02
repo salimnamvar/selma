@@ -3,9 +3,9 @@
 ' Aliases: INTERFACES, IF_REST, IF_CLI, IF_TUI, REST_*, CLI_*, TUI_*
 ' ============================================================
 
-package "$TITLE_INTERFACES" as INTERFACES #EEF4FC/3B7DD8 {
+package "$TITLE_INTERFACES" as INTERFACES #E1F5FE/0288D1 {
 
-  package "$TITLE_IF_REST" as IF_REST #BBDEFB/3B7DD8 {
+  package "$TITLE_IF_REST" as IF_REST #B3E5FC/0288D1 {
     together {
       [DirectiveRouter] as REST_DIR
       [CompilationRouter] as REST_CMP
@@ -28,7 +28,7 @@ package "$TITLE_INTERFACES" as INTERFACES #EEF4FC/3B7DD8 {
     REST_ETAG -[hidden]right- REST_DENY
   }
 
-  package "$TITLE_IF_CLI" as IF_CLI #BBDEFB/3B7DD8 {
+  package "$TITLE_IF_CLI" as IF_CLI #B3E5FC/0288D1 {
     together {
       [DirectiveCommands] as CLI_DIR
       [InspectionCommands] as CLI_INS
@@ -40,7 +40,7 @@ package "$TITLE_INTERFACES" as INTERFACES #EEF4FC/3B7DD8 {
     CLI_FIND -[hidden]right- CLI_CAP
   }
 
-  package "$TITLE_IF_TUI" as IF_TUI #BBDEFB/3B7DD8 {
+  package "$TITLE_IF_TUI" as IF_TUI #B3E5FC/0288D1 {
     together {
       [DirectiveScreens] as TUI_DIR
       [FindingScreens] as TUI_FIND

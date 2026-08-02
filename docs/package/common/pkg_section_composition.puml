@@ -3,7 +3,7 @@
 ' Aliases: COMPOSITION, WIRE_APP, WIRE_PORTS, WIRE_OUTBOX
 ' ============================================================
 
-package "$TITLE_COMPOSITION" as COMPOSITION #EDE7F6/5E35B1 {
+package "$TITLE_COMPOSITION" as COMPOSITION #E8EAF6/283593 {
   together {
     [ApplicationContainer] as WIRE_APP
     [PortBindings] as WIRE_PORTS

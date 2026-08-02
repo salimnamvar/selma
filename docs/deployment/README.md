@@ -46,13 +46,13 @@ python scripts/check_design_alignment.py
 
 | Zone | CA MACRO | Fill / border |
 | :--- | :--- | :--- |
-| External User | Actors | `#E8EEF5` / `#4A6FA5` |
-| Public | Interface | `#EEF4FC` / `#3B7DD8` |
-| Application | Application | `#E8F5E9` / `#1B7A6E` |
-| Data | Frameworks | `#E8F5E9` / `#2C6E49` |
-| External | External | `#F0F0F0` / `#8A9199` |
-| Monitoring | Composition (ops plane) | `#EDE7F6` / `#5E35B1` |
-| Store databases | Frameworks solid | `#2C6E49` |
+| External User | Actors | `#E8EAF6` / `#3F51B5` |
+| Public | Interface | `#E1F5FE` / `#0288D1` |
+| Application | Application | `#E8F5E9` / `#00897B` |
+| Data | Frameworks | `#E8F5E9` / `#2E7D32` |
+| External | External | `#ECEFF1` / `#607D8B` |
+| Monitoring | Composition (ops plane) | `#E8EAF6` / `#283593` |
+| Store databases | Frameworks solid | `#2E7D32` |
 
 **Rule:** never invent hex in sections; match palette literals.
 

@@ -10,9 +10,9 @@ skinparam defaultFontSize 11
 ' Entity styling
 skinparam entity {
   BackgroundColor #F7F9FC
-  BorderColor #4A6FA5
+  BorderColor #3F51B5
   FontColor #1E293B
-  ArrowColor #4A6FA5
+  ArrowColor #3F51B5
   StereotypeFontSize 10
   AttributeFontSize 10
 }
@@ -20,7 +20,7 @@ skinparam entity {
 ' Package (store boundary) styling
 skinparam package {
   BackgroundColor #EDF2F7
-  BorderColor #4A6FA5
+  BorderColor #3F51B5
   FontColor #1E293B
   Style rectangle
 }

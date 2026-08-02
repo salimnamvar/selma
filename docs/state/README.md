@@ -32,15 +32,15 @@ State styles include the palette and re-export `$STATE_COLOR_*` as **lifecycle m
 
 | `$STATE_COLOR_*` (micro) | CA MACRO | Hex | Typical state use |
 | :--- | :--- | :--- | :--- |
-| `RESOURCE` | Interface | `#3B7DD8` | Durable resource hubs (Created, Open) |
-| `PROCESS` | Application | `#1B7A6E` | Pure pipelines, automated stages |
-| `STORE` | Frameworks | `#2C6E49` | Published, Verified, durable success |
-| `PENDING` | Infrastructure | `#B9770E` | Draft, Queued, awaits human |
-| `DOMAIN` | Domain | `#8E44AD` | ResolveConflict path (not a C4 peer) |
-| `GATE` | Gate (micro) | `#A93226` | Denied, Failed, Rejected |
-| `TERMINAL` | Terminal (micro) | `#4A4A4A` | Closed, Dismissed, Archived |
-| `EXTERNAL` | External | `#8A9199` | Offline certification tool |
-| `ACTOR` | Actors | `#4A6FA5` | Rare actor emphasis |
+| `RESOURCE` | Interface | `#0288D1` | Durable resource hubs (Created, Open) |
+| `PROCESS` | Application | `#00897B` | Pure pipelines, automated stages |
+| `STORE` | Frameworks | `#2E7D32` | Published, Verified, durable success |
+| `PENDING` | Infrastructure | `#EF6C00` | Draft, Queued, awaits human |
+| `DOMAIN` | Domain | `#7B1FA2` | ResolveConflict path (not a C4 peer) |
+| `GATE` | Gate (micro) | `#C62828` | Denied, Failed, Rejected |
+| `TERMINAL` | Terminal (micro) | `#37474F` | Closed, Dismissed, Archived |
+| `EXTERNAL` | External | `#607D8B` | Offline certification tool |
+| `ACTOR` | Actors | `#3F51B5` | Rare actor emphasis |
 
 **Rule:** never invent hex in diagram bodies — only `$STATE_COLOR_*` macros.
 

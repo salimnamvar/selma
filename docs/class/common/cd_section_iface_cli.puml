@@ -1,25 +1,25 @@
 ' Section: cd_section_iface_cli.puml
 
-package "cli_interface\n(C4: clients)" as IF_CLI #EEF4FC/3B7DD8 {
+package "cli_interface\n(C4: clients)" as IF_CLI #E1F5FE/0288D1 {
 
-  class "**DirectiveCommands**" as DirectiveCommands <<Interface>> #EEF4FC/3B7DD8 {
+  class "**DirectiveCommands**" as DirectiveCommands <<Interface>> #E1F5FE/0288D1 {
     + create(...)
     + get(...)
     + list(...)
   }
 
-  class "**InspectionCommands**" as InspectionCommands <<Interface>> #EEF4FC/3B7DD8 {
+  class "**InspectionCommands**" as InspectionCommands <<Interface>> #E1F5FE/0288D1 {
     + submit(...)
     + get(...)
   }
 
-  class "**FindingCommands**" as FindingCommands <<Interface>> #EEF4FC/3B7DD8 {
+  class "**FindingCommands**" as FindingCommands <<Interface>> #E1F5FE/0288D1 {
     + get(...)
     + list(...)
     + transition(...)
   }
 
-  class "**CapabilityEnforcer**" as CliCapabilityEnforcer <<Interface>> #EEF4FC/3B7DD8 {
+  class "**CapabilityEnforcer**" as CliCapabilityEnforcer <<Interface>> #E1F5FE/0288D1 {
     + Authorize(actor, capability): Decision
   }
 }

@@ -2,9 +2,9 @@
 ' Section: cd_section_domain_findings.puml
 ' ============================================================
 
-package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
+package "findings_domain" as DOM_FIND #F3E5F5/7B1FA2 {
 
-  class "**Finding**" as Finding <<Aggregate Root>> #E8F5E9/2C6E49 {
+  class "**Finding**" as Finding <<Aggregate Root>> #E8F5E9/2E7D32 {
     + finding_id: FindingId
     + inspection_id: UUID
     + control_id: String
@@ -19,7 +19,7 @@ package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
     <<invariant>> disposition requires terminal state
   }
 
-  class "**FindingProjection**" as FindingProjection <<Read Model>> #EEF4FC/3B7DD8 {
+  class "**FindingProjection**" as FindingProjection <<Read Model>> #E1F5FE/0288D1 {
     + finding_id: FindingId
     + fsm_state: FindingState
     + disposition: Disposition
@@ -28,30 +28,30 @@ package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
     + updated_at: HlcTimestamp
   }
 
-  class "**FindingFsm**" as FindingFsm <<Domain Service>> #F3E5F5/8E44AD {
+  class "**FindingFsm**" as FindingFsm <<Domain Service>> #F3E5F5/7B1FA2 {
     + transition(finding: Finding, target: FindingState, actor: ActorId): boolean
     + allowedTransitions(current: FindingState): Set~FindingState~
     + checkSegregationOfDuties(finding: Finding, actor: ActorId, action: String): boolean
   }
 
-  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #F3E5F5/8E44AD {
+  class "**GuidanceResolver**" as GuidanceResolver <<Domain Service>> #F3E5F5/7B1FA2 {
     + materialize(ref: PairedPolicyRef, doctrine: PolicyDoctrineDoc): GuidancePayload
   }
 
-  class "**GuidanceView**" as GuidanceView <<Read Model>> #EEF4FC/3B7DD8 {
+  class "**GuidanceView**" as GuidanceView <<Read Model>> #E1F5FE/0288D1 {
     + directive_lineage_id: LineageId
     + doctrine_text: String
     + paired_policy_ref: PairedPolicyRef
   }
 
-  class "**AggregateReport**" as AggregateReport <<Read Model>> #EEF4FC/3B7DD8 {
+  class "**AggregateReport**" as AggregateReport <<Read Model>> #E1F5FE/0288D1 {
     + scope: String
     + period: DateRange
     + finding_counts: Map~Severity,int~
     + directive_coverage: double
   }
 
-  enum "**FindingState**" as FindingState #FEF5E7/B9770E {
+  enum "**FindingState**" as FindingState #FFFDE7/F9A825 {
     Created
     Open
     Acknowledged
@@ -65,7 +65,7 @@ package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
     Closed
   }
 
-  enum "**Disposition**" as Disposition #FEF5E7/B9770E {
+  enum "**Disposition**" as Disposition #FFFDE7/F9A825 {
     valid
     invalid
     waived
@@ -73,7 +73,7 @@ package "findings_domain" as DOM_FIND #F3E5F5/8E44AD {
     superseded
   }
 
-  enum "**Severity**" as Severity #FEF5E7/B9770E {
+  enum "**Severity**" as Severity #FFFDE7/F9A825 {
     critical
     high
     medium

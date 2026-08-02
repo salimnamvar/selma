@@ -1,19 +1,19 @@
 ' Section: cd_section_iface_tui.puml
 
-package "tui_interface\n(C4: clients)" as IF_TUI #EEF4FC/3B7DD8 {
+package "tui_interface\n(C4: clients)" as IF_TUI #E1F5FE/0288D1 {
 
-  class "**DirectiveScreens**" as DirectiveScreens <<Interface>> #EEF4FC/3B7DD8 {
+  class "**DirectiveScreens**" as DirectiveScreens <<Interface>> #E1F5FE/0288D1 {
     + showList()
     + showDetail(lineage_id)
   }
 
-  class "**FindingScreens**" as FindingScreens <<Interface>> #EEF4FC/3B7DD8 {
+  class "**FindingScreens**" as FindingScreens <<Interface>> #E1F5FE/0288D1 {
     + showList()
     + showDetail(finding_id)
     + showGuidance(finding_id)
   }
 
-  class "**CapabilityEnforcer**" as TuiCapabilityEnforcer <<Interface>> #EEF4FC/3B7DD8 {
+  class "**CapabilityEnforcer**" as TuiCapabilityEnforcer <<Interface>> #E1F5FE/0288D1 {
     + Authorize(actor, capability): Decision
   }
 }

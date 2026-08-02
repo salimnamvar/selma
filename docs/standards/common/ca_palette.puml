@@ -2,153 +2,126 @@
 ' Title:     Selma — Clean Architecture color palette (SSoT)
 ' Purpose:   MACRO layer colors + MICRO concern colors shared by
 '            C4, package, class, deployment, and state diagrams.
-'            Every view MUST include this file first, then map
-'            its local aliases ($STATE_*, $DEP_*, $CD_*, …).
 ' Contract:  1.1.0
 '
-' Include from any docs/**/common/*_styles.puml:
+' Include:
 '   !include ../../standards/common/ca_palette.puml
 '
-' ── Clean Architecture rings (MACRO · outer → inner) ───────
+' MACRO rings use widely spaced hues (≈45–60°) so layers read
+' as distinct at a glance — not tint variants of the same green/blue.
 '
-'   ACTORS              people / external users
-'   INTERFACE           driving adapters (clients, api gate UI)
-'   APPLICATION         use-case business rules (*_application)
-'   DOMAIN              enterprise rules (entities, domain services)
-'   INFRASTRUCTURE      driven adapters (*_repository, *_gateway)
-'   FRAMEWORKS          frameworks & drivers (*_store, DB, object)
-'   EXTERNAL            systems outside the product boundary
-'   COMPOSITION         main / DI / wiring (not a CA ring peer)
+'   ACTORS           indigo        people
+'   INTERFACE        sky cyan-blue driving adapters
+'   APPLICATION      teal          use cases
+'   DOMAIN           violet        enterprise entities (core)
+'   INFRASTRUCTURE   vivid orange  driven adapters
+'   FRAMEWORKS       forest green  stores / DB / object
+'   EXTERNAL         blue-grey     outside product
+'   COMPOSITION      deep indigo   main / DI (not a peer)
 '
-' ── Cross-cutting (MICRO · shared concern tags) ────────────
-'
-'   GATE                capability / permission deny
-'   HERMETIC            compile-only / pure evaluation constraint
-'   TERMINAL            lifecycle sinks / retired
-'   ASYNC               eventually consistent delivery
-'   MEDIATED            no external mutation (subset of domain purple)
-'
-' Hex values are LOCKED. Change only here; views re-export aliases.
+' MICRO (cross-cutting; not CA rings):
+'   GATE             crimson       permission deny
+'   HERMETIC         gold amber    compile-only / pure eval
+'   TERMINAL         charcoal      sinks
 ' ============================================================
 
-' ── Typography / canvas (shared chrome) ─────────────────────
 !$CA_CANVAS            = "#FAFBFC"
 !$CA_INK               = "#1A2332"
-!$CA_ARROW             = "#3D4F5F"
-!$CA_BORDER_NEUTRAL    = "#5B7BA5"
+!$CA_ARROW             = "#37474F"
+!$CA_BORDER_NEUTRAL    = "#546E7A"
 !$CA_LEGEND_BG         = "#FFFFFF"
-!$CA_LEGEND_BORDER     = "#D0D7DE"
+!$CA_LEGEND_BORDER     = "#CFD8DC"
 
 ' ============================================================
-' MACRO — Clean Architecture layers
-' Each layer: SOLID (element fill when solid), FILL (zone/package
-' light background), BORDER (zone/package border), PKG (PlantUML
-' package "fill/border" shortcut string).
+' MACRO — Clean Architecture layers (high-contrast hues)
 ' ============================================================
 
-' ACTORS — people (C4 person)
-!$CA_SOLID_ACTOR       = "#4A6FA5"
-!$CA_FILL_ACTOR        = "#E8EEF5"
-!$CA_BORDER_ACTOR      = "#4A6FA5"
-!$CA_PKG_ACTOR         = "#E8EEF5/4A6FA5"
+' ACTORS — indigo (people)
+!$CA_SOLID_ACTOR       = "#3F51B5"
+!$CA_FILL_ACTOR        = "#E8EAF6"
+!$CA_BORDER_ACTOR      = "#303F9F"
+!$CA_PKG_ACTOR         = "#E8EAF6/3F51B5"
 
-' INTERFACE — driving adapters (C4 container / clients / api shell)
-!$CA_SOLID_INTERFACE   = "#3B7DD8"
-!$CA_FILL_INTERFACE    = "#EEF4FC"
-!$CA_BORDER_INTERFACE  = "#3B7DD8"
-!$CA_PKG_INTERFACE     = "#EEF4FC/3B7DD8"
-!$CA_SOLID_INTERFACE_SOFT = "#85B4F2"
-!$CA_PKG_INTERFACE_NEST = "#BBDEFB/3B7DD8"
+' INTERFACE — sky cyan-blue (driving adapters / clients / api shell)
+!$CA_SOLID_INTERFACE   = "#0288D1"
+!$CA_FILL_INTERFACE    = "#E1F5FE"
+!$CA_BORDER_INTERFACE  = "#01579B"
+!$CA_PKG_INTERFACE     = "#E1F5FE/0288D1"
+!$CA_SOLID_INTERFACE_SOFT = "#4FC3F7"
+!$CA_PKG_INTERFACE_NEST = "#B3E5FC/0288D1"
 
-' APPLICATION — use cases (*_application) (C4 system/process teal)
-!$CA_SOLID_APPLICATION = "#1B7A6E"
-!$CA_FILL_APPLICATION  = "#E8F5E9"
-!$CA_BORDER_APPLICATION = "#1B7A6E"
-!$CA_PKG_APPLICATION   = "#E8F5E9/1B7A6E"
-!$CA_PKG_APPLICATION_NEST = "#C8E6C9/1B7A6E"
+' APPLICATION — teal (use cases) — not forest green
+!$CA_SOLID_APPLICATION = "#00897B"
+!$CA_FILL_APPLICATION  = "#E0F2F1"
+!$CA_BORDER_APPLICATION = "#00695C"
+!$CA_PKG_APPLICATION   = "#E0F2F1/00897B"
+!$CA_PKG_APPLICATION_NEST = "#B2DFDB/00897B"
 
-' DOMAIN — entities & domain services (core purple)
-!$CA_SOLID_DOMAIN      = "#8E44AD"
+' DOMAIN — violet (enterprise core) — warm vs composition indigo
+!$CA_SOLID_DOMAIN      = "#7B1FA2"
 !$CA_FILL_DOMAIN       = "#F3E5F5"
-!$CA_BORDER_DOMAIN     = "#8E44AD"
-!$CA_PKG_DOMAIN        = "#F3E5F5/8E44AD"
-!$CA_PKG_DOMAIN_NEST   = "#E1BEE7/8E44AD"
+!$CA_BORDER_DOMAIN     = "#4A148C"
+!$CA_PKG_DOMAIN        = "#F3E5F5/7B1FA2"
+!$CA_PKG_DOMAIN_NEST   = "#E1BEE7/7B1FA2"
 
-' INFRASTRUCTURE — driven adapters (*_repository, *_gateway)
-!$CA_SOLID_INFRASTRUCTURE = "#B9770E"
-!$CA_FILL_INFRASTRUCTURE  = "#FEF5E7"
-!$CA_BORDER_INFRASTRUCTURE = "#B9770E"
-!$CA_PKG_INFRASTRUCTURE = "#FEF5E7/B9770E"
-!$CA_PKG_INFRASTRUCTURE_NEST = "#FFE0B2/B9770E"
+' INFRASTRUCTURE — vivid orange (driven adapters)
+!$CA_SOLID_INFRASTRUCTURE = "#EF6C00"
+!$CA_FILL_INFRASTRUCTURE  = "#FFF3E0"
+!$CA_BORDER_INFRASTRUCTURE = "#E65100"
+!$CA_PKG_INFRASTRUCTURE = "#FFF3E0/EF6C00"
+!$CA_PKG_INFRASTRUCTURE_NEST = "#FFE0B2/EF6C00"
 
-' FRAMEWORKS & DRIVERS — stores / DB / object plane (C4 store green)
-!$CA_SOLID_FRAMEWORKS  = "#2C6E49"
+' FRAMEWORKS & DRIVERS — forest green (stores) — distinct from teal app
+!$CA_SOLID_FRAMEWORKS  = "#2E7D32"
 !$CA_FILL_FRAMEWORKS   = "#E8F5E9"
-!$CA_BORDER_FRAMEWORKS = "#2C6E49"
-!$CA_PKG_FRAMEWORKS    = "#E8F5E9/2C6E49"
-!$CA_BORDER_FRAMEWORKS_DEEP = "#1B4332"
+!$CA_BORDER_FRAMEWORKS = "#1B5E20"
+!$CA_PKG_FRAMEWORKS    = "#E8F5E9/2E7D32"
+!$CA_BORDER_FRAMEWORKS_DEEP = "#1B5E20"
 
-' EXTERNAL — systems outside Selma (C4 external grey)
-!$CA_SOLID_EXTERNAL    = "#8A9199"
-!$CA_FILL_EXTERNAL     = "#F0F0F0"
-!$CA_BORDER_EXTERNAL   = "#8A9199"
-!$CA_PKG_EXTERNAL      = "#F0F0F0/8A9199"
-!$CA_SOLID_EXTERNAL_PERSON = "#8B9BB4"
+' EXTERNAL — blue-grey (outside Selma)
+!$CA_SOLID_EXTERNAL    = "#607D8B"
+!$CA_FILL_EXTERNAL     = "#ECEFF1"
+!$CA_BORDER_EXTERNAL   = "#455A64"
+!$CA_PKG_EXTERNAL      = "#ECEFF1/607D8B"
+!$CA_SOLID_EXTERNAL_PERSON = "#78909C"
 
-' COMPOSITION — main / DI / wiring (deep violet; not a C4 peer)
-!$CA_SOLID_COMPOSITION = "#5E35B1"
-!$CA_FILL_COMPOSITION  = "#EDE7F6"
-!$CA_BORDER_COMPOSITION = "#5E35B1"
-!$CA_PKG_COMPOSITION   = "#EDE7F6/5E35B1"
+' COMPOSITION — deep indigo (wiring; cooler than domain violet)
+!$CA_SOLID_COMPOSITION = "#283593"
+!$CA_FILL_COMPOSITION  = "#E8EAF6"
+!$CA_BORDER_COMPOSITION = "#1A237E"
+!$CA_PKG_COMPOSITION   = "#E8EAF6/283593"
 
 ' ============================================================
-' MICRO — cross-cutting concerns (any view may apply)
+' MICRO — cross-cutting (must not collide with MACRO solids)
 ' ============================================================
 
-!$CA_SOLID_GATE        = "#A93226"
-!$CA_FILL_GATE         = "#FDEDEC"
-!$CA_BORDER_GATE       = "#A93226"
-!$CA_PKG_GATE          = "#FDEDEC/A93226"
-!$CA_BORDER_GATE_DEEP  = "#641E16"
+!$CA_SOLID_GATE        = "#C62828"
+!$CA_FILL_GATE         = "#FFEBEE"
+!$CA_BORDER_GATE       = "#B71C1C"
+!$CA_PKG_GATE          = "#FFEBEE/C62828"
+!$CA_BORDER_GATE_DEEP  = "#B71C1C"
 
-!$CA_SOLID_HERMETIC    = "#B9770E"
-!$CA_FILL_HERMETIC     = "#FEF5E7"
-!$CA_BORDER_HERMETIC   = "#7D4E00"
-!$CA_PKG_HERMETIC      = "#FEF5E7/B9770E"
+' Hermetic: gold (yellower than infrastructure orange)
+!$CA_SOLID_HERMETIC    = "#F9A825"
+!$CA_FILL_HERMETIC     = "#FFFDE7"
+!$CA_BORDER_HERMETIC   = "#F57F17"
+!$CA_PKG_HERMETIC      = "#FFFDE7/F9A825"
 
-!$CA_SOLID_TERMINAL    = "#4A4A4A"
+!$CA_SOLID_TERMINAL    = "#37474F"
 !$CA_FILL_TERMINAL     = "#ECEFF1"
-!$CA_BORDER_TERMINAL   = "#4A4A4A"
+!$CA_BORDER_TERMINAL   = "#263238"
 
 !$CA_SOLID_ENTITY      = "#546E7A"
 !$CA_FILL_ENTITY       = "#ECEFF1"
 !$CA_PKG_ENTITY        = "#ECEFF1/546E7A"
 
-!$CA_SOLID_ASYNC       = "#2980B9"
-!$CA_SOLID_MEDIATED    = "#8E44AD"
-!$CA_SOLID_IMMUTABLE   = "#1B8A5A"
-!$CA_SOLID_VALIDATION  = "#16A085"
-!$CA_SOLID_CAPABILITY  = "#C0392B"
+!$CA_SOLID_ASYNC       = "#0277BD"
+!$CA_SOLID_MEDIATED    = "#7B1FA2"
+!$CA_SOLID_IMMUTABLE   = "#2E7D32"
+!$CA_SOLID_VALIDATION  = "#00897B"
+!$CA_SOLID_CAPABILITY  = "#C62828"
 
-' System / container boundary fills (C4)
-!$CA_BOUNDARY_SYSTEM_FILL    = "#E8F5F3"
-!$CA_BOUNDARY_CONTAINER_FILL = "#EEF4FC"
-!$CA_BOUNDARY_DEFAULT_FILL   = "#F0F4F8"
-
-' ============================================================
-' View mapping cheat-sheet (document only)
-' ============================================================
-' C4 element tag     → macro
-'   person           → ACTOR
-'   container/api    → INTERFACE (gate tag → GATE solid)
-'   *_application    → APPLICATION
-'   domain non-peer  → DOMAIN
-'   *_repository     → INFRASTRUCTURE
-'   *_store          → FRAMEWORKS
-'   external system  → EXTERNAL
-'
-' Package rings      → same macro PKG_* strings
-' Class packages     → same macro PKG_* strings
-' Deployment zones   → ACTOR | INTERFACE | APPLICATION |
-'                      FRAMEWORKS | EXTERNAL | COMPOSITION(ops)
-' State micro fills  → see state_styles alias table
+' C4 boundaries (light tints of application / interface)
+!$CA_BOUNDARY_SYSTEM_FILL    = "#E0F2F1"
+!$CA_BOUNDARY_CONTAINER_FILL = "#E1F5FE"
+!$CA_BOUNDARY_DEFAULT_FILL   = "#F5F7FA"

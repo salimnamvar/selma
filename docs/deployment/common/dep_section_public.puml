@@ -3,7 +3,7 @@
 ' Aliases: ZONE_PUBLIC, NODE_LOAD_BALANCER
 ' ============================================================
 
-' Zone fill/border = DEP_ZONE_PUBLIC_* (#EEF4FC / #3B7DD8 · C4 container)
-package "$ZONE_PUBLIC" as ZONE_PUBLIC #EEF4FC/3B7DD8 {
+' Zone fill/border = DEP_ZONE_PUBLIC_* (#E1F5FE / #0288D1 · C4 container)
+package "$ZONE_PUBLIC" as ZONE_PUBLIC #E1F5FE/0288D1 {
   node "$NODE_LOAD_BALANCER" as NODE_LOAD_BALANCER
 }

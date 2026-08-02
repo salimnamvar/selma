@@ -4,8 +4,8 @@
 ' Internals of application: c4_selma_component.puml
 ' ============================================================
 
-' Zone fill/border = DEP_ZONE_APP_* (#E8F5F3 / #1B7A6E · C4 system)
-package "$ZONE_APPLICATION" as ZONE_APP #E8F5E9/1B7A6E {
+' Zone fill/border = DEP_ZONE_APP_* (#E0F2F1 / #00897B · C4 system)
+package "$ZONE_APPLICATION" as ZONE_APP #E0F2F1/00897B {
   node "$NODE_APPLICATION" as NODE_APPLICATION
   database "$NODE_HLC_PVC" as NODE_HLC_PVC
 }

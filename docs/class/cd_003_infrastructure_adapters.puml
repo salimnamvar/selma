@@ -29,9 +29,9 @@ title $TITLE_INFRASTRUCTURE
 
 legend bottom
   |= Module |= CA layer · C4 peer |
-  | `*_infrastructure` ring | **Infrastructure** amber #B9770E |
+  | `*_infrastructure` ring | **Infrastructure** amber #EF6C00 |
   | Adapter classes | same (driven adapters) |
-  | Port ref | **Gate** micro #A93226 |
+  | Port ref | **Gate** micro #C62828 |
   | directives_infrastructure | directives_repository |
   | compiled_rules_infrastructure | compiled_rules_repository |
   | findings_infrastructure | finding_events_repository |

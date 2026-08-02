@@ -37,14 +37,14 @@ PlantUML package diagrams are an **implementation view**. Behavior stays in `spe
 
 | Package ring | CA MACRO | Fill / border |
 | :--- | :--- | :--- |
-| `*_interface` | Interface | `#EEF4FC` / `#3B7DD8` |
-| `*_application` | Application | `#E8F5E9` / `#1B7A6E` |
-| `*_domain` | Domain | `#F3E5F5` / `#8E44AD` |
-| `*_infrastructure` | Infrastructure | `#FEF5E7` / `#B9770E` |
-| stores | Frameworks | `#E8F5E9` / `#2C6E49` |
-| external | External | `#F0F0F0` / `#8A9199` |
-| `composition_root` | Composition | `#EDE7F6` / `#5E35B1` |
-| `<<port>>` | Gate (micro) | `#FDEDEC` / `#A93226` |
+| `*_interface` | Interface | `#E1F5FE` / `#0288D1` |
+| `*_application` | Application | `#E8F5E9` / `#00897B` |
+| `*_domain` | Domain | `#F3E5F5` / `#7B1FA2` |
+| `*_infrastructure` | Infrastructure | `#FFF3E0` / `#EF6C00` |
+| stores | Frameworks | `#E8F5E9` / `#2E7D32` |
+| external | External | `#ECEFF1` / `#607D8B` |
+| `composition_root` | Composition | `#E8EAF6` / `#283593` |
+| `<<port>>` | Gate (micro) | `#FFEBEE` / `#C62828` |
 
 ```bash
 plantuml docs/package/pkg_001_clean_architecture.puml

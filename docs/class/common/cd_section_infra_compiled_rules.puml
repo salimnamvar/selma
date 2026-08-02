@@ -1,8 +1,8 @@
 ' Section: cd_section_infra_compiled_rules.puml
 
-package "compiled_rules_infrastructure\n(C4: compiled_rules_repository)" as INFRA_CR #FEF5E7/B9770E {
+package "compiled_rules_infrastructure\n(C4: compiled_rules_repository)" as INFRA_CR #FFF3E0/EF6C00 {
 
-  class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> #FEF5E7/B9770E {
+  class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> #FFF3E0/EF6C00 {
     + GetCompiledRules(snapshot_hash): CgIrSnapshot
     + GetLatestCompiledRules(lineage_id): CgIrSnapshot
     + PublishCompiledRules(snapshot): void
