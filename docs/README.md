@@ -79,20 +79,23 @@ One concept, two names by design. Never invent a C4 peer `compiled_rules_applica
 | **API** | [`api/`](api/README.md) | Modular OpenAPI (Redocly) |
 | **Deployment** | [`deployment/`](deployment/README.md) | *Where* it runs (zones, TLS, failure domains, RPO) |
 
-### Structural & state views (no concern overlap)
+### Structural, state, and API views (no concern overlap)
 
 Full matrix: [`standards/view_concerns.md`](standards/view_concerns.md).
 
 | Question | Authority | Owns 100% | Must not restate |
 | :--- | :--- | :--- | :--- |
-| What peers / containers / components exist? | [`c4-model/`](c4-model/README.md) | Peer IDs, dependency rule, boundaries | Package trees, zones/TLS/RPO, FSM tables, capability matrix |
-| How are source modules and ports organized? | [`package/`](package/README.md) | `{resource}_{layer}`, ISP ports, module edges | Peer inventing, failure domains, normative FSM/lock text |
-| Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Zones, TLS, HA, RPO/RTO, observability | Component use-case graph, package trees, domain algorithms |
-| How does state evolve (FSMs / pipelines)? | [`state/`](state/README.md) | Extracted states/transitions from contracts | Peer inventing, packages, zones; product design principles (spec owns) |
-| What durable tables sit in each store? | [`erd/`](erd/README.md) | Entities, columns, PK/FK/unique, mutability stereotypes | FSM guards, lock algorithms, zones/TLS, class methods, use-case goals |
+| What peers / containers / components exist? | [`c4-model/`](c4-model/README.md) | Peer IDs, dependency rule, boundaries | Package trees, **HTTP/OpenAPI**, zones/TLS/RPO, FSM tables, capability matrix |
+| How are source modules and ports organized? | [`package/`](package/README.md) | `{resource}_{layer}`, ISP ports, module edges | Peer inventing, failure domains, normative FSM/lock text, **HTTP paths** |
+| What types and methods realize packages? | [`class/`](class/README.md) | Domain members, ports, ROD use cases, DTOs, routers (mirror API) | Package layout authority, **OpenAPI SSoT**, actor graphs, zones |
+| Where do processes and data live in prod? | [`deployment/`](deployment/README.md) | Zones, TLS, HA, RPO/RTO, observability | Component use-case graph, package trees, **REST surface** |
+| How does state evolve (FSMs / pipelines)? | [`state/`](state/README.md) | Extracted states/transitions from contracts | Peer inventing, packages, zones, **OpenAPI catalogs** |
+| What actor goals and ROD use cases exist? | [`usecase/`](usecase/README.md) | Actors, ROD ovals, groups, include/extend | **HTTP paths/bodies**, FSM tables, capability catalog |
+| What durable tables sit in each store? | [`erd/`](erd/README.md) | Entities, columns, PK/FK/unique, mutability stereotypes | FSM guards, **OpenAPI**, zones/TLS, class methods, use-case goals |
+| What HTTP resources/methods/wire schemas? | [`api/`](api/README.md) | Paths, methods, operationIds, wire schemas, error envelope, security scheme | Peers, packages, FSM guards, capability catalog, zones, ERD keys |
 
-Join key: **C4 peer IDs** from [`standards/c4_registry.yaml`](standards/c4_registry.yaml).
-Behavior principles (authn, SoD, hermetic compile, dual-document, store mutability): **`spec/contracts/`** + **`schema/`** only — structural views link, never duplicate.
+Join keys: **C4 peer IDs** + ROD use-case names + `api_resources` paths — see view_concerns.  
+Behavior principles (authn, SoD, hermetic compile, dual-document, store mutability, REST **behavior**): **`spec/contracts/`** + **`schema/`** only — views **link**, never duplicate.
 
 ## Authority (investigation order)
 

@@ -14,12 +14,16 @@ use case / class / package / ERD / C4 / contracts.
 
 ## View concern (this directory owns)
 
+Full exclusive-ownership matrix: [`../standards/view_concerns.md`](../standards/view_concerns.md).
+
 | | |
 | :--- | :--- |
 | **Answers** | *What HTTP resources, methods, and wire schemas* the product exposes |
-| **Owns 100%** | Path inventory; HTTP methods; `operationId`s; request/response wire schemas; shared parameters/headers as wire names; OpenAPI security scheme declaration; error envelope shapes |
-| **Does not own** | Peer inventing · package trees · domain algorithms · FSM guards · capability catalog · store mutability · deployment topology |
-| **Join key** | C4 peer IDs + ROD PascalCase use-case names + domain type names + `api_resources` |
+| **Owns 100%** | Path inventory (AIP-121/136); HTTP methods; `operationId`s; request/response **wire** schemas; shared parameters/headers as wire names; error response components / envelope shape; OpenAPI security **scheme declaration**; multi-file OpenAPI + Redocly; `api_resources` path list identity |
+| **Does not own** | Peer inventing (C4) · package trees/ports · domain method catalogs · actor graphs · zones/TLS/RPO · FSM tables/guards · capability catalog / SoD · store mutability / locks / HLC · dual-document principles · certification gate criteria · ERD physical keys · REST **behavior** norms (idempotency rules live in `rest_api.yaml` — this view only **encodes** headers/status) |
+| **Join key** | C4 peer IDs + ROD PascalCase use-case names + domain resource type names + `api_resources` |
+
+**Absorption rule:** API is the HTTP encoding of use case + class + ERD + C4 owners — not a parallel product design. Every path/operation must map to an existing ROD use case (or pure Get/List on an existing resource).
 
 ## AIP-121 / AIP-136 (mandatory)
 
