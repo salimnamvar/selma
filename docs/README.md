@@ -48,7 +48,7 @@ All design work MUST follow [`standards/`](standards/README.md):
 | [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract:` = `VERSION`, C4, Source) | same |
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 
-**design_contract_version:** `1.1.0` — stamp of [`standards/VERSION`](standards/VERSION) (C4, API `info.version`, contracts, diagram headers). Bump `VERSION` once, then `python scripts/check_design_alignment.py --fix`.
+**design_contract_version:** `1.2.0` — stamp of [`standards/VERSION`](standards/VERSION) (C4, API `info.version`, contracts, diagram headers). Bump `VERSION` once, then `python scripts/check_design_alignment.py --fix`.
 
 **Tenant model (v1):** single-tenant per deployment instance. Multi-tenancy is
 out of scope; see [`c4-model/README.md`](c4-model/README.md) "Tenant model".

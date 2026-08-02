@@ -2,7 +2,7 @@
 ' Title:     Deployment topology connections (all edges)
 ' Purpose:   Every zone leaf has ≥1 edge. Edit edges here.
 '            Topology only — not component use-case graph.
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Include AFTER all dep_section_*.puml files.
 ' Store I/O only via C4 *_repository adapters (never api → store).

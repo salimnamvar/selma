@@ -3,7 +3,7 @@
 ' Purpose:   Stable alias registry for package diagrams — same role
 '            as c4_identities.puml for C4. Display titles + C4 peer map.
 '            Sections MUST use these aliases only (do not invent IDs).
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Naming dual (intentional):
 '   C4 peer: compilation_application

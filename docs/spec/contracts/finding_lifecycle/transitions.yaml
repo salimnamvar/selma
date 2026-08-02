@@ -4,7 +4,7 @@
 
 contract_id: "finding_lifecycle.transitions"
 schema_version: "1.0.0"
-design_contract_version: "1.1.0"
+design_contract_version: "1.2.0"
 owner_component: "findings_application"
 state_machine_ref: "../../state/state_machine_001_finding_lifecycle.puml"
 description: >

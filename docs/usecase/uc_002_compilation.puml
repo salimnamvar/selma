@@ -4,7 +4,7 @@
 ' Source:    docs/spec/contracts/compilation/
 ' C4:        compilation_application
 ' Package:   compiled_rules_application
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/uc_styles.puml
 !include common/uc_identities.puml

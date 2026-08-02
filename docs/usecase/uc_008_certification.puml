@@ -4,7 +4,7 @@
 ' Source:    docs/spec/contracts/certification/gates.yaml
 ' C4:        certification_tool (offline · not peer)
 ' Package:   offline certification_tool
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/uc_styles.puml
 !include common/uc_identities.puml

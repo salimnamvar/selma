@@ -2,7 +2,7 @@
 ' Title:     Selma — Use Case Diagram Styles
 ' Purpose:   Use-case chrome + aliases to CA palette.
 '            MACRO = Clean Architecture layers; MICRO = UC roles.
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Include order (orchestrator):
 '   !include common/uc_styles.puml   (pulls ca_palette)

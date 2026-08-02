@@ -7,7 +7,7 @@
 ' C4:        api (ingress gate); denials → finding_events_repository → finding_events_store
 '            segregation of duties also at findings_application state machine; ResolveConflict (domain · not peer)
 ' Package:   rest_interface / CapabilityEnforcer (C4: api)
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 title **State Machine 007 — Capability Authorization**\nC4: api · denials → finding_events_repository → finding_events_store\n<size:12><i>authenticate · capability · segregation of duties · stage · allow | deny+audit</i></size>

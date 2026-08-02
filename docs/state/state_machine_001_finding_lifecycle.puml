@@ -6,7 +6,7 @@
 '            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
 ' C4:        findings_application → finding_events_repository → finding_events_store
 ' Package:   findings_application / findings_domain (FindingFsm)
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 !include ./common/state_styles.puml

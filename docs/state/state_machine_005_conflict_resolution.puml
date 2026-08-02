@@ -6,7 +6,7 @@
 ' C4:        ResolveConflict (domain · not peer) used by compilation_application | inspections_application
 '            artifacts → artifacts_repository → artifacts_store
 ' Package:   conflicts_domain
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 title **State Machine 005 — Conflict Resolution**\nC4: ResolveConflict (domain · not peer) · compilation_application | inspections_application\n<size:12><i>within-lineage binding · cross-lineage advisory · artifacts</i></size>

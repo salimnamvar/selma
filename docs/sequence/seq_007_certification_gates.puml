@@ -3,7 +3,7 @@
 ' Title:     SEQ-007 Certification Gates
 ' Source:    docs/spec/contracts/certification/gates.yaml
 ' C4:        certification_tool (offline · not peer) → artifacts_repository
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/seq_styles.puml
 

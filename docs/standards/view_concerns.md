@@ -5,7 +5,7 @@ Views **reference** each other by **C4 peer IDs** only. They must not restate an
 
 **Join key (all structural views):** peer IDs from [`c4_registry.yaml`](c4_registry.yaml).  
 **Behavior authority:** [`../spec/contracts/`](../spec/contracts/) + [`../schema/`](../schema/).  
-**design_contract_version:** `1.1.0` (stamp of [`VERSION`](VERSION); whole-design freeze line)
+**design_contract_version:** `1.2.0` (stamp of [`VERSION`](VERSION); whole-design freeze line)
 
 ## Exclusive ownership matrix
 

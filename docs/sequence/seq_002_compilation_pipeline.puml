@@ -3,7 +3,7 @@
 ' Title:     SEQ-002 Compilation Pipeline
 ' Source:    docs/spec/contracts/compilation/
 ' C4:        compilation_application → compiled_rules_repository
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/seq_styles.puml
 

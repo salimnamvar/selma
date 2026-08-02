@@ -4,7 +4,7 @@
 '            IDs, port names — same role as c4_identities.puml,
 '            pkg_identities.puml, dep_identities.puml,
 '            state_identities.puml. Sections MUST use these strings.
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Include AFTER cd_styles.puml.
 ' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.

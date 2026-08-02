@@ -1,7 +1,7 @@
 # Selma — Activity Diagrams
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `1.2.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 Activity diagrams showing process flows and decision logic across Selma's key workflows. Complements the [state machines](../state/README.md) (which model state *transitions*) with a focus on *procedural flow*, parallelism, and swim-lane partitioning.
 

@@ -7,7 +7,7 @@
 '            FindingOpenPort → findings_application (atomic FindingCreated+Open)
 '            optional target_sources_gateway → target_sources
 ' Package:   inspections_application / inspections_domain
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 title **State Machine 004 — Inspection Execution Pipeline**\nC4: inspections_application → artifacts_repository → artifacts_store\n<size:12><i>six pure stages · FindingOpenPort · optional target_sources_gateway</i></size>

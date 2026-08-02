@@ -7,7 +7,7 @@
 ' C4:        api → directives_application → directives_repository → directives_store
 '            compile via outbox → compilation_application (no direct app→app edge)
 ' Package:   directives_application / directives_domain
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 title **State Machine 002 — Directive Lifecycle**\nC4: api → directives_application → directives_repository → directives_store\n<size:12><i>Draft · Active · Deprecated · Superseded · identity spawn</i></size>

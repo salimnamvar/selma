@@ -5,7 +5,7 @@
 ' C4:        *_repository | target_sources_gateway → *_store
 ' Package:   directives|compiled_rules|findings|artifacts|
 '            inspections|platform_infrastructure
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Structure:
 '   common/cd_styles.puml · cd_identities.puml

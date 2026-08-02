@@ -4,7 +4,7 @@
 
 contract_id: "conflict.detection"
 schema_version: "1.0.0"
-design_contract_version: "1.1.0"
+design_contract_version: "1.2.0"
 owner_component: "compilation_application"
 state_machine_ref: "../../state/state_machine_005_conflict_resolution.puml"
 description: >

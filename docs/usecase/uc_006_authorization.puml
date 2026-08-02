@@ -4,7 +4,7 @@
 ' Source:    docs/spec/contracts/authorization/
 ' C4:        api
 ' Package:   rest_interface
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/uc_styles.puml
 !include common/uc_identities.puml

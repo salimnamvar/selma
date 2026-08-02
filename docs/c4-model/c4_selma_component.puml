@@ -5,7 +5,7 @@
 '            narrow: api → finding_events_repository (DenialAuditPort path)
 ' Purpose:   Product peers and dependencies only. Modules → package/.
 '            Topology → deployment/. FSMs → state/. Domain services not peers.
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 @startuml c4_selma_component
 title Selma -- Component Diagram

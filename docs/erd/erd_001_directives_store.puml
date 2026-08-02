@@ -3,7 +3,7 @@
 ' Title:     ERD-001 Directives Store
 ' Source:    docs/spec/contracts/data_stores/directives_store.yaml
 ' C4:        directives_store ← directives_repository
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 !include common/erd_styles.puml
 

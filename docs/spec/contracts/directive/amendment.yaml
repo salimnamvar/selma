@@ -4,7 +4,7 @@
 
 contract_id: "directive.amendment"
 schema_version: "1.0.0"
-design_contract_version: "1.1.0"
+design_contract_version: "1.2.0"
 owner_component: "directives_application"
 description: >
   Defines how directives are amended — metadata rules, anchor references,

@@ -5,7 +5,7 @@
 '            c4_identities / pkg_identities / cd_identities /
 '            state_identities. Diagrams and sections MUST use these
 '            macros (no inventing peers, no short-form actor names).
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Include AFTER uc_styles.puml.
 ' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.

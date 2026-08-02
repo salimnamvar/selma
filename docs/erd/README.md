@@ -1,7 +1,7 @@
 # Selma — Entity-Relationship Diagrams
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.1.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `1.2.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 PlantUML ERDs for each **C4 resource store** (`*_store`). Store IDs and display
 names match [`../c4-model/README.md`](../c4-model/README.md).

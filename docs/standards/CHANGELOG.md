@@ -42,7 +42,30 @@ Tag freezes in git as `design/vX.Y.Z` when publishing a line (optional).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-08-02
+
 ### Added
+
+- **Use case view** exclusive ownership in [`view_concerns.md`](view_concerns.md):
+  actor goals, ROD use-case groups, identity dual vs package/class/C4.
+- Use-case shared `common/` maintenance layer: `uc_styles.puml` (CA palette),
+  `uc_identities.puml`, `uc_section_*` per application / gate / offline group.
+- `ValidateDirectiveDocuments` on package `compiled_rules_application` leaves
+  (aligned with class + use case).
+
+### Changed
+
+- **UC-001…UC-008** rewritten to PascalCase ROD names identical to package
+  application components and class `<<Use Case>>` types; pipeline stages and
+  FSM state names removed from use-case ovals (state/activity own those).
+- Use-case diagrams drop PlantUML `note` blocks and stop restating C4 paths,
+  store mutability, capability catalogs, and segregation-of-duties tables.
+- Use-case colors use [`common/ca_palette.puml`](common/ca_palette.puml) only
+  (no invented hex in `uc_styles` / sections).
+- Class interface use-case reference lists the full application catalog.
+- Certification use cases include all nine gates (AA-01…AA-09).
+
+### Added (prior)
 
 - Design-wide version SSoT: `docs/standards/VERSION`, this changelog, and
   `check_design_alignment.py --fix` stamp propagation (big-project pattern:

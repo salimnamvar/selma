@@ -3,7 +3,7 @@
 ' Purpose:   C4 element + relationship styles mapped to the
 '            Clean Architecture MACRO / MICRO palette
 '            (docs/standards/common/ca_palette.puml).
-' Contract:  1.1.0
+' Contract:  1.2.0
 '
 ' Include AFTER C4_Context / C4_Container / C4_Component.
 ' Then include ./common/c4_identities.puml.

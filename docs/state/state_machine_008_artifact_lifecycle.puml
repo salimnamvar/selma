@@ -7,7 +7,7 @@
 '            producers: compilation_application | inspections_application |
 '            findings_application | ResolveConflict (domain) | certification_tool (offline)
 ' Package:   artifacts_infrastructure
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' ============================================================
 
 title **State Machine 008 — Artifact Lifecycle**\nC4: artifacts_repository → artifacts_store\n<size:12><i>build · publish · reference · optional replicate · write-once</i></size>

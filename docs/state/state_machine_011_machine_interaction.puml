@@ -4,7 +4,7 @@
 ' Source:    docs/spec/contracts/ (all machines) · handoffs only
 ' C4:        api | application peers | ResolveConflict (domain) | certification_tool (offline)
 ' Package:   cross-machine handoffs only
-' Contract:  1.1.0
+' Contract:  1.2.0
 ' Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
 ' ============================================================
 
