@@ -24,24 +24,39 @@ package "<<ports>>\nApplication ports (ISP)" as PORTS #FCE4EC/C62828 {
 }
 
 package "directives_infrastructure" as INFRA_DIR #FFE0B2/F57C00 {
-  class "**SqlDirectiveRepository**" as SqlDirectiveRepository <<Adapter>> {
+  class "**SqlDirectiveWriter**" as SqlDirectiveWriter <<Adapter>> {
     + GetDirective(...)
     + SaveDirective(... If-Match)
     + EnqueueCompileRequest(...)
+    --
+    <<implements>> DirectiveRepository only
+    write path; same PG pool optional
+  }
+  class "**SqlCompilerReader**" as SqlCompilerReader <<Adapter>> {
     + GetDirectiveExecutableDocument(...)
+    --
+    <<implements>> CompilerReadPort only
+    no SaveDirective / doctrine methods
+  }
+  class "**SqlGuidanceReader**" as SqlGuidanceReader <<Adapter>> {
     + GetDirectivePolicyDoctrine(...)
     --
-    <<implements>> DirectiveRepository
-    <<implements>> CompilerReadPort
-    <<implements>> GuidanceReadPort
+    <<implements>> GuidanceReadPort only
+    revision-pinned doctrine reads
   }
+  note right of SqlCompilerReader
+    ISP: three adapter classes (or narrow façades).
+    Composition root injects the port type, never
+    a shared multi-port concrete into compile path.
+    God-adapter SqlDirectiveRepository is **forbidden**.
+  end note
 }
 
 package "compiled_rules_infrastructure" as INFRA_CR #FFE0B2/F57C00 {
   class "**ContentAddressedCompiledRulesRepository**" as ContentAddressedCompiledRulesRepository <<Adapter>> {
     + GetCompiledRules(snapshot_hash)
     + GetLatestCompiledRules(lineage_id)
-    + PublishCompiledRules(... updates lineage_heads)
+    + PublishCompiledRules(... revision-monotonic head)
     --
     GetLatest resolves head_snapshot_hash
     via lineage_head_index (not compiled_at)
@@ -53,11 +68,19 @@ package "findings_infrastructure" as INFRA_FE #FFE0B2/F57C00 {
     + AppendFindingEvent(... expected_chain_head)
     + ListFindingEvents(...)
     + GetFindingProjection(...)
+    --
+    <<implements>> FindingEventRepository only
+  }
+  class "**DenialAuditAdapter**" as DenialAuditAdapter <<Adapter>> {
     + AppendDenial(...)
     --
-    <<implements>> FindingEventRepository
-    <<implements>> DenialAuditPort
+    <<implements>> DenialAuditPort only
+    dedicated pool bulkhead; no full repo surface
   }
+  note right of DenialAuditAdapter
+    api receives DenialAuditPort only.
+    MUST NOT inject FindingEventRepository into api.
+  end note
 }
 
 package "artifacts_infrastructure" as INFRA_ART #FFE0B2/F57C00 {
@@ -95,12 +118,12 @@ package "authorization (api support)" as INFRA_AUTH_MOD #FFE0B2/F57C00 {
   }
 }
 
-SqlDirectiveRepository ..|> DirectiveRepository
-SqlDirectiveRepository ..|> CompilerReadPort
-SqlDirectiveRepository ..|> GuidanceReadPort
+SqlDirectiveWriter ..|> DirectiveRepository
+SqlCompilerReader ..|> CompilerReadPort
+SqlGuidanceReader ..|> GuidanceReadPort
 ContentAddressedCompiledRulesRepository ..|> CompiledRulesRepository
 AppendOnlyFindingEventRepository ..|> FindingEventRepository
-AppendOnlyFindingEventRepository ..|> DenialAuditPort
+DenialAuditAdapter ..|> DenialAuditPort
 InspectionArtifactAdapter ..|> InspectionArtifactPort
 FindingArtifactAdapter ..|> FindingArtifactPort
 CertificationArtifactAdapter ..|> CertificationArtifactPort
@@ -132,12 +155,12 @@ package "platform_infrastructure" as INFRA_PLAT #FFE0B2/F57C00 {
 
 legend bottom
   |= Module |= Implements (ISP ports) |
-  | directives_infrastructure | DirectiveRepository + CompilerReadPort + GuidanceReadPort |
+  | directives_infrastructure | SqlDirectiveWriter / SqlCompilerReader / SqlGuidanceReader (one port each) |
   | compiled_rules_infrastructure | CompiledRulesRepository |
-  | findings_infrastructure | FindingEventRepository + DenialAuditPort |
+  | findings_infrastructure | FindingEventRepository + DenialAuditAdapter (ISP-split) |
   | artifacts_infrastructure | InspectionArtifactPort + FindingArtifactPort + CertificationArtifactPort (shared ObjectStoreClient) |
-  | inspections_infrastructure | TargetSourcesGateway (resilient HTTP) |
-  | authorization (api support) | CapabilityEnforcer (shared by all driving adapters) |
+  | inspections_infrastructure | TargetSourcesGateway (resilient HTTP + SSRF allowlist) |
+  | authorization (api support) | CapabilityEnforcer (shared class; all driving adapters) |
 endlegend
 
 @enduml

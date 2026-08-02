@@ -57,6 +57,12 @@ pipeline:
         "latest" rules, resolve head_snapshot_hash via compiled_rules
         lineage_head_index (or Directives.head_snapshot_hash) — never by
         compiled_at wall clock (INV-CS-006 / directives head_snapshot_pointer)
+      - >
+        Pin the resolved cg_ir_snapshot_hash for the entire remaining pipeline;
+        MUST NOT re-resolve "latest" mid-pipeline (INV-IP-022)
+      - >
+        Live-attest inspector engine pins against snapshot frozen_environment
+        (HERM-010 / INV-HB-010); on EnginePinMismatch fail inspection
       - "For each node: evaluate scope against target metadata"
       - "Filter nodes where scope matches target (target_type, domain, jurisdiction, filters)"
       - "Include nodes with scope.target_type = 'any'"
@@ -66,6 +72,10 @@ pipeline:
         statement: "Only nodes with applicable scope enter evaluation"
       - id: "INV-IP-021"
         statement: "Scope matching MUST use scope specificity score algorithm (conflict/precedence contract)"
+      - id: "INV-IP-022"
+        statement: "cg_ir_snapshot_hash is pinned at select_controls; no mid-pipeline GetLatest re-resolve"
+      - id: "INV-IP-023"
+        statement: "Inspector live engine attestation MUST pass before evaluate (HERM-010)"
     error_handling: "skip_non_applicable_nodes"
 
   - order: 4
@@ -89,6 +99,11 @@ pipeline:
         statement: "Context object is read-only; detection evaluators MUST NOT mutate it"
       - id: "INV-IP-033"
         statement: "Dependency-failed nodes produce no finding (prevent cascading false positives)"
+      - id: "INV-IP-034"
+        statement: >
+          DetectionEvaluator purity is enforced by process isolation (no network
+          credentials in evaluator sandbox) and AA-03 certification, not only
+          code review convention
     error_handling: "per_fault_taxonomy"
     fault_taxonomy:
       - fault: "deterministic_evaluation"
@@ -166,13 +181,15 @@ pipeline:
       - "Mark snapshot as immutable"
       - "Note: finding_aggregates in context reflects PREVIOUS inspections only"
       - >
-        Open findings via findings_application FindingOpenPort: each finding is
-        FindingCreated + Open as one atomic append batch (INV-FL-020). Prefer
-        writing the inspection artifact first, then opening findings with
-        idempotent keys (inspection_id, control_id, target_hash) so retries
-        cannot double-open. If the process crashes after artifact write but
-        before all findings open, a reconciliation job re-reads the immutable
-        inspection snapshot and re-invokes FindingOpenPort (idempotent).
+        Cross-store saga (INV-FL-025): write inspection artifact with status
+        pending (or birth findings first). Open findings via FindingOpenPort
+        (FindingCreated + Open atomic per INV-FL-020) with idempotent keys
+        (inspection_id, control_id, target_hash). Only after findings birth
+        succeeds mark artifact Completed. Never expose Completed with zero
+        findings when Fail|Partial|NeedsReview detections existed. On crash:
+        reconciliation re-reads pending snapshot and re-invokes FindingOpenPort;
+        orphaned completed blobs without events are GC candidates. Mark Failed
+        (not Completed) if birth cannot complete after retries.
     invariants:
       - id: "INV-IP-050"
         statement: "Inspection snapshot is immutable once completed"
@@ -186,6 +203,11 @@ pipeline:
         statement: >
           Finding creation is retry-safe: partial open after snapshot write MUST be
           recoverable via FindingOpenPort idempotency + Created sweeper (INV-FL-021)
+      - id: "INV-IP-055"
+        statement: >
+          Completed status requires successful finding birth for non-empty
+          detection sets (INV-FL-025 saga); zero-finding Completed with detections
+          is non-conformant
     error_handling: "abort_with_detailed_reason"
     story_refs: ["US-IP-001"]
 
@@ -258,7 +280,27 @@ target_sources_resilience:
     - "connect_timeout_ms ≤ 2000; read_timeout_ms ≤ 5000 (configurable, hard caps)"
     - "Retries: ≤ 2 on idempotent GET only; exponential backoff with jitter"
     - "Circuit breaker: open after N consecutive failures (default 5); half-open probe after cooldown"
+    - "Circuit breaker and bulkhead partition MUST be per target_source_id (or per allowlist entry), not a single global breaker for all sources"
     - "Bulkhead: dedicated connection pool; never share with PostgreSQL or object-store pools"
     - "On timeout/open circuit: fail the inspection fetch with structured error; do not hang the request"
     - "Never mutate Target Sources; pull-only"
+    - "HTTP method allowlist: GET (and HEAD if used for probes) only; POST/PUT/PATCH/DELETE MUST be rejected by the gateway"
+  ssrf_and_egress:
+    description: "Mandatory SSRF and egress controls for target_ref resolution"
+    rules:
+      - "target_ref MUST resolve only against a configured allowlist of hostnames, CIDR ranges, or signed registry entries — not arbitrary URLs"
+      - "Block RFC1918, link-local (169.254.0.0/16), loopback, metadata endpoints (e.g. 169.254.169.254), and file:// schemes"
+      - "DNS rebinding: resolve once, pin resolved IP against allowlist before connect"
+      - "NetworkPolicy (deployment) MUST restrict egress of the gateway path to allowlisted destinations"
+      - "Max response body size and max JSON depth MUST be enforced during stream read (parser bomb / OOM protection)"
+  target_snapshot_semantics:
+    description: "Fetch-once pin for evaluation"
+    rules:
+      - "GetTarget materializes an immutable Target body; HashTarget is SHA-256 of canonicalized body"
+      - "Inspection pins target_hash at IngressGranted; evaluation MUST use the fetched body, not re-fetch"
+      - "Cache key is (target_ref, content_hash) or uncached live fetch; cache-by-ref-only without hash is non-conformant if body can change"
+  stream_limits:
+    max_body_bytes: 10485760
+    max_json_depth: 64
+    on_exceed: "reject_with_target_too_large"
 

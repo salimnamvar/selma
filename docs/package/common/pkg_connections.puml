@@ -96,8 +96,11 @@ WIRE_PORTS --> REST_CAP
 WIRE_PORTS --> CLI_CAP
 WIRE_PORTS --> TUI_CAP
 WIRE_PORTS --> SQL_DIR
+WIRE_PORTS --> SQL_CR_R
+WIRE_PORTS --> SQL_GUIDE
 WIRE_PORTS --> CAS_CR
 WIRE_PORTS --> EVT_REPO
+WIRE_PORTS --> DENY_ADAPT
 WIRE_PORTS --> ART_INS
 WIRE_PORTS --> ART_FIND
 WIRE_PORTS --> ART_CERT
@@ -196,13 +199,13 @@ AGG_PROJ ..> VO_FIND
 SVC_FSM ..> AGG_FIND
 SVC_CONFLICT ..> AGG_CGIR
 
-' ── Infrastructure implements ports (ISP) ───────────────────
+' ── Infrastructure implements ports (ISP — one adapter per port) ─
 SQL_DIR ..|> P_DIR_REPO
-SQL_DIR ..|> P_CR_READ
-SQL_DIR ..|> P_FIND_GUIDE
+SQL_CR_R ..|> P_CR_READ
+SQL_GUIDE ..|> P_FIND_GUIDE
 CAS_CR ..|> P_CR_REPO
 EVT_REPO ..|> P_FIND_EVT
-EVT_REPO ..|> P_FIND_DENY
+DENY_ADAPT ..|> P_FIND_DENY
 ART_INS ..|> P_INS_ART
 ART_FIND ..|> P_FIND_ART
 TGT_GW ..|> P_INS_TGT
@@ -212,14 +215,21 @@ ART_INS --> OBJ_CLI
 ART_FIND --> OBJ_CLI
 ART_CERT --> OBJ_CLI
 SQL_DIR --> PLAT_HASH
+SQL_CR_R --> PLAT_HASH
+SQL_GUIDE --> PLAT_HASH
 CAS_CR --> PLAT_HASH
 EVT_REPO --> PLAT_HASH
 EVT_REPO --> PLAT_HLC
+DENY_ADAPT --> PLAT_HASH
+DENY_ADAPT --> PLAT_HLC
 PLAT_HLC ..> VO_HLC
 
 ' ── Repositories → stores / external ────────────────────────
 SQL_DIR --> ST_DIR : SQL
+SQL_CR_R --> ST_DIR : SQL (read)
+SQL_GUIDE --> ST_DIR : SQL (doctrine)
 CAS_CR --> ST_CR : CAS
 EVT_REPO --> ST_FE : append-only
+DENY_ADAPT --> ST_FE : denial append (bulkhead pool)
 OBJ_CLI --> ST_ART : object write-once
 TGT_GW --> ST_TGT : HTTPS

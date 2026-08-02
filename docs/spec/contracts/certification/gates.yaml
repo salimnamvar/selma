@@ -14,6 +14,11 @@ description: >
   Implementation: offline/CI certification_tool (not an in-process C4 peer).
   Results MAY be written to artifacts_store (kind=certification) and read via
   the Artifacts API. There is no in-process certifications Application component.
+  Artifact writes use scoped offline credentials (deployment certification_tool
+  authentication) — not the JWT capability gate, and not unauthenticated
+  object-store access. schema x-cg-ir-hashing vs runtime hash field sets MUST
+  be compared in CI (INV-HB-013). AA suite MUST include chain integrity check
+  (HLC monotonicity + chain_hash) as AA-09 companion tool.
 
 gates:
   - gate_id: "AA-01"
@@ -111,8 +116,8 @@ gates:
       compile path has no unordered set/dict hash inputs and no wall-clock reads
     validation_method: >
       Compile-time pin assertion + static analysis of compile path for
-      datetime.now/wall-clock and unordered collection iteration; preimage
-      exhaustiveness check against hermetic_boundary.schema
+      nondeterministic_call_denylist and unordered collection iteration; preimage
+      exhaustiveness check against hermetic_boundary.schema; AA-07 canary in prod image
     story_refs: ["US-HB-001", "US-CP-001"]
     criteria:
       - "python_hash_seed is present and non-null integer in frozen_environment"
@@ -122,23 +127,40 @@ gates:
         pinned is permitted only with a non-null injected
         pinned_compile_start_timestamp excluded from snapshot hashes (HERM-008,
         INV-HB-007)
-      - "ordered_collection_policy is sorted (or insertion_order with fixed construction)"
-      - "runtime_preimage enumerates every input folded into os_runtime_hash"
-      - "Static analysis finds no datetime.now()/wall-clock reads in the compile path"
+      - "ordered_collection_policy is sorted only (production)"
+      - "runtime_preimage includes runtime_preimage_minimum categories"
+      - "Static analysis covers nondeterministic_call_denylist (not only datetime.now)"
       - "Static analysis finds no unordered set/dict iteration folded into snapshot hash"
       - "Missing any required pin fails compile_time_validation (HERM-008)"
+      - "CI compares schema x-cg-ir-hashing to runtime hash field set (INV-HB-013)"
+      - "Inspector live attestation path is tested (HERM-010)"
+
+  - gate_id: "AA-09"
+    name: "Event Chain Integrity"
+    invariant: >
+      finding_events_store chain_hash and HLC monotonicity are verifiable offline
+    validation_method: >
+      Chain integrity tool re-computes event hashes and verifies non-decreasing
+      (pt, lc, node_id) order; rejects retired node_id emissions
+    story_refs: ["US-GA-001"]
+    criteria:
+      - "chain_hash continuity verified for sampled finding streams"
+      - "HLC tuples are non-decreasing per node_id"
+      - "retired_nodes table rejects appends with fenced node_id"
+      - "Tool is part of certification_tool suite"
 
 certification_requirements:
   description: "Requirements for production-grade certification"
   rules:
-    - "All 8 gates (AA-01 through AA-08) MUST pass"
+    - "All 9 gates (AA-01 through AA-09) MUST pass"
     - "Gates are non-blocking for document suite conformance"
     - "Gates are REQUIRED for production-grade reference implementation certification"
     - "Gate results MUST be recorded with pass/fail per gate and explicit gate-ID traceability"
+    - "certification_tool artifact writes use scoped credentials only"
 
 invariants:
   - id: "INV-GA-001"
-    statement: "All 8 gates MUST pass for production certification"
+    statement: "All 9 gates (AA-01 through AA-09) MUST pass for production certification"
     enforcement: "certification_process"
 
   - id: "INV-GA-002"

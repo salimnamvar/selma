@@ -79,7 +79,7 @@ Peer definitions: [`../c4-model/`](../c4-model/README.md) + [`../standards/c4_re
 | `inspections_application` / `inspections_domain` | `inspections_application` |
 | `inspections_infrastructure` | `target_sources_gateway` (+ `DetectionEvaluator` non-peer) |
 | `findings_application` / `findings_domain` | `findings_application` |
-| `findings_infrastructure` | `finding_events_repository` (+ `DenialAuditPort` implementer) |
+| `findings_infrastructure` | `finding_events_repository` + separate `DenialAuditAdapter` (ISP) |
 | `artifacts_infrastructure` | `artifacts_repository` |
 | `rest_interface` / `cli_interface` / `tui_interface` | `api` + `clients` |
 | `conflicts_domain` | not a peer — in-process with compile + inspect |
@@ -97,8 +97,8 @@ Do not invent C4 peer `compiled_rules_application`. Forbidden IDs: registry `for
 
 | Port | Owner package | Implementer package | C4 adapter peer |
 |------|---------------|---------------------|-----------------|
-| `DirectiveRepository` | `directives_application` | `directives_infrastructure` (`SqlDirectiveWriter` or equivalent) | `directives_repository` |
-| `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader`) | `directives_repository` |
+| `DirectiveRepository` | `directives_application` | `directives_infrastructure` (`SqlDirectiveWriter` only) | `directives_repository` |
+| `CompilerReadPort` | `compiled_rules_application` (C4: `compilation_application`) | `directives_infrastructure` (`SqlCompilerReader` only — never multi-port god adapter) | `directives_repository` |
 | `GuidanceReadPort` | `findings_application` | `directives_infrastructure` (`SqlGuidanceReader`) | `directives_repository` |
 | `CompiledRulesRepository` | compile + inspect (+ findings SoD) | `compiled_rules_infrastructure` | `compiled_rules_repository` |
 | `FindingEventRepository` | `findings_application` | `findings_infrastructure` (`FindingEventRepositoryAdapter`) | `finding_events_repository` |

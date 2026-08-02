@@ -59,7 +59,10 @@ Rel(api, directives_application, "directive resource CRUD and lifecycle", "Inter
 Rel(api, compilation_application, "triggers compile on directive change", "Internal", $tags="capability_enforced")
 Rel(api, inspections_application, "creates inspections with target body or reference", "Internal", $tags="capability_enforced")
 Rel(api, findings_application, "finding transitions, evidence, guidance reads", "Internal", $tags="capability_enforced")
-Rel(api, finding_events_repository, "DenialAuditPort: append capability denial events", "Append-Only", $tags="immutable")
+' Port-typed exception: api depends on DenialAuditPort only (not full FindingEventRepository).
+' Implementer is DenialAuditAdapter in findings_infrastructure; rendered target is the
+' repository peer for C4 layout. Composition root MUST inject DenialAuditPort surface only.
+Rel(api, finding_events_repository, "DenialAuditPort only (AppendDenial; ISP — not full event repo)", "Append-Only", $tags="immutable")
 
 ' ── Directives Application ──
 ' Compile coupling is store-mediated (compile_request outbox in directives_store).

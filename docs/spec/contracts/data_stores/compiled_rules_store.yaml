@@ -93,6 +93,20 @@ lineage_head_index:
     - "GetLatestCompiledRules(lineage_id) MUST use this index (or directives head pointer)"
     - "Index is authoritative for inspection 'latest rules' resolution across replicas"
     - "CAS blob identity remains content-addressed; this index is the only mutable head map"
+  publish_atomicity: >
+    CAS object write (immutable blob) and lineage_head_index update are two
+    stores (object store + index). Linearization rules:
+    (1) Write CAS blob first (idempotent by content hash).
+    (2) Update lineage_head_index only if head_revision of the completing
+        outbox row is strictly greater than current head_revision (monotonic
+        CAS on revision — late older compiles MUST NOT clobber newer heads).
+    (3) Mark outbox row completed in the same directives_store transaction as
+        the mirrored Directives.head_snapshot_hash update when the mirror lives
+        in PostgreSQL.
+    (4) If head-index update fails after CAS publish, outbox row stays
+        retryable; drain is idempotent (CAS no-op + revision-monotonic head).
+    (5) Drain isolation: SELECT … FOR UPDATE SKIP LOCKED; at-most-one active
+        worker per outbox row; duplicate drain after crash is safe under (1)–(2).
 
 retention_policy:
   description: >
@@ -134,6 +148,25 @@ invariants:
       GetLatestCompiledRules / inspection "latest rules" MUST resolve via
       lineage_head_index (head_snapshot_hash), not by scanning compiled_at
     enforcement: "lineage_head_index"
+
+  - id: "INV-CS-007"
+    statement: >
+      lineage_head_index updates MUST be revision-monotonic; late older compile
+      MUST NOT clobber a newer head (publish_atomicity)
+    enforcement: "compiled_rules_infrastructure"
+
+  - id: "INV-CS-008"
+    statement: >
+      Outbox drain MUST be idempotent across retries; CAS publish + head update
+      follow publish_atomicity linearization
+    enforcement: "compilation_application + compiled_rules_store"
+
+  - id: "INV-CS-009"
+    statement: >
+      Production object store for CG-IR and artifacts MUST enable Object Lock /
+      WORM or equivalent immutability controls so content-addressed blobs
+      cannot be overwritten in place
+    enforcement: "deployment + artifacts_store + compiled_rules_store"
 
 stories:
   - story_id: "US-CS-001"

@@ -159,26 +159,67 @@ total-order and `chain_hash` guarantees (see `finding_events_store.yaml`
 `hlc.node_identity`).
 
 **Production mandate:** Application replicas MUST be deployed as a **Kubernetes
-StatefulSet (or equivalent) with a PVC per ordinal** for HLC node state:
+StatefulSet (or equivalent) with a PVC per ordinal** for HLC node state, **with
+DB watermark reconciliation** (closes PVC-vs-DB dual-path audit gap):
 
 1. **StatefulSet with PVCs (required production):** one replica identity per
-   StatefulSet ordinal; `node_id` (UUID) and HLC `(physical_time, logical_counter)`
-   live on the replica's persistent volume and are reloaded on restart before
-   accepting appends. Pod rescheduling reattaches the PVC. DEP-001 shows the PVC.
-2. **Database-backed `hlc_state` (non-production / emergency only):** a dedicated
-   table in `finding_events_store` keyed by `node_id`. **Not** a production
-   default: it couples process bootstrap to DB availability (circular dependency
-   during store outage) and is unsafe under PITR rollback of the same store
-   (stale logical counters can collide with externally observed chain hashes).
-   Environments that use it MUST document risk acceptance and a fence-and-retire
-   procedure after any PITR.
+   StatefulSet ordinal; `node_id` MUST be the stable ordinal/pod_name identity
+   (not Pod IP or ephemeral hostname). HLC `(physical_time, logical_counter)`
+   live on the replica's persistent volume, fsynced before accepting appends
+   after load (batched fsync MUST still guarantee non-decreasing emit).
+   Pod rescheduling reattaches the PVC. DEP-001 shows the PVC.
+2. **DB watermark (required production recovery authority):** on startup and
+   after crash, load `max(pt,lc)` for this `node_id` from `finding_events_store`
+   (or a dedicated watermark table updated periodically). Effective state is
+   `max(PVC, DB_watermark)`; write back to PVC before emit. Pure PVC-only load
+   without watermark check is non-conformant when the PVC may be stale after a
+   lost fsync. Pure DB-only bootstrap remains emergency/non-prod (couples
+   process start to DB availability).
+3. **Fence and retire:** If PVC is corrupted/lost, register old `node_id` in
+   `retired_nodes` (finding_events_store); issue a new node identity for the
+   ordinal. Append path MUST reject events whose `node_id` is retired (zombie
+   PVC reattach). Partition heal MUST advance local HLC to max observed remote
+   tuple (see `selma_hlc_clock.puml` Resync / PartitionHeal).
 
 A stateless `Deployment` that regenerates a fresh `node_id` on every start is
 conformant **only if** no events from the previous `node_id` remain in the
 stream (fence-and-retire); it MUST NOT reuse a previously retired `node_id`.
-If a PVC is lost, treat the ordinal as a **new** node (retire old `node_id`).
 Monitor `hlc_counter_reset_total` / node_id restarts (observability catalog)
 to detect unpersisted restarts.
+
+#### RPO / RTO (production defaults)
+
+| Component | RPO | RTO | Notes |
+|:----------|:----|:----|:------|
+| `finding_events_store` | **0** | ≤ 15 min | Synchronous replication across failure domains; regulatory event log |
+| `directives_store` | ≤ 5 min | ≤ 15 min | Sync preferred; async with documented lag cap |
+| `compiled_rules_store` / `artifacts_store` | ≤ 15 min | ≤ 30 min | CAS + Object Lock/WORM; multi-AZ |
+| Application StatefulSet | n/a | ≤ 5 min | PVC reattach; HLC resync before traffic |
+
+**Failure domain:** distinct availability zone or failure domain for primary vs
+synchronous replica of PostgreSQL event/directive clusters. "Failure domain"
+means a failure of one zone does not take both primary and sync replica.
+
+#### Object store immutability
+
+Production `compiled_rules_store` and `artifacts_store` MUST enable S3 Object
+Lock (or equivalent WORM) so content-addressed blobs cannot be overwritten.
+Certification and inspection artifacts inherit the same lock policy.
+
+#### certification_tool authentication
+
+Offline/CI `certification_tool` writes `artifacts_store` (kind=certification)
+using **scoped credentials** (IAM role / short-lived token) limited to put of
+certification object prefix — not application capability gate, but not
+anonymous object-store access. Credentials MUST NOT include write to
+directives/events stores. Read paths for gates use read-only replicas where
+possible. Compromised CI credentials are a separate threat model from JWT SoD;
+operators MUST rotate and audit put markers.
+
+#### Compile sandbox (same pod)
+
+Hermetic compile CPU work MUST use process/netns sandbox or compile sidecar
+with NetworkPolicy egress deny even when co-located with `api` (HERM / INV-HB-011).
 
 **Replay of spooled denials:** CapabilityDenied / SoDDenied events spooled to
 disk during store outage MUST be replayed with HLC timestamps assigned at
@@ -204,8 +245,12 @@ When inspections use remote references (`target_sources_gateway`):
 |:--------|:---------------------|
 | Connect / read timeout | ≤ 5 s (configurable; fail closed to error, not hang) |
 | Retries | ≤ 2 retries on idempotent GET; exponential backoff |
-| Circuit breaker | Open after consecutive failures; fail inspection fetch with structured error |
-| Bulkhead | Dedicated connection pool separate from store pools |
+| Circuit breaker | **Per-source** open after consecutive failures; fail inspection fetch with structured error |
+| Bulkhead | Dedicated connection pool separate from store pools; partitioned per source |
+| Method allowlist | GET (HEAD probes only); no mutating methods |
+| SSRF | Allowlist hosts/CIDRs; block link-local/metadata/RFC1918; DNS rebind pin |
+| NetworkPolicy | Egress restricted to allowlisted destinations |
+| Body limits | max_body_bytes / max_json_depth (pipeline.yaml) |
 
 Normative inspection pipeline: [`../spec/contracts/inspection/pipeline.yaml`](../spec/contracts/inspection/pipeline.yaml). Primary path remains **inline target body** on the inspection resource.
 

@@ -6,7 +6,10 @@
 package "$TITLE_INFRASTRUCTURE" as INFRASTRUCTURE #FFF3E0/E65100 {
 
   package "$TITLE_INFRA_DIR" as INFRA_DIR #FFE0B2/F57C00 {
-    [SqlDirectiveRepository] as SQL_DIR
+    [SqlDirectiveWriter] as SQL_DIR
+    [SqlCompilerReader] as SQL_CR_R
+    [SqlGuidanceReader] as SQL_GUIDE
+    [DenialAuditAdapter] as DENY_ADAPT
   }
 
   package "$TITLE_INFRA_CR" as INFRA_CR #FFE0B2/F57C00 {

@@ -59,15 +59,54 @@ merge_semantics:
   description: "Deterministic merge identity resolution"
   algorithm:
     step_1: "lineage_id := MIN(parent_a.lineage_id, parent_b.lineage_id) lexicographically"
-    step_2: "execution_id := lineage_id + '-M' + SHA-256(canonical_json({parents, operation: 'merge', timestamp}))[0:16].uppercase()"
+    step_2: >
+      execution_id := lineage_id + '-M' + SHA-256(canonical_json(sorted([
+      parent_a.execution_id, parent_b.execution_id])))[0:16].uppercase()
     step_3: "lineage.parent_lineage_ids := sorted unique([parent_a.lineage_id, parent_b.lineage_id])"
     step_4: "lineage.parent_execution_ids := sorted unique([parent_a.id, parent_b.id])"
     step_5: "Both parent rules transition to status=deprecated"
+  hash_input_rules: >
+    SHA-256 input MUST be only the sorted parent execution_ids (canonical JSON
+    array). MUST NOT include creator, wall-clock timestamp, or random salt —
+    otherwise merge identity is non-reproducible across nodes.
   invariant: "Merged lineage_id equals lexicographically minimum parent lineage_id"
   accepted_risk: >
     Lexicographic MIN is deterministic but semantically lossy. Non-surviving
     parent's lineage_id preserved in lineage.parent_lineage_ids and optional
     metadata.migration.merge_provenance.
+  retired_lineage_recreation: >
+    After merge absorbs lineage B into A, lineage_id B MUST remain reserved
+    (Deprecated node retained). Creating a new root with Machine ID B is
+    rejected (INV-ID-010) unless an explicit operator lineage_release procedure
+    retires the reserved id with audit.
+
+split_semantics:
+  description: "Split produces N children from one parent"
+  max_children: 16
+  rules:
+    - "N MUST be in [2, max_children]; unbounded split is non-conformant"
+    - "Each child receives a new execution_id; lineage_id inherited from parent"
+    - "Parent becomes Deprecated"
+    - "directive.fork capability gates split; per-actor rate limits apply"
+
+lineage_operation_validation:
+  description: "DAG checks at mutation time (not only next compile)"
+  rules:
+    - "Fork, merge, and split MUST validate acyclicity and max depth 64 before commit"
+    - "Compile LineageValidate is a second line of defense, not the sole gate"
+    - "On cycle detection at mutation: reject with 409 LineageCycle"
+
+lineage_history:
+  description: "Chain-of-custody value object for regulators"
+  required_fields:
+    - "operation (create|fork|merge|split|retire|restore|modify)"
+    - "actor (natural_person_id)"
+    - "timestamp (server-assigned authoritative UTC at api)"
+    - "parent_execution_ids"
+    - "child_execution_ids"
+  rules:
+    - "Every lineage mutation appends a lineage_history entry queryable from directives_store"
+    - "created_at for recency tie-break is server-assigned at api (not client wall clock)"
 
 lineage_dag_invariants:
   - id: "INV-ID-001"
@@ -84,6 +123,18 @@ lineage_dag_invariants:
     statement: "Maximum ancestry depth = 64 operations"
   - id: "INV-ID-007"
     statement: "lineage.timestamp ≥ max(parent timestamps)"
+  - id: "INV-ID-008"
+    statement: >
+      Merge execution_id SHA-256 input is sorted parent execution_ids only
+      (no timestamp/creator)
+  - id: "INV-ID-009"
+    statement: "Split N is bounded (2 ≤ N ≤ 16)"
+  - id: "INV-ID-010"
+    statement: "Absorbed lineage_ids remain reserved; no silent re-create"
+  - id: "INV-ID-011"
+    statement: "Acyclicity validated at every fork/merge/split, not only compile"
+  - id: "INV-ID-012"
+    statement: "lineage_history entry required for every lineage mutation"
 
 uniqueness:
   rules:
@@ -91,6 +142,7 @@ uniqueness:
     - "Post-fork/split: multiple active rules may share lineage_id with distinct execution_ids"
     - "Primary key: (lineage_id, id) is unique within ruleset"
     - "Execution id alone is also globally unique"
+    - "Reserved/absorbed lineage_ids block new root assignment until explicit release"
 
 stories:
   - story_id: "US-ID-001"

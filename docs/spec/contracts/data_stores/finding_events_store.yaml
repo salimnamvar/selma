@@ -144,32 +144,42 @@ hlc:
       process restarts requires stable identity and persisted HLC state.
     rules:
       - >
-        node_id MUST be a stable per-replica (or per-process-slot) identifier —
-        UUID preferred — assigned at first start and persisted across restarts.
-        It MUST NOT be re-derived solely from hostname or PID.
+        node_id MUST be a stable per-replica identifier derived from StatefulSet
+        ordinal / pod_name (optionally with a generation suffix after fence).
+        It MUST NOT be re-derived solely from Pod IP, ephemeral hostname, or PID.
       - >
-        On restart, the process MUST load the last persisted HLC state
-        (physical_time, logical_counter) for its node_id before accepting
-        appends; cold start with empty state is allowed only for a brand-new
-        node_id never used for prior events.
+        On restart, the process MUST load HLC state as max(PVC, DB_watermark)
+        for its node_id before accepting appends (see deployment HLC dual-write).
+        Cold start with empty state is allowed only for a brand-new node_id never
+        used for prior events.
       - >
-        Retiring a replica MUST fence its node_id (no reuse for a different
-        process without a new UUID) so historical tuples remain unambiguous.
+        Retiring a replica MUST insert node_id into retired_nodes; append MUST
+        reject any event whose node_id is retired (zombie PVC reattach).
       - >
         Total order remains well-defined even without persistence; persistence
         is required so post-restart events continue causal monotonicity relative
         to that replica's pre-crash stream.
+    retired_nodes:
+      description: "Fencing table for zombie node_id prevention"
+      structure:
+        - key: "node_id"
+        - fields: ["retired_at", "reason", "replaced_by"]
+      rules:
+        - "AppendFindingEvent MUST reject node_id present in retired_nodes"
+        - "PVC loss / corruption path: retire then issue new node identity"
     persistence_mechanism:
       description: >
-        Deployment topology MUST provide one of the conformant persistence
-        backends (deployment/README.md "HLC node state persistence"):
-        (1) per-replica persistent volume (StatefulSet/PVC) holding node_id
-        and HLC state, or (2) an hlc_state table in finding_events_store
-        keyed by node_id.
+        Production dual-write (deployment/README.md "HLC node state persistence"):
+        (1) per-replica PVC primary for crash restart, (2) DB watermark
+        (max HLC observed per node_id in finding_events or hlc_state) as recovery
+        authority when PVC is stale. Emergency DB-only bootstrap remains
+        non-production default.
       rules:
         - "A stateless replica with a fresh node_id that has no prior events in the stream is conformant (fence-and-retire)"
         - "Reusing a retired node_id without its persisted HLC state is non-conformant (breaks INV-ES-003)"
         - "HLC state MUST be durably advanced (fsync-batched) as events are appended; lossy in-memory-only counters are non-conformant"
+        - "On load: (pt,lc) = max(PVC, DB_watermark); fsync PVC before first emit"
+        - "Partition heal advances local HLC to max remote observed tuple"
 
 event_hash:
   formula: "SHA-256(canonical_json(event excluding event_hash and chain_hash fields))"

@@ -43,13 +43,31 @@ state "Partition Heal" as PartitionHeal #A93226 {
   Reconciling --> [*] : <b>HealCompleted</b>\nactor: System
 }
 
-Initialized --> Steady : <b>HlcStateLoaded</b>\nactor: System\ncommand: restore (pt, lc) from finding_events
+Initialized --> Steady : <b>HlcStateLoaded</b>\nactor: System\ncommand: restore (pt, lc, node_id)\nfrom PVC primary; max(PVC, DB watermark)\n[reconcileNonDecreasing]
+
+state "Resync" as Resync #B9770E : **entry** PVC stale or missing\n**allowed** fence old node_id · load DB max\n**forbidden** emit with stale PVC alone
+state "Fenced" as Fenced #A93226 : **entry** node_id retired\n**allowed** register new node_id\n**forbidden** reuse retired node_id
+
+Initialized --> Resync : <b>HlcPvcStaleOrMissing</b>\nactor: System\ncommand: detect PVC/DB divergence
+Resync --> Steady : <b>HlcResynced</b>\nactor: System\n/ ptLcEqualsMax(pvc, finding_events_max)\n/ fsync before accept appends
+Resync --> Fenced : <b>HlcNodeFenced</b>\nactor: System\n[pvcCorruptedOrLost]\n/ retire node_id in retired_nodes
+Fenced --> Initialized : <b>HlcNewNodeIssued</b>\nactor: System\ncommand: node_id = StatefulSet pod_name stable id\n+ new UUID suffix if retired
 
 Steady --> LocalSend : <b>HlcLocalSend</b>\nactor: System\ncommand: hlc_send
 Steady --> RemoteReceive : <b>HlcRemoteReceive</b>\nactor: System\ncommand: hlc_receive
 Steady --> PartitionHeal : <b>HlcPartitioned</b>\nactor: System\ncommand: heartbeat timeout
 
-Tick --> Steady : <b>HlcStatePersisted</b>\nactor: System\ncommand: store (pt_new, lc_new)\n[strictlyNonDecreasingVsPrior]
-PartitionHeal --> Steady : <b>HlcReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ noOverwriteCommitted()
+Tick --> Steady : <b>HlcStatePersisted</b>\nactor: System\ncommand: store (pt_new, lc_new) on PVC\n+ periodic DB watermark\n[strictlyNonDecreasingVsPrior]
+PartitionHeal --> Steady : <b>HlcReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ advanceLocalHlcToMaxRemote()\n/ noOverwriteCommitted()
+
+note right of Steady
+  **Persistence dual-write (production):**
+  PVC is primary for crash restart.
+  DB watermark (max HLC per node_id in finding_events)
+  is recovery authority when PVC is stale/lost.
+  On load: (pt,lc) = max(PVC, DB watermark) then fsync PVC.
+  **node_id** = stable StatefulSet ordinal/pod_name
+  (not Pod IP). retired_nodes rejects zombie reuse.
+end note
 
 @enduml

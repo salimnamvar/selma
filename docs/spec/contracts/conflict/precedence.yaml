@@ -124,8 +124,34 @@ defer_to_resolution:
     eval-time surprises; eval algorithm remains the authority for runtime pairs.
   cycle_detection: >
     Before applying any defer_to override, run DFS cycle detection
-    on the defer_to subgraph within the snapshot. If cycle detected, both defer_to
-    overrides ignored → fall through to computed resolution.
+    on the defer_to subgraph within the snapshot. If a cycle is detected,
+    ignore only the defer_to edges that participate in the cycle; unaffected
+    nodes keep their defer_to. If the implementation cannot isolate cycle
+    participants, fall through to computed resolution for the entire conflicting
+    pair (safe default). Self-ref is always ignore + fall through.
+
+multi_party_conflict:
+  description: >
+    Pairwise cascade is insufficient for three-or-more mutually conflicting
+    rules within a lineage. ResolveConflict MUST build a conflict graph and
+    produce a single topological binding order (or Conflict Artifact if cycle /
+    total tie). Transitive loser adjustments MUST be consistent with the
+    global order, not sequential independent pair results.
+
+recency_tie_break:
+  description: >
+    When created_at timestamps are identical, emit Conflict Artifact for
+    binding path OR apply deterministic secondary key: execution_id ascending
+    (lexicographic). Advisory path uses the same secondary key for recommended
+    winner. created_at is server-assigned at directive authoring (api), not
+    client wall clock.
+
+cascade_mode:
+  description: "binding vs advisory"
+  rules:
+    - "binding: may mutate within-lineage binding outcomes in CG-IR compile"
+    - "read_only / advisory: same cascade algorithm; MUST suppress side effects (no new binding mutation); may still emit AdvisoryConflictArtifact"
+    - "ResolveConflict(mode=binding|read_only) is the required API shape"
 
 cross_lineage_advisory:
   description: "Advisory resolution for cross-lineage conflicts"
@@ -133,13 +159,23 @@ cross_lineage_advisory:
     1. Compute pairwise specificity_score for both rules
     2. Compute priority_level integers
     3. Record created_at timestamps
-    4. Apply precedence chain: priority → specificity → recency
+    4. Apply precedence chain: priority → specificity → recency (+ execution_id tie-break)
     5. Emit AdvisoryConflictArtifact with recommended_winner and resolution_basis
+  snapshot_binding: >
+    Each advisory stores cg_ir_snapshot_hash (and participating lineage heads).
+    When either lineage publishes a new head_snapshot_hash, advisories referencing
+    the old snapshot MUST be marked status=stale (invalidation job). Humans are
+    notified via telemetry/optional webhook. Stale advisories MUST NOT be acted
+    on as current without re-running analysis on the new snapshot.
+  ttl: >
+    advisory_ttl (default 90 days) after which open advisories may be bulk-closed
+    as expired; does not mutate findings. Re-analysis required for new snapshots.
   constraints:
     - "Advisory outcomes MUST NOT modify finding FSM state"
     - "Advisory outcomes MUST NOT be replayed as automatic resolution"
     - "Identical CG-IR snapshot + identical rule pair → identical advisory output"
     - "binding_status = 'advisory' (requires_human_action = true)"
+    - "Advisories are snapshot-bound; recompile invalidates (status=stale)"
   human_resolution_path: >
     Humans MAY record a resolution decision on an advisory artifact via
     conflict.resolve (capability-gated) without changing finding FSM state.
@@ -180,6 +216,22 @@ invariants:
       defer_to resolution MUST use only CG-IR snapshot nodes; MUST NOT consult
       directives_store or other mutable state at resolve time
     enforcement: "ResolveConflict + certification_tool (AA-02)"
+
+  - id: "INV-PR-008"
+    statement: "Cross-lineage advisories MUST bind cg_ir_snapshot_hash and invalidate on head advance"
+    enforcement: "findings_application / artifacts reconciliation"
+
+  - id: "INV-PR-009"
+    statement: "Multi-party within-lineage conflicts MUST use a conflict graph, not independent pair folds"
+    enforcement: "ResolveConflict"
+
+  - id: "INV-PR-010"
+    statement: "Recency ties use execution_id ascending secondary key or Conflict Artifact"
+    enforcement: "ResolveConflict"
+
+  - id: "INV-PR-011"
+    statement: "read_only cascade mode MUST NOT perform binding mutations"
+    enforcement: "ResolveConflict"
 
 stories:
   - story_id: "US-PR-001"

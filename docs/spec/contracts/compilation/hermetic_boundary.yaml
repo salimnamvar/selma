@@ -47,9 +47,17 @@ frozen_environment:
       - field: "python_hash_seed"
         type: "integer"
         description: >
-          Pin Python HASHSEED to a fixed value (0 or a deterministic constant)
-          to guarantee set/dict iteration order across processes and runs.
-          Absence or null means uncontrolled hash randomization (non-conformant).
+          Pin PYTHONHASHSEED to a fixed non-null integer. The compile process
+          MUST verify os.environ["PYTHONHASHSEED"] is set and matches this pin
+          at startup (fail compile_time_validation if unset). Hash seed alone
+          does NOT guarantee iteration order — ordered_collection_policy MUST
+          be "sorted" for all hash-participating collections (HERM-008).
+      - field: "json_canonicalization_lib_digest"
+        type: "sha256 | null"
+        description: >
+          Optional but recommended: SHA-256 of the canonical JSON library
+          wheel/artifact. Version strings alone can hide rebuild drift;
+          when present, folded into frozen_env_hash.
       - field: "locale"
         type: "string"
         default: "C.UTF-8"
@@ -61,6 +69,7 @@ frozen_environment:
         enum: ["forbidden", "pinned"]
         default: "forbidden"
         description: >
+          COMPILE path only — not inspector/runtime HLC wall clock.
           Compile path MUST NOT call datetime.now() or read wall clock.
           Production compilations MUST use "forbidden". "pinned" is permitted
           only for offline/forensic reproduction: the orchestrator injects a
@@ -69,7 +78,8 @@ frozen_environment:
           injected value (never the live clock), and the value MUST be
           excluded from the snapshot hash exactly like compiled_at (HERM-006).
           A "pinned" environment without pinned_compile_start_timestamp is
-          non-conformant (INV-HB-007).
+          non-conformant (INV-HB-007). Runtime HLC (inspection, finding events)
+          ALWAYS advances with the live wall clock (INV-HB-012).
       - field: "pinned_compile_start_timestamp"
         type: "datetime (ISO 8601, UTC) | null"
         default: null
@@ -81,12 +91,13 @@ frozen_environment:
           treatment as compiled_at per HERM-006 / INV-CP-033).
       - field: "ordered_collection_policy"
         type: "string"
-        enum: ["sorted", "insertion_order"]
+        enum: ["sorted"]
         default: "sorted"
         description: >
-          Compile path MUST use sorted iteration for all set/dict values that
-          participate in hash computation (INV-CP-032 already requires sorted
-          depends_on). This policy extends the guarantee to all collections.
+          Production MUST use "sorted" for every set/dict that participates in
+          hash computation. insertion_order is removed as a production option
+          because it is not enforceable across processes without sorted keys.
+          (INV-CP-032 already requires sorted depends_on.)
       - field: "confidence_severity_cap_threshold"
         type: "number"
         default: 0.5
@@ -117,6 +128,63 @@ runtime_enforcement:
     - "Hermetic compile CPU work MUST run with network egress denied (sandbox, netns, or equivalent)"
     - "Evaluators and compile stages MUST NOT perform network IO; AA-03/AA-07 validate purity"
     - "Doctrine files MUST NOT be loaded at compile time (INV-CP-062)"
+  compile_sandbox_deployment: >
+    When the application runs as a single StatefulSet pod, compile CPU work
+    MUST still be isolated: (1) subprocess with PR_SET_NO_NEW_PRIVS + seccomp
+    deny-network, or (2) dedicated compile sidecar container in the same pod
+    with NetworkPolicy egress deny, or (3) separate compile worker deployable.
+    Sharing the api process address space without a sandbox is non-conformant
+    for production (INV-HB-011). Deployment MUST document which option is used.
+  nondeterministic_call_denylist:
+    description: >
+      AA-08 static analysis / sandbox MUST reject the full denylist, not only
+      datetime.now().
+    symbols:
+      - "datetime.datetime.now"
+      - "datetime.datetime.utcnow"
+      - "time.time"
+      - "time.time_ns"
+      - "time.monotonic"
+      - "time.perf_counter"
+      - "os.urandom"
+      - "random.*"
+      - "uuid.uuid4"
+      - "uuid.uuid1"
+      - "socket.gethostname"
+      - "socket.getaddrinfo"
+    notes: >
+      Reflection-based or C-extension clock reads MAY evade AST analysis;
+      AA-07 runtime canary on a known payload is required in addition to AST.
+
+inspection_live_attestation:
+  description: >
+    Compile-time pins are necessary but not sufficient. The inspector process
+    MUST attest its live engine against the CG-IR frozen_env before evaluation.
+  rules:
+    - >
+      Before evaluate stage, inspections_application MUST compute
+      engine_runtime_attestation = {re2_engine_version, conflicts_domain_version,
+      python_hash_seed, hash_algorithm, engine_version} from the live process
+      and refuse to load a snapshot when attestation is inconsistent with the
+      snapshot's frozen_environment (error: EnginePinMismatch).
+    - >
+      When compile and inspect are split deployables, both MUST load the same
+      conflicts_domain wheel (version + digest when available). Inspector is the
+      enforcement point at load time (INV-HB-010).
+    - "Mismatch MUST fail the inspection (not silently evaluate with different semantics)"
+
+runtime_preimage_minimum:
+  description: "Minimum inputs that MUST appear in toolchain.runtime_preimage"
+  required_entries:
+    - "container_image_digest or explicit compile-path file set digests"
+    - "python_interpreter_version + build_id"
+    - "libc identity (e.g. glibc version)"
+    - "locale (LC_CTYPE)"
+    - "re2_engine_version"
+    - "json_canonicalization_lib (+ digest when present)"
+  rules:
+    - "Hostname and wall-clock MUST NOT be in preimage"
+    - "A single opaque digest without listing these categories is non-conformant"
 
 hermeticity_rules:
   - id: "HERM-001"
@@ -147,11 +215,13 @@ hermeticity_rules:
     statement: >
       frozen_environment MUST pin python_hash_seed (non-null integer),
       locale (C.UTF-8 or equivalent), datetime_wall_clock_policy,
-      ordered_collection_policy (sorted), and conflicts_domain_version.
-      datetime_wall_clock_policy MUST be "forbidden" for all production
-      compilations; "pinned" is allowed only when pinned_compile_start_timestamp
-      is present and excluded from all snapshot hashes. Absence of any required
-      pin is non-conformant and MUST fail compile_time_validation.
+      ordered_collection_policy ("sorted" only in production), and
+      conflicts_domain_version. datetime_wall_clock_policy MUST be "forbidden"
+      for all production compilations; "pinned" is allowed only when
+      pinned_compile_start_timestamp is present and excluded from all snapshot
+      hashes. Absence of any required pin is non-conformant and MUST fail
+      compile_time_validation. Compile process MUST verify PYTHONHASHSEED at
+      startup.
     enforcement: "compile_time_validation (AA-08)"
 
   - id: "HERM-009"
@@ -160,6 +230,19 @@ hermeticity_rules:
       into frozen_env_hash. When compilation and inspection are split deployables,
       both MUST load the same conflicts_domain library version recorded here.
     enforcement: "compile_time_validation + release_engineering"
+
+  - id: "HERM-010"
+    statement: >
+      Inspector MUST live-attest engine pins against frozen_environment before
+      evaluate (inspection_live_attestation); EnginePinMismatch fails inspection
+    enforcement: "inspections_application"
+
+  - id: "HERM-011"
+    statement: >
+      AA-08 MUST scan the nondeterministic_call_denylist (not only datetime.now)
+      and AA-07 canary MUST verify hash stability on a known payload in the
+      production image
+    enforcement: "certification_tool AA-07/AA-08"
 
 version_incompatibility:
   description: "How version mismatches are handled"
@@ -233,6 +316,42 @@ invariants:
       frozen_env_hash and cg_ir_snapshot_hash. Production compilations MUST
       use "forbidden" (HERM-008).
     enforcement: "compile_time_validation (AA-08)"
+
+  - id: "INV-HB-008"
+    statement: >
+      ordered_collection_policy MUST be "sorted" for production; python_hash_seed
+      pin alone is insufficient for iteration-order determinism
+    enforcement: "compile_time_validation (HERM-008)"
+
+  - id: "INV-HB-009"
+    statement: >
+      runtime_preimage MUST include at least runtime_preimage_minimum categories;
+      opaque single digest without categories is non-conformant
+    enforcement: "compile_time_validation (AA-08)"
+
+  - id: "INV-HB-010"
+    statement: >
+      Inspector live attestation of re2_engine_version, conflicts_domain_version,
+      python_hash_seed, and engine_version MUST pass before evaluate (HERM-010)
+    enforcement: "inspections_application"
+
+  - id: "INV-HB-011"
+    statement: >
+      Production compile CPU work MUST run under compile_sandbox_deployment
+      isolation with network egress denied
+    enforcement: "deployment + compilation_application"
+
+  - id: "INV-HB-012"
+    statement: >
+      Compile wall-clock policy MUST NOT pin inspector/runtime HLC; runtime HLC
+      advances with live wall clock
+    enforcement: "hlc + inspections_application"
+
+  - id: "INV-HB-013"
+    statement: >
+      Schema x-cg-ir-hashing field set and runtime hash field set MUST be
+      compared in CI; drift fails the build
+    enforcement: "ci_hash_set_alignment"
 
 stories:
   - story_id: "US-HB-001"
