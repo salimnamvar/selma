@@ -16,22 +16,27 @@ storage_model:
   integrity: "event_hash ensures content integrity"
 
 event_schema:
+  description: >
+    Logical event shape. Physical storage flattens logical_clock into
+    physical_time, logical_counter, node_id columns (see physical_model /
+    docs/erd/erd_003_finding_events_store.puml).
   required_fields:
     - field: "event_id"
       type: "string (UUID)"
       description: "Unique event identifier"
     - field: "finding_id"
-      type: "string"
-      description: "Reference to the finding"
+      type: "string (UUID) or null"
+      description: "Reference to the finding; null only for global CapabilityDenied"
     - field: "event_type"
       type: "enum"
       values: ["FindingCreated", "DispositionChanged", "FindingClosed", "CapabilityDenied", "SoDDenied", "ConflictResolved", "ResolutionDecided"]
     - field: "timestamp"
       type: "datetime (ISO 8601, UTC)"
-      description: "Event time"
+      description: "Event wall time"
     - field: "logical_clock"
       type: "object"
-      description: "Hybrid logical clock for ordering"
+      description: "Hybrid logical clock for ordering (stored as physical_time, logical_counter, node_id)"
+      fields: ["physical_time", "logical_counter", "node_id"]
     - field: "actor"
       type: "string"
       description: "Human ID or AI agent ID"
@@ -47,6 +52,22 @@ event_schema:
     - field: "chain_hash"
       type: "string (SHA-256)"
       description: "Hash chain linking all events for tamper-evidence"
+  optional_fields:
+    - field: "trigger_command"
+      type: "string or null"
+      description: "finding.* | evidence.* | system automatic command that produced the event"
+    - field: "from_fsm_state"
+      type: "string or null"
+      description: "Storage enum FindingState before transition"
+    - field: "to_fsm_state"
+      type: "string or null"
+      description: "Storage enum FindingState after transition"
+    - field: "atomic_batch_id"
+      type: "UUID or null"
+      description: "INV-FL-020 batch key for human+system co-appended events"
+    - field: "idempotency_key"
+      type: "string or null"
+      description: "Client idempotency key when supplied"
 
 event_payloads:
   - event_type: "FindingCreated"
@@ -55,12 +76,15 @@ event_payloads:
       - "lineage_id"
       - "control_id (directive_id)"
       - "inspection_id"
+      - "target_hash"
       - "fsm_state (Created)"
       - "severity"
       - "outcome"
       - "confidence"
       - "evidence"
       - "reasoning"
+      - "paired_policy_ref"
+      - "creator_provenance"
 
   - event_type: "DispositionChanged"
     required_fields:
@@ -419,4 +443,108 @@ denied_actions_view:
     - "Not a C4 peer; not a separate store"
     - "Not required on the public REST surface in v1 (may be operator SQL / internal admin API)"
     - "MUST NOT provide a write path to findings or directives (AA-01)"
+
+# ---------------------------------------------------------------------------
+# Physical model (identical to docs/erd/erd_003_finding_events_store.puml)
+# FSM enum storage keys match finding_lifecycle/states.yaml storage_id.
+# ---------------------------------------------------------------------------
+physical_model:
+  erd: "docs/erd/erd_003_finding_events_store.puml"
+  c4_store_id: "finding_events_store"
+  owner_component: "finding_events_repository"
+  storage_engine: "PostgreSQL (append-only event table + projections)"
+  schema_bindings:
+    fsm_states: "docs/spec/contracts/finding_lifecycle/states.yaml"
+    transitions: "docs/spec/contracts/finding_lifecycle/transitions.yaml"
+    sod: "docs/spec/contracts/finding_lifecycle/sod_contract.yaml"
+    doctrine_pin: "docs/schema/policy_doctrine.yaml via paired_policy_ref → directives_store"
+  entities:
+    - name: Events
+      stereotype: [append_only, system_of_record]
+      primary_key: [event_id]
+      columns:
+        - { name: event_id, type: UUID, constraints: [PK] }
+        - { name: finding_id, type: UUID, constraints: [nullable, indexed] }
+        - { name: event_type, type: "enum FindingEventType", values: [FindingCreated, DispositionChanged, FindingClosed, CapabilityDenied, SoDDenied, ConflictResolved, ResolutionDecided] }
+        - { name: trigger_command, type: TEXT, constraints: [nullable] }
+        - { name: from_fsm_state, type: TEXT, constraints: [nullable], notes: "FindingState storage_id" }
+        - { name: to_fsm_state, type: TEXT, constraints: [nullable], notes: "FindingState storage_id" }
+        - { name: timestamp, type: TIMESTAMPTZ }
+        - { name: physical_time, type: TIMESTAMPTZ, notes: "HLC wall" }
+        - { name: logical_counter, type: INTEGER, notes: "HLC counter" }
+        - { name: node_id, type: TEXT, notes: "HLC node" }
+        - { name: actor, type: TEXT }
+        - { name: payload, type: JSONB }
+        - { name: atomic_batch_id, type: UUID, constraints: [nullable], notes: "INV-FL-020" }
+        - { name: event_hash, type: "CHAR(64)" }
+        - { name: prev_event_hash, type: "CHAR(64)", constraints: [nullable] }
+        - { name: chain_hash, type: "CHAR(64)" }
+        - { name: idempotency_key, type: TEXT, constraints: [nullable] }
+    - name: FindingProjections
+      stereotype: [projection, mutable]
+      primary_key: [finding_id]
+      columns:
+        - { name: finding_id, type: UUID, constraints: [PK] }
+        - { name: fsm_state, type: "enum FindingState", values: [Created, Open, Acknowledged, EvidenceSubmitted, PendingVerification, Verified, Rejected, Dismissed, Waived, Superseded, Closed] }
+        - { name: disposition, type: "enum FindingDisposition", values: [valid, invalid, waived, dismissed, superseded], constraints: [nullable] }
+        - { name: severity, type: TEXT }
+        - { name: creator_provenance, type: TEXT, notes: "SoD waive/supersede" }
+        - { name: evidence_submitter, type: TEXT, constraints: [nullable], notes: "SoD approve remediation" }
+        - { name: evidence_ref, type: TEXT, constraints: [nullable] }
+        - { name: paired_policy_ref, type: TEXT, notes: "pinned doctrine revision" }
+        - { name: inspection_id, type: UUID }
+        - { name: control_id, type: TEXT }
+        - { name: target_hash, type: "CHAR(64)" }
+        - { name: last_trigger_command, type: TEXT, constraints: [nullable] }
+        - { name: last_reopen_comments, type: TEXT, constraints: [nullable] }
+        - { name: chain_head_hash, type: "CHAR(64)" }
+        - { name: last_applied_event_id, type: UUID }
+        - { name: event_count, type: INTEGER }
+        - { name: updated_at, type: TIMESTAMPTZ }
+    - name: FindingOpenKeys
+      stereotype: [secondary_index]
+      primary_key: [inspection_id, control_id, target_hash]
+      foreign_keys:
+        - { columns: [finding_id], ref: "FindingProjections.finding_id" }
+      columns:
+        - { name: inspection_id, type: UUID, constraints: [PK part] }
+        - { name: control_id, type: TEXT, constraints: [PK part] }
+        - { name: target_hash, type: "CHAR(64)", constraints: [PK part] }
+        - { name: finding_id, type: UUID, constraints: [FK] }
+        - { name: created_at, type: TIMESTAMPTZ }
+    - name: IdempotencyRecords
+      stereotype: [secondary_index]
+      primary_key: [actor, idempotency_key]
+      foreign_keys:
+        - { columns: [event_id], ref: "Events.event_id" }
+      columns:
+        - { name: actor, type: TEXT, constraints: [PK part] }
+        - { name: idempotency_key, type: TEXT, constraints: [PK part] }
+        - { name: event_id, type: UUID, constraints: [FK] }
+        - { name: request_hash, type: "CHAR(64)" }
+        - { name: created_at, type: TIMESTAMPTZ }
+    - name: RetiredNodes
+      stereotype: [append_only]
+      primary_key: [node_id]
+      columns:
+        - { name: node_id, type: TEXT, constraints: [PK] }
+        - { name: retired_at, type: TIMESTAMPTZ }
+        - { name: reason, type: TEXT }
+        - { name: replaced_by, type: TEXT, constraints: [nullable] }
+    - name: HybridLogicalClockState
+      stereotype: [mutable]
+      primary_key: [node_id]
+      columns:
+        - { name: node_id, type: TEXT, constraints: [PK] }
+        - { name: physical_time, type: TIMESTAMPTZ }
+        - { name: logical_counter, type: INTEGER }
+        - { name: updated_at, type: TIMESTAMPTZ }
+  relationships:
+    - { from: Events, to: FindingProjections, cardinality: "N:0..1", on: finding_id }
+    - { from: Events, to: IdempotencyRecords, cardinality: "1:0..1", on: event_id }
+    - { from: FindingProjections, to: FindingOpenKeys, cardinality: "1:0..1", on: finding_id }
+  cross_store_pointers:
+    - { column: "FindingProjections.paired_policy_ref", targets: "directives_store.DirectiveRevisions.paired_policy_ref", kind: text_key }
+    - { column: "FindingProjections.evidence_ref", targets: "artifacts_store.EvidenceArtifacts.evidence_id", kind: identifier }
+    - { column: "Events.payload.inspection_id", targets: "artifacts_store.InspectionSnapshots.inspection_id", kind: identifier }
 

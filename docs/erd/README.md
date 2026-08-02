@@ -24,7 +24,16 @@ and are **not** restated as diagram notes.
 
 Contract filenames under `spec/contracts/data_stores/` match C4 store IDs
 (`directives_store.yaml`, `compiled_rules_store.yaml`, `finding_events_store.yaml`,
-`artifacts_store.yaml`).
+`artifacts_store.yaml`). Each store contract carries a **`physical_model`**
+section whose entity names and columns are **identical** to the corresponding
+ERD. Dual-document JSON columns bind to [`../schema/`](../schema/README.md):
+
+| Store / ERD | Document schema |
+| :--- | :--- |
+| `DirectiveRevisions.executable_document` | `docs/schema/rule_schema.json` |
+| `DirectiveRevisions.policy_doctrine_document` | `docs/schema/policy_doctrine.yaml` |
+| CG-IR `Nodes.node_body` | executable projection of `rule_schema.json` only |
+| `FindingState` enum | `finding_lifecycle/states.yaml` → `storage_id` |
 
 ## Shared maintenance layer
 

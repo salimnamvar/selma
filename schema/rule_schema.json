@@ -49,24 +49,26 @@
   "x-finding-fsm": {
     "normative_status": "informative",
     "normative_reference": "docs/spec/contracts/finding_lifecycle/",
-    "states": ["Created", "Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Verified", "Rejected", "Dismissed", "Waived", "Superseded", "Closed"],
+    "normative_reference_detail": "docs/spec/contracts/finding_lifecycle/states.yaml storage_id + transitions.yaml; durable columns in docs/erd/erd_003_finding_events_store.puml",
+    "states_storage_id": ["Created", "Open", "Acknowledged", "EvidenceSubmitted", "PendingVerification", "Verified", "Rejected", "Dismissed", "Waived", "Superseded", "Closed"],
+    "states_display": ["Created", "Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Verified", "Rejected", "Dismissed", "Waived", "Superseded", "Closed"],
     "terminal_states": ["Closed", "Dismissed", "Superseded"],
-    "disposition_source_states": ["Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Rejected"],
+    "disposition_source_states": ["Open", "Acknowledged", "EvidenceSubmitted", "PendingVerification", "Rejected"],
     "transitions": [
       {"from": "Created", "to": "Open", "trigger": "automatic", "actor": "system"},
       {"from": "Open", "to": "Acknowledged", "trigger": "finding.acknowledge", "actor": "compliance_representative", "story": "US-FL-010"},
-      {"from": ["Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Rejected"], "to": "Dismissed", "trigger": "finding.dismiss", "actor": "regulatory_official", "story": "US-FL-001", "invariant": "INV-FL-006"},
-      {"from": ["Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Rejected"], "to": "Waived", "trigger": "finding.waive", "actor": "regulatory_official", "story": "US-SD-001", "invariant": "INV-FL-006"},
-      {"from": ["Open", "Acknowledged", "Evidence Submitted", "Pending Verification", "Rejected"], "to": "Superseded", "trigger": "finding.supersede", "actor": "regulatory_official", "story": "US-FL-012", "invariant": "INV-FL-006"},
-      {"from": "Acknowledged", "to": "Evidence Submitted", "trigger": "evidence.submit", "actor": "compliance_representative", "story": "US-FL-010"},
-      {"from": "Evidence Submitted", "to": "Pending Verification", "trigger": "automatic", "actor": "system"},
-      {"from": "Pending Verification", "to": "Verified", "trigger": "finding.approve_remediation", "actor": "regulatory_official", "story": "US-SD-002"},
-      {"from": "Pending Verification", "to": "Rejected", "trigger": "finding.reject_remediation", "actor": "regulatory_official", "story": "US-FL-010"},
+      {"from": ["Open", "Acknowledged", "EvidenceSubmitted", "PendingVerification", "Rejected"], "to": "Dismissed", "trigger": "finding.dismiss", "actor": "regulatory_official", "story": "US-FL-001", "invariant": "INV-FL-006"},
+      {"from": ["Open", "Acknowledged", "EvidenceSubmitted", "PendingVerification", "Rejected"], "to": "Waived", "trigger": "finding.waive", "actor": "regulatory_official", "story": "US-SD-001", "invariant": "INV-FL-006"},
+      {"from": ["Open", "Acknowledged", "EvidenceSubmitted", "PendingVerification", "Rejected"], "to": "Superseded", "trigger": "finding.supersede", "actor": "regulatory_official", "story": "US-FL-012", "invariant": "INV-FL-006"},
+      {"from": "Acknowledged", "to": "EvidenceSubmitted", "trigger": "evidence.submit", "actor": "compliance_representative", "story": "US-FL-010"},
+      {"from": "EvidenceSubmitted", "to": "PendingVerification", "trigger": "automatic", "actor": "system"},
+      {"from": "PendingVerification", "to": "Verified", "trigger": "finding.approve_remediation", "actor": "regulatory_official", "story": "US-SD-002"},
+      {"from": "PendingVerification", "to": "Rejected", "trigger": "finding.reject_remediation", "actor": "regulatory_official", "story": "US-FL-010"},
       {"from": "Rejected", "to": "Open", "trigger": "finding.reopen", "actor": "regulatory_official", "story": "US-FL-010"},
       {"from": "Verified", "to": "Closed", "trigger": "automatic", "actor": "system"},
       {"from": "Waived", "to": "Closed", "trigger": "automatic", "actor": "system"}
     ],
-    "note": "FSM is enforced at runtime by findings_application / FindingFsm (domain); not by JSON Schema structural validation of rule datasets. INV-FL-006 prevents stale-acknowledgment permanent lock."
+    "note": "FSM is enforced at runtime by findings_application / FindingFsm (domain); not by JSON Schema structural validation of rule datasets. INV-FL-006 prevents stale-acknowledgment permanent lock. storage_id values are identical across ERD FindingState enum, finding_events_store physical_model, and this informative projection."
   },
   "x-portability-note": {
     "normative_status": "informative",

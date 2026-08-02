@@ -1,8 +1,8 @@
 @startuml erd_003_finding_events_store
 ' ============================================================
 ' Title:     ERD-003 Finding Events Store
-' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
-'            docs/spec/contracts/finding_lifecycle/states.yaml
+' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml (physical_model)
+'            docs/spec/contracts/finding_lifecycle/states.yaml (storage_id)
 '            docs/spec/contracts/finding_lifecycle/transitions.yaml
 '            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
 ' C4:        finding_events_store ← finding_events_repository

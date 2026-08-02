@@ -459,3 +459,101 @@ lock_timing:
     - "Do not hold write_lock while awaiting compilation completion"
     - "Implementation mapping: PostgreSQL REPEATABLE READ or SELECT ... FOR SHARE for compile reads; exclusive row/advisory lock for writes"
 
+# ---------------------------------------------------------------------------
+# Physical model (identical to docs/erd/erd_001_directives_store.puml)
+# Document bodies constrained by docs/schema/ — not free-form JSON.
+# ---------------------------------------------------------------------------
+physical_model:
+  erd: "docs/erd/erd_001_directives_store.puml"
+  c4_store_id: "directives_store"
+  owner_component: "directives_repository"
+  storage_engine: "PostgreSQL"
+  schema_bindings:
+    executable_document: "docs/schema/rule_schema.json"
+    policy_doctrine_document: "docs/schema/policy_doctrine.yaml"
+  entities:
+    - name: Directives
+      stereotype: [mutable, system_of_record]
+      primary_key: [lineage_id]
+      columns:
+        - { name: lineage_id, type: UUID, constraints: [PK, immutable] }
+        - { name: execution_id, type: UUID, constraints: [indexed] }
+        - { name: status, type: "enum DirectiveStatus", values: [draft, active, deprecated, superseded] }
+        - { name: revision, type: INTEGER, notes: "head revision number" }
+        - { name: head_snapshot_hash, type: "CHAR(64)", constraints: [nullable], notes: "SHA-256 cg_ir_snapshot_hash" }
+        - { name: authored_by, type: TEXT }
+        - { name: superseded_by_execution_id, type: TEXT, constraints: [nullable] }
+        - { name: retire_reason, type: TEXT, constraints: [nullable] }
+        - { name: restore_from_revision, type: INTEGER, constraints: [nullable] }
+        - { name: metadata, type: JSONB }
+        - { name: created_at, type: TIMESTAMPTZ }
+        - { name: updated_at, type: TIMESTAMPTZ }
+    - name: DirectiveRevisions
+      stereotype: [append_only]
+      primary_key: [revision_id]
+      unique: [[lineage_id, revision_number], [paired_policy_ref]]
+      foreign_keys:
+        - { columns: [lineage_id], ref: "Directives.lineage_id" }
+      columns:
+        - { name: revision_id, type: UUID, constraints: [PK] }
+        - { name: lineage_id, type: UUID, constraints: [FK] }
+        - { name: execution_id, type: UUID }
+        - { name: revision_number, type: INTEGER }
+        - { name: executable_document, type: JSONB, schema: "docs/schema/rule_schema.json" }
+        - { name: policy_doctrine_document, type: JSONB, schema: "docs/schema/policy_doctrine.yaml" }
+        - { name: paired_policy_ref, type: TEXT, constraints: [unique, indexed] }
+        - { name: change_trigger, type: TEXT, values: [create, modify, publish, restore, spawn] }
+        - { name: created_by, type: TEXT }
+        - { name: created_at, type: TIMESTAMPTZ }
+    - name: LineageOperations
+      stereotype: [append_only]
+      primary_key: [operation_id]
+      foreign_keys:
+        - { columns: [lineage_id], ref: "Directives.lineage_id" }
+      columns:
+        - { name: operation_id, type: UUID, constraints: [PK] }
+        - { name: lineage_id, type: UUID, constraints: [FK] }
+        - { name: operation_type, type: "enum LineageOperationType", values: [fork, merge, split] }
+        - { name: source_ids, type: JSONB, notes: "UUID array" }
+        - { name: target_ids, type: JSONB, notes: "UUID array" }
+        - { name: parent_status_after, type: "enum DirectiveStatus" }
+        - { name: created_by, type: TEXT }
+        - { name: created_at, type: TIMESTAMPTZ }
+    - name: CompileRequests
+      stereotype: [outbox, mutable]
+      primary_key: [request_id]
+      unique: [[lineage_id, revision_number]]
+      foreign_keys:
+        - { columns: [lineage_id], ref: "Directives.lineage_id" }
+      columns:
+        - { name: request_id, type: UUID, constraints: [PK] }
+        - { name: lineage_id, type: UUID, constraints: [FK] }
+        - { name: revision_number, type: INTEGER }
+        - { name: status, type: "enum CompileRequestStatus", values: [pending, in_progress, completed, failed, permanently_failed] }
+        - { name: trigger_source, type: TEXT, values: [mutation, api_compile, admin_retry] }
+        - { name: idempotency_key, type: TEXT, constraints: [nullable] }
+        - { name: worker_id, type: TEXT, constraints: [nullable] }
+        - { name: lease_expires_at, type: TIMESTAMPTZ, constraints: [nullable] }
+        - { name: retry_count, type: INTEGER, default: 0 }
+        - { name: failure_class, type: TEXT, constraints: [nullable], values: [schema, retriable, lock_deferred] }
+        - { name: last_error, type: TEXT, constraints: [nullable] }
+        - { name: published_snapshot_hash, type: "CHAR(64)", constraints: [nullable] }
+        - { name: enqueued_at, type: TIMESTAMPTZ }
+        - { name: claimed_at, type: TIMESTAMPTZ, constraints: [nullable] }
+        - { name: completed_at, type: TIMESTAMPTZ, constraints: [nullable] }
+    - name: PairedPolicyRefCounts
+      stereotype: [secondary_index]
+      primary_key: [paired_policy_ref]
+      columns:
+        - { name: paired_policy_ref, type: TEXT, constraints: [PK] }
+        - { name: refcount, type: INTEGER, notes: "non-negative" }
+        - { name: updated_at, type: TIMESTAMPTZ }
+  relationships:
+    - { from: Directives, to: DirectiveRevisions, cardinality: "1:N", on: lineage_id }
+    - { from: Directives, to: LineageOperations, cardinality: "1:N", on: lineage_id }
+    - { from: Directives, to: CompileRequests, cardinality: "1:N", on: lineage_id }
+    - { from: DirectiveRevisions, to: PairedPolicyRefCounts, cardinality: "1:0..1", on: paired_policy_ref }
+  cross_store_pointers:
+    - { column: "Directives.head_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
+    - { column: "CompileRequests.published_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
+

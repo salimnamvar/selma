@@ -176,3 +176,94 @@ stories:
       - "Given two nodes with identical node_body. When stored. Then both reference the same node_hash (deduplication)."
       - "Given a published snapshot. When any mutation is attempted. Then the mutation is rejected (immutability)."
       - "Given a snapshot. When integrity verification runs. Then all recomputed hashes match stored hashes."
+
+# ---------------------------------------------------------------------------
+# Physical model (identical to docs/erd/erd_002_compiled_rules_store.puml)
+# node_body is compiled projection of docs/schema/rule_schema.json executables.
+# ---------------------------------------------------------------------------
+physical_model:
+  erd: "docs/erd/erd_002_compiled_rules_store.puml"
+  c4_store_id: "compiled_rules_store"
+  owner_component: "compiled_rules_repository"
+  storage_engine: "content-addressed storage"
+  schema_bindings:
+    node_body_source: "docs/schema/rule_schema.json (executable projection only; no policy doctrine)"
+  entities:
+    - name: Snapshots
+      stereotype: [immutable, content_addressed, system_of_record]
+      primary_key: [cg_ir_snapshot_hash]
+      columns:
+        - { name: cg_ir_snapshot_hash, type: "CHAR(64)", constraints: [PK], notes: "SHA-256; excludes compiled_at" }
+        - { name: frozen_env_hash, type: "CHAR(64)" }
+        - { name: engine_version, type: TEXT }
+        - { name: directive_graph_version, type: TEXT }
+        - { name: compiled_at, type: TIMESTAMPTZ, notes: "excluded from snapshot hash" }
+        - { name: provenance, type: JSONB }
+        - { name: conflicts_domain_version, type: TEXT, constraints: [nullable] }
+        - { name: manifest_ref, type: TEXT }
+    - name: Nodes
+      stereotype: [immutable, content_addressed]
+      primary_key: [node_hash]
+      columns:
+        - { name: node_hash, type: "CHAR(64)", constraints: [PK], notes: "SHA-256(semantic_hash ∥ presentation_hash)" }
+        - { name: node_id, type: TEXT }
+        - { name: node_kind, type: "enum NodeKind", values: [control, gateway, join] }
+        - { name: lineage_id, type: UUID, constraints: [indexed] }
+        - { name: execution_id, type: TEXT, constraints: [indexed] }
+        - { name: priority_level, type: INTEGER, constraints: [nullable], notes: "conflict cascade input" }
+        - { name: authored_at, type: TIMESTAMPTZ, constraints: [nullable], notes: "recency cascade" }
+        - { name: node_body, type: JSONB }
+        - { name: semantic_hash, type: "CHAR(64)" }
+        - { name: presentation_hash, type: "CHAR(64)" }
+        - { name: creator_provenance, type: TEXT }
+        - { name: deprecated, type: BOOLEAN, default: false }
+    - name: Edges
+      stereotype: [immutable, content_addressed]
+      primary_key: [edge_hash]
+      foreign_keys:
+        - { columns: [source_node_hash], ref: "Nodes.node_hash", nullable: true }
+        - { columns: [target_node_hash], ref: "Nodes.node_hash", nullable: true }
+      columns:
+        - { name: edge_hash, type: "CHAR(64)", constraints: [PK] }
+        - { name: source_id, type: TEXT }
+        - { name: target_id, type: TEXT }
+        - { name: edge_kind, type: "enum EdgeKind", values: [depends_on, sequence, conflict] }
+        - { name: source_node_hash, type: "CHAR(64)", constraints: [nullable] }
+        - { name: target_node_hash, type: "CHAR(64)", constraints: [nullable] }
+    - name: SnapshotNodes
+      stereotype: [immutable]
+      primary_key: [snapshot_hash, node_hash]
+      foreign_keys:
+        - { columns: [snapshot_hash], ref: "Snapshots.cg_ir_snapshot_hash" }
+        - { columns: [node_hash], ref: "Nodes.node_hash" }
+      columns:
+        - { name: snapshot_hash, type: "CHAR(64)", constraints: [PK, FK] }
+        - { name: node_hash, type: "CHAR(64)", constraints: [PK, FK] }
+    - name: SnapshotEdges
+      stereotype: [immutable]
+      primary_key: [snapshot_hash, edge_hash]
+      foreign_keys:
+        - { columns: [snapshot_hash], ref: "Snapshots.cg_ir_snapshot_hash" }
+        - { columns: [edge_hash], ref: "Edges.edge_hash" }
+      columns:
+        - { name: snapshot_hash, type: "CHAR(64)", constraints: [PK, FK] }
+        - { name: edge_hash, type: "CHAR(64)", constraints: [PK, FK] }
+    - name: LineageHeads
+      stereotype: [secondary_index, mutable]
+      primary_key: [lineage_id]
+      foreign_keys:
+        - { columns: [head_snapshot_hash], ref: "Snapshots.cg_ir_snapshot_hash" }
+      columns:
+        - { name: lineage_id, type: UUID, constraints: [PK] }
+        - { name: head_snapshot_hash, type: "CHAR(64)", constraints: [FK] }
+        - { name: head_revision, type: INTEGER, notes: "revision-monotonic" }
+        - { name: updated_at, type: TIMESTAMPTZ }
+  relationships:
+    - { from: Snapshots, to: SnapshotNodes, cardinality: "1:N", on: snapshot_hash }
+    - { from: Nodes, to: SnapshotNodes, cardinality: "1:N", on: node_hash }
+    - { from: Snapshots, to: SnapshotEdges, cardinality: "1:N", on: snapshot_hash }
+    - { from: Edges, to: SnapshotEdges, cardinality: "1:N", on: edge_hash }
+    - { from: LineageHeads, to: Snapshots, cardinality: "N:1", on: head_snapshot_hash }
+  cross_store_pointers:
+    - { column: "LineageHeads.lineage_id", targets: "directives_store.Directives.lineage_id", kind: identifier }
+    - { column: "LineageHeads.head_snapshot_hash", mirrors: "directives_store.Directives.head_snapshot_hash", kind: content_hash }

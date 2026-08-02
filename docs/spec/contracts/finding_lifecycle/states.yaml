@@ -12,8 +12,16 @@ description: >
   all finding lifecycle transitions — no state may be added or removed
   without a MAJOR version bump.
 
+storage_enum:
+  description: >
+    Durable fsm_state column values (FindingProjections / Events from_fsm_state /
+    to_fsm_state) use storage_id. Display names retain spaces for prose/UI.
+  erd: "docs/erd/erd_003_finding_events_store.puml"
+  values: [Created, Open, Acknowledged, EvidenceSubmitted, PendingVerification, Verified, Rejected, Dismissed, Waived, Superseded, Closed]
+
 states:
   - name: "Created"
+    storage_id: "Created"
     terminal: false
     description: "Initial state on finding creation by the inspection pipeline"
     transitions_out: ["Open"]
@@ -22,6 +30,7 @@ states:
     notes: "System-automatic transition to Open immediately on creation"
 
   - name: "Open"
+    storage_id: "Open"
     terminal: false
     description: "Finding is active and awaiting action"
     transitions_out: ["Acknowledged", "Dismissed", "Waived", "Superseded"]
@@ -34,6 +43,7 @@ states:
       permanently block closure.
 
   - name: "Acknowledged"
+    storage_id: "Acknowledged"
     terminal: false
     description: "Compliance Representative has accepted the finding and begun remediation"
     transitions_out: ["Evidence Submitted", "Dismissed", "Waived", "Superseded"]
@@ -45,6 +55,7 @@ states:
       supersede without waiting for evidence (stale-acknowledgment closure).
 
   - name: "Evidence Submitted"
+    storage_id: "EvidenceSubmitted"
     terminal: false
     description: "Remediation evidence has been attached to the finding"
     transitions_out: ["Pending Verification", "Dismissed", "Waived", "Superseded"]
@@ -55,6 +66,7 @@ states:
       unless an RO disposition transition races first (per-finding serialization).
 
   - name: "Pending Verification"
+    storage_id: "PendingVerification"
     terminal: false
     description: "Evidence is awaiting review by a Regulatory Official"
     transitions_out: ["Verified", "Rejected", "Dismissed", "Waived", "Superseded"]
@@ -65,6 +77,7 @@ states:
       RO may approve/reject evidence or take a terminal disposition.
 
   - name: "Verified"
+    storage_id: "Verified"
     terminal: false
     description: "Regulatory Official has approved the remediation evidence"
     transitions_out: ["Closed"]
@@ -73,6 +86,7 @@ states:
     notes: "System-automatic transition to Closed immediately after verification"
 
   - name: "Rejected"
+    storage_id: "Rejected"
     terminal: false
     description: "Regulatory Official has rejected the remediation evidence"
     transitions_out: ["Open", "Dismissed", "Waived", "Superseded"]
@@ -83,6 +97,7 @@ states:
       comments. RO may instead take a terminal disposition without reopening.
 
   - name: "Dismissed"
+    storage_id: "Dismissed"
     terminal: true
     description: "Finding was determined to be invalid — no action needed"
     transitions_out: []
@@ -96,6 +111,7 @@ states:
     notes: "Terminal state; no outgoing transitions; remains in Finding Event Stream for audit"
 
   - name: "Waived"
+    storage_id: "Waived"
     terminal: false
     description: "Finding is legitimate but risk is accepted by Regulatory Official"
     transitions_out: ["Closed"]
@@ -109,6 +125,7 @@ states:
     notes: "System-automatic transition to Closed after waive; requires SoD check"
 
   - name: "Superseded"
+    storage_id: "Superseded"
     terminal: true
     description: "Finding is superseded by a newer finding or directive update"
     transitions_out: []
@@ -122,6 +139,7 @@ states:
     notes: "Terminal state; finding replaced by newer rule or finding"
 
   - name: "Closed"
+    storage_id: "Closed"
     terminal: true
     description: "Finding lifecycle is complete"
     transitions_out: []

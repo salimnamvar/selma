@@ -13,6 +13,7 @@ description: >
 artifact_types:
   - name: "inspection_snapshot"
     description: "Complete evaluation state at inspection completion"
+    physical_entity: InspectionSnapshots
     schema:
       required_fields:
         - field: "inspection_id"
@@ -40,32 +41,61 @@ artifact_types:
           type: "integer"
         - field: "skipped_nodes"
           type: "array of strings (node_ids, ordered)"
+        - field: "evaluate_retry_count"
+          type: "integer"
+          default: 0
         - field: "pipeline_trace"
           type: "array of trace entries (ordered chronologically)"
         - field: "system_state_hash"
           type: "string (SHA-256)"
+        - field: "object_key"
+          type: "string"
+        - field: "content_hash"
+          type: "string (SHA-256) or null"
     immutability: "Once completed, never modified"
 
   - name: "conflict_artifact"
     description: "Human-reviewable conflict resolution artifact"
+    physical_entity: ConflictArtifacts
     schema:
       required_fields:
         - field: "artifact_id"
           type: "string (UUID)"
+        - field: "version"
+          type: "integer"
+          notes: "append-only version per artifact_id"
         - field: "conflict_type"
           type: "enum"
           values: ["within_lineage", "cross_lineage"]
         - field: "binding_status"
           type: "enum"
           values: ["pending", "resolved", "rejected", "archived", "advisory"]
+        - field: "lineage_id_a"
+          type: "string (UUID)"
+        - field: "lineage_id_b"
+          type: "string (UUID)"
         - field: "rule_a_id"
           type: "string (execution_id)"
         - field: "rule_b_id"
           type: "string (execution_id)"
+        - field: "cg_ir_snapshot_hash"
+          type: "string (SHA-256)"
+          notes: "frozen compiled rules snapshot for the decision"
         - field: "resolution_type"
           type: "string (override|priority|specificity|recency|artifact)"
+        - field: "resolution_trace"
+          type: "object"
+        - field: "requires_human_action"
+          type: "boolean"
         - field: "created_at"
           type: "datetime (ISO 8601, UTC)"
+        - field: "created_by"
+          type: "string"
+      optional_fields:
+        - field: "decision_actor"
+          type: "string"
+        - field: "object_key"
+          type: "string"
     immutability: "Append-only versioning: each state transition creates a new immutable version; previous versions retained for audit"
     notes: >
       ConflictArtifacts support state transitions (HumanReview → ArtifactResolved → ArtifactArchived)
@@ -75,8 +105,15 @@ artifact_types:
 
   - name: "pipeline_trace_entry"
     description: "Individual stage execution record"
+    physical_entity: PipelineTraces
     schema:
       required_fields:
+        - field: "trace_id"
+          type: "string (UUID)"
+        - field: "inspection_id"
+          type: "string (UUID)"
+        - field: "sequence_index"
+          type: "integer"
         - field: "stage"
           type: "enum"
           values: ["normalize", "classify", "select_controls", "evaluate", "aggregate", "report"]
@@ -93,6 +130,78 @@ artifact_types:
           type: "string (optional)"
         - field: "duration_ms"
           type: "integer"
+        - field: "trigger_name"
+          type: "string (optional)"
+
+  - name: "evidence_artifact"
+    description: "Remediation evidence blob attached to a finding"
+    physical_entity: EvidenceArtifacts
+    schema:
+      required_fields:
+        - field: "evidence_id"
+          type: "string (UUID)"
+        - field: "finding_id"
+          type: "string (UUID)"
+        - field: "content_hash"
+          type: "string (SHA-256)"
+        - field: "object_key"
+          type: "string"
+        - field: "submitted_by"
+          type: "string"
+          notes: "evidence submitter for segregation of duties"
+        - field: "created_by"
+          type: "string"
+        - field: "created_at"
+          type: "datetime (ISO 8601, UTC)"
+      optional_fields:
+        - field: "media_type"
+          type: "string"
+    immutability: "Write-once"
+
+  - name: "certification_run"
+    description: "Offline certification_tool run lifecycle row"
+    physical_entity: CertificationRuns
+    schema:
+      required_fields:
+        - field: "run_id"
+          type: "string (UUID)"
+        - field: "status"
+          type: "enum"
+          values: ["triggered", "collecting_evidence", "validating_gates", "passed", "failed", "remediation_required", "certified", "archived"]
+        - field: "trigger_source"
+          type: "string (ci|manual|retrigger)"
+        - field: "started_at"
+          type: "datetime"
+      optional_fields:
+        - field: "completed_at"
+          type: "datetime"
+        - field: "overall_pass"
+          type: "boolean"
+
+  - name: "certification_artifact"
+    description: "Per-gate result for a certification run (AA-01 .. AA-09)"
+    physical_entity: CertificationArtifacts
+    schema:
+      required_fields:
+        - field: "cert_id"
+          type: "string (UUID)"
+        - field: "run_id"
+          type: "string (UUID)"
+        - field: "gate_id"
+          type: "string"
+          notes: "AA-01 .. AA-09"
+        - field: "pass_fail"
+          type: "boolean"
+        - field: "evidence_ref"
+          type: "string"
+        - field: "checked_at"
+          type: "datetime"
+        - field: "created_at"
+          type: "datetime"
+      optional_fields:
+        - field: "object_key"
+          type: "string"
+    immutability: "Write-once"
 
   - name: "system_state_hash"
     description: "Inspection reproducibility hash"
@@ -160,4 +269,118 @@ port_segregation:
   rules:
     - "Do not inject a single god ArtifactRepository into unrelated use cases"
     - "Shared ObjectStoreClient is allowed as a framework driver"
+
+# ---------------------------------------------------------------------------
+# Physical model (identical to docs/erd/erd_004_artifacts_store.puml)
+# ---------------------------------------------------------------------------
+physical_model:
+  erd: "docs/erd/erd_004_artifacts_store.puml"
+  c4_store_id: "artifacts_store"
+  owner_component: "artifacts_repository"
+  storage_engine: "object store (write-once) + metadata tables"
+  schema_bindings:
+    inspection_pipeline: "docs/spec/contracts/inspection/pipeline.yaml"
+    conflict: "docs/spec/contracts/conflict/detection.yaml"
+    certification_gates: "docs/spec/contracts/certification/gates.yaml"
+  entities:
+    - name: InspectionSnapshots
+      stereotype: [write_once, system_of_record]
+      primary_key: [inspection_id]
+      columns:
+        - { name: inspection_id, type: UUID, constraints: [PK] }
+        - { name: target_id, type: TEXT }
+        - { name: target_hash, type: "CHAR(64)" }
+        - { name: cg_ir_snapshot_hash, type: "CHAR(64)" }
+        - { name: frozen_env_hash, type: "CHAR(64)" }
+        - { name: engine_version, type: TEXT }
+        - { name: inspector, type: TEXT }
+        - { name: started_at, type: TIMESTAMPTZ }
+        - { name: completed_at, type: TIMESTAMPTZ }
+        - { name: status, type: "enum InspectionStatus", values: [completed, partial, failed] }
+        - { name: finding_count, type: INTEGER }
+        - { name: skipped_nodes, type: JSONB }
+        - { name: evaluate_retry_count, type: INTEGER, default: 0 }
+        - { name: system_state_hash, type: "CHAR(64)" }
+        - { name: object_key, type: TEXT }
+        - { name: content_hash, type: "CHAR(64)", constraints: [nullable] }
+    - name: PipelineTraces
+      stereotype: [write_once]
+      primary_key: [trace_id]
+      foreign_keys:
+        - { columns: [inspection_id], ref: "InspectionSnapshots.inspection_id" }
+      columns:
+        - { name: trace_id, type: UUID, constraints: [PK] }
+        - { name: inspection_id, type: UUID, constraints: [FK] }
+        - { name: sequence_index, type: INTEGER }
+        - { name: stage, type: "enum PipelineStage", values: [normalize, classify, select_controls, evaluate, aggregate, report] }
+        - { name: node_id, type: TEXT, constraints: [nullable] }
+        - { name: started_at, type: TIMESTAMPTZ }
+        - { name: completed_at, type: TIMESTAMPTZ }
+        - { name: status, type: "enum TraceStatus", values: [success, skipped, failed] }
+        - { name: trigger_name, type: TEXT, constraints: [nullable] }
+        - { name: error, type: TEXT, constraints: [nullable] }
+        - { name: duration_ms, type: INTEGER }
+    - name: ConflictArtifacts
+      stereotype: [append_only]
+      primary_key: [artifact_id, version]
+      columns:
+        - { name: artifact_id, type: UUID, constraints: [PK part] }
+        - { name: version, type: INTEGER, constraints: [PK part] }
+        - { name: conflict_type, type: "enum ConflictType", values: [within_lineage, cross_lineage] }
+        - { name: binding_status, type: "enum BindingStatus", values: [pending, resolved, rejected, archived, advisory] }
+        - { name: lineage_id_a, type: UUID }
+        - { name: lineage_id_b, type: UUID }
+        - { name: rule_a_id, type: TEXT }
+        - { name: rule_b_id, type: TEXT }
+        - { name: cg_ir_snapshot_hash, type: "CHAR(64)" }
+        - { name: resolution_type, type: TEXT }
+        - { name: resolution_trace, type: JSONB }
+        - { name: requires_human_action, type: BOOLEAN }
+        - { name: decision_actor, type: TEXT, constraints: [nullable] }
+        - { name: created_at, type: TIMESTAMPTZ }
+        - { name: created_by, type: TEXT }
+        - { name: object_key, type: TEXT, constraints: [nullable] }
+    - name: EvidenceArtifacts
+      stereotype: [write_once]
+      primary_key: [evidence_id]
+      columns:
+        - { name: evidence_id, type: UUID, constraints: [PK] }
+        - { name: finding_id, type: UUID, constraints: [indexed] }
+        - { name: content_hash, type: "CHAR(64)" }
+        - { name: object_key, type: TEXT }
+        - { name: media_type, type: TEXT, constraints: [nullable] }
+        - { name: submitted_by, type: TEXT }
+        - { name: created_by, type: TEXT }
+        - { name: created_at, type: TIMESTAMPTZ }
+    - name: CertificationRuns
+      stereotype: [mutable]
+      primary_key: [run_id]
+      columns:
+        - { name: run_id, type: UUID, constraints: [PK] }
+        - { name: status, type: "enum CertificationRunStatus", values: [triggered, collecting_evidence, validating_gates, passed, failed, remediation_required, certified, archived] }
+        - { name: trigger_source, type: TEXT }
+        - { name: started_at, type: TIMESTAMPTZ }
+        - { name: completed_at, type: TIMESTAMPTZ, constraints: [nullable] }
+        - { name: overall_pass, type: BOOLEAN, constraints: [nullable] }
+    - name: CertificationArtifacts
+      stereotype: [write_once]
+      primary_key: [cert_id]
+      foreign_keys:
+        - { columns: [run_id], ref: "CertificationRuns.run_id" }
+      columns:
+        - { name: cert_id, type: UUID, constraints: [PK] }
+        - { name: run_id, type: UUID, constraints: [FK] }
+        - { name: gate_id, type: TEXT, notes: "AA-01 .. AA-09" }
+        - { name: pass_fail, type: BOOLEAN }
+        - { name: evidence_ref, type: TEXT }
+        - { name: checked_at, type: TIMESTAMPTZ }
+        - { name: created_at, type: TIMESTAMPTZ }
+        - { name: object_key, type: TEXT, constraints: [nullable] }
+  relationships:
+    - { from: InspectionSnapshots, to: PipelineTraces, cardinality: "1:N", on: inspection_id }
+    - { from: CertificationRuns, to: CertificationArtifacts, cardinality: "1:N", on: run_id }
+  cross_store_pointers:
+    - { column: "InspectionSnapshots.cg_ir_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
+    - { column: "ConflictArtifacts.cg_ir_snapshot_hash", targets: "compiled_rules_store.Snapshots.cg_ir_snapshot_hash", kind: content_hash }
+    - { column: "EvidenceArtifacts.finding_id", targets: "finding_events_store.FindingProjections.finding_id", kind: identifier }
 

@@ -1,7 +1,7 @@
 @startuml erd_004_artifacts_store
 ' ============================================================
 ' Title:     ERD-004 Artifacts Store
-' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
+' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml (physical_model)
 '            docs/spec/contracts/inspection/pipeline.yaml
 '            docs/spec/contracts/conflict/detection.yaml
 '            docs/spec/contracts/certification/gates.yaml

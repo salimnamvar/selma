@@ -1,7 +1,8 @@
 @startuml erd_002_compiled_rules_store
 ' ============================================================
 ' Title:     ERD-002 Compiled Rules Store
-' Source:    docs/spec/contracts/data_stores/compiled_rules_store.yaml
+' Source:    docs/spec/contracts/data_stores/compiled_rules_store.yaml (physical_model)
+'            docs/schema/rule_schema.json (executable projection → node_body)
 '            docs/spec/contracts/compilation/pipeline.yaml
 ' C4:        compiled_rules_store ← compiled_rules_repository
 '            (compilation_application publish path)

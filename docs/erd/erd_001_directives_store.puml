@@ -1,7 +1,8 @@
 @startuml erd_001_directives_store
 ' ============================================================
 ' Title:     ERD-001 Directives Store
-' Source:    docs/spec/contracts/data_stores/directives_store.yaml
+' Source:    docs/spec/contracts/data_stores/directives_store.yaml (physical_model)
+'            docs/schema/rule_schema.json · docs/schema/policy_doctrine.yaml
 '            docs/spec/contracts/directive/lifecycle.yaml
 '            docs/spec/contracts/directive/identity.yaml
 ' C4:        directives_store ← directives_repository
