@@ -1,15 +1,16 @@
-@startuml selma_inspection_pipeline
+@startuml sm_004_inspection_pipeline
 ' ============================================================
-' Title:     Inspection Execution Pipeline
+' Title:     SM-004 Inspection Execution Pipeline
 ' Source:    docs/spec/contracts/inspection/pipeline.yaml
 '            docs/spec/contracts/inspection/finding_contract.yaml
 ' C4:        inspections_application → artifacts_repository → artifacts_store
 '            FindingOpenPort → findings_application (atomic FindingCreated+Open)
 '            optional target_sources_gateway → target_sources
+' Package:   inspections_application / inspections_domain
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Inspection Execution Pipeline\n<size:12><i>Hierarchical six-stage pure evaluation · typed faults · immutable snapshot</i></size>
+title **SM-004 — Inspection Execution Pipeline**\nC4: inspections_application → artifacts_repository → artifacts_store\n<size:12><i>six pure stages · FindingOpenPort · optional target_sources_gateway</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -66,5 +67,7 @@ PureStages --> Failed : <b>InspectionFailed</b>\nactor: System
 Completed --> [*] : <b>Finalized</b>\nactor: System
 Partial --> [*] : <b>Finalized</b>\nactor: System
 Failed --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-004 · Contract 1.1.0 · inspections_application · Selma
 
 @enduml

@@ -1,15 +1,16 @@
-@startuml selma_directive_lifecycle
+@startuml sm_002_directive_lifecycle
 ' ============================================================
-' Title:     Directive Lifecycle State Machine
+' Title:     SM-002 Directive Lifecycle
 ' Source:    docs/spec/contracts/directive/lifecycle.yaml
 '            docs/spec/contracts/directive/identity.yaml
 '            docs/spec/contracts/directive/amendment.yaml
 ' C4:        api → directives_application → directives_repository → directives_store
 '            compile via outbox → compilation_application (no direct app→app edge)
+' Package:   directives_application / directives_domain
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Directive Lifecycle FSM\n<size:12><i>Status path · hierarchical identity spawn · parent deprecation · hermetic recompile</i></size>
+title **SM-002 — Directive Lifecycle**\nC4: api → directives_application → directives_repository → directives_store\n<size:12><i>Draft · Active · Deprecated · Superseded · identity spawn</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -52,5 +53,7 @@ SplitChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncomman
 
 ' Stable sink: Superseded has no outgoing business edges → Final (STM-024)
 Superseded --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-002 · Contract 1.1.0 · directives_application · Selma
 
 @enduml

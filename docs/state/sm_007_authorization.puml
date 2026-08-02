@@ -1,15 +1,16 @@
-@startuml selma_authorization
+@startuml sm_007_authorization
 ' ============================================================
-' Title:     Capability Authorization State Machine
+' Title:     SM-007 Capability Authorization
 ' Source:    docs/spec/contracts/authorization/capabilities.yaml
 '            docs/spec/contracts/authorization/role_matrix.yaml
 '            docs/spec/contracts/finding_lifecycle/sod_contract.yaml
 ' C4:        api (ingress gate); denials → finding_events_repository → finding_events_store
 '            SoD also at findings_application FSM; ResolveConflict (domain · not peer)
+' Package:   rest_interface / CapabilityEnforcer (C4: api)
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Capability Authorization FSM\n<size:12><i>Hierarchical evaluate · allow | deny+audit · hard-reject</i></size>
+title **SM-007 — Capability Authorization**\nC4: api · denials → finding_events_repository → finding_events_store\n<size:12><i>authenticate · capability · SoD · stage · allow | deny+audit</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -57,5 +58,7 @@ StageGateChecked --> Denied : <b>AuthzDenied</b>\nactor: System\n/ stageCapabili
 
 EvaluateAccess --> [*] : <b>AuthzDispatched</b>\nactor: System
 DenyPath --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-007 · Contract 1.1.0 · api · Selma
 
 @enduml

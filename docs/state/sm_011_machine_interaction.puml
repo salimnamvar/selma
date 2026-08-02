@@ -1,26 +1,27 @@
-@startuml selma_machine_interaction
+@startuml sm_011_machine_interaction
 ' ============================================================
-' Title:     State Machine Interaction Overview
+' Title:     SM-011 Machine Interaction Overview
 ' Source:    docs/spec/contracts/ (all machines) · handoffs only
 ' C4:        api | *_application | ResolveConflict (domain) | certification_tool (offline)
+' Package:   cross-machine handoffs only
 ' Contract:  1.1.0
 ' Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
 ' ============================================================
 
-title Selma — State Machine Interaction Overview\n<size:12><i>C4 handoffs · FSMs · domain service · offline tool · not freestanding engines</i></size>
+title **SM-011 — Machine Interaction Overview**\nC4: api | *_application | ResolveConflict (domain) | certification_tool (offline)\n<size:12><i>authz → domain FSMs · compile · inspect · findings · cert · artifacts</i></size>
 
 !include ./common/sm_styles.puml
 
-state "Capability Authorization" as Authz #B9770E : **api gate (cross-cutting)**\ningress · matrix · SoD · stage\nallow | deny + audit
-state "Directive Lifecycle" as Dir #2C6E49 : C4: directives_application\nDraft · Active\nDeprecated · Superseded
-state "Compilation / CG-IR" as Comp #1B7A6E : C4: compilation_application\nhermetic gates · CAS publish
-state "CG-IR Hash Detail" as Hash #1B7A6E : dual-hash · reuse\n(detail of Comp)
-state "Inspection Execution" as Insp #1B7A6E : C4: inspections_application\nsix pure stages
-state "Finding Lifecycle" as Find #3B7DD8 : C4: findings_application\n**normative** · 11 states · SoD
-state "HLC Detail" as Hlc #3B7DD8 : (pt, lc) advance\n(detail of event envelope)
-state "Conflict Resolution" as Conf #1B7A6E : domain ResolveConflict\n(not a C4 peer) · artifacts
-state "Architectural Certification" as Cert #B9770E : certification_tool\n(offline/CI · not C4 peer)
-state "Artifact Lifecycle" as Art #4A4A4A : C4: artifacts_repository\nwrite-once · four kinds
+state "SM-007 Authorization" as Authz #B9770E : C4: api\ningress · matrix · SoD · stage\nallow | deny + audit
+state "SM-002 Directive Lifecycle" as Dir #2C6E49 : C4: directives_application\nDraft · Active · Deprecated · Superseded
+state "SM-003 Compilation" as Comp #1B7A6E : C4: compilation_application\nhermetic gates · CAS publish
+state "SM-010 CG-IR Hash" as Hash #1B7A6E : C4: compilation_application\ndual-hash · reuse (detail of SM-003)
+state "SM-004 Inspection" as Insp #1B7A6E : C4: inspections_application\nsix pure stages · FindingOpenPort
+state "SM-001 Finding Lifecycle" as Find #3B7DD8 : C4: findings_application\n**normative** · 11 states · SoD
+state "SM-009 HLC" as Hlc #3B7DD8 : C4: finding_events_repository\n(pt, lc, node_id) advance
+state "SM-005 Conflict" as Conf #1B7A6E : package: conflicts_domain\nResolveConflict (not C4 peer)
+state "SM-006 Certification" as Cert #B9770E : C4 non-peer: certification_tool\nAA-01…AA-09 · offline/CI
+state "SM-008 Artifact Lifecycle" as Art #4A4A4A : C4: artifacts_repository\nwrite-once
 
 [*] --> Authz : <b>MutatingRequestReceived</b>
 Authz --> Dir : <b>AuthzAllowedDirective</b>\n[capability directive.*]
@@ -52,5 +53,7 @@ Cert --> Comp : <b>CertificationSamplesRead</b>\nread CG-IR samples
 Cert --> Find : <b>CertificationSamplesRead</b>\nSoD / mediated-feedback tests\n(no production mutation)
 
 Art --> [*] : <b>ArtifactRetained</b>\narchived / retained
+
+footer SM-011 · Contract 1.1.0 · overview · Selma
 
 @enduml

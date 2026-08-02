@@ -1,20 +1,21 @@
-@startuml selma_hlc_clock
+@startuml sm_009_hlc_clock
 ' ============================================================
-' Title:     Hybrid Logical Clock (HLC) State Machine
+' Title:     SM-009 Hybrid Logical Clock (HLC)
 ' Source:    docs/spec/contracts/data_stores/finding_events_store.yaml
 ' C4:        finding_events_repository → finding_events_store
-'            (ops: Application StatefulSet PVC — see deployment/)
+' Package:   platform_infrastructure (HLC) · findings_infrastructure
+' Deploy:    application StatefulSet PVC + DB watermark (topology only)
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Hybrid Logical Clock (Detail View)\n<size:12><i>Hierarchical tick · wall-clock regression absorption · partition reconciliation</i></size>
+title **SM-009 — Hybrid Logical Clock**\nC4: finding_events_repository → finding_events_store\n<size:12><i>Tick · wall-clock absorption · partition heal · PVC+watermark load</i></size>
 
 !include ./common/sm_styles.puml
 
 [*] --> Initialized : <b>HlcInitialized</b>\nactor: System\ncommand: init HLC node
 
 state "Initialized" as Initialized #B9770E : **entry** pt=0 · lc=0 (cold start)\n**allowed** load persisted state\n**forbidden** emit without advance
-state "Steady" as Steady #3B7DD8 : **entry** persisted tuple (pt, lc)\nlast emitted HLC\n**allowed** local send · remote receive\n**forbidden** decrease pt or lc
+state "Steady" as Steady #3B7DD8 : **entry** last emitted (pt, lc, node_id)\n**node_id** StatefulSet ordinal/pod_name (not Pod IP)\n**persist** PVC primary · DB watermark recovery authority\n**load** (pt,lc)=max(PVC, DB watermark) then fsync PVC\n**allowed** local send · remote receive\n**forbidden** decrease pt/lc · reuse retired node_id
 
 ' ---------- Hierarchical: single HLC tick (RTC step) ----------
 state "Tick" as Tick #1B7A6E {
@@ -58,17 +59,9 @@ Steady --> LocalSend : <b>HlcLocalSend</b>\nactor: System\ncommand: hlc_send
 Steady --> RemoteReceive : <b>HlcRemoteReceive</b>\nactor: System\ncommand: hlc_receive
 Steady --> PartitionHeal : <b>HlcPartitioned</b>\nactor: System\ncommand: heartbeat timeout
 
-Tick --> Steady : <b>HlcStatePersisted</b>\nactor: System\ncommand: store (pt_new, lc_new) on PVC\n+ periodic DB watermark\n[strictlyNonDecreasingVsPrior]
+Tick --> Steady : <b>HlcStatePersisted</b>\nactor: System\ncommand: fsync (pt_new, lc_new) on PVC\n+ periodic DB watermark upsert\n[strictlyNonDecreasingVsPrior]
 PartitionHeal --> Steady : <b>HlcReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ advanceLocalHlcToMaxRemote()\n/ noOverwriteCommitted()
 
-note right of Steady
-  **Persistence dual-write (production):**
-  PVC is primary for crash restart.
-  DB watermark (max HLC per node_id in finding_events)
-  is recovery authority when PVC is stale/lost.
-  On load: (pt,lc) = max(PVC, DB watermark) then fsync PVC.
-  **node_id** = stable StatefulSet ordinal/pod_name
-  (not Pod IP). retired_nodes rejects zombie reuse.
-end note
+footer SM-009 · Contract 1.1.0 · finding_events_repository · Selma
 
 @enduml

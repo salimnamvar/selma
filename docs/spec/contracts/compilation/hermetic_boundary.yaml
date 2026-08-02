@@ -6,7 +6,7 @@ contract_id: "compilation.hermetic_boundary"
 schema_version: "1.0.0"
 design_contract_version: "1.1.0"
 owner_component: "compilation_application"
-state_machine_ref: "../../state/selma_compilation_pipeline.puml"
+state_machine_ref: "../../state/sm_003_compilation_pipeline.puml"
 description: >
   Defines the invariants that ensure compilation is hermetic — fully
   reproducible given identical inputs. The frozen environment captures

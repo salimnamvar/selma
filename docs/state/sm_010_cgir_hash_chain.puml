@@ -1,13 +1,14 @@
-@startuml selma_cgir_hash_chain
+@startuml sm_010_cgir_hash_chain
 ' ============================================================
-' Title:     CG-IR Hash Composition & Incremental Reuse
+' Title:     SM-010 CG-IR Hash Composition
 ' Source:    docs/spec/contracts/compilation/pipeline.yaml
 '            docs/spec/contracts/compilation/hermetic_boundary.yaml
 ' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
+' Package:   compiled_rules_application (detail of SM-003)
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — CG-IR Hash Composition (Detail View)\n<size:12><i>Orthogonal dual-hash · local node identity · CAS dedup · compiled_at excluded</i></size>
+title **SM-010 — CG-IR Hash Composition**\nC4: compilation_application → compiled_rules_repository → compiled_rules_store\n<size:12><i>dual-hash · local identity · CAS dedup · compiled_at excluded</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -67,5 +68,7 @@ CheckCAS --> PublishedNew : <b>CgIrPublishedNew</b>\nactor: System
 
 PublishedDedup --> [*] : <b>Finalized</b>\nactor: System
 PublishedNew --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-010 · Contract 1.1.0 · compilation_application · Selma
 
 @enduml

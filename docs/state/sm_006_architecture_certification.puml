@@ -1,12 +1,13 @@
-@startuml selma_architecture_certification
+@startuml sm_006_architecture_certification
 ' ============================================================
-' Title:     Architectural Certification State Machine
+' Title:     SM-006 Architectural Certification
 ' Source:    docs/spec/contracts/certification/gates.yaml (AA-01 … AA-09)
 ' C4:        certification_tool (offline · not peer) → artifacts_repository → artifacts_store
+' Package:   certification_tool (offline)
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Architectural Certification FSM\n<size:12><i>offline/CI nine-gate audit (not C4 peer) · hierarchical AA composite · AA-09 chain integrity</i></size>
+title **SM-006 — Architectural Certification**\nC4: certification_tool (offline · not peer) → artifacts_repository → artifacts_store\n<size:12><i>AA-01…AA-09 sequential gates · seal artifact</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -71,5 +72,7 @@ Rejected --> RemediationRequired : <b>CertificationRemediationRequired</b>\nacto
 Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: retain + async optional long-term export
 RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: new certification run_id
 Archived --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-006 · Contract 1.1.0 · certification_tool · Selma
 
 @enduml

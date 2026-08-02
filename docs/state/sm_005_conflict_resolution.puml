@@ -1,14 +1,15 @@
-@startuml selma_conflict_resolution
+@startuml sm_005_conflict_resolution
 ' ============================================================
-' Title:     Conflict Resolution State Machine
+' Title:     SM-005 Conflict Resolution
 ' Source:    docs/spec/contracts/conflict/detection.yaml
 '            docs/spec/contracts/conflict/precedence.yaml
 ' C4:        ResolveConflict (domain · not peer) used by compilation_application | inspections_application
 '            artifacts → artifacts_repository → artifacts_store
+' Package:   conflicts_domain
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Conflict Resolution FSM\n<size:12><i>Hierarchical cascade · binding within-lineage · advisory cross-lineage · human artifact path</i></size>
+title **SM-005 — Conflict Resolution**\nC4: ResolveConflict (domain · not peer) · compilation_application | inspections_application\n<size:12><i>within-lineage binding · cross-lineage advisory · artifacts</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -85,5 +86,7 @@ ResolvedBinding --> [*] : <b>Finalized</b>\nactor: System
 ArtifactPending --> HumanArtifactPath : <b>ConflictReviewOpened</b>\nactor: System\ncommand: open human review queue
 HumanArtifactPath --> [*] : <b>Finalized</b>\nactor: System
 AdvisoryPath --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-005 · Contract 1.1.0 · conflicts_domain · Selma
 
 @enduml

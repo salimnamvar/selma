@@ -109,10 +109,10 @@ concern_split:
 
 cross_references:
   - from: "specification_contracts/compilation"
-    to: "state/selma_compilation_pipeline.puml"
+    to: "state/sm_003_compilation_pipeline.puml"
     relationship: "state machine visualizes this contract"
   - from: "specification_contracts/finding_lifecycle"
-    to: "state/selma_finding_lifecycle.puml"
+    to: "state/sm_001_finding_lifecycle.puml"
     relationship: "state machine is normative for this contract"
   - from: "specification_contracts/inspection"
     to: "c4-model/c4_selma_component.puml"

@@ -1,15 +1,16 @@
-@startuml selma_artifact_lifecycle
+@startuml sm_008_artifact_lifecycle
 ' ============================================================
-' Title:     Artifact Lifecycle State Machine
+' Title:     SM-008 Artifact Lifecycle
 ' Source:    docs/spec/contracts/data_stores/artifacts_store.yaml
 '            docs/spec/contracts/data_stores/compiled_rules_store.yaml
 ' C4:        artifacts_repository → artifacts_store
 '            producers: compilation_application | inspections_application |
 '            findings_application | ResolveConflict (domain) | certification_tool (offline)
+' Package:   artifacts_infrastructure
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Artifact Lifecycle FSM\n<size:12><i>Immutable creation · orthogonal reference ‖ replication · no silent rewrite</i></size>
+title **SM-008 — Artifact Lifecycle**\nC4: artifacts_repository → artifacts_store\n<size:12><i>build · publish · reference · optional replicate · write-once</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -52,5 +53,7 @@ Validated --> Durable : <b>ArtifactPublished</b>\nactor: System (adapter)\ncomma
 SupersededReference --> Archived : <b>ArtifactArchived</b>\nactor: System\ncommand: apply retention (§3.5 defaults)
 
 Archived --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-008 · Contract 1.1.0 · artifacts_repository · Selma
 
 @enduml

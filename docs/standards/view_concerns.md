@@ -44,8 +44,9 @@ Never invent C4 peer `compiled_rules_application` (see `forbidden_c4_peer_ids` i
 1. **C4** defines IDs; package and deployment **map** to those IDs; state **annotates** machines with those IDs in headers.
 2. **Package** may name ports (`DenialAuditPort`, `FindingOpenPort`); C4 Component may show only the **peer edge** (e.g. `api` → `finding_events_repository` for denial audit path).
 3. **Deployment** names zones and nodes using C4 container/store IDs; it does not redraw Component Rel graphs.
-4. **State** headers MUST use the diagram header schema (`Title`, `Source`, `C4`, `Contract: 1.1.0`). Non-peers labeled `(domain)` / `(offline)`.
-5. If two views need the same fact, put it once under the **authority** column above and link from the others.
+4. **State** files use `sm_NNN_*.puml` / diagram ID `SM-NNN` (parallel to `pkg_NNN`, `dep_NNN`, `act_NNN`, `seq_NNN`). Headers: `Title`, `Source`, `C4`, `Package`, `Contract: 1.1.0`. Non-peers labeled `(domain)` / `(offline)`.
+5. **No PlantUML `note` blocks** on state (or topology) diagrams — unfinished design smell. Encode as state body, guard, action, or keep only in the Source contract.
+6. If two views need the same fact, put it once under the **authority** column above and link from the others.
 
 ## Check
 

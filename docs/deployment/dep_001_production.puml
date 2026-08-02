@@ -75,20 +75,15 @@ package "Monitoring Zone" as MON #E8EAF6/C5CAE9 {
 }
 
 ' ── Topology edges only (not component use-case graph) ──
+' Store I/O only via C4 *_repository adapters (never api → store).
 CLIENTS --> LOAD_BALANCER : HTTPS
 LOAD_BALANCER --> APP : HTTPS / REST
 
-note right of APP
-  All store I/O via *_repository adapters
-  (C4 interface adapters — not direct api→store).
-  Data Zone hosts C4 *_store peers (frameworks & drivers).
-end note
-
-APP --> DIRECTIVES : SQL / TLS\n(via *_repository)
-APP --> EVENTS : Append-Only / TLS\n(via finding_events_repository)
-APP --> COMPILED : CAS / TLS\n(via compiled_rules_repository)
-APP --> ARTIFACTS : Object Write / TLS\n(via artifacts_repository)
-APP --> TARGETS : HTTPS optional\n(via target_sources_gateway)
+APP --> DIRECTIVES : SQL / TLS\nvia directives_repository
+APP --> EVENTS : Append-Only / TLS\nvia finding_events_repository
+APP --> COMPILED : CAS / TLS\nvia compiled_rules_repository
+APP --> ARTIFACTS : Object Write / TLS\nvia artifacts_repository
+APP --> TARGETS : HTTPS optional\nvia target_sources_gateway
 
 APP ..> PROM
 APP ..> ELK

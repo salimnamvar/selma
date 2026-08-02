@@ -1,15 +1,16 @@
-@startuml selma_compilation_pipeline
+@startuml sm_003_compilation_pipeline
 ' ============================================================
-' Title:     Hermetic Compilation / CG-IR Pipeline
+' Title:     SM-003 Compilation / CG-IR Pipeline
 ' Source:    docs/spec/contracts/compilation/pipeline.yaml
 '            docs/spec/contracts/compilation/hermetic_boundary.yaml
 '            docs/spec/contracts/data_stores/directives_store.yaml (compile_coordination)
 ' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
 '            drains compile_request outbox via directives_repository (store-mediated)
+' Package:   compiled_rules_application (C4: compilation_application)
 ' Contract:  1.1.0
 ' ============================================================
 
-title Selma — Hermetic Compilation / CG-IR Pipeline\n<size:12><i>Hierarchical validate → materialize · all-or-nothing CAS · no runtime policy</i></size>
+title **SM-003 — Compilation / CG-IR Pipeline**\nC4: compilation_application → compiled_rules_repository → compiled_rules_store\n<size:12><i>validate → materialize · CAS publish · no doctrine at eval</i></size>
 
 !include ./common/sm_styles.puml
 
@@ -80,5 +81,7 @@ Completed --> [*] : <b>Finalized</b>\nactor: System
 
 Failed --> ReleaseLockFail : <b>CompileLockReleased</b>\nactor: System
 ReleaseLockFail --> [*] : <b>Finalized</b>\nactor: System
+
+footer SM-003 · Contract 1.1.0 · compilation_application · Selma
 
 @enduml
