@@ -47,7 +47,7 @@ python scripts/check_design_alignment.py
 | Package ring | CA layer | Fill / border |
 | :--- | :--- | :--- |
 | `*_domain` | Domain | `#F3E5F5` / `#7B1FA2` |
-| `*_application` | Application | `#E8F5E9` / `#00897B` |
+| `*_application` | Application | `#E0F2F1` / `#00897B` |
 | `*_infrastructure` | Infrastructure | `#FFF3E0` / `#EF6C00` |
 | `*_interface` | Interface | `#E1F5FE` / `#0288D1` |
 | `composition_root` | Composition | `#E8EAF6` / `#283593` |
@@ -60,9 +60,9 @@ python scripts/check_design_alignment.py
 | Aggregate Root | Frameworks (durable) | `#E8F5E9` / `#2E7D32` |
 | Value Object / DTO | Interface | `#E1F5FE` / `#0288D1` |
 | Domain Service | Domain | `#F3E5F5` / `#7B1FA2` |
-| Use Case | Application | `#E8F5E9` / `#00897B` |
+| Use Case | Application | `#E0F2F1` / `#00897B` |
 | Port | Gate | `#FFEBEE` / `#C62828` |
-| Domain Event / Enum | Infrastructure / hermetic | `#FFF3E0` / `#EF6C00` |
+| Domain Event / Enum | Hermetic (micro) | `#FFFDE7` / `#F9A825` |
 | Adapter | Infrastructure | `#FFF3E0` / `#EF6C00` |
 | Entity | micro entity | `#ECEFF1` / `#546E7A` |
 
