@@ -2,8 +2,8 @@
 
 **SSoT:** [`ca_palette.puml`](ca_palette.puml)
 
-All structural views (C4, package, class, deployment, state) include this
-file and **must not invent hex codes** in diagram bodies.
+All structural views (C4, package, class, deployment, state, use case) include
+this file and **must not invent hex codes** in diagram bodies.
 
 ## MACRO — CA layers (high-contrast hues)
 
@@ -55,6 +55,7 @@ actors → interface → application → domain
 | Class | `docs/class/common/cd_styles.puml` | Layer packages + type archetypes |
 | Deployment | `docs/deployment/common/dep_styles.puml` | Zones |
 | State | `docs/state/common/state_styles.puml` | `$STATE_COLOR_*` lifecycle micro |
+| Use Case | `docs/usecase/common/uc_styles.puml` | Actors, use-case ovals, groups (`$UC_*`) |
 
 ### State micro → CA macro
 
