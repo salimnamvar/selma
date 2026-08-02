@@ -3,8 +3,7 @@
 ' Title:     SEQ-002 Compilation Pipeline
 ' Source:    docs/spec/contracts/compilation/
 ' C4:        compilation_application → compiled_rules_repository
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 !include common/seq_styles.puml
 
 title SEQ-002 Compilation Pipeline\nHermetic Compilation of Directive Graph to CG-IR

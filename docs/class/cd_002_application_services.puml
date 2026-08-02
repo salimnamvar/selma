@@ -5,8 +5,7 @@
 ' C4:        directives|compilation|inspections|findings_application
 ' Package:   directives_application | compiled_rules_application |
 '            inspections_application | findings_application
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Structure:
 '   common/cd_styles.puml · cd_identities.puml
 '   common/cd_section_app_*.puml · cd_section_app_connections.puml

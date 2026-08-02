@@ -7,8 +7,7 @@
 ' C4:        api → directives_application → directives_repository → directives_store
 '            compile via outbox → compilation_application (no direct app→app edge)
 ' Package:   directives_application / directives_domain
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 002 — Directive Lifecycle**\nC4: api → directives_application → directives_repository → directives_store\n<size:12><i>Draft · Active · Deprecated · Superseded · identity spawn</i></size>
 
@@ -55,6 +54,6 @@ SplitChildren --> Draft : <b>DirectiveChildrenSpawned</b>\nactor: System\ncomman
 ' Stable sink: Superseded has no outgoing business edges → Final (STM-024)
 Superseded --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 002 · Contract 1.1.0 · directives_application · Selma
+footer State Machine 002 · docs/standards/VERSION · directives_application · Selma
 
 @enduml

@@ -7,8 +7,7 @@
 ' C4:        api (ingress gate); denials → finding_events_repository → finding_events_store
 '            segregation of duties also at findings_application state machine; ResolveConflict (domain · not peer)
 ' Package:   rest_interface / CapabilityEnforcer (C4: api)
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 007 — Capability Authorization**\nC4: api · denials → finding_events_repository → finding_events_store\n<size:12><i>authenticate · capability · segregation of duties · stage · allow | deny+audit</i></size>
 
@@ -60,6 +59,6 @@ StageGateChecked --> Denied : <b>AuthorizationDenied</b>\nactor: System\n/ stage
 EvaluateAccess --> [*] : <b>AuthorizationDispatched</b>\nactor: System
 DenyPath --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 007 · Contract 1.1.0 · api · Selma
+footer State Machine 007 · docs/standards/VERSION · api · Selma
 
 @enduml

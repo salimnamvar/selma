@@ -7,8 +7,7 @@
 ' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
 '            drains compile_request outbox via directives_repository (store-mediated)
 ' Package:   compiled_rules_application (C4: compilation_application)
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 003 — Compilation Pipeline**\nC4: compilation_application → compiled_rules_repository → compiled_rules_store\n<size:12><i>validate → materialize · content-addressed storage publish · no doctrine at eval</i></size>
 
@@ -83,6 +82,6 @@ Completed --> [*] : <b>Finalized</b>\nactor: System
 Failed --> ReleaseLockFail : <b>CompileLockReleased</b>\nactor: System
 ReleaseLockFail --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 003 · Contract 1.1.0 · compilation_application · Selma
+footer State Machine 003 · docs/standards/VERSION · compilation_application · Selma
 
 @enduml

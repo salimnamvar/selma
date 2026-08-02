@@ -6,8 +6,7 @@
 ' C4:        compiled_rules_store ← compiled_rules_repository
 '            (compilation_application publish path)
 ' Package:   compiled_rules_infrastructure (C4: compiled_rules_repository)
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' State machines supported by durable facts (not drawn here):
 '   003 Compilation · 010 Hash composition · 005 Conflict (frozen body) · 008 Artifact
 ' ============================================================
@@ -107,6 +106,6 @@ legend bottom
   | $LEGEND_ERD |
 endlegend
 
-footer ERD-002 · compiled_rules_store · Contract 1.3.0 · Selma
+footer ERD-002 · compiled_rules_store · docs/standards/VERSION · Selma
 
 @enduml

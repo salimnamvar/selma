@@ -4,8 +4,7 @@
 '            package titles and C4 peers as package / class / C4.
 '            Group rectangles MUST use $TITLE_APP_* / $TITLE_IF_*
 '            / $TITLE_DOM_* from package pkg_identities (SSoT).
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include AFTER uc_styles.puml.
 '
 ' Identity binding (must stay identical):
@@ -48,14 +47,14 @@
 !$TITLE_GUIDANCE      = "**UC-007 — Guidance**\n$TITLE_APP_FIND"
 !$TITLE_CERTIFICATION = "**UC-008 — Certification**\n$TITLE_OFFLINE_CERT"
 
-!$FOOTER_DIRECTIVES    = "UC-001 · Directives · Contract 1.2.0 · Selma"
-!$FOOTER_COMPILATION   = "UC-002 · Compilation · Contract 1.2.0 · Selma"
-!$FOOTER_INSPECTION    = "UC-003 · Inspection · Contract 1.2.0 · Selma"
-!$FOOTER_FINDINGS      = "UC-004 · Findings · Contract 1.2.0 · Selma"
-!$FOOTER_CONFLICT      = "UC-005 · Conflict · Contract 1.2.0 · Selma"
-!$FOOTER_AUTHORIZATION = "UC-006 · Authorization · Contract 1.2.0 · Selma"
-!$FOOTER_GUIDANCE      = "UC-007 · Guidance · Contract 1.2.0 · Selma"
-!$FOOTER_CERTIFICATION = "UC-008 · Certification · Contract 1.2.0 · Selma"
+!$FOOTER_DIRECTIVES    = "UC-001 · Directives · Contract docs/standards/VERSION · Selma"
+!$FOOTER_COMPILATION   = "UC-002 · Compilation · Contract docs/standards/VERSION · Selma"
+!$FOOTER_INSPECTION    = "UC-003 · Inspection · Contract docs/standards/VERSION · Selma"
+!$FOOTER_FINDINGS      = "UC-004 · Findings · Contract docs/standards/VERSION · Selma"
+!$FOOTER_CONFLICT      = "UC-005 · Conflict · Contract docs/standards/VERSION · Selma"
+!$FOOTER_AUTHORIZATION = "UC-006 · Authorization · Contract docs/standards/VERSION · Selma"
+!$FOOTER_GUIDANCE      = "UC-007 · Guidance · Contract docs/standards/VERSION · Selma"
+!$FOOTER_CERTIFICATION = "UC-008 · Certification · Contract docs/standards/VERSION · Selma"
 
 ' ── C4 peer IDs (registry only; same strings as package dual) ─
 !$C4_API = "api"

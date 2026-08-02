@@ -4,8 +4,7 @@
 '            IDs, port names — same role as c4_identities.puml,
 '            pkg_identities.puml, dep_identities.puml,
 '            state_identities.puml. Sections MUST use these strings.
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include AFTER cd_styles.puml.
 ' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
 ' Package module names identical to docs/package/common/pkg_identities.puml.
@@ -26,10 +25,10 @@
 !$TITLE_INFRASTRUCTURE = "**CLS-003 — Infrastructure Adapters**\nISP one-adapter-per-port · platform services"
 !$TITLE_INTERFACE = "**CLS-004 — Interface Adapters and Composition**\nDriving adapters · capability gate · DI wiring"
 
-!$FOOTER_DOMAIN = "CLS-001 · Domain Model · Contract 1.1.0 · Selma"
-!$FOOTER_APPLICATION = "CLS-002 · Application Services · Contract 1.1.0 · Selma"
-!$FOOTER_INFRASTRUCTURE = "CLS-003 · Infrastructure Adapters · Contract 1.1.0 · Selma"
-!$FOOTER_INTERFACE = "CLS-004 · Interface and Composition · Contract 1.1.0 · Selma"
+!$FOOTER_DOMAIN = "CLS-001 · Domain Model · Contract docs/standards/VERSION · Selma"
+!$FOOTER_APPLICATION = "CLS-002 · Application Services · Contract docs/standards/VERSION · Selma"
+!$FOOTER_INFRASTRUCTURE = "CLS-003 · Infrastructure Adapters · Contract docs/standards/VERSION · Selma"
+!$FOOTER_INTERFACE = "CLS-004 · Interface and Composition · Contract docs/standards/VERSION · Selma"
 
 ' ── C4 peer IDs (registry only; identical across views) ─────
 !$C4_API = "api"

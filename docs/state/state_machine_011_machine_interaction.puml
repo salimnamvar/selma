@@ -4,8 +4,7 @@
 ' Source:    docs/spec/contracts/ (all machines) · handoffs only
 ' C4:        api | application peers | ResolveConflict (domain) | certification_tool (offline)
 ' Package:   cross-machine handoffs only
-' Contract:  1.3.0
-' Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
+' Contract:  docs/standards/VERSION Role:      Cross-machine handoff overview (behavior only; C4 owns structure)
 ' ============================================================
 
 !include ./common/state_styles.puml
@@ -56,6 +55,6 @@ Certification --> FindingLifecycle : <b>CertificationSamplesRead</b>\nsegregatio
 
 ArtifactLifecycle --> [*] : <b>ArtifactRetained</b>\narchived / retained
 
-footer State Machine 011 · Contract 1.1.0 · machine interaction overview · Selma
+footer State Machine 011 · docs/standards/VERSION · machine interaction overview · Selma
 
 @enduml

@@ -4,7 +4,6 @@
 
 contract_id: "authorization.capabilities"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "api"
 description: >
   Defines the complete capability catalog for the Selma system.

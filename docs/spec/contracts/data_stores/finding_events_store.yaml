@@ -4,7 +4,6 @@
 
 contract_id: "data_stores.finding_events"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "finding_events_repository"
 description: >
   Defines the contract for the Finding Event Stream — an append-only
@@ -380,7 +379,7 @@ replay_validation:
     - >
       Replay MUST accept legacy Dismissed→Closed and Superseded→Closed events
       recorded under older contracts (states.yaml legacy_event_migration).
-    - "Replay MUST reject new emissions of those transitions under design_contract_version 1.1.0"
+    - "Replay MUST reject new emissions of those transitions under design freeze line (docs/standards/VERSION)"
     - "Hash-chain integrity checks still apply to legacy events (event_hash / prev_event_hash)"
 
 denied_actions_view:

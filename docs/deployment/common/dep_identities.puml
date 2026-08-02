@@ -4,8 +4,7 @@
 '            edge descriptions — same role as c4_identities.puml,
 '            pkg_identities.puml, state_identities.puml.
 '            Diagrams MUST use these macros (no inventing IDs).
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include AFTER dep_styles.puml.
 ' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
 ' ============================================================
@@ -135,5 +134,5 @@
 !$EDGE_APP_TARGETS = "HTTPS optional\nvia target_sources_gateway"
 
 ' ── Footer / title helpers ──────────────────────────────────
-!$FOOTER_PRODUCTION = "DEP-001 · Contract 1.1.0 · topology only · C4 IDs · Selma"
+!$FOOTER_PRODUCTION = "DEP-001 · Contract docs/standards/VERSION · topology only · C4 IDs · Selma"
 !$TITLE_PRODUCTION = "**DEP-001 — Production Deployment**\nZones · nodes · store failure domains · TLS"

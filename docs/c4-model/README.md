@@ -2,10 +2,10 @@
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **View concerns:** [`../standards/view_concerns.md`](../standards/view_concerns.md)  
-> **design_contract_version:** `1.3.0` · This directory is the **structural SSoT** (product peers only)
+> **design_contract_version:** `docs/standards/VERSION` · This directory is the **structural SSoT** (product peers only)
 
 Three-level C4 model using Clean Architecture layering and resource-oriented entity IDs.  
-IDs MUST match [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml). Diagrams include `Contract: 1.3.0` headers.
+IDs MUST match [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml). Diagrams include `Contract: docs/standards/VERSION` headers.
 
 ## View concern (this directory owns)
 
@@ -137,7 +137,7 @@ Full path list: registry `api_resources` + [`../api/`](../api/README.md).
 
 ## Tenant model (v1 product boundary)
 
-**Single-tenant per deployment instance.** No `tenant_id` on API resources, store rows, JWT claims, or idempotency keys. Isolation is deployment-level (see [`../deployment/`](../deployment/README.md)). Multi-tenancy is out of scope for design_contract_version `1.3.0`.
+**Single-tenant per deployment instance.** No `tenant_id` on API resources, store rows, JWT claims, or idempotency keys. Isolation is deployment-level (see [`../deployment/`](../deployment/README.md)). Multi-tenancy is out of scope for design_contract_version `docs/standards/VERSION`.
 
 ## Normative behavior (do not redefine here)
 
@@ -153,7 +153,7 @@ Full path list: registry `api_resources` + [`../api/`](../api/README.md).
 
 ## Canonical registry & rendering
 
-- IDs: `common/c4_identities.puml` · Styles: `common/c4_styles.puml` · Contract: `1.1.0`
+- IDs: `common/c4_identities.puml` · Styles: `common/c4_styles.puml` · Contract: `docs/standards/VERSION`
 - Check: `python scripts/check_design_alignment.py`
 
 ```bash

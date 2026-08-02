@@ -8,8 +8,7 @@
 ' C4:        artifacts_store ← artifacts_repository
 '            (inspections_application · findings_application · certification_tool)
 ' Package:   artifacts_infrastructure (C4: artifacts_repository)
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' State machines supported by durable facts (not drawn here):
 '   004 Inspection · 005 Conflict · 006 Certification · 008 Artifact lifecycle
 ' ============================================================
@@ -174,6 +173,6 @@ legend bottom
   | $LEGEND_ERD |
 endlegend
 
-footer ERD-004 · artifacts_store · Contract 1.3.0 · Selma
+footer ERD-004 · artifacts_store · docs/standards/VERSION · Selma
 
 @enduml

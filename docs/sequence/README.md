@@ -1,7 +1,7 @@
 # Selma Sequence Diagrams
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.3.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `docs/standards/VERSION` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 PlantUML sequence diagrams for core resource workflows.
 
@@ -36,7 +36,7 @@ plantuml -tsvg docs/sequence/*.puml
 - **SEQ-006:** guidance resolves **revision-pinned** `paired_policy_ref` only (never latest doctrine head).
 - **SEQ-008:** authentication via JWT; denials append through application-owned **DenialAuditPort**.
 
-## Participants (C4 1.1.0)
+## Participants (C4 docs/standards/VERSION)
 
 | ID | Technology | Role |
 |----|------------|------|

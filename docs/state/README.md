@@ -2,7 +2,7 @@
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **View concerns:** [`../standards/view_concerns.md`](../standards/view_concerns.md)  
-> **design_contract_version:** `1.3.0` · Structural SSoT for **peers:** [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `docs/standards/VERSION` · Structural SSoT for **peers:** [`../c4-model/`](../c4-model/README.md)
 
 ## View concern (this directory owns)
 
@@ -82,7 +82,7 @@ State styles include the palette and re-export `$STATE_COLOR_*` as **lifecycle m
 ## View rules
 
 - **Contract dominance** — diagrams extract contracts; they never supersede them  
-- **Header schema** — `Title` / `Source` / `C4` / `Package` / `Contract: 1.3.0`  
+- **Header schema** — `Title` / `Source` / `C4` / `Package` / `Contract: docs/standards/VERSION`  
 - **No notes** — invariants as `**entry**` / `**forbidden**` / guards / actions  
 - **No short forms** — full words in filenames and diagram text  
 - **Colors only via macros** from `state_styles.puml`  

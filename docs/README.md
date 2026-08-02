@@ -45,10 +45,10 @@ All design work MUST follow [`standards/`](standards/README.md):
 | [`standards/c4_registry.yaml`](standards/c4_registry.yaml) | Canonical C4 IDs, non-peers, API resources, forbidden aliases | same checker |
 | [`standards/view_concerns.md`](standards/view_concerns.md) | Exclusive ownership: C4 / package / class / deployment / state / use case | design review |
 | [`standards/contract.schema.json`](standards/contract.schema.json) | Spec contract front-matter | same checker |
-| [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract:` = `VERSION`, C4, Source) | same |
+| [`standards/diagram_header.schema.md`](standards/diagram_header.schema.md) | PlantUML headers (`Contract: docs/standards/VERSION`, C4, Source) | same |
 | [`api/redocly.yaml`](api/redocly.yaml) | OpenAPI + wire schema lint | `cd docs/api && npx @redocly/cli lint openapi.yaml` |
 
-**design_contract_version:** `1.3.0` — stamp of [`standards/VERSION`](standards/VERSION) (C4, API `info.version`, contracts, diagram headers). Bump `VERSION` once, then `python scripts/check_design_alignment.py --fix`.
+**design_contract_version:** [`docs/standards/VERSION`](standards/VERSION) — sole SemVer SSoT. Diagrams, README banners, and OpenAPI `info.version` **redirect** to that path (never embed the number). Bump `VERSION` once; run `python scripts/check_design_alignment.py`.
 
 **Tenant model (v1):** single-tenant per deployment instance. Multi-tenancy is
 out of scope; see [`c4-model/README.md`](c4-model/README.md) "Tenant model".

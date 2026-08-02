@@ -4,7 +4,6 @@
 
 contract_id: "meta.versioning"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner: null
 description: >
   Defines how versions work across all contract layers and the design freeze line.
@@ -20,20 +19,20 @@ design_freeze_line:
   ssot: "docs/standards/VERSION"
   changelog: "docs/standards/CHANGELOG.md"
   description: >
-    The whole design under docs/ shares one freeze line. Any material change to
-    design meaning bumps VERSION once; stamps everywhere else are rewritten by
-    scripts/check_design_alignment.py --fix. Individual contracts, diagrams,
-    and section READMEs MUST NOT carry independent design revisions.
-  stamps:
-    - "docs/standards/c4_registry.yaml design_contract_version"
-    - "docs/spec/contracts/**/*.yaml design_contract_version"
-    - "docs/**/*.puml Contract: header"
-    - "docs/**/README.md design_contract_version banner"
-    - "docs/api/openapi.yaml info.version"
+    The whole design under docs/ shares one freeze line. The numeric SemVer
+    appears ONLY in docs/standards/VERSION. Diagrams, README banners, OpenAPI
+    info.version, and registry MUST redirect to that path — they MUST NOT embed
+    MAJOR.MINOR.PATCH. Individual contracts omit design_contract_version front-matter.
+  redirects:
+    - "docs/**/*.puml → Contract: docs/standards/VERSION"
+    - "docs/**/README.md → design_contract_version: docs/standards/VERSION"
+    - "docs/api/openapi.yaml → info.version: docs/standards/VERSION"
   forbidden:
+    - "Embedded SemVer in PlantUML Contract headers or footers"
+    - "Embedded SemVer in README design_contract_version banners"
+    - "design_contract_version front-matter on contracts or c4_registry"
     - "Per-diagram Version fields as independent SemVer"
     - "Per-contract design revision distinct from VERSION"
-    - "Editing stamps without bumping VERSION (use --fix after VERSION change)"
 
 compatibility_rules:
   - rule_id: "VER-001"
@@ -57,37 +56,13 @@ compatibility_rules:
   - rule_id: "VER-005"
     statement: "schema_version field in each contract file MUST match this format"
     scope: "all-contracts"
+    notes: >
+      schema_version is the contract *body* shape version — not the design freeze
+      line. It may differ per file and is unrelated to docs/standards/VERSION.
 
   - rule_id: "VER-006"
-    statement: "Contract files with different schema_version values MUST NOT be mixed"
-    scope: "within-layer"
-
-  - rule_id: "VER-007"
     statement: >
-      design_contract_version on every contract MUST equal docs/standards/VERSION.
-      This is the design freeze line, not a per-file design version.
-    scope: "design-freeze"
+      Design freeze SemVer MUST be edited only in docs/standards/VERSION;
+      all other design artifacts redirect to that path
+    scope: "design-tree"
     enforcement: "scripts/check_design_alignment.py"
-
-  - rule_id: "VER-008"
-    statement: >
-      Bumping design_contract_version is done only by editing docs/standards/VERSION
-      once per change set, then running check_design_alignment.py --fix.
-    scope: "design-freeze"
-
-layer_versioning:
-  design_contract:
-    ssot: "docs/standards/VERSION"
-    note: "Whole-design freeze; stamps only elsewhere"
-
-  specification_contracts:
-    current_major: 1
-    note: "Breaking from 8.x (markdown) to 1.x (structured contracts); schema_version is file-body SemVer"
-
-  schema_contracts:
-    current_major: 1
-    note: "rule_schema.json and policy_doctrine.yaml at 1.0.0"
-
-  directive_instances:
-    current_major: 0
-    note: "Will migrate from SC-*/ST-* to GOV-*/COD-* taxonomy"

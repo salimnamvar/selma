@@ -2,7 +2,7 @@
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **View concerns:** [`../standards/view_concerns.md`](../standards/view_concerns.md)  
-> **design_contract_version:** `1.3.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `docs/standards/VERSION` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 ## View concern (this directory owns)
 

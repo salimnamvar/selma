@@ -11,7 +11,7 @@ comment block that enables investigation without opening the figure.
 ' Source:    docs/spec/contracts/<path>.yaml  # primary contract(s)
 ' C4:        <canonical peer IDs and edges>
 ' Package:   <optional {resource}_{layer} map>  # state / class implementation views
-' Contract:  <VERSION>                        # stamp of docs/standards/VERSION only
+' Contract:  docs/standards/VERSION           # redirect only — never embed SemVer
 ' ============================================================
 ```
 
@@ -21,11 +21,11 @@ comment block that enables investigation without opening the figure.
 | **Source** | One or more paths under `docs/spec/contracts/` or `docs/schema/`; never invent authority |
 | **C4** | Only IDs from [`c4_registry.yaml`](c4_registry.yaml) peers; non-peers labeled `(domain)` / `(offline)` |
 | **Package** | Optional; package module map for behavior views (`findings_application`, `conflicts_domain`, …) |
-| **Contract** | Exactly the SemVer in [`VERSION`](VERSION). Not a per-diagram version. Bump `VERSION` + `python scripts/check_design_alignment.py --fix` |
+| **Contract** | Exactly the path `docs/standards/VERSION`. **Never** embed `MAJOR.MINOR.PATCH` in the diagram. Read the freeze line from that file. |
 
 **State diagram files:** `docs/state/state_machine_NNN_*.puml` (aligned with `pkg_NNN`, `dep_NNN`, `seq_NNN`, `act_NNN`, `uc_NNN`, `cd_NNN`).  
 **Use case diagram files:** `docs/usecase/uc_NNN_*.puml` / diagram ID `UC-NNN`. Shared includes: `usecase/common/uc_styles.puml` + `uc_identities.puml` + `uc_section_*`. ROD oval names identical to package application leaves and class `<<Use Case>>` types.  
-**Notes forbidden** on state, package, class, C4, deployment, and use-case diagrams — encode invariants as state body / guards / actions / associations / include edges, or leave them in Source contracts.
+**Notes forbidden** on state, package, class, C4, deployment, use-case, and ERD diagrams — encode invariants as state body / guards / actions / associations / include edges / stereotypes, or leave them in Source contracts.
 
 ## Allowed C4 line patterns
 
@@ -41,7 +41,7 @@ comment block that enables investigation without opening the figure.
 - Stale IDs listed under `forbidden_ids` in `c4_registry.yaml`
 - Presenting `ResolveConflict`, `certification_tool`, or “analytics engine” as peer boxes
 - Independent per-file design versions (e.g. `Version: 1.0.3` on one diagram only)
-- `Contract:` values that do not equal `docs/standards/VERSION`
+- Embedding SemVer in `Contract:` headers, footers, or identities (numeric freeze line on the diagram is **forbidden**)
 - Source paths to removed files (e.g. `event_store.yaml`)
 
 ## Style includes
@@ -49,7 +49,16 @@ comment block that enables investigation without opening the figure.
 Shared `common/*_styles.puml` files SHOULD note:
 
 ```text
-' Contract: design_contract_version <VERSION> (docs/standards/VERSION)
+' Contract: docs/standards/VERSION
 ```
 
-Use the real SemVer from `VERSION` (stamped by the alignment checker), not the placeholder word.
+Never write the numeric freeze line into style files.
+
+## Single source of truth
+
+| Role | Location |
+| :--- | :--- |
+| Freeze line (SemVer) | [`VERSION`](VERSION) only |
+| History | [`CHANGELOG.md`](CHANGELOG.md) |
+| Diagram redirect | `Contract: docs/standards/VERSION` |
+| Gate | `python scripts/check_design_alignment.py` |

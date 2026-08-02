@@ -5,8 +5,7 @@
 ' C4:        finding_events_repository → finding_events_store
 ' Package:   platform_infrastructure (HybridLogicalClock) · findings_infrastructure
 ' Deploy:    application StatefulSet persistent volume claim + DB watermark (topology only)
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 009 — Hybrid Logical Clock**\nC4: finding_events_repository → finding_events_store\n<size:12><i>Tick · wall-clock absorption · partition heal · persistent volume claim + watermark load</i></size>
 
@@ -63,6 +62,6 @@ Steady --> PartitionHeal : <b>HybridLogicalClockPartitioned</b>\nactor: System\n
 Tick --> Steady : <b>HybridLogicalClockStatePersisted</b>\nactor: System\ncommand: fsync (pt_new, lc_new) on persistent volume claim\n+ periodic DB watermark upsert\n[strictlyNonDecreasingVsPrior]
 PartitionHeal --> Steady : <b>HybridLogicalClockReconciled</b>\nactor: System\n/ sortPhysicalTimeThenLcThenNodeThenEventId()\n/ advanceLocalHybridLogicalClockToMaxRemote()\n/ noOverwriteCommitted()
 
-footer State Machine 009 · Contract 1.1.0 · finding_events_repository · Selma
+footer State Machine 009 · docs/standards/VERSION · finding_events_repository · Selma
 
 @enduml

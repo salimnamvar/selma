@@ -7,8 +7,7 @@
 '            FindingOpenPort → findings_application (atomic FindingCreated+Open)
 '            optional target_sources_gateway → target_sources
 ' Package:   inspections_application / inspections_domain
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 004 — Inspection Execution Pipeline**\nC4: inspections_application → artifacts_repository → artifacts_store\n<size:12><i>six pure stages · FindingOpenPort · optional target_sources_gateway</i></size>
 
@@ -69,6 +68,6 @@ Completed --> [*] : <b>Finalized</b>\nactor: System
 Partial --> [*] : <b>Finalized</b>\nactor: System
 Failed --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 004 · Contract 1.1.0 · inspections_application · Selma
+footer State Machine 004 · docs/standards/VERSION · inspections_application · Selma
 
 @enduml

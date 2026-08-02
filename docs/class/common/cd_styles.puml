@@ -2,8 +2,7 @@
 ' Title:     Selma — Class Diagram Styles
 ' Purpose:   Class view chrome + aliases to CA palette.
 '            MACRO = Clean Architecture layers; MICRO = type archetypes.
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include order:
 '   !include common/cd_styles.puml   (pulls ca_palette)
 '   !include common/cd_identities.puml

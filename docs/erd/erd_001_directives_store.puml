@@ -7,8 +7,7 @@
 ' C4:        directives_store ← directives_repository
 '            (directives_application · compilation_application drain)
 ' Package:   directives_infrastructure (C4: directives_repository)
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' State machines supported by durable facts (not drawn here):
 '   002 Directive Lifecycle · 003 Compilation (outbox) · 011 interaction
 ' ============================================================
@@ -129,6 +128,6 @@ legend bottom
   | $LEGEND_ERD |
 endlegend
 
-footer ERD-001 · directives_store · Contract 1.3.0 · Selma
+footer ERD-001 · directives_store · docs/standards/VERSION · Selma
 
 @enduml

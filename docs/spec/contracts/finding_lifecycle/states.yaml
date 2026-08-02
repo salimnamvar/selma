@@ -4,7 +4,6 @@
 
 contract_id: "finding_lifecycle.states"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "findings_application"
 state_machine_ref: "../../state/state_machine_001_finding_lifecycle.puml"
 description: >
@@ -135,8 +134,7 @@ states:
 legacy_event_migration:
   description: >
     Historical event streams may contain Dismissed→Closed or Superseded→Closed
-    transitions from earlier design revisions. Current design_contract_version
-    1.1.0 does not emit those transitions (Dismissed and Superseded are terminal).
+    transitions from earlier design revisions. Current design freeze line (docs/standards/VERSION) does not emit those transitions (Dismissed and Superseded are terminal).
   rules:
     - >
       On replay/validation of historical streams: events with from_state in

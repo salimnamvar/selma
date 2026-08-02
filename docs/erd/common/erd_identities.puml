@@ -5,8 +5,7 @@
 '            c4_identities / pkg_identities / dep_identities /
 '            cd_identities / state_identities / uc_identities.
 '            Diagrams MUST use these macros (no inventing IDs).
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include AFTER erd_styles.puml.
 ' Join key: C4 peer IDs from docs/standards/c4_registry.yaml.
 ' Storage authority: docs/spec/contracts/data_stores/*.yaml

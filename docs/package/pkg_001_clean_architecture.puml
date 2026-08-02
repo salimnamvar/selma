@@ -4,8 +4,7 @@
 ' Source:    docs/standards/c4_registry.yaml · docs/c4-model/ (peer SSoT)
 ' C4:        {resource}_{layer} maps to C4 peers; stores via repos
 ' Purpose:   HOW modules layer (CA rings, ports). Not zones/FSMs/peers invent.
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Structure (mirrors c4-model/common/):
 '   common/pkg_styles.puml          — visual language
 '   common/pkg_identities.puml      — titles, port/store names, alias map
@@ -31,6 +30,6 @@ title **PKG-001 — Clean Architecture Packages**\nCA layers · {resource}_{laye
 
 !include common/pkg_connections.puml
 
-footer PKG-001 · Contract 1.1.0 · {resource}_{layer} · Selma
+footer PKG-001 · docs/standards/VERSION · {resource}_{layer} · Selma
 
 @enduml

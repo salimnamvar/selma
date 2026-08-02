@@ -3,12 +3,20 @@
 
 Design freeze version SSoT
 --------------------------
-  docs/standards/VERSION          — sole writable design_contract_version
-  docs/standards/CHANGELOG.md     — human history (Keep a Changelog)
-  All other occurrences are stamps and must equal VERSION.
+  docs/standards/VERSION          — sole place that holds the SemVer freeze line
+  docs/standards/CHANGELOG.md     — human history (historical SemVer allowed)
+
+  Everywhere else MUST redirect to docs/standards/VERSION — never embed
+  design_contract SemVer (X.Y.Z) in diagrams, footers, README banners,
+  contract front-matter, registry, or OpenAPI info.version.
+
+  Redirect forms:
+    PlantUML:   ' Contract:  docs/standards/VERSION
+    Markdown:   design_contract_version: `docs/standards/VERSION`
+    OpenAPI:    info.version: "docs/standards/VERSION"
 
   python scripts/check_design_alignment.py           # verify
-  python scripts/check_design_alignment.py --fix    # rewrite stamps from VERSION
+  python scripts/check_design_alignment.py --fix    # rewrite redirects (no SemVer stamps)
 
 Exit 0 if clean; non-zero if errors. Warnings print but do not fail by default
 unless --strict.
@@ -32,27 +40,39 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 STANDARDS = DOCS / "standards"
 VERSION_PATH = STANDARDS / "VERSION"
+VERSION_REF = "docs/standards/VERSION"
 REGISTRY_PATH = STANDARDS / "c4_registry.yaml"
 CONTRACT_SCHEMA_PATH = STANDARDS / "contract.schema.json"
 CONTRACTS_DIR = DOCS / "spec" / "contracts"
 API_DIR = DOCS / "api"
 
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+SEMVER_TOKEN = re.compile(r"\b\d+\.\d+\.\d+\b")
 
-# Stamp patterns (design line only — not product schema_version fields)
-RE_CONTRACT_DCV = re.compile(
-    r'^(design_contract_version:\s*)(["\']?)(\d+\.\d+\.\d+)\2',
-    re.M,
-)
-RE_PUML_CONTRACT = re.compile(
-    r"(Contract:\s*)(?:design_contract_version\s+)?(\d+\.\d+\.\d+)",
-)
-RE_MD_DCV_BACKTICK = re.compile(
-    r"(design_contract_version[:\*]*\s*[`*]*)(\d+\.\d+\.\d+)([`*]*)",
+# Design freeze must never appear as embedded SemVer outside VERSION / CHANGELOG
+RE_EMBEDDED_DCV = re.compile(
+    r"design_contract_version\s*[:=]?\s*[`\"']?\d+\.\d+\.\d+",
     re.I,
 )
-RE_OPENAPI_INFO_VERSION = re.compile(
+RE_PUML_CONTRACT_SEMVER = re.compile(
+    r"Contract:\s*(?:design_contract_version\s+)?\d+\.\d+\.\d+",
+)
+RE_PUML_CONTRACT_REF = re.compile(
+    r"Contract:\s*docs/standards/VERSION\b",
+)
+RE_FOOTER_CONTRACT_SEMVER = re.compile(
+    r"footer[^\n]*Contract\s+\d+\.\d+\.\d+",
+    re.I,
+)
+RE_MD_DCV_SEMVER = re.compile(
+    r"design_contract_version[:\*\s`]+[`\"']?\d+\.\d+\.\d+",
+    re.I,
+)
+RE_OPENAPI_INFO_SEMVER = re.compile(
     r"(?m)^(\s*version:\s*)([\"']?)(\d+\.\d+\.\d+)\2",
+)
+RE_OPENAPI_INFO_REF = re.compile(
+    r'(?m)^(\s*version:\s*)(["\']?)docs/standards/VERSION\2',
 )
 
 
@@ -61,7 +81,6 @@ def load_design_version() -> str:
         print(f"ERROR missing SSoT {VERSION_PATH.relative_to(ROOT)}", file=sys.stderr)
         sys.exit(2)
     raw = VERSION_PATH.read_text(encoding="utf-8").strip()
-    # allow optional trailing comment / blank lines: first non-empty token
     line = raw.splitlines()[0].strip() if raw else ""
     if "#" in line:
         line = line.split("#", 1)[0].strip()
@@ -95,131 +114,91 @@ def _write_if_changed(path: Path, new_text: str, rel: Path, messages: list[str],
         messages.append(f"{rel}: {label}")
 
 
-def fix_registry_stamp(design_version: str, messages: list[str]) -> None:
+def fix_registry(messages: list[str]) -> None:
     text = REGISTRY_PATH.read_text(encoding="utf-8")
-    new, n = RE_CONTRACT_DCV.subn(
-        rf'\1"{design_version}"',
-        text,
-        count=1,
-    )
-    if n:
-        _write_if_changed(
-            REGISTRY_PATH, new, REGISTRY_PATH.relative_to(ROOT), messages, "stamped design_contract_version"
-        )
-    elif f'design_contract_version: "{design_version}"' not in text and (
-        f"design_contract_version: '{design_version}'" not in text
-    ):
-        # try unquoted
-        new2, n2 = re.subn(
-            r"^(design_contract_version:\s*)(\d+\.\d+\.\d+)",
-            rf'\1"{design_version}"',
-            text,
-            count=1,
-            flags=re.M,
-        )
-        if n2:
-            _write_if_changed(
-                REGISTRY_PATH,
-                new2,
-                REGISTRY_PATH.relative_to(ROOT),
-                messages,
-                "stamped design_contract_version",
-            )
-
-
-def fix_contract_file(path: Path, design_version: str, messages: list[str]) -> None:
-    text = path.read_text(encoding="utf-8")
-    rel = path.relative_to(ROOT)
-    if "design_contract_version:" in text:
-        new, n = RE_CONTRACT_DCV.subn(rf'\1"{design_version}"', text, count=1)
-        if n and new != text:
-            path.write_text(new, encoding="utf-8")
-            messages.append(f"{rel}: stamped design_contract_version")
-        return
-    new, n = re.subn(
-        r"(schema_version:\s*[\"']?\d+\.\d+\.\d+[\"']?\s*\n)",
-        rf'\1design_contract_version: "{design_version}"\n',
-        text,
-        count=1,
-    )
-    if n:
-        path.write_text(new, encoding="utf-8")
-        messages.append(f"{rel}: injected design_contract_version")
-    else:
-        messages.append(f"{rel}: could not inject design_contract_version")
-
-
-def fix_puml_file(path: Path, design_version: str, messages: list[str]) -> None:
-    text = path.read_text(encoding="utf-8")
-    rel = path.relative_to(ROOT)
-
-    def repl_header(m: re.Match[str]) -> str:
-        return f"{m.group(1)}{design_version}"
-
-    def repl_style(m: re.Match[str]) -> str:
-        return f"{m.group(1)}{design_version}{m.group(3)}"
-
-    new = RE_PUML_CONTRACT.sub(repl_header, text)
-    # styles: ' Contract: design_contract_version 1.1.0 (docs/standards/...)
     new = re.sub(
-        r"(Contract:\s*design_contract_version\s+)\d+\.\d+\.\d+(\s*)",
-        rf"\g<1>{design_version}\2",
-        new,
+        r"^design_contract_version:\s*[\"']?\d+\.\d+\.\d+[\"']?[^\n]*\n",
+        "",
+        text,
+        flags=re.M,
+    )
+    _write_if_changed(
+        REGISTRY_PATH, new, REGISTRY_PATH.relative_to(ROOT), messages, "removed design_contract_version stamp"
+    )
+
+
+def fix_contract_file(path: Path, messages: list[str]) -> None:
+    text = path.read_text(encoding="utf-8")
+    rel = path.relative_to(ROOT)
+    new = re.sub(
+        r"^design_contract_version:\s*[\"']?\d+\.\d+\.\d+[\"']?\s*\n",
+        "",
+        text,
+        flags=re.M,
     )
     if new != text:
         path.write_text(new, encoding="utf-8")
-        messages.append(f"{rel}: stamped Contract header")
+        messages.append(f"{rel}: removed design_contract_version stamp")
 
 
-def fix_markdown_stamps(path: Path, design_version: str, messages: list[str]) -> None:
+def fix_puml_file(path: Path, messages: list[str]) -> None:
     text = path.read_text(encoding="utf-8")
     rel = path.relative_to(ROOT)
+    new = re.sub(
+        r"(Contract:\s*)(?:design_contract_version\s+)?\d+\.\d+\.\d+(\s*(?:\([^)]*\))?)",
+        rf"\1{VERSION_REF}",
+        text,
+    )
+    new = re.sub(
+        r"(footer[^\n]*?)Contract\s+\d+\.\d+\.\d+",
+        rf"\1{VERSION_REF}",
+        new,
+    )
+    new = re.sub(
+        r"(Contract\s+)\d+\.\d+\.\d+(\s*·)",
+        rf"\1{VERSION_REF}\2",
+        new,
+    )
+    new = new.replace(f"{VERSION_REF}'", VERSION_REF)
+    if new != text:
+        path.write_text(new, encoding="utf-8")
+        messages.append(f"{rel}: redirected Contract to {VERSION_REF}")
 
-    def repl(m: re.Match[str]) -> str:
-        return f"{m.group(1)}{design_version}{m.group(3)}"
 
-    new = RE_MD_DCV_BACKTICK.sub(repl, text)
-    # design_contract_version[`:*\s]+VERSION  — covers:
-    #   design_contract_version: `1.1.0`
-    #   design_contract_version 1.1.0
-    #   `design_contract_version` 1.1.0  (backtick closes name before version)
+def fix_markdown(path: Path, messages: list[str]) -> None:
+    if path.name == "CHANGELOG.md" and path.parent == STANDARDS:
+        return
+    if path.name == "VERSION":
+        return
+    text = path.read_text(encoding="utf-8")
+    rel = path.relative_to(ROOT)
     new = re.sub(
         r"(design_contract_version)([`:\*\s]+)(\d+\.\d+\.\d+)",
-        rf"\g<1>\g<2>{design_version}",
-        new,
+        rf"\g<1>\g<2>{VERSION_REF}",
+        text,
         flags=re.I,
     )
-    # Contract: 1.1.0 in markdown schema docs
     new = re.sub(
         r"(Contract:\s*)(\d+\.\d+\.\d+)",
-        rf"\g<1>{design_version}",
+        rf"\g<1>{VERSION_REF}",
         new,
     )
-    # Exactly `1.1.0` until the design line — in diagram_header.schema.md
-    new = re.sub(
-        r"(Exactly `)(\d+\.\d+\.\d+)(` until the design line)",
-        rf"\g<1>{design_version}\3",
-        new,
-    )
-    # Contract **1.1.0** prose
     new = re.sub(
         r"(Contract\s+\*\*)(\d+\.\d+\.\d+)(\*\*)",
-        rf"\g<1>{design_version}\3",
+        rf"\g<1>{VERSION_REF}\3",
         new,
     )
     if new != text:
         path.write_text(new, encoding="utf-8")
-        messages.append(f"{rel}: stamped design_contract_version mentions")
+        messages.append(f"{rel}: redirected design_contract_version to {VERSION_REF}")
 
 
-def fix_openapi(path: Path, design_version: str, messages: list[str]) -> None:
+def fix_openapi(path: Path, messages: list[str]) -> None:
     text = path.read_text(encoding="utf-8")
     rel = path.relative_to(ROOT)
-    # Only the first top-level info.version (after "info:")
     lines = text.splitlines(keepends=True)
     out: list[str] = []
     in_info = False
-    info_indent: int | None = None
     done = False
     changed = False
     for line in lines:
@@ -228,56 +207,49 @@ def fix_openapi(path: Path, design_version: str, messages: list[str]) -> None:
             continue
         if re.match(r"^info:\s*$", line):
             in_info = True
-            info_indent = 0
             out.append(line)
             continue
         if in_info and not done:
-            m = re.match(r"^(\s*)version:\s*([\"']?)(\d+\.\d+\.\d+)\2\s*$", line)
+            m = re.match(r"^(\s*)version:\s*.*$", line)
             if m:
-                out.append(f'{m.group(1)}version: "{design_version}"\n')
-                if m.group(3) != design_version:
+                out.append(f'{m.group(1)}version: "{VERSION_REF}"\n')
+                if line.strip() != f'version: "{VERSION_REF}"':
                     changed = True
                 done = True
                 continue
-            # left info block
-            if line.strip() and not line.startswith(" ") and not line.startswith("\t"):
+            if line.strip() and not line[0].isspace():
                 in_info = False
         out.append(line)
     new = "".join(out)
-    if changed or (done and new != text):
-        # also stamp "Contract **1.1.0**" in description if present
-        new2 = re.sub(
-            r"(Contract\s+\*\*)(\d+\.\d+\.\d+)(\*\*)",
-            rf"\g<1>{design_version}\3",
-            new,
-        )
-        if new2 != text:
-            path.write_text(new2, encoding="utf-8")
-            messages.append(f"{rel}: stamped info.version / design line prose")
+    new = re.sub(
+        r"C4 Contract \*\*\d+\.\d+\.\d+\*\*",
+        f"C4 design freeze ({VERSION_REF})",
+        new,
+    )
+    if new != text or changed:
+        path.write_text(new, encoding="utf-8")
+        messages.append(f"{rel}: redirected info.version to {VERSION_REF}")
 
 
-def apply_fixes(design_version: str) -> list[str]:
+def apply_fixes() -> list[str]:
     messages: list[str] = []
-    fix_registry_stamp(design_version, messages)
-
+    fix_registry(messages)
     for path in sorted(CONTRACTS_DIR.rglob("*.yaml")):
-        fix_contract_file(path, design_version, messages)
-
+        fix_contract_file(path, messages)
     for path in DOCS.rglob("*.puml"):
-        fix_puml_file(path, design_version, messages)
-
-    # Markdown stamps under docs/ (standards templates + section READMEs + root docs README)
+        fix_puml_file(path, messages)
     for path in DOCS.rglob("*.md"):
-        # Keep a Changelog retains historical versions — never rewrite
-        if path.name == "CHANGELOG.md" and path.parent == STANDARDS:
-            continue
-        fix_markdown_stamps(path, design_version, messages)
-
+        fix_markdown(path, messages)
     openapi = API_DIR / "openapi.yaml"
     if openapi.is_file():
-        fix_openapi(openapi, design_version, messages)
-
+        fix_openapi(openapi, messages)
     return messages
+
+
+def _line_of(text: str, pos: int) -> str:
+    start = text.rfind("\n", 0, pos) + 1
+    end = text.find("\n", pos)
+    return text[start : end if end != -1 else None]
 
 
 def main() -> int:
@@ -286,12 +258,12 @@ def main() -> int:
     parser.add_argument(
         "--fix",
         action="store_true",
-        help="Rewrite all design_contract_version stamps from docs/standards/VERSION",
+        help=f"Rewrite design version refs to redirect to {VERSION_REF} (no SemVer stamps)",
     )
     parser.add_argument(
         "--fix-contracts",
         action="store_true",
-        help="Deprecated alias for --fix (contracts + all stamps)",
+        help="Deprecated alias for --fix",
     )
     args = parser.parse_args()
     do_fix = args.fix or args.fix_contracts
@@ -299,19 +271,17 @@ def main() -> int:
     design_version = load_design_version()
 
     if do_fix:
-        for msg in apply_fixes(design_version):
+        for msg in apply_fixes():
             print(f"FIX   {msg}")
 
     reg = load_registry()
-    reg_ver = str(reg.get("design_contract_version") or "")
     errors: list[str] = []
     warnings: list[str] = []
 
-    if reg_ver != design_version:
+    if "design_contract_version" in reg:
         errors.append(
-            f"{REGISTRY_PATH.relative_to(ROOT)}: design_contract_version "
-            f"{reg_ver!r} != VERSION {design_version} "
-            f"(edit VERSION only, then run with --fix)"
+            f"{REGISTRY_PATH.relative_to(ROOT)}: must not embed design_contract_version "
+            f"(redirect to {VERSION_REF} only; remove the field)"
         )
 
     allowed_owners = set(reg.get("allowed_owner_components") or [])
@@ -322,12 +292,11 @@ def main() -> int:
     schema = json.loads(CONTRACT_SCHEMA_PATH.read_text(encoding="utf-8"))
     owner_enum = set(schema["properties"]["owner_component"]["oneOf"][1]["enum"])
 
-    # schema must not pin a const to a stale version (pattern-only)
     dcv_schema = schema.get("properties", {}).get("design_contract_version", {})
-    if "const" in dcv_schema:
+    if dcv_schema and "const" in dcv_schema:
         errors.append(
             f"{CONTRACT_SCHEMA_PATH.relative_to(ROOT)}: design_contract_version "
-            f"must use pattern (not const) so VERSION remains the sole SSoT"
+            f"must not use const (VERSION is sole SSoT)"
         )
 
     for path in sorted(CONTRACTS_DIR.rglob("*.yaml")):
@@ -357,14 +326,10 @@ def main() -> int:
         elif owner not in allowed_owners and owner not in owner_enum:
             errors.append(f"{rel}: owner_component {owner!r} not in C4 allowed set")
 
-        dcv = data.get("design_contract_version")
-        if dcv is None:
+        if "design_contract_version" in data:
             errors.append(
-                f"{rel}: missing design_contract_version (run with --fix)"
-            )
-        elif str(dcv) != design_version:
-            errors.append(
-                f"{rel}: design_contract_version {dcv!r} != VERSION {design_version}"
+                f"{rel}: must not embed design_contract_version "
+                f"(use {VERSION_REF} only; remove the field)"
             )
 
     # --- Forbidden IDs in docs (scan) -----------------------------------------
@@ -425,79 +390,79 @@ def main() -> int:
                         continue
                     errors.append(f"{rel}:{i}: forbidden id {bad!r}: {line.strip()[:100]}")
 
-    # --- PlantUML Contract headers --------------------------------------------
+    # --- PlantUML: Contract redirects; forbid SemVer design stamps ------------
     for path in DOCS.rglob("*.puml"):
         text = path.read_text(encoding="utf-8", errors="replace")
         rel = path.relative_to(ROOT)
-        if path.name.endswith("_styles.puml"):
-            # styles may note the design line
-            m = re.search(
-                r"Contract:\s*(?:design_contract_version\s+)?([0-9]+\.[0-9]+\.[0-9]+)",
-                text,
+        if RE_PUML_CONTRACT_SEMVER.search(text):
+            errors.append(
+                f"{rel}: embeds SemVer in Contract header — use '{VERSION_REF}' only"
             )
-            if m and m.group(1) != design_version:
-                errors.append(
-                    f"{rel}: Contract {m.group(1)} != VERSION {design_version}"
-                )
-            continue
-        m = re.search(r"Contract:\s*([0-9]+\.[0-9]+\.[0-9]+)", text)
-        if m:
-            if m.group(1) != design_version:
-                errors.append(
-                    f"{rel}: Contract {m.group(1)} != VERSION {design_version}"
-                )
-        else:
-            if path.parent.name != "common":
-                warnings.append(f"{rel}: missing Contract: header field")
+        if RE_FOOTER_CONTRACT_SEMVER.search(text):
+            errors.append(
+                f"{rel}: embeds SemVer in footer Contract — use '{VERSION_REF}' only"
+            )
+        # non-common diagrams should declare Contract redirect
+        if path.parent.name != "common" and not path.name.endswith("_styles.puml"):
+            if "Contract:" in text and not RE_PUML_CONTRACT_REF.search(text):
+                # allow files that mention Contract only in prose without header
+                if re.search(r"(?m)^'\s*Contract:", text):
+                    errors.append(
+                        f"{rel}: Contract header must be '{VERSION_REF}' "
+                        f"(got non-redirect form)"
+                    )
+            elif "Contract:" not in text and path.suffix == ".puml":
+                # orchestrator diagrams
+                if path.name.startswith(
+                    (
+                        "cd_",
+                        "erd_",
+                        "uc_",
+                        "seq_",
+                        "act_",
+                        "dep_",
+                        "pkg_",
+                        "c4_",
+                        "state_machine_",
+                    )
+                ):
+                    warnings.append(f"{rel}: missing Contract: header field")
 
-        if "event_store.yaml" in text:
-            errors.append(f"{rel}: stale source event_store.yaml → finding_events_store.yaml")
-
-    # --- Section README / standards markdown stamps ---------------------------
-    md_stamp_re = re.compile(
-        r"design_contract_version[:\*\s`]+(\d+\.\d+\.\d+)",
-        re.I,
-    )
+    # --- Markdown: no design SemVer stamps (except CHANGELOG / VERSION) -------
     for path in DOCS.rglob("*.md"):
-        # CHANGELOG may mention historical versions — skip version equality there
         if path.name == "CHANGELOG.md" and path.parent == STANDARDS:
             continue
         if path.name == "VERSION":
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         rel = path.relative_to(ROOT)
-        for m in md_stamp_re.finditer(text):
-            if m.group(1) != design_version:
-                # allow explicit historical notes
-                line_start = text.rfind("\n", 0, m.start()) + 1
-                line_end = text.find("\n", m.end())
-                line = text[line_start : line_end if line_end != -1 else None]
-                lower = line.lower()
-                if any(
-                    k in lower
-                    for k in (
-                        "superseded",
-                        "historical",
-                        "was ",
-                        "formerly",
-                        "previous",
-                        "deprecated",
-                        "old ",
-                    )
-                ):
-                    continue
-                errors.append(
-                    f"{rel}: design_contract_version stamp {m.group(1)} "
-                    f"!= VERSION {design_version}"
+        for m in RE_MD_DCV_SEMVER.finditer(text):
+            line = _line_of(text, m.start())
+            lower = line.lower()
+            if any(
+                k in lower
+                for k in (
+                    "superseded",
+                    "historical",
+                    "was ",
+                    "formerly",
+                    "previous",
+                    "deprecated",
+                    "old ",
+                    "e.g.",
+                    "example",
                 )
+            ):
+                continue
+            errors.append(
+                f"{rel}: embeds design_contract SemVer stamp — redirect to {VERSION_REF}"
+            )
 
-        # diagram header schema: Contract: X.Y.Z examples
         if path.name == "diagram_header.schema.md":
-            for m in re.finditer(r"Contract:\s*(\d+\.\d+\.\d+)", text):
-                if m.group(1) != design_version:
-                    errors.append(
-                        f"{rel}: Contract example {m.group(1)} != VERSION {design_version}"
-                    )
+            if RE_PUML_CONTRACT_SEMVER.search(text):
+                errors.append(
+                    f"{rel}: example Contract must redirect to {VERSION_REF}, not SemVer"
+                )
 
     # --- Package aliases must not appear as C4 peer IDs -----------------------
     forbidden_c4 = set(reg.get("forbidden_c4_peer_ids") or [])
@@ -544,11 +509,10 @@ def main() -> int:
                 f"(docs/schema is SSoT — copy to schema/ in the same change)"
             )
 
-    # --- API openapi version (design line stamp) ------------------------------
+    # --- API openapi version must redirect to VERSION -------------------------
     openapi = API_DIR / "openapi.yaml"
     if openapi.exists():
         ot = openapi.read_text(encoding="utf-8")
-        # info.version only
         info_ver = None
         in_info = False
         for line in ot.splitlines():
@@ -556,7 +520,7 @@ def main() -> int:
                 in_info = True
                 continue
             if in_info:
-                m = re.match(r"^\s+version:\s*[\"']?([0-9]+\.[0-9]+\.[0-9]+)", line)
+                m = re.match(r"^\s+version:\s*[\"']?([^\"'\s]+)[\"']?", line)
                 if m:
                     info_ver = m.group(1)
                     break
@@ -564,9 +528,14 @@ def main() -> int:
                     break
         if info_ver is None:
             errors.append("docs/api/openapi.yaml: missing info.version")
-        elif info_ver != design_version:
+        elif info_ver != VERSION_REF:
             errors.append(
-                f"docs/api/openapi.yaml info.version {info_ver} != VERSION {design_version}"
+                f"docs/api/openapi.yaml info.version {info_ver!r} must be "
+                f'"{VERSION_REF}" (redirect; SemVer lives only in VERSION)'
+            )
+        if RE_OPENAPI_INFO_SEMVER.search(ot):
+            errors.append(
+                f"docs/api/openapi.yaml: embeds SemVer in info.version — use {VERSION_REF}"
             )
         for path_key in (
             "/directives/{lineage_id}",
@@ -589,7 +558,7 @@ def main() -> int:
     print(
         f"\nSummary: {len(errors)} error(s), {len(warnings)} warning(s); "
         f"peers={len(peer_ids)} design_contract_version={design_version} "
-        f"(SSoT: docs/standards/VERSION)"
+        f"(SSoT: {VERSION_REF}; embeds forbidden)"
     )
     if errors or (args.strict and warnings):
         return 1

@@ -8,8 +8,7 @@
 ' C4:        finding_events_store ← finding_events_repository
 '            (findings_application · DenialAuditPort)
 ' Package:   findings_infrastructure (C4: finding_events_repository)
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' State machines supported by durable facts (not drawn here):
 '   001 Finding Lifecycle · 007 Authorization denials · 009 Hybrid logical clock
 ' ============================================================
@@ -148,6 +147,6 @@ legend bottom
   | $LEGEND_ERD |
 endlegend
 
-footer ERD-003 · finding_events_store · Contract 1.3.0 · Selma
+footer ERD-003 · finding_events_store · docs/standards/VERSION · Selma
 
 @enduml

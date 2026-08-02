@@ -2,8 +2,7 @@
 ' Title:     Selma — State Machine Styles
 ' Purpose:   State view chrome + MICRO lifecycle aliases mapped
 '            to Clean Architecture MACRO palette (ca_palette).
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Include order:
 '   !include ./common/state_styles.puml
 '   !include ./common/state_identities.puml

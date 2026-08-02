@@ -4,7 +4,6 @@
 
 contract_id: "certification.gates"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "certification_tool"
 description: >
   Defines the 8 architectural audit gates required for production-grade

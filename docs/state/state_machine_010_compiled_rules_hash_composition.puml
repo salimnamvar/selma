@@ -5,8 +5,7 @@
 '            docs/spec/contracts/compilation/hermetic_boundary.yaml
 ' C4:        compilation_application → compiled_rules_repository → compiled_rules_store
 ' Package:   compiled_rules_application (detail of State Machine 003)
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 010 — compiled rules intermediate representation Hash Composition**\nC4: compilation_application → compiled_rules_repository → compiled_rules_store\n<size:12><i>dual-hash · local identity · content-addressed storage dedup · compiled_at excluded</i></size>
 
@@ -70,6 +69,6 @@ CheckContentAddressedStorage --> PublishedNew : <b>CompiledRulesPublishedNew</b>
 PublishedDedup --> [*] : <b>Finalized</b>\nactor: System
 PublishedNew --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 010 · Contract 1.1.0 · compilation_application · Selma
+footer State Machine 010 · docs/standards/VERSION · compilation_application · Selma
 
 @enduml

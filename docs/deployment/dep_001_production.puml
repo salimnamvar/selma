@@ -6,8 +6,7 @@
 ' Package:   runtime co-locates compiled_rules_* with application process
 ' Purpose:   WHERE Selma runs: zones, nodes, failure domains, TLS.
 '            Does NOT redraw component graph or package modules.
-' Contract:  1.3.0
-'
+' Contract:  docs/standards/VERSION
 ' Structure (mirrors package/state/c4 common/):
 '   common/dep_styles.puml       — visual language + C4 palette
 '   common/dep_identities.puml   — zone/node/edge/C4 labels

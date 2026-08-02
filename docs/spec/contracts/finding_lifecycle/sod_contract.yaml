@@ -4,7 +4,6 @@
 
 contract_id: "finding_lifecycle.sod"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "findings_application"
 description: >
   Defines segregation of duties constraints that prevent conflicts of interest

@@ -4,8 +4,7 @@
 ' Source:    docs/spec/contracts/certification/gates.yaml (AA-01 … AA-09)
 ' C4:        certification_tool (offline · not peer) → artifacts_repository → artifacts_store
 ' Package:   certification_tool (offline)
-' Contract:  1.3.0
-' ============================================================
+' Contract:  docs/standards/VERSION ============================================================
 
 title **State Machine 006 — Architectural Certification**\nC4: certification_tool (offline · not peer) → artifacts_repository → artifacts_store\n<size:12><i>AA-01…AA-09 sequential gates · seal artifact</i></size>
 
@@ -74,6 +73,6 @@ Certified --> Archived : <b>CertificationArchived</b>\nactor: System\ncommand: r
 RemediationRequired --> Triggered : <b>CertificationRetriggered</b>\nactor: System (optional CI client | certification_tool)\ncommand: new certification run_id
 Archived --> [*] : <b>Finalized</b>\nactor: System
 
-footer State Machine 006 · Contract 1.1.0 · certification_tool · Selma
+footer State Machine 006 · docs/standards/VERSION · certification_tool · Selma
 
 @enduml

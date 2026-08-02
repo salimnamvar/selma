@@ -1,14 +1,14 @@
 # Selma API
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)  
-> **design_contract_version:** `1.3.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
+> **design_contract_version:** `docs/standards/VERSION` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)
 
 OpenAPI design for the HTTP interface between **Clients** and the **Application**
 (`api` gate). Structure follows the same resource-grouped, Redocly-friendly
 layout used for multi-file OpenAPI (paths by resource, shared components).
 
 **Entry point:** [`openapi.yaml`](openapi.yaml)  
-**Structural SSoT:** [`../c4-model/`](../c4-model/README.md) (Contract 1.1.0)  
+**Structural SSoT:** [`../c4-model/`](../c4-model/README.md) (docs/standards/VERSION)  
 **Behavioral SSoT:** [`../spec/contracts/`](../spec/contracts/)
 
 ## Layout

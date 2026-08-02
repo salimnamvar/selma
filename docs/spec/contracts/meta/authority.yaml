@@ -4,7 +4,6 @@
 
 contract_id: "meta.authority"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner: null
 description: >
   Defines the authority hierarchy between contract layers.

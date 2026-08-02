@@ -11,17 +11,19 @@ Version numbers follow [Semantic Versioning](https://semver.org/).
 
 | Role | Location |
 | :--- | :--- |
-| **Authoritative version** | [`VERSION`](VERSION) (one SemVer line; edit only here) |
-| **Human history** | this file |
-| **Machine ID registry** | [`c4_registry.yaml`](c4_registry.yaml) (`design_contract_version` is a **stamp** of `VERSION`) |
+| **Authoritative version** | [`VERSION`](VERSION) (one SemVer line; edit only here — sole numeric SSoT) |
+| **Human history** | this file (historical SemVer sections allowed) |
+| **Machine ID registry** | [`c4_registry.yaml`](c4_registry.yaml) (IDs only; **no** version stamp) |
 | **Alignment gate** | `python scripts/check_design_alignment.py` |
 
-Stamps (contract front-matter, PlantUML `Contract:` headers, section README
-banners, OpenAPI `info.version`) MUST equal `VERSION`. They are not independent
-versions. After editing `VERSION`, run:
+Diagrams, README banners, and OpenAPI **redirect** to `docs/standards/VERSION`
+(path string). They MUST NOT embed `MAJOR.MINOR.PATCH`. Contracts omit
+`design_contract_version` front-matter. After editing `VERSION`, history lives
+here; run:
 
 ```bash
-python scripts/check_design_alignment.py --fix
+python scripts/check_design_alignment.py --fix   # path redirects only
+python scripts/check_design_alignment.py --strict
 ```
 
 Do **not** invent per-diagram or per-document design versions.
@@ -32,7 +34,7 @@ Do **not** invent per-diagram or per-document design versions.
 | :--- | :--- |
 | **MAJOR** | Breaking change to design meaning: rename/remove C4 peers, incompatible lifecycle/API/store contracts, authority order change that invalidates prior investigation |
 | **MINOR** | Backward-compatible addition: new contract, optional field, new diagram that does not contradict existing meaning |
-| **PATCH** | Clarifications, typo/layout fixes, non-normative prose, stamp/tooling hygiene with no semantic change |
+| **PATCH** | Clarifications, typo/layout fixes, non-normative prose, redirect/tooling hygiene with no semantic change |
 
 **Any** material edit under the design tree that should be visible as a new
 freeze line requires **one** bump of `VERSION` for the whole design — never a
@@ -41,6 +43,13 @@ partial version on a single section.
 Tag freezes in git as `design/vX.Y.Z` when publishing a line (optional).
 
 ## [Unreleased]
+
+### Changed
+
+- Design freeze SemVer lives **only** in [`VERSION`](VERSION). Diagrams, docs,
+  OpenAPI `info.version`, and registry no longer embed stamps; they redirect to
+  `docs/standards/VERSION`. Contracts omit `design_contract_version` front-matter.
+  Alignment checker rejects embedded design SemVer.
 
 ## [1.3.0] — 2026-08-02
 

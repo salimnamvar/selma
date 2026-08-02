@@ -4,7 +4,6 @@
 
 contract_id: "interfaces.rest_api"
 schema_version: "1.0.0"
-design_contract_version: "1.3.0"
 owner_component: "api"
 description: >
   Defines the REST API contract for the Selma system. This is a
@@ -216,7 +215,7 @@ tenant_model:
   mode: "single_tenant"
   rules:
     - "One Selma deployment instance serves one authority boundary"
-    - "No tenant_id on resources, store rows, or JWT claims in design_contract_version 1.1.0"
+    - "No tenant_id on resources, store rows, or JWT claims in design freeze line (docs/standards/VERSION)"
     - "Cross-organization isolation is achieved by separate deployments, not by a tenant dimension"
 
 

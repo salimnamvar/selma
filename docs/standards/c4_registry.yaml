@@ -6,14 +6,11 @@
 # for product peers. Non-peers are listed separately and must never be
 # presented as C4 Context/Container/Component peers.
 #
-# design_contract_version is a STAMP of docs/standards/VERSION (sole SSoT).
-# Do not edit the version here — bump VERSION, then:
-#   python scripts/check_design_alignment.py --fix
-# Stamps: this field, contract front-matter, PlantUML Contract headers,
-# section README banners, OpenAPI info.version. See CHANGELOG.md.
+# Design freeze version: docs/standards/VERSION only (never embed SemVer here).
+# Diagrams/docs redirect with Contract: docs/standards/VERSION.
+# See CHANGELOG.md for history. Checker rejects embedded design SemVer stamps.
 # =============================================================================
 
-design_contract_version: "1.3.0"  # stamp of VERSION — not an independent version
 schema_version: "1.0.0"
 
 dependency_rule: >
