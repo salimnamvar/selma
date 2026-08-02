@@ -3,7 +3,7 @@
 ' Title:     SEQ-008 Authorization Check
 ' Source:    docs/spec/contracts/authorization/
 ' C4:        api gate → DenialAuditPort → finding_events_repository
-' Contract:  1.2.0
+' Contract:  1.3.0
 ' ============================================================
 !include common/seq_styles.puml
 

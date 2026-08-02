@@ -1,6 +1,6 @@
 # Selma — Design Schemas
 
-> **Authority:** This directory is the **design-time SSoT** for executable rule and policy doctrine shapes under `design_contract_version` `1.2.0` (stamp of [`../standards/VERSION`](../standards/VERSION)).  
+> **Authority:** This directory is the **design-time SSoT** for executable rule and policy doctrine shapes under `design_contract_version` `1.3.0` (stamp of [`../standards/VERSION`](../standards/VERSION)).  
 > **Normative behavior:** [`../spec/contracts/`](../spec/README.md)  
 > **Structural IDs:** [`../standards/c4_registry.yaml`](../standards/c4_registry.yaml)
 

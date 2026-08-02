@@ -2,7 +2,7 @@
 
 > **Design standard:** [`../standards/`](../standards/README.md) · **C4 registry:** [`c4_registry.yaml`](../standards/c4_registry.yaml)  
 > **View concerns:** [`view_concerns.md`](../standards/view_concerns.md)  
-> **design_contract_version:** `1.2.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)  
+> **design_contract_version:** `1.3.0` · Structural SSoT: [`../c4-model/`](../c4-model/README.md)  
 > *(banner stamp of [`VERSION`](VERSION) — not a section-local version; bump VERSION + `--fix`)*
 
 {One-paragraph purpose: what this section shows and what it must not invent.}

@@ -4,7 +4,7 @@
 
 contract_id: "inspection.finding"
 schema_version: "1.0.0"
-design_contract_version: "1.2.0"
+design_contract_version: "1.3.0"
 owner_component: "inspections_application"
 description: >
   Defines the schema and semantics for finding objects produced by the

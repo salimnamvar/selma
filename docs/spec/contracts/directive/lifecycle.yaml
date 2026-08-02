@@ -4,7 +4,7 @@
 
 contract_id: "directive.lifecycle"
 schema_version: "1.0.0"
-design_contract_version: "1.2.0"
+design_contract_version: "1.3.0"
 owner_component: "directives_application"
 description: >
   Defines the lifecycle states and operations for directives.

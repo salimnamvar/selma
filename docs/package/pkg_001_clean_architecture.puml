@@ -4,7 +4,7 @@
 ' Source:    docs/standards/c4_registry.yaml · docs/c4-model/ (peer SSoT)
 ' C4:        {resource}_{layer} maps to C4 peers; stores via repos
 ' Purpose:   HOW modules layer (CA rings, ports). Not zones/FSMs/peers invent.
-' Contract:  1.2.0
+' Contract:  1.3.0
 '
 ' Structure (mirrors c4-model/common/):
 '   common/pkg_styles.puml          — visual language

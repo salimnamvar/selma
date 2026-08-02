@@ -4,7 +4,7 @@
 '            package titles and C4 peers as package / class / C4.
 '            Group rectangles MUST use $TITLE_APP_* / $TITLE_IF_*
 '            / $TITLE_DOM_* from package pkg_identities (SSoT).
-' Contract:  1.2.0
+' Contract:  1.3.0
 '
 ' Include AFTER uc_styles.puml.
 '

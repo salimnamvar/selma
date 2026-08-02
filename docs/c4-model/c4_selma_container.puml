@@ -4,7 +4,7 @@
 ' C4:        clients | application | directives_store | compiled_rules_store |
 '            finding_events_store | artifacts_store | target_sources
 ' Purpose:   Deployable/process units. Zones/TLS → deployment/. Modules → package/.
-' Contract:  1.2.0
+' Contract:  1.3.0
 ' ============================================================
 @startuml c4_selma_container
 title Selma -- Container Diagram

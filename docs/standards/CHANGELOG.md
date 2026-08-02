@@ -42,6 +42,27 @@ Tag freezes in git as `design/vX.Y.Z` when publishing a line (optional).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-08-02
+
+### Added
+
+- **ERD view** exclusive ownership in [`view_concerns.md`](view_concerns.md):
+  durable tables, keys, enum column domains, mutability stereotypes per C4
+  `*_store`; one diagram file per store peer.
+- ERD shared `common/` maintenance layer: `erd_styles.puml` (CA palette),
+  `erd_identities.puml` (titles, C4 store IDs, table macros, product terms).
+
+### Changed
+
+- **ERD-001…ERD-004** rewritten for full store-contract alignment: compile
+  outbox lease columns, paired-policy refcounts, CAS snapshot/edge membership,
+  hybrid logical clock state + retired nodes, finding projections and open
+  uniqueness keys, conflict artifact versioning, evidence artifacts,
+  skipped_nodes on inspection snapshots.
+- ERD diagrams drop PlantUML `note` blocks; mutability and roles use
+  stereotypes (`<<mutable>>`, `<<append_only>>`, `<<outbox>>`, …).
+- ERD colors use [`common/ca_palette.puml`](common/ca_palette.puml) only.
+
 ## [1.2.0] — 2026-08-02
 
 ### Added

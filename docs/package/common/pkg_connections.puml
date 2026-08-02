@@ -2,7 +2,7 @@
 ' Title:     Package diagram connections (all edges)
 ' Purpose:   Every package + leaf has ≥1 edge. Edit edges here
 '            without touching section structure.
-' Contract:  1.2.0
+' Contract:  1.3.0
 '
 ' Include AFTER all pkg_section_*.puml files.
 ' ============================================================

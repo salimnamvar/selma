@@ -3,7 +3,7 @@
 ' Title:     SEQ-003 Inspection Pipeline
 ' Source:    docs/spec/contracts/inspection/
 ' C4:        inspections_application → findings_application / artifacts_repository
-' Contract:  1.2.0
+' Contract:  1.3.0
 ' ============================================================
 !include common/seq_styles.puml
 
